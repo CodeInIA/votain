@@ -41,6 +41,13 @@ describe("Factory and Paymaster E2E", function () {
     const receipt = await tx.wait();
     expect(receipt).not.to.be.null;
 
+    // Check ElectionCreated event to get the address
+    const filter = factory.filters.ElectionCreated();
+    const events = await factory.queryFilter(filter, receipt!.blockNumber, receipt!.blockNumber);
+    expect(events.length).to.equal(1);
+    expect(events[0].args.name).to.equal("Presidential 2026");
+    expect(events[0].args.electionAddress).to.not.equal(hre.ethers.ZeroAddress);
+
     // 3. Verify that the funds were correctly routed to the Paymaster's gasBalance mapping
     const organizerBalanceInPaymaster = await paymaster.gasBalance(organizer.address);
     expect(organizerBalanceInPaymaster).to.equal(fundingAmount);

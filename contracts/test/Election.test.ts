@@ -33,22 +33,26 @@ describe("ElectionV4 - Coercion Resistance & Ethers v6", function () {
     // --- First Vote ---
     // Initial nonce is 0. After voting it will be 1.
     const tx1 = await election.castVote(voteCiphertext1, nullifier, merkleRoot, merkleDepth, pA, pB, pC);
+    const receipt1 = await tx1.wait();
+    const block1 = await hre.ethers.provider.getBlock(receipt1!.blockNumber);
     
     // Validate first vote event
     await expect(tx1)
       .to.emit(election, "VoteCast")
-      .withArgs(nullifier, voteCiphertext1, 0n, (await hre.ethers.provider.getBlock("latest"))?.timestamp);
+      .withArgs(nullifier, voteCiphertext1, 0n, block1!.timestamp);
 
     expect(await election.nullifierNonces(nullifier)).to.equal(1n);
 
     // --- Second Vote (Coercion or Correction) ---
     // After voting it will be 2. Never reverts on duplicate nullifier
     const tx2 = await election.castVote(voteCiphertext2, nullifier, merkleRoot, merkleDepth, pA, pB, pC);
+    const receipt2 = await tx2.wait();
+    const block2 = await hre.ethers.provider.getBlock(receipt2!.blockNumber);
     
     // Validate second vote event
     await expect(tx2)
       .to.emit(election, "VoteCast")
-      .withArgs(nullifier, voteCiphertext2, 1n, (await hre.ethers.provider.getBlock("latest"))?.timestamp);
+      .withArgs(nullifier, voteCiphertext2, 1n, block2!.timestamp);
 
     // --- Third Vote (Time Block) ---
     // Fast forward time to put the blockchain beyond the election's endTime

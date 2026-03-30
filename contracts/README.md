@@ -11,10 +11,15 @@ This directory contains the foundational smart contracts for the Votain E2E Voti
    A factory utilizing the Factory Pattern to deploy standalone `ElectionV4` instances. Integrates native value routes to directly fund the `ElectionPaymaster` when an organizer provisions an election.
 
 3. **`ElectionPaymaster.sol`**
-   Implements the `IPaymaster` interface (Account Abstraction ERC-4337). Holds gas balances for specific organizers, allowing them to sponsor the network fees for their registered voters via Meta-Transactions / Biconomy Forwarders.
+   Implements a custom paymaster accounting logic for Account Abstraction. Holds gas balances for specific organizers, allowing them to sponsor the network fees for their registered voters via Meta-Transactions / Biconomy Forwarders.
 
 4. **`PlatformRegistry.sol`**
    The global registry avoiding Sybil attacks. Separately stores `registeredNullifiers` (e.g., real-world identities like World ID) and `verifiedMembers` (cryptographic identities like Semaphore Commitments), decoupling biometric proofs from network addresses.
+
+## Known Limitations (Phase 1)
+
+- **On-chain Factory Registry:** `ElectionFactory.sol` strictly routes deployments and emits the `ElectionCreated` event but does not store an on-chain array or mapping of the deployed addresses. In a production environment, DApps must rely on off-chain indexing (graphs or event parsing) to list elections of an organizer.
+- **ERC2771Context usage:** While `ElectionV4` inherits `ERC2771Context` for meta-transactions, `_msgSender()` is not actively evaluated inside `castVote` since authorization is fully handled mathematically by the ZK Proof via the `nullifier`. It's kept structurally ready to decouple sender limits when bridging to Phase 2 and 3 payload wrappers.
 
 ## Development Stack
 
