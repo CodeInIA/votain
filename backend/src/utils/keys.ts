@@ -3,11 +3,17 @@ import crypto from 'crypto';
 // For Phase 2 local development, we simulate a simple ED25519 keypair for the Issuer.
 // In production, the private key would be securely loaded from KMS or .env
 export function getIssuerKeyPair() {
-  // Try to use a persistent mock keypair so signatures don't invalidate on restart during dev,
-  // or just generate on the fly if strictly testing.
+  const privateKeyBase64 = process.env.ISSUER_PRIVATE_KEY;
+  if (!privateKeyBase64) {
+    throw new Error('ISSUER_PRIVATE_KEY not set in .env');
+  }
   
-  // Here we dynamically generate a key pair for the SD-JWT signature for simplicity in Phase 2
-  const { publicKey, privateKey } = crypto.generateKeyPairSync('ed25519');
+  const privateKey = crypto.createPrivateKey({
+    key: Buffer.from(privateKeyBase64, 'base64'),
+    format: 'der',
+    type: 'pkcs8'
+  });
+  const publicKey = crypto.createPublicKey(privateKey);
   
   return { publicKey, privateKey };
 }

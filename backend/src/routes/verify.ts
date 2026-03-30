@@ -41,7 +41,7 @@ router.post('/verify-human', async (req: Request, res: Response) => {
 
     // Verify Worldcoin response
     if (verifyRes.status !== 200) {
-      if (wldResponse.code !== "invalid_proof" && process.env.NODE_ENV !== "development") {
+      if (process.env.NODE_ENV !== "development") {
         return res.status(400).json({ error: 'Invalid World ID proof', details: wldResponse });
       } else {
         console.log("Development mode: Mocking valid proof verification");
@@ -71,8 +71,10 @@ router.post('/verify-human', async (req: Request, res: Response) => {
         } else {
           inputData = Buffer.from(data);
         }
-        const hash = crypto.createHash('sha256').update(inputData).digest();
-        return new Uint8Array(hash);
+        
+        // In the exact @sd-jwt/core version 0.19 it is strictly typed to expect Uint8Array<ArrayBufferLike> back.
+        const hashBuffer = crypto.createHash('sha256').update(inputData).digest();
+        return new Uint8Array(hashBuffer.buffer, hashBuffer.byteOffset, hashBuffer.length);
       },
       signAlg: 'EdDSA', // Ed25519 standard
       saltGenerator: generateSalt,
