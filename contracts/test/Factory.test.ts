@@ -1,6 +1,7 @@
 import { expect } from "chai";
+import "@nomicfoundation/hardhat-toolbox";
 import hre from "hardhat";
-import { time } from "@nomicfoundation/hardhat-toolbox/network-helpers";
+import { time } from "@nomicfoundation/hardhat-network-helpers";
 
 describe("Factory and Paymaster E2E", function () {
   it("Should allow the organizer to fund the factory, deploy an election and route funds to paymaster", async function () {

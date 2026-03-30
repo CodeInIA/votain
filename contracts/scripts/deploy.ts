@@ -1,3 +1,4 @@
+import "@nomicfoundation/hardhat-toolbox";
 import { ethers } from "hardhat";
 
 async function main() {

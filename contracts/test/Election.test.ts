@@ -1,6 +1,7 @@
 import { expect } from "chai";
+import "@nomicfoundation/hardhat-toolbox";
 import hre from "hardhat";
-import { time } from "@nomicfoundation/hardhat-toolbox/network-helpers";
+import { time } from "@nomicfoundation/hardhat-network-helpers";
 
 describe("ElectionV4 - Coercion Resistance & Ethers v6", function () {
   it("Should allow a user to vote multiple times by incrementing the nonce without reverting", async function () {

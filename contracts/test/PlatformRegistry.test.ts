@@ -1,4 +1,5 @@
 import { expect } from "chai";
+import "@nomicfoundation/hardhat-toolbox";
 import hre from "hardhat";
 
 describe("PlatformRegistry", function () {

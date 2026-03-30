@@ -1,7 +1,7 @@
 {
   "name": "contracts",
   "version": "1.0.0",
-  "description": "",
+  "description": "Smart Contracts for Votain E2E Voting System",
   "main": "index.js",
   "directories": {
     "test": "test"
@@ -11,10 +11,10 @@
     "deploy:amoy": "hardhat run scripts/deploy.ts --network amoy",
     "deploy:local": "hardhat run scripts/deploy.ts --network hardhat"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
+  "keywords": ["voting", "smart-contracts", "hardhat"],
+  "author": "Sergio Barrios Paz",
+  "license": "MIT",
+  "type": "module",
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@types/mocha": "^10.0.10",
