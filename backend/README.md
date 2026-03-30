@@ -13,6 +13,7 @@ The generated SD-JWT wraps the user's `identityCommitment` inside the `sub` clai
 
 ```text
 src/
+├── env.ts                # Environment variable initializer
 ├── index.ts              # Express Server entry point
 ├── routes/verify.ts      # World ID callback and SD-JWT generation via `@sd-jwt/core`
 └── utils/keys.ts         # Issuer Keypair management (EdDSA / Ed25519)
@@ -35,6 +36,8 @@ npm install
 PORT=3000
 WORLD_ID_APP_ID=app_staging_X
 WORLD_ID_ACTION=vote_registration
+ISSUER_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n..."
+NODE_ENV=development
 ```
 
 3. Run for dev:
