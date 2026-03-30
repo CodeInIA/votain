@@ -1,9 +1,7 @@
+import './env.js';
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import verifyRouter from './routes/verify.js';
-
-dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;

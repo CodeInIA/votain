@@ -73,8 +73,8 @@ router.post('/verify-human', async (req: Request, res: Response) => {
         }
         
         // In the exact @sd-jwt/core version 0.19 it is strictly typed to expect Uint8Array<ArrayBufferLike> back.
-        const hashBuffer = crypto.createHash('sha256').update(inputData).digest();
-        return new Uint8Array(hashBuffer.buffer, hashBuffer.byteOffset, hashBuffer.length);
+        // Copying the buffer natively avoids NodeJS memory pool offset problems
+        return new Uint8Array(crypto.createHash('sha256').update(inputData).digest());
       },
       signAlg: 'EdDSA', // Ed25519 standard
       saltGenerator: generateSalt,
