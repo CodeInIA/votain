@@ -8,5 +8,5 @@
     "rootDir": "./",
     "resolveJsonModule": true
   },
-  "include": ["./hardhat.config.ts", "./scripts", "./test", "./typechain-types", "./contracts"]
+  "include": ["./hardhat.config.ts", "./scripts", "./test", "./typechain-types"]
 }

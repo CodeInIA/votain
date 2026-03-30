@@ -18,6 +18,7 @@ This directory contains the foundational smart contracts for the Votain E2E Voti
 
 ## Known Limitations (Phase 1)
 
+- **Paymaster Access Control:** The `sponsorVote` function inside `ElectionPaymaster.sol` currently lacks strict `msg.sender` checking (as noted in its comments). In a production environment (or Phase 3), it must be restricted to be only callable by the official ERC-4337 EntryPoint or the Biconomy Trusted Forwarder to prevent malicious actors from maliciously draining an organizer's `gasBalance`.
 - **On-chain Factory Registry:** `ElectionFactory.sol` strictly routes deployments and emits the `ElectionCreated` event but does not store an on-chain array or mapping of the deployed addresses. In a production environment, DApps must rely on off-chain indexing (graphs or event parsing) to list elections of an organizer.
 - **ERC2771Context usage:** While `ElectionV4` inherits `ERC2771Context` for meta-transactions, `_msgSender()` is not actively evaluated inside `castVote` since authorization is fully handled mathematically by the ZK Proof via the `nullifier`. It's kept structurally ready to decouple sender limits when bridging to Phase 2 and 3 payload wrappers.
 
