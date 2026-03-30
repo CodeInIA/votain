@@ -58,8 +58,8 @@ contract ElectionV4 is ERC2771Context {
         );
         // Do NOT revert if the nullifier already exists to allow coercion resistance.
 
-        nullifierNonces[nullifier] += 1;
+        emit VoteCast(nullifier, voteCiphertext, currentNonce, block.timestamp);
         
-        emit VoteCast(nullifier, voteCiphertext, currentNonce + 1, block.timestamp);
+        nullifierNonces[nullifier] += 1;
     }
 }

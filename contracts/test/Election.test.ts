@@ -37,7 +37,7 @@ describe("ElectionV4 - Coercion Resistance & Ethers v6", function () {
     // Validate first vote event
     await expect(tx1)
       .to.emit(election, "VoteCast")
-      .withArgs(nullifier, voteCiphertext1, 1n, (await hre.ethers.provider.getBlock("latest"))?.timestamp);
+      .withArgs(nullifier, voteCiphertext1, 0n, (await hre.ethers.provider.getBlock("latest"))?.timestamp);
 
     expect(await election.nullifierNonces(nullifier)).to.equal(1n);
 
@@ -48,7 +48,7 @@ describe("ElectionV4 - Coercion Resistance & Ethers v6", function () {
     // Validate second vote event
     await expect(tx2)
       .to.emit(election, "VoteCast")
-      .withArgs(nullifier, voteCiphertext2, 2n, (await hre.ethers.provider.getBlock("latest"))?.timestamp);
+      .withArgs(nullifier, voteCiphertext2, 1n, (await hre.ethers.provider.getBlock("latest"))?.timestamp);
 
     // --- Third Vote (Time Block) ---
     // Fast forward time to put the blockchain beyond the election's endTime

@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.34;
 
-import "@account-abstraction/contracts/interfaces/IPaymaster.sol";
-
-contract ElectionPaymaster is IPaymaster {
+contract ElectionPaymaster {
     address public owner;
     
     // Virtual gas tank: organizer => balance
@@ -26,23 +24,5 @@ contract ElectionPaymaster is IPaymaster {
         // In a real scenario, we would validate `msg.sender` to be only the EntryPoint or Biconomy Forwarder.
         require(gasBalance[organizer] >= cost, "Insufficient gas balance");
         gasBalance[organizer] -= cost;
-    }
-
-    function validatePaymasterUserOp(
-        PackedUserOperation calldata /* userOp */,
-        bytes32 /* userOpHash */,
-        uint256 /* maxCost */
-    ) external pure override returns (bytes memory context, uint256 validationData) {
-        // In a real implementation we would validate `userOp` for a valid election contract
-        return ("", 0);
-    }
-
-    function postOp(
-        PostOpMode /* mode */,
-        bytes calldata /* context */,
-        uint256 /* actualGasCost */,
-        uint256 /* actualUserOpFeePerGas */
-    ) external override {
-        // Post-operation logic
     }
 }
