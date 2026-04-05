@@ -1,12 +1,14 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { CircleHelp, SquarePlus, UserCog } from 'lucide-react';
+import { ActionCard } from '../components/ui/ActionCard';
+import { Footer } from '../components/layout/Footer';
 
 export default function Landing() {
   const { t } = useTranslation();
 
   return (
-    <div className="relative h-dvh bg-background text-on-surface font-body selection:bg-primary selection:text-white overflow-hidden">
+    <div className="relative min-h-dvh w-full bg-background text-on-surface font-body selection:bg-primary selection:text-white overflow-x-hidden flex flex-col items-center">
       
       {/* Liquid Background Atmosphere */}
       <div className="fixed inset-0 z-0 pointer-events-none liquid-mesh" />
@@ -22,93 +24,76 @@ export default function Landing() {
       </div>
 
       {/* Content Wrapper */}
-      <div className="relative z-10 flex flex-col h-full">
+      <div className="relative z-10 flex flex-col flex-1 w-full">
         
         {/* Splash Content */}
-        <main className="grow flex flex-col items-center justify-center px-4 py-4 min-h-0">
+        <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 md:px-8 pt-[max(4rem,8dvh)] pb-[min(1.5rem,3dvh)] sm:pt-16 sm:pb-8 w-full">
           
           {/* Brand Anchor Section */}
-          <header className="text-center mb-6 md:mb-10">
-            <div className="inline-flex items-center justify-center p-2 mb-3 md:mb-6">
-              <div className="w-20 h-20 md:w-24 md:h-24 bg-linear-to-br from-primary to-secondary p-px rounded-2xl">
+          <header className="text-center mb-[min(1.5rem,3dvh)] sm:mb-12 shrink-0">
+            <div className="inline-flex items-center justify-center mb-[min(0.75rem,2dvh)] sm:mb-6">
+              <div className="w-[min(5.5rem,12dvh)] h-[min(5.5rem,12dvh)] sm:w-28 sm:h-28 bg-linear-to-br from-primary to-secondary p-px rounded-2xl shrink-0">
                 <div className="w-full h-full bg-surface-lowest rounded-[15px] flex items-center justify-center">
                   <img 
                     alt="Votain Logo" 
-                    className="w-12 h-12 md:w-16 md:h-16 object-contain drop-shadow-[0_0_15px_rgba(79,142,247,0.5)]" 
+                    className="w-[60%] h-[60%] object-contain drop-shadow-[0_0_15px_rgba(79,142,247,0.5)]" 
                     src="/votain-logo.png"
                   />
                 </div>
               </div>
             </div>
-            <h1 className="text-4xl md:text-7xl font-black tracking-tighter text-on-surface mb-1 md:mb-3">{t('landing.title')}</h1>
-            <p className="text-base md:text-xl text-on-surface-variant font-medium tracking-tight">{t('landing.subtitle')}</p>
+            <h1 className="text-[min(2.5rem,7dvh)] md:text-5xl lg:text-6xl font-black tracking-tighter text-on-surface mb-[min(0.25rem,1dvh)] leading-none">{t('landing.title')}</h1>
+            <p className="text-[min(0.875rem,2.5dvh)] sm:text-base text-on-surface-variant font-medium tracking-tight mb-0 leading-snug">{t('landing.subtitle')}</p>
           </header>
 
           {/* Path Selection Grid (Bento Style) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-5 w-full max-w-4xl">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-[min(0.75rem,2dvh)] md:gap-6 w-full max-w-4xl shrink-0 py-1 px-1">
             
-            {/* Voter Path */}
-            <button 
-              aria-label="I want to vote: Join an existing election using your World ID"
-              className="group relative flex flex-col items-start p-5 md:p-6 rounded-2xl bg-surface-low/40 backdrop-blur-2xl border border-white/5 hover:bg-surface-low/60 focus-visible:bg-surface-low/60 focus-visible:ring-2 focus-visible:ring-primary outline-none transition-all duration-500 text-left overflow-hidden min-h-40 md:min-h-55"
-            >
-              <div className="absolute inset-0 glass-reflection pointer-events-none opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity duration-500"></div>       
-              <div className="mb-3 md:mb-5 w-10 h-10 md:w-14 md:h-14 bg-primary-container/20 rounded-full flex items-center justify-center group-hover:scale-110 group-focus-visible:scale-110 transition-transform duration-500 overflow-hidden">
-                <img alt="" aria-hidden="true" className="w-5 h-5 md:w-8 md:h-8 object-contain" style={{ filter: "invert(1) brightness(200%)" }} src="/world-id-logo.svg" />   
-              </div>
-              <span className="block text-lg md:text-2xl font-bold text-on-surface mb-1 md:mb-2">{t('landing.voter_title')}</span>
-              <p className="text-on-surface-variant mb-3 md:mb-5 text-xs md:text-base max-w-50 md:max-w-60">{t('landing.voter_desc')}</p>
-              <div className="mt-auto flex items-center text-primary font-bold tracking-wider text-[10px] md:text-xs uppercase">
-                {t('landing.voter_cta')}
-                <ArrowRight className="ml-2 w-3 h-3 md:w-4 md:h-4" />
-              </div>
-            </button>
+            <ActionCard
+              ariaLabel={t('landing.voter_title')}
+              title={t('landing.voter_title')}
+              description={t('landing.voter_desc')}
+              ctaText={t('landing.voter_cta')}
+              variant="primary"
+              icon={
+                <img alt="" aria-hidden="true" className="w-[50%] h-[50%] object-contain" style={{ filter: "invert(1) brightness(200%)" }} src="/world-id-logo.svg" />
+              }
+            />
 
-            {/* Organizer Path */}
-            <button 
-              aria-label="I am an organizer: Create secure decentralized ballots"
-              className="group relative flex flex-col items-start p-5 md:p-6 rounded-2xl bg-surface-low/40 backdrop-blur-2xl border border-white/5 hover:bg-surface-low/60 focus-visible:bg-surface-low/60 focus-visible:ring-2 focus-visible:ring-secondary outline-none transition-all duration-500 text-left overflow-hidden min-h-40 md:min-h-55"
-            >
-              <div className="absolute inset-0 glass-reflection pointer-events-none opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity duration-500"></div>       
-              <div className="mb-3 md:mb-5 w-10 h-10 md:w-14 md:h-14 bg-secondary-container/20 rounded-full flex justify-center items-center text-secondary group-hover:scale-110 group-focus-visible:scale-110 transition-transform duration-500">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-5 h-5 md:w-8 md:h-8" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-              </div>
-              <span className="block text-lg md:text-2xl font-bold text-on-surface mb-1 md:mb-2">{t('landing.org_title')}</span>       
-              <p className="text-on-surface-variant mb-3 md:mb-5 text-xs md:text-base max-w-50 md:max-w-60">{t('landing.org_desc')}</p>
-              <div className="mt-auto flex items-center text-secondary font-bold tracking-wider text-[10px] md:text-xs uppercase">
-                {t('landing.org_cta')}
-                <ArrowRight className="ml-2 w-3 h-3 md:w-4 md:h-4" />
-              </div>
-            </button>
+            <ActionCard
+              ariaLabel={t('landing.org_title')}
+              title={t('landing.org_title')}
+              description={t('landing.org_desc')}
+              ctaText={t('landing.org_cta')}
+              variant="secondary"
+              ctaIcon={
+                <SquarePlus className="w-full h-full" strokeWidth={2.5} />
+              }
+              icon={
+                <UserCog className="w-[50%] h-[50%]" strokeWidth={1.5} />
+              }
+            />
           </div>
 
           {/* Secondary Actions */}
-          <div className="mt-6 md:mt-10 flex flex-col items-center gap-3 md:gap-5">
-            <Link to="/discover" className="px-6 md:px-8 py-2 md:py-3 text-sm md:text-base rounded-full bg-surface-high/40 text-on-surface font-medium backdrop-blur-xl border border-outline-variant/10 hover:bg-surface-high/60 focus-visible:ring-2 focus-visible:ring-primary outline-none transition-all cursor-pointer text-center">
+          <div className="my-auto flex flex-col items-center justify-center gap-[min(0.75rem,2dvh)] shrink-0 px-2 py-[min(1rem,2dvh)]">
+            <Link 
+              to="/discover" 
+              className="px-[min(1.5rem,4vw)] sm:px-8 py-[min(0.5rem,1.5dvh)] md:py-3 text-[min(0.875rem,2dvh)] sm:text-sm rounded-full bg-surface-high/40 text-on-surface font-medium backdrop-blur-xl border border-outline-variant/10 hover:bg-surface-high/60 active:bg-surface-high/60 focus-visible:ring-2 focus-visible:ring-primary outline-none transition-all cursor-pointer text-center whitespace-nowrap"
+            >
               {t('landing.browse')}
             </Link>
-            <Link to="/how-it-works" className="text-on-surface-variant hover:text-primary focus-visible:text-primary focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4 focus-visible:ring-offset-background outline-none rounded-sm text-[11px] md:text-sm font-medium transition-colors flex items-center gap-2">
+            <Link 
+              to="/how-it-works" 
+              className="text-on-surface-variant hover:text-on-surface active:text-on-surface focus-visible:text-on-surface focus-visible:ring-2 focus-visible:ring-on-surface focus-visible:ring-offset-4 focus-visible:ring-offset-background outline-none rounded-sm text-[min(0.65rem,1.5dvh)] sm:text-xs font-medium transition-colors flex items-center justify-center gap-1.5 cursor-pointer pb-[min(0.25rem,1dvh)]"
+            >
               {t('landing.how_it_works')}
+              <CircleHelp className="w-[1.25em] h-[1.25em]" />
             </Link>
           </div>
         </main>
 
-        {/* Footer */}
-        <footer className="bg-slate-950/40 backdrop-blur-md w-full py-3 md:py-6 mt-auto border-t border-white/5">
-          <div className="flex flex-col md:flex-row justify-between items-center px-8 max-w-7xl mx-auto gap-4">
-            <div className="text-slate-400 font-bold tracking-tight">{t('landing.footer.protocol')}</div>      
-            <div className="flex flex-wrap justify-center items-center gap-x-6 gap-y-2 text-slate-500 text-xs">     
-              <a className="hover:text-slate-200 focus-visible:text-slate-200 outline-none focus-visible:underline transition-colors" href="#">{t('landing.footer.terms')}</a>
-              <a className="hover:text-slate-200 focus-visible:text-slate-200 outline-none focus-visible:underline transition-colors" href="#">{t('landing.footer.privacy')}</a>
-              <a className="hover:text-slate-200 focus-visible:text-slate-200 outline-none focus-visible:underline transition-colors" href="#">{t('landing.footer.language')}</a>
-            </div>
-            <div className="text-slate-500 text-xs text-center">
-              {t('landing.footer.copyright')}
-            </div>
-          </div>
-        </footer>
+        <Footer />
       </div>
     </div>
   );
