@@ -29,5 +29,13 @@
     "free_desc": "비용을 지불하거나 암호화폐를 이해할 필요가 없습니다. 주최자가 모든 것을 처리합니다.",
     "btn_next": "다음",
     "btn_start": "인증 시작"
+  },
+  "verify": {
+    "title": "신원 확인",
+    "description": "1인 1표를 보장하기 위해 World ID를 사용합니다. 귀하의 생체 정보는 기기 밖으로 유출되지 않습니다.",
+    "btn_verify": "World ID로 확인",
+    "success_toast": "신원이 성공적으로 확인되었습니다",
+    "error_toast": "확인 실패 또는 취소됨",
+    "back": "뒤로가기"
   }
 }

@@ -29,5 +29,13 @@
     "free_desc": "Vous n'avez rien à payer ni à comprendre la crypto. L'organisateur s'occupe de tout.",
     "btn_next": "Suivant",
     "btn_start": "Commencer la vérification"
+  },
+  "verify": {
+    "title": "Vérifiez votre identité",
+    "description": "Nous utilisons World ID pour garantir une personne, un vote. Vos données biométriques ne quittent jamais votre appareil.",
+    "btn_verify": "Vérifier avec World ID",
+    "success_toast": "Identité vérifiée avec succès",
+    "error_toast": "La vérification a échoué ou a été annulée",
+    "back": "Retour à l'accueil"
   }
 }

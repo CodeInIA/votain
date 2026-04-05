@@ -29,5 +29,13 @@
     "free_desc": "You don't need to pay anything or understand crypto. The organizer takes care of everything.",
     "btn_next": "Next",
     "btn_start": "Start Verification"
+  },
+  "verify": {
+    "title": "Verify Your Identity",
+    "description": "We use World ID to ensure one person, one vote. Your biometrics never leave your device and are never shared with us.",
+    "btn_verify": "Verify with World ID",
+    "success_toast": "Identity verified successfully",
+    "error_toast": "Verification failed or canceled",
+    "back": "Back to Onboarding"
   }
 }

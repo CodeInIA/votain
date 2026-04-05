@@ -29,5 +29,13 @@
     "free_desc": "您无需支付任何费用或了解加密货币。组织者会处理一切。",
     "btn_next": "下一步",
     "btn_start": "开始验证"
+  },
+  "verify": {
+    "title": "验证您的身份",
+    "description": "我们使用 World ID 来确保一人一票。您的生物识别技术永远不会离开您的设备。",
+    "btn_verify": "使用 World ID 验证",
+    "success_toast": "身份验证成功",
+    "error_toast": "验证失败或已取消",
+    "back": "返回"
   }
 }

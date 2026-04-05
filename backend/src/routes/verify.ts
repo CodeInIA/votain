@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { SDJwtInstance } from '@sd-jwt/core';
 import crypto from 'crypto';
 import { getIssuerKeyPair, issueSigner } from '../utils/keys.js';
+import { signRequest } from '@worldcoin/idkit-core';
 
 const router = Router();
 const { publicKey, privateKey } = getIssuerKeyPair();
@@ -10,6 +11,31 @@ const { publicKey, privateKey } = getIssuerKeyPair();
 const generateSalt = () => {
   return crypto.randomBytes(16).toString('base64url');
 };
+
+router.post('/rp-signature', async (req: Request, res: Response) => {
+  try {
+    const { action } = req.body;
+    
+    if (!process.env.WORLD_ID_APP_ID) {
+      throw new Error('WORLD_ID_APP_ID not configured');
+    }
+    
+    // Developer Portal creates a Developer Key
+    if (!process.env.DEVELOPER_KEY) {
+       console.warn("DEVELOPER_KEY not configured, signRequest may fail");
+    }
+
+    const rpSignature = signRequest(
+      action || process.env.WORLD_ID_ACTION || "testing", 
+      process.env.DEVELOPER_KEY || "", 
+    ); // TTL default is 3600 (1 hour)
+
+    return res.status(200).json(rpSignature);
+  } catch (error: any) {
+    console.error('Error generating RP signature:', error);
+    return res.status(500).json({ error: 'Internal server error', message: error.message });
+  }
+});
 
 router.post('/verify-human', async (req: Request, res: Response) => {
   try {
@@ -41,10 +67,12 @@ router.post('/verify-human', async (req: Request, res: Response) => {
 
     // Verify Worldcoin response
     if (verifyRes.status !== 200) {
-      if (process.env.NODE_ENV !== "development") {
+      // If we are explicitly in production (or anything other than development), we fail.
+      if (process.env.NODE_ENV === "production" || process.env.NODE_ENV !== "development") {
+        console.error("World ID verification failed:", wldResponse);
         return res.status(400).json({ error: 'Invalid World ID proof', details: wldResponse });
       } else {
-        console.log("Development mode: Mocking valid proof verification");
+        console.log("Development mode: Mocking valid proof verification despite Worldcoin rejection.", wldResponse);      
       }
     }
 

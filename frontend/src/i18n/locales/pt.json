@@ -29,5 +29,13 @@
     "free_desc": "Você não precisa pagar nada ou entender de criptografia. O organizador cuida de tudo.",
     "btn_next": "Avançar",
     "btn_start": "Iniciar verificação"
+  },
+  "verify": {
+    "title": "Verifique sua Identidade",
+    "description": "Usamos o World ID para garantir uma pessoa, um voto. Sua biometria nunca sai do seu dispositivo.",
+    "btn_verify": "Verificar com World ID",
+    "success_toast": "Identidade verificada com sucesso",
+    "error_toast": "A verificação falhou ou foi cancelada",
+    "back": "Voltar ao início"
   }
 }

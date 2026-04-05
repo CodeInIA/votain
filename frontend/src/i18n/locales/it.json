@@ -29,5 +29,13 @@
     "free_desc": "Non è necessario pagare o comprendere le criptovalute. L'organizzatore si occupa di tutto.",
     "btn_next": "Avanti",
     "btn_start": "Inizia la verifica"
+  },
+  "verify": {
+    "title": "Verifica la tua identità",
+    "description": "Usiamo World ID per garantire una persona, un voto. La tua biometria non lascia mai il tuo dispositivo.",
+    "btn_verify": "Verifica con World ID",
+    "success_toast": "Identità verificata con successo",
+    "error_toast": "Verifica non riuscita o annullata",
+    "back": "Torna all'inizio"
   }
 }

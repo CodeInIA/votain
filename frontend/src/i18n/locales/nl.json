@@ -29,5 +29,13 @@
     "free_desc": "U hoeft niets te betalen of crypto te begrijpen. De organisator regelt alles.",
     "btn_next": "Volgende",
     "btn_start": "Start verificatie"
+  },
+  "verify": {
+    "title": "Verifieer uw identiteit",
+    "description": "We gebruiken World ID om één persoon, één stem te garanderen. Uw biometrie verlaat uw apparaat nooit.",
+    "btn_verify": "Verifieer met World ID",
+    "success_toast": "Identiteit succesvol geverifieerd",
+    "error_toast": "Verificatie mislukt of geannuleerd",
+    "back": "Terug naar start"
   }
 }

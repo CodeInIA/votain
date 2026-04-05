@@ -29,5 +29,13 @@
     "free_desc": "Sie müssen nichts bezahlen oder Krypto verstehen. Der Organisator kümmert sich um alles.",
     "btn_next": "Weiter",
     "btn_start": "Überprüfung starten"
+  },
+  "verify": {
+    "title": "Überprüfen Sie Ihre Identität",
+    "description": "Wir verwenden World ID, um sicherzustellen: eine Person, eine Stimme. Ihre biometrischen Daten verlassen niemals Ihr Gerät.",
+    "btn_verify": "Mit World ID verifizieren",
+    "success_toast": "Identität erfolgreich verifiziert",
+    "error_toast": "Verifizierung fehlgeschlagen oder abgebrochen",
+    "back": "Zurück zum Start"
   }
 }

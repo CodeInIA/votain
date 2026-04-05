@@ -8,12 +8,19 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc"
   },
-  "keywords": ["world-id", "semaphore", "zero-knowledge", "sd-jwt", "voting"],
+  "keywords": [
+    "world-id",
+    "semaphore",
+    "zero-knowledge",
+    "sd-jwt",
+    "voting"
+  ],
   "author": "Sergio Barrios Paz",
   "license": "MIT",
   "type": "module",
   "dependencies": {
     "@sd-jwt/core": "^0.19.0",
+    "@worldcoin/idkit-core": "^4.0.11",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1"
