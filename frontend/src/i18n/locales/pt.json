@@ -1,0 +1,21 @@
+{
+  "landing": {
+    "title": "Votain",
+    "subtitle": "Privado. Verificável. Seu.",
+    "voter_title": "Eu quero votar",
+    "voter_desc": "Participe de uma eleição existente usando seu World ID para privacidade biométrica.",
+    "voter_cta": "Começar",
+    "org_title": "Sou um organizador",
+    "org_desc": "Crie votações seguras e descentralizadas garantidas por passkeys criptográficas.",
+    "org_cta": "Criar Eleição",
+    "browse": "Navegar nas eleições",
+    "how_it_works": "Como funciona",
+    "footer": {
+      "protocol": "Votain Protocol",
+      "terms": "Termos",
+      "privacy": "Privacidade",
+      "language": "Idioma",
+      "copyright": "© 2026 Votain Protocol"
+    }
+  }
+}

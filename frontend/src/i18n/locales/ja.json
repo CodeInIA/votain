@@ -1,0 +1,21 @@
+{
+  "landing": {
+    "title": "Votain",
+    "subtitle": "プライベート。検証可能。あなたのもの。",
+    "voter_title": "投票したい",
+    "voter_desc": "生体認証のプライバシーのためにWorld IDを使用して既存の選挙に参加します。",
+    "voter_cta": "はじめる",
+    "org_title": "私は主催者です",
+    "org_desc": "暗号化パスキーによって保護された、安全で分散型の投票を作成します。",
+    "org_cta": "選挙を作成",
+    "browse": "選挙を閲覧",
+    "how_it_works": "仕組み",
+    "footer": {
+      "protocol": "Votain プロトコル",
+      "terms": "利用規約",
+      "privacy": "プライバシー",
+      "language": "言語",
+      "copyright": "© 2026 Votain プロトコル"
+    }
+  }
+}

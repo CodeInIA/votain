@@ -1,0 +1,21 @@
+{
+  "landing": {
+    "title": "Votain",
+    "subtitle": "Privé. Vérifiable. À vous.",
+    "voter_title": "Je veux voter",
+    "voter_desc": "Rejoignez une élection existante en utilisant votre World ID pour une confidentialité biométrique.",
+    "voter_cta": "Commencer",
+    "org_title": "Je suis un organisateur",
+    "org_desc": "Créez des bulletins de vote sécurisés et décentralisés, protégés par des clés d'accès (passkeys) cryptographiques.",
+    "org_cta": "Créer une élection",
+    "browse": "Parcourir les élections",
+    "how_it_works": "Comment ça marche",
+    "footer": {
+      "protocol": "Votain Protocol",
+      "terms": "Conditions",
+      "privacy": "Confidentialité",
+      "language": "Langue",
+      "copyright": "© 2026 Votain Protocol"
+    }
+  }
+}

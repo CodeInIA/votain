@@ -1,0 +1,21 @@
+{
+  "landing": {
+    "title": "Votain",
+    "subtitle": "프라이빗. 검증 가능. 당신의 것.",
+    "voter_title": "투표하고 싶습니다",
+    "voter_desc": "생체 인식 프라이버시를 위해 World ID를 사용하여 기존 선거에 참여하세요.",
+    "voter_cta": "시작하기",
+    "org_title": "주최자입니다",
+    "org_desc": "암호화 패스키로 보호되는 안전하고 분산된 투표를 만드세요.",
+    "org_cta": "선거 만들기",
+    "browse": "선거 찾아보기",
+    "how_it_works": "작동 방식",
+    "footer": {
+      "protocol": "Votain 프로토콜",
+      "terms": "이용 약관",
+      "privacy": "개인정보 보호",
+      "language": "언어",
+      "copyright": "© 2026 Votain 프로토콜"
+    }
+  }
+}

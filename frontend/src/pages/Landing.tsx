@@ -1,7 +1,10 @@
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export default function Landing() {
+  const { t } = useTranslation();
+
   return (
     <div className="relative h-dvh bg-background text-on-surface font-body selection:bg-primary selection:text-white overflow-hidden">
       
@@ -37,8 +40,8 @@ export default function Landing() {
                 </div>
               </div>
             </div>
-            <h1 className="text-4xl md:text-7xl font-black tracking-tighter text-on-surface mb-1 md:mb-3">Votain</h1>
-            <p className="text-base md:text-xl text-on-surface-variant font-medium tracking-tight">Private. Verifiable. Yours.</p>
+            <h1 className="text-4xl md:text-7xl font-black tracking-tighter text-on-surface mb-1 md:mb-3">{t('landing.title')}</h1>
+            <p className="text-base md:text-xl text-on-surface-variant font-medium tracking-tight">{t('landing.subtitle')}</p>
           </header>
 
           {/* Path Selection Grid (Bento Style) */}
@@ -53,10 +56,10 @@ export default function Landing() {
               <div className="mb-3 md:mb-5 w-10 h-10 md:w-14 md:h-14 bg-primary-container/20 rounded-full flex items-center justify-center group-hover:scale-110 group-focus-visible:scale-110 transition-transform duration-500 overflow-hidden">
                 <img alt="" aria-hidden="true" className="w-5 h-5 md:w-8 md:h-8 object-contain" style={{ filter: "invert(1) brightness(200%)" }} src="/world-id-logo.svg" />   
               </div>
-              <span className="block text-lg md:text-2xl font-bold text-on-surface mb-1 md:mb-2">I want to vote</span>
-              <p className="text-on-surface-variant mb-3 md:mb-5 text-xs md:text-base max-w-50 md:max-w-60">Join an existing election using your World ID for biometric privacy.</p>
+              <span className="block text-lg md:text-2xl font-bold text-on-surface mb-1 md:mb-2">{t('landing.voter_title')}</span>
+              <p className="text-on-surface-variant mb-3 md:mb-5 text-xs md:text-base max-w-50 md:max-w-60">{t('landing.voter_desc')}</p>
               <div className="mt-auto flex items-center text-primary font-bold tracking-wider text-[10px] md:text-xs uppercase">
-                Get Started
+                {t('landing.voter_cta')}
                 <ArrowRight className="ml-2 w-3 h-3 md:w-4 md:h-4" />
               </div>
             </button>
@@ -72,10 +75,10 @@ export default function Landing() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
               </div>
-              <span className="block text-lg md:text-2xl font-bold text-on-surface mb-1 md:mb-2">I'm an organizer</span>       
-              <p className="text-on-surface-variant mb-3 md:mb-5 text-xs md:text-base max-w-50 md:max-w-60">Create secure, decentralized ballots secured by cryptographic passkeys.</p>
+              <span className="block text-lg md:text-2xl font-bold text-on-surface mb-1 md:mb-2">{t('landing.org_title')}</span>       
+              <p className="text-on-surface-variant mb-3 md:mb-5 text-xs md:text-base max-w-50 md:max-w-60">{t('landing.org_desc')}</p>
               <div className="mt-auto flex items-center text-secondary font-bold tracking-wider text-[10px] md:text-xs uppercase">
-                Create Election
+                {t('landing.org_cta')}
                 <ArrowRight className="ml-2 w-3 h-3 md:w-4 md:h-4" />
               </div>
             </button>
@@ -84,10 +87,10 @@ export default function Landing() {
           {/* Secondary Actions */}
           <div className="mt-6 md:mt-10 flex flex-col items-center gap-3 md:gap-5">
             <Link to="/discover" className="px-6 md:px-8 py-2 md:py-3 text-sm md:text-base rounded-full bg-surface-high/40 text-on-surface font-medium backdrop-blur-xl border border-outline-variant/10 hover:bg-surface-high/60 focus-visible:ring-2 focus-visible:ring-primary outline-none transition-all cursor-pointer text-center">
-              Browse elections
+              {t('landing.browse')}
             </Link>
             <Link to="/how-it-works" className="text-on-surface-variant hover:text-primary focus-visible:text-primary focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4 focus-visible:ring-offset-background outline-none rounded-sm text-[11px] md:text-sm font-medium transition-colors flex items-center gap-2">
-              How it works
+              {t('landing.how_it_works')}
             </Link>
           </div>
         </main>
@@ -95,14 +98,14 @@ export default function Landing() {
         {/* Footer */}
         <footer className="bg-slate-950/40 backdrop-blur-md w-full py-3 md:py-6 mt-auto border-t border-white/5">
           <div className="flex flex-col md:flex-row justify-between items-center px-8 max-w-7xl mx-auto gap-4">
-            <div className="text-slate-400 font-bold tracking-tight">Votain Protocol</div>      
+            <div className="text-slate-400 font-bold tracking-tight">{t('landing.footer.protocol')}</div>      
             <div className="flex flex-wrap justify-center items-center gap-x-6 gap-y-2 text-slate-500 text-xs">     
-              <a className="hover:text-slate-200 focus-visible:text-slate-200 outline-none focus-visible:underline transition-colors" href="#">Terms</a>
-              <a className="hover:text-slate-200 focus-visible:text-slate-200 outline-none focus-visible:underline transition-colors" href="#">Privacy</a>
-              <a className="hover:text-slate-200 focus-visible:text-slate-200 outline-none focus-visible:underline transition-colors" href="#">Language</a>
+              <a className="hover:text-slate-200 focus-visible:text-slate-200 outline-none focus-visible:underline transition-colors" href="#">{t('landing.footer.terms')}</a>
+              <a className="hover:text-slate-200 focus-visible:text-slate-200 outline-none focus-visible:underline transition-colors" href="#">{t('landing.footer.privacy')}</a>
+              <a className="hover:text-slate-200 focus-visible:text-slate-200 outline-none focus-visible:underline transition-colors" href="#">{t('landing.footer.language')}</a>
             </div>
             <div className="text-slate-500 text-xs text-center">
-              © 2026 Votain Protocol
+              {t('landing.footer.copyright')}
             </div>
           </div>
         </footer>
