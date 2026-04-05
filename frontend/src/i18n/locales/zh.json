@@ -17,5 +17,17 @@
       "language": "语言",
       "copyright": "© 2026 Votain 协议"
     }
+  },
+  "onboarding": {
+    "what_title": "欢迎来到 Votain",
+    "what_desc": "从任何设备安全而秘密地投票。没有人会知道您的选择。",
+    "privacy_title": "100% 匿名",
+    "privacy_desc": "我们使用 World ID 证明您是真人。我们永远不会保存您的个人数据。",
+    "coercion_title": "随时可以改变主意",
+    "coercion_desc": "如果有人强迫您投票，您可以稍后秘密重新投票。只计算您的最后一次投票。",
+    "free_title": "完全免费",
+    "free_desc": "您无需支付任何费用或了解加密货币。组织者会处理一切。",
+    "btn_next": "下一步",
+    "btn_start": "开始验证"
   }
 }

@@ -4,18 +4,20 @@ import { cn } from '../../lib/utils';
 
 // Definir las variantes del botón para mantener la cohesión de diseño
 export const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-sm font-medium transition-colors focus-visible:outline-none cursor-pointer disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center whitespace-nowrap rounded-sm font-medium transition-all focus-visible:outline-none cursor-pointer disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]",
   {
     variants: {
       variant: {
         default:
-          "bg-surface-high/40 text-on-surface backdrop-blur-xl border border-outline-variant/10 hover:bg-surface-high/60 focus-visible:ring-2 focus-visible:ring-primary rounded-full",
+          "bg-surface-high/40 text-on-surface backdrop-blur-xl border border-outline-variant/10 hover:bg-surface-high/60 active:bg-surface-high/60 focus-visible:ring-2 focus-visible:ring-primary rounded-full",
         ghost:
-          "text-on-surface-variant hover:text-primary focus-visible:text-primary focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4 focus-visible:ring-offset-background",
+          "text-on-surface-variant hover:text-primary active:text-primary focus-visible:text-primary focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4 focus-visible:ring-offset-background",
         primary:
-          "bg-primary text-white hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+          "bg-primary text-white hover:bg-primary/90 active:bg-primary/90 shadow-lg hover:shadow-primary/20 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
         secondary:
-          "bg-secondary text-white hover:bg-secondary/90 focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2",
+          "bg-secondary text-white hover:bg-secondary/90 active:bg-secondary/90 shadow-lg hover:shadow-secondary/20 focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2",
+        gradient:
+          "bg-linear-to-br from-primary-dim to-primary-container text-[#001a40] hover:brightness-110 active:brightness-90 shadow-[0_0_15px_rgba(79,142,247,0.3)] filter",
       },
       size: {
         default: "h-9 px-4 py-2",
@@ -40,7 +42,7 @@ export interface ButtonProps
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  ({ className, variant, size, ...props }, ref) => {
     return (
       <button
         className={cn(buttonVariants({ variant, size, className }))}

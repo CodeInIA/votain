@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { CircleHelp, SquarePlus, UserCog } from 'lucide-react';
 import { ActionCard } from '../components/ui/ActionCard';
@@ -6,6 +6,7 @@ import { Footer } from '../components/layout/Footer';
 
 export default function Landing() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   return (
     <div className="relative min-h-dvh w-full bg-background text-on-surface font-body selection:bg-primary selection:text-white overflow-x-hidden flex flex-col items-center">
@@ -48,8 +49,9 @@ export default function Landing() {
 
           {/* Path Selection Grid (Bento Style) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3 md:gap-6 w-full max-w-4xl shrink py-1 px-1 overflow-y-auto min-h-0">
-            
+
             <ActionCard
+              onClick={() => navigate('/voter/onboarding')}
               ariaLabel={t('landing.voter_title')}
               title={t('landing.voter_title')}
               description={t('landing.voter_desc')}
@@ -61,6 +63,7 @@ export default function Landing() {
             />
 
             <ActionCard
+              onClick={() => navigate('/organizer/auth')}
               ariaLabel={t('landing.org_title')}
               title={t('landing.org_title')}
               description={t('landing.org_desc')}

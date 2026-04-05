@@ -17,5 +17,17 @@
       "language": "Language",
       "copyright": "© 2026 Votain Protocol"
     }
+  },
+  "onboarding": {
+    "what_title": "Welcome to Votain",
+    "what_desc": "Vote securely and secretly from any device. Nobody will ever know your choice.",
+    "privacy_title": "100% Anonymous",
+    "privacy_desc": "We use World ID to prove you are a real person. We never save your personal data.",
+    "coercion_title": "Feel free to change your mind",
+    "coercion_desc": "If someone forces you to vote, you can vote again in secret later. Only your last vote counts.",
+    "free_title": "Completely free",
+    "free_desc": "You don't need to pay anything or understand crypto. The organizer takes care of everything.",
+    "btn_next": "Next",
+    "btn_start": "Start Verification"
   }
 }
