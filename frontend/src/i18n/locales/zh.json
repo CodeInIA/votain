@@ -1,13 +1,7 @@
 {
   "landing": {
     "title": "Votain",
-    "subtitle": "私密。可验证。属于你。",
-    "voter_title": "我要投票",
-    "voter_desc": "使用您的 World ID 加入现有的选举，以获得生物特征隐私。",
     "voter_cta": "开始使用",
-    "org_title": "我是组织者",
-    "org_desc": "创建由加密密钥保护的安全、去中心化选票。",
-    "org_cta": "创建选举",
     "browse": "浏览选举",
     "how_it_works": "工作原理",
     "footer": {
@@ -16,7 +10,12 @@
       "privacy": "隐私",
       "language": "语言",
       "copyright": "© 2026 Votain 协议"
-    }
+    },
+    "subtitle_1": "私密。可验证。",
+    "subtitle_2": "你的。",
+    "hero_desc": "以绝对的隐私参与民主进程。Votain 使用密码学证明来确保您的投票有效，而无需透露您的身份。",
+    "are_you_organizer": "您是组织者吗？",
+    "create_election_link": "创建选举"
   },
   "onboarding": {
     "what_title": "欢迎来到 Votain",

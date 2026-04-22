@@ -12,42 +12,50 @@ describe('Landing Page Structure & Navigation', () => {
 
   it('renders the main protocol branding and titles via i18n keys', () => {
     setup();
-    const logo = screen.getByAltText('Votain Logo');
-    expect(logo).toBeInTheDocument();
-    expect(logo.getAttribute('src')).toBe('/votain-logo.png');
+    const logos = screen.getAllByAltText('Votain Logo');
+    expect(logos.length).toBeGreaterThan(0);
+    expect(logos[0].getAttribute('src')).toBe('/votain-logo.png');
+
+    const wordmark = screen.getByAltText('Votain Wordmark');
+    expect(wordmark).toBeInTheDocument();
+    expect(wordmark.getAttribute('src')).toBe('/votain-wordmark.svg');
 
     // Since i18next is mapped to return the raw keys, we can safely test if the component asks for the right text
-    expect(screen.getByText('landing.title')).toBeInTheDocument();
-    expect(screen.getByText('landing.subtitle')).toBeInTheDocument();
+    expect(screen.getByText(/landing\.subtitle_1/i)).toBeInTheDocument();
+    expect(screen.getByText(/landing\.subtitle_2/i)).toBeInTheDocument();
+    expect(screen.getByText(/landing\.hero_desc/)).toBeInTheDocument();
   });
 
-  it('renders both strictly defined user paths (Voter & Organizer)', () => {
+  it('renders both main paths (Voter & Organizer)', () => {
     setup();
-    // Voter Path (Web3 Auth - World ID)
-    const voterButton = screen.getByRole('button', { name: /I want to vote/i });
+    // Voter Path (Web3 Auth - World ID CTA)
+    const voterButton = screen.getByRole('button', { name: /landing.voter_cta/i });
     expect(voterButton).toBeInTheDocument();
-    expect(screen.getByText('landing.voter_title')).toBeInTheDocument();
-    expect(screen.getByText('landing.voter_desc')).toBeInTheDocument();
 
-    // Organizer Path (Web3 Auth - Passkeys)
-    const orgButton = screen.getByRole('button', { name: /I am an organizer/i });
-    expect(orgButton).toBeInTheDocument();
-    expect(screen.getByText('landing.org_title')).toBeInTheDocument();
-    expect(screen.getByText('landing.org_desc')).toBeInTheDocument();
+    // Organizer Path (Web3 Auth - Passkeys link)
+    expect(screen.getByText('landing.are_you_organizer')).toBeInTheDocument();
+    expect(screen.getByText('landing.create_election_link')).toBeInTheDocument();
+    
+    const orgLink = screen.getByRole('link', { name: /landing.are_you_organizer/i });
+    expect(orgLink).toBeInTheDocument();
+    expect(orgLink.getAttribute('href')).toBe('/organizer/auth');
   });
 
-  it('renders secondary ecosystem links with correct internal routing', () => {
+  it('renders secondary actions with correct routing logic', () => {
     setup();
     
-    // Test the "Browse Elections" Link
-    const discoverLink = screen.getByRole('link', { name: 'landing.browse' });
-    expect(discoverLink).toBeInTheDocument();
-    expect(discoverLink.getAttribute('href')).toBe('/discover');
+    // Test the "Browse Elections" Button (now a button navigating to /discover)
+    const discoverButton = screen.getByRole('button', { name: /landing.browse/i });
+    expect(discoverButton).toBeInTheDocument();
 
     // Test the "How it works" Link
-    const howItWorksLink = screen.getByRole('link', { name: 'landing.how_it_works' });
+    const howItWorksLink = screen.getByRole('link', { name: /landing.how_it_works/i });
     expect(howItWorksLink).toBeInTheDocument();
     expect(howItWorksLink.getAttribute('href')).toBe('/how-it-works');
+
+    // Test the Login Button in the Header
+    const loginButton = screen.getByRole('button', { name: /landing.login/i });
+    expect(loginButton).toBeInTheDocument();
   });
 
   it('renders the generic footer correctly containing protocol agreements', () => {

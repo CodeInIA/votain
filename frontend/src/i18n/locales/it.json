@@ -1,13 +1,7 @@
 {
   "landing": {
     "title": "Votain",
-    "subtitle": "Privato. Verificabile. Tuo.",
-    "voter_title": "Voglio votare",
-    "voter_desc": "Unisciti a un'elezione esistente utilizzando il tuo World ID per la privacy biometrica.",
     "voter_cta": "Inizia",
-    "org_title": "Sono un organizzatore",
-    "org_desc": "Crea schede elettorali sicure e decentralizzate protette da passkey crittografiche.",
-    "org_cta": "Crea elezione",
     "browse": "Esplora le elezioni",
     "how_it_works": "Come funziona",
     "footer": {
@@ -16,7 +10,12 @@
       "privacy": "Privacy",
       "language": "Lingua",
       "copyright": "© 2026 Protocollo Votain"
-    }
+    },
+    "subtitle_1": "Privato. Verificabile.",
+    "subtitle_2": "Tuo.",
+    "hero_desc": "Partecipa ai processi democratici con assoluta privacy. Votain utilizza prove crittografiche per garantire che il tuo voto conti senza rivelare la tua identità.",
+    "are_you_organizer": "Sei un organizzatore?",
+    "create_election_link": "Crea un'elezione"
   },
   "onboarding": {
     "what_title": "Benvenuto su Votain",

@@ -1,13 +1,7 @@
 {
   "landing": {
     "title": "Votain",
-    "subtitle": "Privé. Verifieerbaar. Van jou.",
-    "voter_title": "Ik wil stemmen",
-    "voter_desc": "Neem deel aan een bestaande verkiezing met uw World ID voor biometrische privacy.",
     "voter_cta": "Aan de slag",
-    "org_title": "Ik ben een organisator",
-    "org_desc": "Creëer veilige, gedecentraliseerde stembiljetten beveiligd met cryptografische passkeys.",
-    "org_cta": "Verkiezing aanmaken",
     "browse": "Blader door verkiezingen",
     "how_it_works": "Hoe het werkt",
     "footer": {
@@ -16,7 +10,12 @@
       "privacy": "Privacy",
       "language": "Taal",
       "copyright": "© 2026 Votain Protocol"
-    }
+    },
+    "subtitle_1": "Privé. Verifieerbaar.",
+    "subtitle_2": "Van jou.",
+    "hero_desc": "Neem deel aan democratische processen met absolute privacy. Votain gebruikt cryptografische bewijzen om ervoor te zorgen dat uw stem telt zonder uw identiteit prijs te geven.",
+    "are_you_organizer": "Bent u een organisator?",
+    "create_election_link": "Creëer een verkiezing"
   },
   "onboarding": {
     "what_title": "Welkom bij Votain",
