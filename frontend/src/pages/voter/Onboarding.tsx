@@ -95,7 +95,7 @@ export default function Onboarding() {
       id: 'what',
       title: t('onboarding.what_title'),
       description: t('onboarding.what_desc'),
-      icon: <img src="/votain-logo.png" alt="Votain" className="w-16 h-16 sm:w-20 sm:h-20 object-contain drop-shadow-[0_0_10px_rgba(79,142,247,0.3)]" />
+      icon: <img src="/votain-logo.webp" alt="Votain" className="w-16 h-16 sm:w-20 sm:h-20 object-contain drop-shadow-[0_0_10px_rgba(79,142,247,0.3)]" />
     },
     {
       id: 'privacy',

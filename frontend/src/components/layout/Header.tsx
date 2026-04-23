@@ -13,7 +13,7 @@ export function Header() {
         onClick={() => navigate('/')}
         className="flex items-center gap-3 hover:bg-transparent hover:opacity-80 transition-opacity px-0 focus-visible:ring-0 cursor-pointer"
       >
-        <img alt="Votain Logo" className="w-12 h-12 object-contain shrink-0" src="/votain-logo.png" />
+        <img alt="Votain Logo" className="w-12 h-12 object-contain shrink-0" src="/votain-logo.webp" />
         <img alt="Votain Wordmark" className="h-5 sm:h-6 object-contain shrink-0 translate-y-0.5" src="/votain-wordmark.svg" />
       </Button>
       

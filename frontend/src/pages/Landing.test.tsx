@@ -14,7 +14,7 @@ describe('Landing Page Structure & Navigation', () => {
     setup();
     const logos = screen.getAllByAltText('Votain Logo');
     expect(logos.length).toBeGreaterThan(0);
-    expect(logos[0].getAttribute('src')).toBe('/votain-logo.png');
+    expect(logos[0].getAttribute('src')).toBe('/votain-logo.webp');
 
     const wordmark = screen.getByAltText('Votain Wordmark');
     expect(wordmark).toBeInTheDocument();

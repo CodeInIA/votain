@@ -34,7 +34,7 @@ export default function Landing() {
             <img 
               alt="Votain Logo" 
               className="w-[clamp(5rem,10vh,7rem)] h-[clamp(5rem,10vh,7rem)] object-contain drop-shadow-[0_0_20px_rgba(79,142,247,0.4)]" 
-              src="/votain-logo.png"
+              src="/votain-logo.webp"
             />
           </div>
           <h1 className="text-[clamp(2.1rem,4.6vh,4.8rem)] font-black tracking-tighter text-transparent bg-clip-text bg-linear-to-b from-white to-white/70 leading-[1.05] pb-1 pr-2">
