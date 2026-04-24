@@ -20,9 +20,14 @@ export function getIssuerKeyPair() {
 
 // Helper to sign the SD-JWT (mocking the exact algorithm/header requirements based on @sd-jwt/core config)
 // The actual implementation depends on the exact @sd-jwt/core and jsonwebtoken signature approach.
-export const issueSigner = async (data: string, privateKey: crypto.KeyObject): Promise<string> => {
-  const sign = crypto.createSign('Ed25519');
-  sign.update(data);
-  sign.end();
-  return sign.sign(privateKey).toString('base64url');
+export const issueSigner = async (
+  data: string,
+  privateKey: crypto.KeyObject
+): Promise<string> => {
+  const signature = crypto.sign(
+    null,                         // null = Ed25519 maneja el hash internamente
+    Buffer.from(data, 'utf-8'),
+    privateKey
+  );
+  return signature.toString('base64url');
 };
