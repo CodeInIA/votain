@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -24,6 +24,7 @@ function cn(...inputs: ClassValue[]) {
 
 export default function Onboarding() {
   const [step, setStep] = useState(0);
+  const [isLoadingQr, setIsLoadingQr] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [connectorURI, setConnectorURI] = useState<string | null>(null);
@@ -36,6 +37,7 @@ export default function Onboarding() {
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/verify-human`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // necesario para que el backend pueda setear la cookie
         body: JSON.stringify(proof),
       });
 
@@ -47,12 +49,13 @@ export default function Onboarding() {
 
       const data = await res.json();
 
-      if (data.sdJwt) {
-        localStorage.setItem('voter_vc', data.sdJwt);
+      // Solo guardamos el nullifier — el SD-JWT ya vive en la httpOnly cookie
+      if (data.nullifier) {
         localStorage.setItem('voter_nullifier', data.nullifier);
       }
 
       setConnectorURI(null);
+      setIsVerifying(false);
       setIsSuccess(true);
       setTimeout(() => navigate('/voter/dashboard'), 1500);
     } catch (error) {
@@ -65,18 +68,18 @@ export default function Onboarding() {
 
   const handleOpenWorldId = async () => {
     setQrError(null);
+    setIsLoadingQr(true);
     try {
-      // 1. Obtener firma RP del backend
       const rpSigRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/rp-signature`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ action: import.meta.env.VITE_WORLD_ID_ACTION }),
       });
 
       if (!rpSigRes.ok) throw new Error('Failed to fetch rp-signature');
       const rpSig = await rpSigRes.json();
 
-      // 2. Crear el request con IDKit v4
       const request = await IDKit.request({
         app_id: import.meta.env.VITE_WORLD_ID_APP_ID,
         action: import.meta.env.VITE_WORLD_ID_ACTION,
@@ -91,11 +94,10 @@ export default function Onboarding() {
         environment: 'production',
       }).preset(orbLegacy({}));
 
-      // 3. Mostrar el QR en la UI
+      setIsLoadingQr(false);
       setConnectorURI(request.connectorURI);
       setIsVerifying(true);
 
-      // 4. Esperar a que el usuario escanee y complete el flujo
       const completion = await request.pollUntilCompletion();
       if (!completion.success) {
         setQrError(t('verify.error_generic'));
@@ -107,6 +109,7 @@ export default function Onboarding() {
     } catch (e) {
       console.error('World ID flow failed:', e);
       setQrError(t('verify.error_generic'));
+      setIsLoadingQr(false);
       setIsVerifying(false);
       setConnectorURI(null);
     }
@@ -115,10 +118,11 @@ export default function Onboarding() {
   const handleCancelQr = () => {
     setConnectorURI(null);
     setIsVerifying(false);
+    setIsLoadingQr(false);
     setQrError(null);
   };
 
-  const stepsData = [
+  const stepsData = useMemo(() => [
     {
       id: 'what',
       title: t('onboarding.what_title'),
@@ -162,14 +166,14 @@ export default function Onboarding() {
         />
       ),
     },
-  ];
+  ], [t]);
 
   const handleNext = () => {
     if (step < stepsData.length - 1) setStep(step + 1);
   };
 
   const handleBack = () => {
-    if (isVerifying) return;
+    if (isVerifying || isLoadingQr) return;
     if (step > 0) setStep(step - 1);
     else navigate(-1);
   };
@@ -196,7 +200,7 @@ export default function Onboarding() {
         variant="ghost"
         className="absolute top-4 left-4 sm:top-6 sm:left-6 z-50 w-12 h-12 p-0 flex items-center justify-center rounded-full bg-surface-low/30 hover:bg-surface-low/50 backdrop-blur-xl border border-white/5 text-white shadow-lg"
         aria-label={t('common.back')}
-        disabled={isVerifying || isSuccess}
+        disabled={isVerifying || isLoadingQr || isSuccess}
       >
         <ChevronLeft className="w-6 h-6" />
       </Button>
@@ -244,7 +248,6 @@ export default function Onboarding() {
                 {t('verify.qr_desc')}
               </p>
 
-              {/* QR */}
               <div className="p-4 bg-white rounded-2xl shadow-lg mb-6">
                 <QRCodeSVG
                   value={connectorURI}
@@ -292,7 +295,6 @@ export default function Onboarding() {
                 {currentData.description}
               </p>
 
-              {/* Error inline */}
               {qrError && (
                 <p className="text-red-400 text-sm mb-4">{qrError}</p>
               )}
@@ -307,7 +309,7 @@ export default function Onboarding() {
               {stepsData.map((_, i) => (
                 <button
                   key={i}
-                  onClick={() => !isVerifying && setStep(i)}
+                  onClick={() => !isVerifying && !isLoadingQr && setStep(i)}
                   className={cn(
                     'h-1.5 rounded-full transition-all duration-500 cursor-pointer',
                     i === step
@@ -315,7 +317,7 @@ export default function Onboarding() {
                       : 'w-1.5 bg-outline-variant hover:bg-primary/50'
                   )}
                   aria-label={t('onboarding.go_to_step', { step: i + 1 })}
-                  disabled={isVerifying}
+                  disabled={isVerifying || isLoadingQr}
                 />
               ))}
             </div>
@@ -326,10 +328,15 @@ export default function Onboarding() {
                   onClick={handleOpenWorldId}
                   size="lg"
                   variant="gradient"
-                  disabled={isVerifying}
+                  disabled={isVerifying || isLoadingQr}
                   className="w-full rounded-full flex items-center justify-center gap-2 group text-lg font-semibold h-14"
                 >
-                  {isVerifying ? (
+                  {isLoadingQr ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span className="opacity-80">{t('verify.btn_loading')}</span>
+                    </>
+                  ) : isVerifying ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin" />
                       <span className="opacity-80">{t('verify.btn_verifying')}</span>

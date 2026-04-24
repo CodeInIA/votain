@@ -8,7 +8,6 @@ import { signRequest } from '@worldcoin/idkit-core/signing';
 const router = Router();
 const { privateKey } = getIssuerKeyPair();
 
-// El payload extiende JwtPayload para cumplir el constraint del genérico
 type VotainCredentialPayload = JwtPayload & {
   iss: string;
   sub: string;
@@ -18,7 +17,6 @@ type VotainCredentialPayload = JwtPayload & {
 
 const generateSalt = (): string => crypto.randomBytes(16).toString('base64url');
 
-// SDJWTConfig sin genérico — así acepta el constructor
 const sdJwtConfig: SDJWTConfig = {
   signer: async (data: string): Promise<string> => {
     return await issueSigner(data, privateKey);
@@ -38,8 +36,47 @@ const sdJwtConfig: SDJWTConfig = {
   saltGenerator: generateSalt,
 };
 
-// El genérico tipea .issue() y .verify(), no el constructor
 const sdJwt = new SDJwtInstance<VotainCredentialPayload>(sdJwtConfig);
+
+// ────────────────────────────────────────────────
+// GET /me — comprueba si hay sesión activa
+// ────────────────────────────────────────────────
+router.get('/me', (req: Request, res: Response) => {
+  const vc = req.cookies?.voter_vc;
+  if (!vc) return res.status(401).json({ authenticated: false });
+
+  try {
+    const payloadB64 = vc.split('.')[1];
+    const payload = JSON.parse(
+      Buffer.from(payloadB64, 'base64url').toString('utf-8')
+    ) as VotainCredentialPayload;
+
+    const now = Math.floor(Date.now() / 1000);
+    if (payload.exp < now) {
+      res.clearCookie('voter_vc');
+      return res.status(401).json({ authenticated: false, reason: 'expired' });
+    }
+
+    return res.status(200).json({
+      authenticated: true,
+      nullifier: payload.sub,
+    });
+  } catch {
+    return res.status(401).json({ authenticated: false, reason: 'invalid_token' });
+  }
+});
+
+// ────────────────────────────────────────────────
+// POST /logout
+// ────────────────────────────────────────────────
+router.post('/logout', (_req: Request, res: Response) => {
+  res.clearCookie('voter_vc', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+  });
+  return res.status(200).json({ success: true });
+});
 
 // ────────────────────────────────────────────────
 // POST /rp-signature
@@ -85,7 +122,6 @@ router.post('/verify-human', async (req: Request, res: Response) => {
 
     console.log('Verify payload received:', JSON.stringify(idkitResponse, null, 2));
 
-    // Verificar con la API v4 de Worldcoin
     const verifyRes = await fetch(`https://developer.world.org/api/v4/verify/${rpId}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -98,27 +134,32 @@ router.post('/verify-human', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid World ID proof', details: wldError });
     }
 
-    // Extraer nullifier_hash compatible con protocolo v3 y v4
     const nullifier_hash: string =
       idkitResponse.responses?.[0]?.nullifier ??
       idkitResponse.nullifier_hash ??
       '';
 
-    // Construir el payload de la credencial
     const now = Math.floor(Date.now() / 1000);
     const credentialPayload: VotainCredentialPayload = {
       iss: 'https://issuer.votain.local',
       sub: nullifier_hash,
       iat: now,
-      exp: now + 365 * 24 * 60 * 60,
+      exp: now + 7 * 24 * 60 * 60,
     };
 
     const issuedCredential = await sdJwt.issue(credentialPayload, {});
 
+    // Guardar el SD-JWT en una httpOnly cookie — nunca expuesto a JS
+    res.cookie('voter_vc', issuedCredential, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días en ms
+    });
+
     return res.status(200).json({
       success: true,
       message: 'Human verified successfully',
-      sdJwt: issuedCredential,
       nullifier: nullifier_hash,
     });
 
