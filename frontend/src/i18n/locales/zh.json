@@ -1,7 +1,8 @@
 {
   "landing": {
     "title": "Votain",
-    "voter_cta": "开始使用",
+    "voter_cta": "开始",
+    "login": "登录",
     "browse": "浏览选举",
     "how_it_works": "工作原理",
     "footer": {
@@ -9,32 +10,45 @@
       "terms": "条款",
       "privacy": "隐私",
       "language": "语言",
-      "copyright": "© 2026 Votain 协议"
+      "copyright": "© 2026 Votain Protocol"
     },
     "subtitle_1": "私密。可验证。",
-    "subtitle_2": "你的。",
-    "hero_desc": "以绝对的隐私参与民主进程。Votain 使用密码学证明来确保您的投票有效，而无需透露您的身份。",
+    "subtitle_2": "属于你。",
+    "hero_desc": "以完全隐私参与民主进程。Votain 使用密码学证明确保您的投票被计入，同时不泄露您的身份。",
     "are_you_organizer": "您是组织者吗？",
     "create_election_link": "创建选举"
   },
   "onboarding": {
-    "what_title": "欢迎来到 Votain",
-    "what_desc": "从任何设备安全而秘密地投票。没有人会知道您的选择。",
+    "what_title": "欢迎使用 Votain",
+    "what_desc": "从任何设备安全且秘密地投票。没有人会知道您的选择。",
     "privacy_title": "100% 匿名",
-    "privacy_desc": "我们使用 World ID 证明您是真人。我们永远不会保存您的个人数据。",
-    "coercion_title": "随时可以改变主意",
-    "coercion_desc": "如果有人强迫您投票，您可以稍后秘密重新投票。只计算您的最后一次投票。",
+    "privacy_desc": "我们使用 World ID 确保您是真实的人。我们从不存储您的数据。",
+    "coercion_title": "可以自由改变主意",
+    "coercion_desc": "如果有人强迫您投票，您可以稍后秘密重新投票。只计算最后一次。",
     "free_title": "完全免费",
-    "free_desc": "您无需支付任何费用或了解加密货币。组织者会处理一切。",
+    "free_desc": "您不需要支付任何费用或了解加密货币。组织者负责处理一切。",
     "btn_next": "下一步",
-    "btn_start": "开始验证"
+    "btn_start": "验证身份",
+    "go_to_step": "前往第 {{step}} 步"
   },
   "verify": {
     "title": "验证您的身份",
-    "description": "我们使用 World ID 来确保一人一票。您的生物识别技术永远不会离开您的设备。",
+    "description": "我们使用 World ID 确保每人一票。您的生物特征数据永远不会离开您的设备，也不会与我们共享。",
     "btn_verify": "使用 World ID 验证",
+    "btn_loading": "生成二维码中...",
+    "btn_verifying": "验证中...",
+    "qr_title": "使用 World ID 扫描",
+    "qr_desc": "打开 World ID 应用并扫描此码以验证您的身份。",
+    "qr_waiting": "等待验证中...",
     "success_toast": "身份验证成功",
+    "redirecting": "安全跳转中...",
     "error_toast": "验证失败或已取消",
-    "back": "返回"
+    "error_backend": "服务器端验证失败，请重试。",
+    "error_generic": "出了些问题，请重试。",
+    "back": "返回首页"
+  },
+  "common": {
+    "back": "返回",
+    "cancel": "取消"
   }
 }

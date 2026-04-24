@@ -2,6 +2,7 @@
   "landing": {
     "title": "Votain",
     "voter_cta": "Commencer",
+    "login": "Se connecter",
     "browse": "Parcourir les élections",
     "how_it_works": "Comment ça marche",
     "footer": {
@@ -13,28 +14,41 @@
     },
     "subtitle_1": "Privé. Vérifiable.",
     "subtitle_2": "À vous.",
-    "hero_desc": "Participez aux processus démocratiques avec une confidentialité absolue. Votain utilise des preuves cryptographiques pour s'assurer que votre vote compte sans révéler votre identité.",
+    "hero_desc": "Participez à des processus démocratiques en toute confidentialité. Votain utilise des preuves cryptographiques pour garantir que votre vote compte sans révéler votre identité.",
     "are_you_organizer": "Êtes-vous un organisateur ?",
     "create_election_link": "Créer une élection"
   },
   "onboarding": {
     "what_title": "Bienvenue sur Votain",
-    "what_desc": "Votez en toute sécurité et secrètement depuis n'importe quel appareil. Personne ne connaîtra jamais votre choix.",
+    "what_desc": "Votez en toute sécurité et confidentialité depuis n'importe quel appareil. Personne ne saura jamais ce que vous avez choisi.",
     "privacy_title": "100% Anonyme",
-    "privacy_desc": "Nous utilisons World ID pour prouver que vous êtes une vraie personne. Nous ne sauvegardons jamais vos données personnelles.",
-    "coercion_title": "N'hésitez pas à changer d'avis",
-    "coercion_desc": "Si quelqu'un vous force à voter, vous pouvez revoter en secret plus tard. Seul votre dernier vote compte.",
-    "free_title": "Totalement gratuit",
-    "free_desc": "Vous n'avez rien à payer ni à comprendre la crypto. L'organisateur s'occupe de tout.",
+    "privacy_desc": "Nous utilisons World ID pour nous assurer que vous êtes une vraie personne. Nous ne stockons jamais vos données.",
+    "coercion_title": "Libre de changer d'avis",
+    "coercion_desc": "Si quelqu'un vous force à voter, vous pouvez le refaire en secret plus tard. Seul le dernier compte.",
+    "free_title": "Entièrement gratuit",
+    "free_desc": "Vous n'avez rien à payer ni besoin de comprendre la crypto. L'organisateur s'occupe de tout.",
     "btn_next": "Suivant",
-    "btn_start": "Commencer la vérification"
+    "btn_start": "Vérifier l'identité",
+    "go_to_step": "Aller à l'étape {{step}}"
   },
   "verify": {
     "title": "Vérifiez votre identité",
-    "description": "Nous utilisons World ID pour garantir une personne, un vote. Vos données biométriques ne quittent jamais votre appareil.",
+    "description": "Nous utilisons World ID pour garantir un vote par personne. Vos données biométriques ne quittent jamais votre appareil et ne sont jamais partagées avec nous.",
     "btn_verify": "Vérifier avec World ID",
+    "btn_loading": "Génération du QR...",
+    "btn_verifying": "Vérification...",
+    "qr_title": "Scannez avec World ID",
+    "qr_desc": "Ouvrez l'application World ID et scannez ce code pour vérifier votre identité.",
+    "qr_waiting": "En attente de vérification...",
     "success_toast": "Identité vérifiée avec succès",
-    "error_toast": "La vérification a échoué ou a été annulée",
+    "redirecting": "Redirection sécurisée...",
+    "error_toast": "Vérification échouée ou annulée",
+    "error_backend": "La vérification a échoué côté serveur. Veuillez réessayer.",
+    "error_generic": "Une erreur s'est produite. Veuillez réessayer.",
     "back": "Retour à l'accueil"
+  },
+  "common": {
+    "back": "Retour",
+    "cancel": "Annuler"
   }
 }

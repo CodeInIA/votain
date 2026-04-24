@@ -2,8 +2,9 @@
   "landing": {
     "title": "Votain",
     "voter_cta": "Loslegen",
+    "login": "Anmelden",
     "browse": "Wahlen durchsuchen",
-    "how_it_works": "Wie es funktioniert",
+    "how_it_works": "So funktioniert es",
     "footer": {
       "protocol": "Votain Protocol",
       "terms": "Bedingungen",
@@ -11,30 +12,43 @@
       "language": "Sprache",
       "copyright": "© 2026 Votain Protocol"
     },
-    "subtitle_1": "Privat. Verifizierbar.",
+    "subtitle_1": "Privat. Überprüfbar.",
     "subtitle_2": "Deins.",
-    "hero_desc": "Nehmen Sie mit absoluter Privatsphäre an demokratischen Prozessen teil. Votain verwendet kryptografische Beweise, um sicherzustellen, dass Ihre Stimme zählt, ohne Ihre Identität preiszugeben.",
+    "hero_desc": "Nehmen Sie an demokratischen Prozessen in völliger Privatsphäre teil. Votain verwendet kryptografische Beweise, um sicherzustellen, dass Ihre Stimme zählt, ohne Ihre Identität preiszugeben.",
     "are_you_organizer": "Sind Sie ein Organisator?",
-    "create_election_link": "Wahl erstellen"
+    "create_election_link": "Eine Wahl erstellen"
   },
   "onboarding": {
     "what_title": "Willkommen bei Votain",
-    "what_desc": "Stimmen Sie sicher und geheim von jedem Gerät aus ab. Niemand wird je Ihre Wahl erfahren.",
+    "what_desc": "Stimmen Sie sicher und geheim von jedem Gerät ab. Niemand wird jemals wissen, was Sie gewählt haben.",
     "privacy_title": "100% Anonym",
-    "privacy_desc": "Wir verwenden World ID, um zu beweisen, dass Sie eine echte Person sind. Wir speichern niemals Ihre persönlichen Daten.",
-    "coercion_title": "Fühlen Sie sich frei zu ändern",
-    "coercion_desc": "Wenn Sie jemand zur Abstimmung zwingt, können Sie später heimlich erneut abstimmen. Nur Ihre letzte Stimme zählt.",
+    "privacy_desc": "Wir verwenden World ID, um sicherzustellen, dass Sie eine echte Person sind. Wir speichern niemals Ihre Daten.",
+    "coercion_title": "Frei, die Meinung zu ändern",
+    "coercion_desc": "Wenn jemand Sie zwingt zu wählen, können Sie es später heimlich noch einmal tun. Nur der letzte zählt.",
     "free_title": "Völlig kostenlos",
     "free_desc": "Sie müssen nichts bezahlen oder Krypto verstehen. Der Organisator kümmert sich um alles.",
     "btn_next": "Weiter",
-    "btn_start": "Überprüfung starten"
+    "btn_start": "Identität verifizieren",
+    "go_to_step": "Zu Schritt {{step}} gehen"
   },
   "verify": {
-    "title": "Überprüfen Sie Ihre Identität",
-    "description": "Wir verwenden World ID, um sicherzustellen: eine Person, eine Stimme. Ihre biometrischen Daten verlassen niemals Ihr Gerät.",
+    "title": "Verifizieren Sie Ihre Identität",
+    "description": "Wir verwenden World ID, um eine Stimme pro Person zu gewährleisten. Ihre biometrischen Daten verlassen niemals Ihr Gerät und werden niemals mit uns geteilt.",
     "btn_verify": "Mit World ID verifizieren",
+    "btn_loading": "QR wird generiert...",
+    "btn_verifying": "Verifizierung läuft...",
+    "qr_title": "Mit World ID scannen",
+    "qr_desc": "Öffnen Sie die World ID App und scannen Sie diesen Code, um Ihre Identität zu verifizieren.",
+    "qr_waiting": "Warte auf Verifizierung...",
     "success_toast": "Identität erfolgreich verifiziert",
+    "redirecting": "Sicher weiterleiten...",
     "error_toast": "Verifizierung fehlgeschlagen oder abgebrochen",
-    "back": "Zurück zum Start"
+    "error_backend": "Verifizierung auf dem Server fehlgeschlagen. Bitte erneut versuchen.",
+    "error_generic": "Etwas ist schiefgelaufen. Bitte erneut versuchen.",
+    "back": "Zurück zur Startseite"
+  },
+  "common": {
+    "back": "Zurück",
+    "cancel": "Abbrechen"
   }
 }

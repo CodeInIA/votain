@@ -2,39 +2,53 @@
   "landing": {
     "title": "Votain",
     "voter_cta": "시작하기",
-    "browse": "선거 찾아보기",
+    "login": "로그인",
+    "browse": "선거 둘러보기",
     "how_it_works": "작동 방식",
     "footer": {
       "protocol": "Votain 프로토콜",
-      "terms": "이용 약관",
-      "privacy": "개인정보 보호",
+      "terms": "이용약관",
+      "privacy": "개인정보",
       "language": "언어",
-      "copyright": "© 2026 Votain 프로토콜"
+      "copyright": "© 2026 Votain Protocol"
     },
     "subtitle_1": "비공개. 검증 가능.",
     "subtitle_2": "당신의 것.",
-    "hero_desc": "완벽한 프라이버시로 민주적 절차에 참여하세요. Votain은 신원을 노출시키지 않고 표가 계산되도록 암호학적 증명을 사용합니다.",
+    "hero_desc": "완전한 프라이버시로 민주적 과정에 참여하세요. Votain은 암호학적 증명을 사용하여 신원을 밝히지 않고 투표가 반영되도록 보장합니다.",
     "are_you_organizer": "주최자이신가요?",
     "create_election_link": "선거 만들기"
   },
   "onboarding": {
     "what_title": "Votain에 오신 것을 환영합니다",
-    "what_desc": "어떤 기기에서든 안전하고 비밀스럽게 투표하세요. 당신의 선택은 아무도 알 수 없습니다.",
-    "privacy_title": "100% 익명성",
-    "privacy_desc": "당신이 실제 사람임을 증명하기 위해 World ID를 사용합니다. 개인 데이터는 절대 저장하지 않습니다.",
-    "coercion_title": "자유롭게 마음을 바꾸세요",
-    "coercion_desc": "누군가 강제로 투표하게 한다면 나중에 몰래 다시 투표할 수 있습니다. 마지막 투표만 계산됩니다.",
+    "what_desc": "모든 기기에서 안전하고 비밀스럽게 투표하세요. 아무도 당신의 선택을 알 수 없습니다.",
+    "privacy_title": "100% 익명",
+    "privacy_desc": "World ID를 사용하여 실제 사람임을 확인합니다. 데이터를 절대 저장하지 않습니다.",
+    "coercion_title": "마음을 바꿀 자유",
+    "coercion_desc": "누군가 강제로 투표하게 했다면 나중에 몰래 다시 투표할 수 있습니다. 마지막 투표만 유효합니다.",
     "free_title": "완전 무료",
     "free_desc": "비용을 지불하거나 암호화폐를 이해할 필요가 없습니다. 주최자가 모든 것을 처리합니다.",
     "btn_next": "다음",
-    "btn_start": "인증 시작"
+    "btn_start": "신원 확인",
+    "go_to_step": "{{step}}단계로 이동"
   },
   "verify": {
-    "title": "신원 확인",
-    "description": "1인 1표를 보장하기 위해 World ID를 사용합니다. 귀하의 생체 정보는 기기 밖으로 유출되지 않습니다.",
+    "title": "신원을 확인하세요",
+    "description": "World ID를 사용하여 1인 1표를 보장합니다. 생체 인식 데이터는 기기를 절대 벗어나지 않으며 우리와 공유되지 않습니다.",
     "btn_verify": "World ID로 확인",
+    "btn_loading": "QR 생성 중...",
+    "btn_verifying": "확인 중...",
+    "qr_title": "World ID로 스캔",
+    "qr_desc": "World ID 앱을 열고 이 코드를 스캔하여 신원을 확인하세요.",
+    "qr_waiting": "확인 대기 중...",
     "success_toast": "신원이 성공적으로 확인되었습니다",
+    "redirecting": "안전하게 이동 중...",
     "error_toast": "확인 실패 또는 취소됨",
-    "back": "뒤로가기"
+    "error_backend": "서버에서 확인에 실패했습니다. 다시 시도하세요.",
+    "error_generic": "문제가 발생했습니다. 다시 시도하세요.",
+    "back": "홈으로 돌아가기"
+  },
+  "common": {
+    "back": "뒤로",
+    "cancel": "취소"
   }
 }

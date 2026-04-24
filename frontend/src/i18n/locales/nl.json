@@ -1,8 +1,9 @@
 {
   "landing": {
     "title": "Votain",
-    "voter_cta": "Aan de slag",
-    "browse": "Blader door verkiezingen",
+    "voter_cta": "Beginnen",
+    "login": "Inloggen",
+    "browse": "Verkiezingen bekijken",
     "how_it_works": "Hoe het werkt",
     "footer": {
       "protocol": "Votain Protocol",
@@ -13,28 +14,41 @@
     },
     "subtitle_1": "Privé. Verifieerbaar.",
     "subtitle_2": "Van jou.",
-    "hero_desc": "Neem deel aan democratische processen met absolute privacy. Votain gebruikt cryptografische bewijzen om ervoor te zorgen dat uw stem telt zonder uw identiteit prijs te geven.",
+    "hero_desc": "Neem deel aan democratische processen met volledige privacy. Votain gebruikt cryptografische bewijzen om te garanderen dat uw stem telt zonder uw identiteit te onthullen.",
     "are_you_organizer": "Bent u een organisator?",
-    "create_election_link": "Creëer een verkiezing"
+    "create_election_link": "Een verkiezing aanmaken"
   },
   "onboarding": {
     "what_title": "Welkom bij Votain",
-    "what_desc": "Stem veilig en geheim vanaf elk apparaat. Niemand zal ooit uw keuze weten.",
+    "what_desc": "Stem veilig en geheim vanaf elk apparaat. Niemand zal ooit weten wat u heeft gekozen.",
     "privacy_title": "100% Anoniem",
-    "privacy_desc": "We gebruiken World ID om te bewijzen dat u een echt persoon bent. We slaan uw persoonlijke gegevens nooit op.",
-    "coercion_title": "Voel u vrij om van gedachten te veranderen",
-    "coercion_desc": "Als iemand u dwingt te stemmen, kunt u later in het geheim opnieuw stemmen. Alleen uw laatste stem telt.",
-    "free_title": "Helemaal gratis",
+    "privacy_desc": "We gebruiken World ID om te verzekeren dat u een echte persoon bent. We slaan uw gegevens nooit op.",
+    "coercion_title": "Vrij om van gedachten te veranderen",
+    "coercion_desc": "Als iemand u dwingt te stemmen, kunt u het later in het geheim opnieuw doen. Alleen de laatste telt.",
+    "free_title": "Volledig gratis",
     "free_desc": "U hoeft niets te betalen of crypto te begrijpen. De organisator regelt alles.",
     "btn_next": "Volgende",
-    "btn_start": "Start verificatie"
+    "btn_start": "Identiteit verifiëren",
+    "go_to_step": "Ga naar stap {{step}}"
   },
   "verify": {
-    "title": "Verifieer uw identiteit",
-    "description": "We gebruiken World ID om één persoon, één stem te garanderen. Uw biometrie verlaat uw apparaat nooit.",
-    "btn_verify": "Verifieer met World ID",
+    "title": "Verifieer uw Identiteit",
+    "description": "We gebruiken World ID om één stem per persoon te garanderen. Uw biometrische gegevens verlaten nooit uw apparaat en worden nooit met ons gedeeld.",
+    "btn_verify": "Verifiëren met World ID",
+    "btn_loading": "QR genereren...",
+    "btn_verifying": "Verifiëren...",
+    "qr_title": "Scannen met World ID",
+    "qr_desc": "Open de World ID app en scan deze code om uw identiteit te verifiëren.",
+    "qr_waiting": "Wachten op verificatie...",
     "success_toast": "Identiteit succesvol geverifieerd",
+    "redirecting": "Veilig doorsturen...",
     "error_toast": "Verificatie mislukt of geannuleerd",
-    "back": "Terug naar start"
+    "error_backend": "Verificatie mislukt op de server. Probeer opnieuw.",
+    "error_generic": "Er is iets misgegaan. Probeer opnieuw.",
+    "back": "Terug naar home"
+  },
+  "common": {
+    "back": "Terug",
+    "cancel": "Annuleren"
   }
 }

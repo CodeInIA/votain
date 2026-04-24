@@ -1,40 +1,54 @@
 {
   "landing": {
     "title": "Votain",
-    "voter_cta": "はじめる",
-    "browse": "選挙を閲覧",
+    "voter_cta": "始める",
+    "login": "ログイン",
+    "browse": "選挙を見る",
     "how_it_works": "仕組み",
     "footer": {
       "protocol": "Votain プロトコル",
       "terms": "利用規約",
       "privacy": "プライバシー",
       "language": "言語",
-      "copyright": "© 2026 Votain プロトコル"
+      "copyright": "© 2026 Votain Protocol"
     },
     "subtitle_1": "プライベート。検証可能。",
     "subtitle_2": "あなたのもの。",
-    "hero_desc": "絶対的なプライバシーで民主的なプロセスに参加します。Votainは暗号証明を使用して、身元を明かすことなくあなたの投票を確実に計算します。",
+    "hero_desc": "完全なプライバシーで民主的プロセスに参加。Votainは暗号証明を使用して、あなたの身元を明かさずに投票が確実に反映されるようにします。",
     "are_you_organizer": "主催者ですか？",
-    "create_election_link": "選挙を作成する"
+    "create_election_link": "選挙を作成"
   },
   "onboarding": {
     "what_title": "Votainへようこそ",
-    "what_desc": "どのデバイスからでも安全かつ秘密裏に投票できます。あなたが何を選んだか誰にも分かりません。",
+    "what_desc": "どのデバイスからでも安全かつ秘密裏に投票できます。あなたの選択を誰も知ることはありません。",
     "privacy_title": "100%匿名",
-    "privacy_desc": "あなたが実在の人物であることを証明するためにWorld IDを使用します。個人データを保存することは決してありません。",
-    "coercion_title": "自由に意見を変更できます",
-    "coercion_desc": "誰かに投票を強制された場合は、後で秘密裏に再度投票できます。最後の投票のみがカウントされます。",
+    "privacy_desc": "World IDを使用してあなたが実在の人物であることを確認します。データは決して保存しません。",
+    "coercion_title": "意見を変える自由",
+    "coercion_desc": "誰かに強制されて投票した場合、後で秘密裏に再投票できます。最後の投票のみが有効です。",
     "free_title": "完全無料",
-    "free_desc": "お金を払ったり、暗号資産を理解したりする必要はありません。主催者がすべてを処理します。",
+    "free_desc": "支払いも暗号通貨の理解も不要です。主催者がすべて処理します。",
     "btn_next": "次へ",
-    "btn_start": "認証を開始"
+    "btn_start": "本人確認",
+    "go_to_step": "ステップ{{step}}へ"
   },
   "verify": {
-    "title": "本人確認を行う",
-    "description": "1人1票を保証するためにWorld IDを使用しています。生体認証データがデバイスを離れることはありません。",
+    "title": "本人確認",
+    "description": "World IDを使用して1人1票を保証します。生体認証データはデバイスから出ることはなく、私たちと共有されることもありません。",
     "btn_verify": "World IDで確認",
+    "btn_loading": "QR生成中...",
+    "btn_verifying": "確認中...",
+    "qr_title": "World IDでスキャン",
+    "qr_desc": "World IDアプリを開き、このコードをスキャンして本人確認を行ってください。",
+    "qr_waiting": "確認を待っています...",
     "success_toast": "本人確認が完了しました",
-    "error_toast": "確認が失敗またはキャンセルされました",
-    "back": "戻る"
+    "redirecting": "安全にリダイレクト中...",
+    "error_toast": "確認に失敗またはキャンセルされました",
+    "error_backend": "サーバー側で確認に失敗しました。再試行してください。",
+    "error_generic": "問題が発生しました。再試行してください。",
+    "back": "ホームに戻る"
+  },
+  "common": {
+    "back": "戻る",
+    "cancel": "キャンセル"
   }
 }

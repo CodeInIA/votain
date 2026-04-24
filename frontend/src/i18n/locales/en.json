@@ -1,8 +1,8 @@
 {
   "landing": {
     "title": "Votain",
-    "voter_cta": "Get Started",
-    "login": "Log in",
+    "voter_cta": "Get started",
+    "login": "Sign in",
     "browse": "Browse elections",
     "how_it_works": "How it works",
     "footer": {
@@ -14,28 +14,41 @@
     },
     "subtitle_1": "Private. Verifiable.",
     "subtitle_2": "Yours.",
-    "hero_desc": "Participate in democratic processes with absolute privacy. Votain uses cryptographic proofs to ensure your vote counts without revealing your identity.",
+    "hero_desc": "Participate in democratic processes with full privacy. Votain uses cryptographic proofs to ensure your vote counts without revealing your identity.",
     "are_you_organizer": "Are you an organizer?",
     "create_election_link": "Create an election"
   },
   "onboarding": {
     "what_title": "Welcome to Votain",
-    "what_desc": "Vote securely and secretly from any device. Nobody will ever know your choice.",
+    "what_desc": "Vote safely and secretly from any device. No one will ever know what you chose.",
     "privacy_title": "100% Anonymous",
-    "privacy_desc": "We use World ID to prove you are a real person. We never save your personal data.",
-    "coercion_title": "Feel free to change your mind",
-    "coercion_desc": "If someone forces you to vote, you can vote again in secret later. Only your last vote counts.",
+    "privacy_desc": "We use World ID to ensure you are a real person. We never store your data.",
+    "coercion_title": "Free to change your mind",
+    "coercion_desc": "If someone forces you to vote, you can do it again in secret later. Only the last one counts.",
     "free_title": "Completely free",
-    "free_desc": "You don't need to pay anything or understand crypto. The organizer takes care of everything.",
+    "free_desc": "You don't need to pay anything or understand crypto. The organizer handles everything.",
     "btn_next": "Next",
-    "btn_start": "Start Verification"
+    "btn_start": "Verify Identity",
+    "go_to_step": "Go to step {{step}}"
   },
   "verify": {
-    "title": "Verify Your Identity",
-    "description": "We use World ID to ensure one person, one vote. Your biometrics never leave your device and are never shared with us.",
+    "title": "Verify your Identity",
+    "description": "We use World ID to ensure one vote per person. Your biometric data never leaves your device and is never shared with us.",
     "btn_verify": "Verify with World ID",
+    "btn_loading": "Generating QR...",
+    "btn_verifying": "Verifying...",
+    "qr_title": "Scan with World ID",
+    "qr_desc": "Open the World ID app and scan this code to verify your identity.",
+    "qr_waiting": "Waiting for verification...",
     "success_toast": "Identity verified successfully",
-    "error_toast": "Verification failed or canceled",
-    "back": "Back to Onboarding"
+    "redirecting": "Redirecting securely...",
+    "error_toast": "Verification failed or cancelled",
+    "error_backend": "Verification failed on our end. Please try again.",
+    "error_generic": "Something went wrong. Please try again.",
+    "back": "Back to home"
+  },
+  "common": {
+    "back": "Back",
+    "cancel": "Cancel"
   }
 }
