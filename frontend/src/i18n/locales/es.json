@@ -37,6 +37,8 @@
     "btn_verify": "Verificar con World ID",
     "btn_loading": "Generando QR...",
     "btn_verifying": "Verificando...",
+    "btn_open_app": "Abrir World ID",
+    "mobile_return_hint": "Tras verificar en la app, vuelve a esta pestaña",
     "qr_title": "Escanea con World ID",
     "qr_desc": "Abre la app de World ID y escanea este código para verificar tu identidad.",
     "qr_waiting": "Esperando verificación...",

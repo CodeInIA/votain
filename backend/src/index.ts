@@ -6,22 +6,25 @@ import verifyRouter from './routes/verify.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
+const isDev = process.env.NODE_ENV !== 'production';
 
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true,
-}));
+app.use(cors(
+  isDev
+    ? // Desarrollo: aceptar cualquier origen (móvil, localhost, IP local...)
+      { origin: true, credentials: true }
+    : // Producción: solo el dominio real
+      { origin: process.env.FRONTEND_URL, credentials: true }
+));
+
 app.use(express.json());
 app.use(cookieParser());
 
-// Routes
 app.use('/api', verifyRouter);
 
-// Health check
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Votain VC Issuer Backend (Phase 2) is running' });
+  res.json({ status: 'OK', message: 'Votain VC Issuer Backend is running' });
 });
 
-app.listen(port, () => {
-  console.log(`Server is running at http://localhost:${port}`);
+app.listen(Number(port), isDev ? '0.0.0.0' : '127.0.0.1', () => {
+  console.log(`Server running in ${isDev ? 'DEVELOPMENT' : 'PRODUCTION'} mode on port ${port}`);
 });

@@ -37,6 +37,8 @@
     "btn_verify": "World IDで確認",
     "btn_loading": "QR生成中...",
     "btn_verifying": "確認中...",
+    "btn_open_app": "World ID を開く",
+    "mobile_return_hint": "アプリで確認後、このタブに戻ってください",
     "qr_title": "World IDでスキャン",
     "qr_desc": "World IDアプリを開き、このコードをスキャンして本人確認を行ってください。",
     "qr_waiting": "確認を待っています...",

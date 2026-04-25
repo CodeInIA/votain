@@ -22,6 +22,8 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
 export default function Onboarding() {
   const [step, setStep] = useState(0);
   const [isLoadingQr, setIsLoadingQr] = useState(false);
@@ -37,7 +39,7 @@ export default function Onboarding() {
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/verify-human`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include', // necesario para que el backend pueda setear la cookie
+        credentials: 'include',
         body: JSON.stringify(proof),
       });
 
@@ -49,7 +51,6 @@ export default function Onboarding() {
 
       const data = await res.json();
 
-      // Solo guardamos el nullifier — el SD-JWT ya vive en la httpOnly cookie
       if (data.nullifier) {
         localStorage.setItem('voter_nullifier', data.nullifier);
       }
@@ -95,6 +96,7 @@ export default function Onboarding() {
       }).preset(orbLegacy({}));
 
       setIsLoadingQr(false);
+      // Siempre seteamos connectorURI — en móvil se muestra botón, en desktop QR
       setConnectorURI(request.connectorURI);
       setIsVerifying(true);
 
@@ -232,7 +234,7 @@ export default function Onboarding() {
             </motion.div>
 
           ) : connectorURI ? (
-            /* ── Estado: mostrar QR ── */
+            /* ── Estado: esperando verificación ── */
             <motion.div
               key="qr"
               initial={{ opacity: 0, scale: 0.95 }}
@@ -248,14 +250,32 @@ export default function Onboarding() {
                 {t('verify.qr_desc')}
               </p>
 
-              <div className="p-4 bg-white rounded-2xl shadow-lg mb-6">
-                <QRCodeSVG
-                  value={connectorURI}
-                  size={200}
-                  level="M"
-                  includeMargin={false}
-                />
-              </div>
+              {isMobile ? (
+                <div className="flex flex-col items-center gap-4 mb-6">
+                  <a
+                    href={connectorURI}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-6 py-4 bg-white text-black font-semibold rounded-2xl flex items-center gap-3 shadow-lg active:scale-95 transition-transform"
+                  >
+                    <img src="/world-id-logo.svg" alt="" className="w-6 h-6" />
+                    {t('verify.btn_open_app')}
+                  </a>
+                  <p className="text-on-surface-variant text-xs text-center px-4">
+                    {t('verify.mobile_return_hint')}
+                  </p>
+                </div>
+              ) : (
+                /* Desktop: QR para escanear con el móvil */
+                <div className="p-4 bg-white rounded-2xl shadow-lg mb-6">
+                  <QRCodeSVG
+                    value={connectorURI}
+                    size={200}
+                    level="M"
+                    includeMargin={false}
+                  />
+                </div>
+              )}
 
               <div className="flex items-center gap-2 text-on-surface-variant text-xs mb-6">
                 <Loader2 className="w-4 h-4 animate-spin shrink-0" />

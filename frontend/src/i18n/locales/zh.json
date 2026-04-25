@@ -37,6 +37,8 @@
     "btn_verify": "使用 World ID 验证",
     "btn_loading": "生成二维码中...",
     "btn_verifying": "验证中...",
+    "btn_open_app": "打开 World ID",
+    "mobile_return_hint": "在应用中验证后，请返回此标签页",
     "qr_title": "使用 World ID 扫描",
     "qr_desc": "打开 World ID 应用并扫描此码以验证您的身份。",
     "qr_waiting": "等待验证中...",

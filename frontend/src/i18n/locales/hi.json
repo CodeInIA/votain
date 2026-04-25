@@ -37,6 +37,8 @@
     "btn_verify": "World ID से सत्यापित करें",
     "btn_loading": "QR बना रहे हैं...",
     "btn_verifying": "सत्यापित हो रहा है...",
+    "btn_open_app": "World ID खोलें",
+    "mobile_return_hint": "ऐप में सत्यापन के बाद इस टैब पर वापस आएं",
     "qr_title": "World ID से स्कैन करें",
     "qr_desc": "World ID ऐप खोलें और अपनी पहचान सत्यापित करने के लिए इस कोड को स्कैन करें।",
     "qr_waiting": "सत्यापन की प्रतीक्षा में...",
