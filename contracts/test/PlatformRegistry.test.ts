@@ -1,11 +1,12 @@
 import { expect } from "chai";
-import "@nomicfoundation/hardhat-toolbox";
-import hre from "hardhat";
+import { network } from "hardhat";
+import { describe, it } from "node:test";
+
+const { ethers } = await network.create();
 
 describe("PlatformRegistry", function () {
   it("Should allow the owner to register a member", async function () {
-    const [owner, other] = await hre.ethers.getSigners();
-    const PlatformRegistry = await hre.ethers.getContractFactory("PlatformRegistry");
+    const PlatformRegistry = await ethers.getContractFactory("PlatformRegistry");
     const registry = await PlatformRegistry.deploy();
     await registry.waitForDeployment();
 
@@ -21,8 +22,7 @@ describe("PlatformRegistry", function () {
   });
 
   it("Should prevent registering the same nullifier twice", async function () {
-    const [owner] = await hre.ethers.getSigners();
-    const PlatformRegistry = await hre.ethers.getContractFactory("PlatformRegistry");
+    const PlatformRegistry = await ethers.getContractFactory("PlatformRegistry");
     const registry = await PlatformRegistry.deploy();
     await registry.waitForDeployment();
 
@@ -33,13 +33,13 @@ describe("PlatformRegistry", function () {
     await registry.registerMember(mockNullifier, mockIdentityCommitment1);
 
     await expect(
-      registry.registerMember(mockNullifier, mockIdentityCommitment2)
+      registry.registerMember(mockNullifier, mockIdentityCommitment2),
     ).to.be.revertedWith("Nullifier already registered");
   });
 
   it("Should prevent non-owners from registering members", async function () {
-    const [owner, other] = await hre.ethers.getSigners();
-    const PlatformRegistry = await hre.ethers.getContractFactory("PlatformRegistry");
+    const [, other] = await ethers.getSigners();
+    const PlatformRegistry = await ethers.getContractFactory("PlatformRegistry");
     const registry = await PlatformRegistry.deploy();
     await registry.waitForDeployment();
 
@@ -47,7 +47,7 @@ describe("PlatformRegistry", function () {
     const mockIdentityCommitment = 67890n;
 
     await expect(
-      registry.connect(other).registerMember(mockNullifier, mockIdentityCommitment)
+      registry.connect(other).registerMember(mockNullifier, mockIdentityCommitment),
     ).to.be.revertedWith("Not owner");
   });
 });

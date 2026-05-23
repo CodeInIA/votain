@@ -71,21 +71,25 @@ export default function Onboarding() {
     setQrError(null);
     setIsLoadingQr(true);
     try {
+      const worldIdAction = import.meta.env.VITE_WORLD_ID_ACTION ?? 'vote-registration';
+      const worldIdAppId = import.meta.env.VITE_WORLD_ID_APP_ID;
+      const worldIdRpId = import.meta.env.VITE_WORLD_ID_RP_ID;
+
       const rpSigRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/rp-signature`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ action: import.meta.env.VITE_WORLD_ID_ACTION }),
+        body: JSON.stringify({ action: worldIdAction }),
       });
 
       if (!rpSigRes.ok) throw new Error('Failed to fetch rp-signature');
       const rpSig = await rpSigRes.json();
 
       const request = await IDKit.request({
-        app_id: import.meta.env.VITE_WORLD_ID_APP_ID,
-        action: import.meta.env.VITE_WORLD_ID_ACTION,
+        app_id: worldIdAppId,
+        action: worldIdAction,
         rp_context: {
-          rp_id: import.meta.env.VITE_WORLD_ID_RP_ID,
+          rp_id: worldIdRpId,
           nonce: rpSig.nonce,
           created_at: rpSig.created_at,
           expires_at: rpSig.expires_at,
@@ -96,7 +100,7 @@ export default function Onboarding() {
       }).preset(orbLegacy({}));
 
       setIsLoadingQr(false);
-      // Siempre seteamos connectorURI — en móvil se muestra botón, en desktop QR
+      // Always set connectorURI — on mobile shows deep-link button, on desktop shows QR
       setConnectorURI(request.connectorURI);
       setIsVerifying(true);
 
@@ -213,7 +217,7 @@ export default function Onboarding() {
       >
         <AnimatePresence mode="wait">
 
-          {/* ── Estado: éxito ── */}
+          {/* ── Success state ── */}
           {isSuccess ? (
             <motion.div
               key="success"
@@ -234,7 +238,7 @@ export default function Onboarding() {
             </motion.div>
 
           ) : connectorURI ? (
-            /* ── Estado: esperando verificación ── */
+            /* ── Awaiting verification ── */
             <motion.div
               key="qr"
               initial={{ opacity: 0, scale: 0.95 }}
@@ -266,7 +270,7 @@ export default function Onboarding() {
                   </p>
                 </div>
               ) : (
-                /* Desktop: QR para escanear con el móvil */
+                /* Desktop: QR to scan with mobile */
                 <div className="p-4 bg-white rounded-2xl shadow-lg mb-6">
                   <QRCodeSVG
                     value={connectorURI}
@@ -294,7 +298,7 @@ export default function Onboarding() {
             </motion.div>
 
           ) : (
-            /* ── Estado: paso normal ── */
+            /* ── Normal step state ── */
             <motion.div
               key={step}
               initial={{ opacity: 0, scale: 0.95 }}
@@ -322,7 +326,7 @@ export default function Onboarding() {
           )}
         </AnimatePresence>
 
-        {/* ── Dots + botones de navegación ── */}
+        {/* ── Step dots + navigation buttons ── */}
         {!isSuccess && !connectorURI && (
           <div className="w-full mt-4 sm:mt-6 flex flex-col items-center">
             <div className="flex gap-2 mb-6 sm:mb-8">

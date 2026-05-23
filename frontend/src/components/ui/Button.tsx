@@ -2,7 +2,6 @@ import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '../../lib/utils';
 
-// Definir las variantes del botón para mantener la cohesión de diseño
 export const buttonVariants = cva(
   "inline-flex items-center justify-center whitespace-nowrap rounded-sm font-medium transition-all focus-visible:outline-none cursor-pointer disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]",
   {

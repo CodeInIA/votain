@@ -39,7 +39,7 @@ const sdJwtConfig: SDJWTConfig = {
 const sdJwt = new SDJwtInstance<VotainCredentialPayload>(sdJwtConfig);
 
 // ────────────────────────────────────────────────
-// GET /me — comprueba si hay sesión activa
+// GET /me — check for an active session
 // ────────────────────────────────────────────────
 router.get('/me', (req: Request, res: Response) => {
   const vc = req.cookies?.voter_vc;
@@ -149,12 +149,12 @@ router.post('/verify-human', async (req: Request, res: Response) => {
 
     const issuedCredential = await sdJwt.issue(credentialPayload, {});
 
-    // Guardar el SD-JWT en una httpOnly cookie — nunca expuesto a JS
+    // Store SD-JWT as an httpOnly cookie — never exposed to JS
     res.cookie('voter_vc', issuedCredential, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días en ms
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in ms
     });
 
     return res.status(200).json({

@@ -10,9 +10,9 @@ const isDev = process.env.NODE_ENV !== 'production';
 
 app.use(cors(
   isDev
-    ? // Desarrollo: aceptar cualquier origen (móvil, localhost, IP local...)
+    ? // Development: accept any origin (mobile, localhost, local IP)
       { origin: true, credentials: true }
-    : // Producción: solo el dominio real
+    : // Production: restrict to the real frontend domain
       { origin: process.env.FRONTEND_URL, credentials: true }
 ));
 

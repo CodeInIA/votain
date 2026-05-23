@@ -15,6 +15,7 @@ contracts/artifacts/
 contracts/cache/
 contracts/typechain/
 contracts/typechain-types/
+contracts/types/
 contracts/coverage.json
 contracts/coverage/
 
@@ -24,6 +25,7 @@ frontend/dist/
 frontend/.eslintcache
 frontend/.next/
 frontend/out/
+frontend/*.tsbuildinfo
 
 # ------------- Express Backend -------------
 backend/dist/
