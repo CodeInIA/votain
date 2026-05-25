@@ -1,28 +1,28 @@
-# Votain TFG — Iterative Completion Plan
+# Votain TFG. Iterative Completion Plan
 
-> **This is the canonical copy of the plan** for any future AI agent to continue without prior context.
+> **This is the canonical copy of the plan** for any future agent to continue without prior context.
 
 ## Context
 
 **Votain** is an end-to-end verifiable, anonymous, coercion-resistant voting dApp on Polygon Amoy. The architecture combines:
 
-- **Smart contracts** Solidity (Semaphore V4, ERC-2771/ERC-4337) in `contracts/`
-- **Backend issuer** Node.js emitting Verifiable Credentials (SD-JWT) after validating World ID, in `backend/`. Will be deployed on **decentralized TEE** (Phala Network) at the end.
-- **Frontend** React + Vite with **ZeroDev (Account Abstraction + Passkeys)**, homomorphic Paillier, and `@semaphore-protocol/*` in `frontend/`. Will be published on **IPFS with CI/CD (Fleek)**.
+- **Smart contracts** in Solidity (Semaphore V4, ERC-2771/ERC-4337) inside `contracts/`.
+- **Backend issuer** in Node.js emitting Verifiable Credentials (SD-JWT) after validating World ID, inside `backend/`. Will be deployed on a **decentralized TEE** (Phala Network) at the end.
+- **Frontend** in React + Vite with **ZeroDev (Account Abstraction + Passkeys)**, homomorphic Paillier and `@semaphore-protocol/*` inside `frontend/`. Will be published on **IPFS with CI/CD (Fleek)**.
 - **Tally script** off-chain to filter votes by nullifier and decrypt results.
 
 ### Confirmed stack decisions
 
 | Piece | Decision | Replaces | Reason |
 |-------|----------|----------|--------|
-| Account Abstraction | **ZeroDev SDK v5** (free tier) | Biconomy v4 | Biconomy v4 had very outdated deps; ZeroDev v5 actively maintained, Passkeys support, ethers v6 aligned |
+| Account Abstraction | **ZeroDev SDK v5** (free tier) | Biconomy v4 | Biconomy v4 had very outdated deps. ZeroDev v5 is actively maintained, supports Passkeys, aligned with ethers v6 |
 | Frontend deploy | **Fleek (IPFS) free tier with GitHub CD** | Vercel | Keeps "Hosted on IPFS" badge from `stich.md`, immutable verifiable CID |
-| Backend issuer deploy | **Phala Network free tier (decentralized TEE) + MPC future work** | Centralized VPS | Issuer signs VCs — TEE with on-chain attestation upholds the TFG's trust principles |
-| IPFS tally pinning | **Pinata free tier (1 GB)** | — | Sufficient for JSON audit trail |
-| LaTeX thesis | **Overleaf free or local** | — | University template to confirm |
+| Backend issuer deploy | **Phala Network free tier (decentralized TEE) + MPC future work** | Centralized VPS | Issuer signs VCs. TEE with on-chain attestation upholds the TFG's trust principles |
+| IPFS tally pinning | **Pinata free tier (1 GB)** | n/a | Sufficient for JSON audit trail |
+| LaTeX thesis | **Overleaf free or local** | n/a | University template to confirm |
 | Everything else (World ID Portal, Polygon Amoy, GitHub Actions, Hardhat, Vitest, Playwright, Zotero) | Free / open source | | |
 
-**Cross-cutting constraint**: NOTHING with recurring cost. If a service claims free tier but requires a card, evaluate alternative first.
+**Cross-cutting constraint**: NOTHING with recurring cost. If a service claims free tier but requires a card, evaluate an alternative first.
 
 ### Verified state as of 2026-05-23
 
@@ -41,30 +41,76 @@ The dApp **must look and work well on both PC and mobile**. This is an acceptanc
 
 | MCP | Usage | Milestone needed |
 |-----|-------|-----------------|
-| **Playwright MCP** | Screenshots at mobile (375×667), tablet (768×1024), desktop (1440×900) | H1-H4 + H7-H8 |
-| **Stitch MCP / stich.md** | Consult original designs before implementing each screen. Fallback: read `stich.md` from `C:\Users\virus\OneDrive\UNI\4\TFG\stich\stich.md` | All Phase A (H1-H4) |
-| **Chrome DevTools MCP** | Inspect layouts, overflow, WCAG contrast | H1-H4 |
-| **Filesystem MCP** | Read assets from `OneDrive/UNI/4/TFG/stich/` | H1-H4 |
+| **Playwright MCP** | Screenshots at mobile (375×667), tablet (768×1024), desktop (1440×900) | H1 to H4, H7, H8 |
+| **Stitch MCP / stich.md** | Consult original designs before implementing each screen. Fallback: read `stich.md` from `C:\Users\virus\OneDrive\UNI\4\TFG\stich\stich.md` | All Phase A (H1 to H4) |
+| **Chrome DevTools MCP** | Inspect layouts, overflow, WCAG contrast | H1 to H4 |
+| **Filesystem MCP** | Read assets from `OneDrive/UNI/4/TFG/stich/` | H1 to H4 |
 
 **Mandatory procedure for each new screen**:
-1. Read `stich.md` → understand layout, states, copy, palette.
+
+1. Read `stich.md`. Understand layout, states, copy, palette.
 2. Implement.
-3. Playwright MCP → screenshots at 3 viewports → save to `docs/progress/H<n>/screens/<name>/`.
-4. Review: overflow / buttons <44px / insufficient contrast → iterate.
+3. Playwright MCP. Screenshots at 3 viewports, saved to `docs/progress/H<n>/screens/<name>/`.
+4. Review. Overflow, buttons <44px, insufficient contrast: iterate.
 
 ### User decisions on process
 
-- **Order**: visual design of all 24 screens first (hardcoded data), then real integration.
+- **Order**. Visual design of all 24 screens first (hardcoded data), then real integration.
 - **Everything free tier**.
 - **Latest versions always**. Dependency audit before each milestone.
 - **Agent NEVER does `git commit`**. User reviews diffs and commits.
-- **Goal**: July 2026 (extraordinary), September 2026 if needed.
-- **Scope**: complete per `copilot-instructions.md` (PRD) and `stich.md` (24 screens).
+- **Goal**. July 2026 (extraordinary), September 2026 if needed.
+- **Scope**. Complete per `copilot-instructions.md` (PRD) and `stich.md` (24 screens).
 
 ### Important distinction: "hardcoded data" vs "mocks"
 
-- **Phase A**: hardcoded data in `src/data/seed.ts` or inline. NO technical mocks (fake Promise.resolve, fake interfaces).
-- **Phase B**: real integration. No mocks. If a screen needs a new endpoint/function, add it in the same milestone.
+- **Phase A**: hardcoded data in `src/data/seed.ts` or inline. NO technical mocks (fake `Promise.resolve`, fake interfaces).
+- **Phase B**: real integration. No mocks. If a screen needs a new endpoint or function, add it in the same milestone.
+
+### Voting types (decision 2026-05-25, suggested by thesis advisor)
+
+The organizer who creates an election picks the **winner determination rule**. Four supported types broaden the use cases significantly (not just democratic elections):
+
+| Type | Approval rule | Example use case |
+|------|---------------|------------------|
+| `SIMPLE_PLURALITY` | Candidate with the most votes wins, even by a 1-vote margin. No minimum threshold | Local elections, most parliamentary seats, club president |
+| `ABSOLUTE_MAJORITY` | yes-votes > 50% of total eligible voters. Can result in no winner if no one crosses the threshold | Public elections with majority requirement, referendums |
+| `SUPERMAJORITY_TWO_THIRDS` | yes-votes ≥ ⌈2/3⌉ of total eligible voters | Bylaw changes, board decisions, constitutional amendments |
+| `WITNESS_THRESHOLD` | yes-votes ≥ N (absolute number, not percentage) | Wedding (4 witnesses), notarial multi-sig, cooperative quorum |
+
+Default in the Create Election wizard: `SIMPLE_PLURALITY` (most common globally).
+
+**Cryptographic impact**: minimal. All three rules operate on the same Paillier homomorphic sum of ciphertexts. Only the post-decryption threshold check differs.
+
+**Layer impact**:
+
+- **Contracts (H5)**: `ElectionV4` gets a `VotingType` enum field + `thresholdValue` uint (used as N for WITNESS_THRESHOLD, ignored for the others). `publishResults` applies the corresponding rule.
+- **Tally script (H9)**: same Paillier sum, branches on `VotingType` for the Approved/Rejected verdict.
+- **Frontend Create Election wizard (H3 visual, H8 real)**: extra step "Voting type". Selecting WITNESS_THRESHOLD reveals an N input.
+- **Frontend ballot UIs (H2)**: candidate-vs-Yes/No layouts depending on type. Wedding-style witness vote shows fewer candidates and clearer Approve/Reject framing.
+- **`seed.ts` (H2)**: must include at least one example of each voting type so all UI states are covered in Phase A.
+- **Results UI (H2 visual, H9 real)**: outcome rendering changes. Yes/No outcome for witness and supermajority; multi-candidate outcome for majority elections.
+
+**Out of scope** (future work, noted in chapter 10 of the thesis): ranked-choice voting, STV, Borda count, quadratic voting. These either require additional cryptography or contradict the additive-homomorphic tally design.
+
+### Identity and selective disclosure sources (decision 2026-05-25)
+
+For national or restricted elections that require attribute verification (age, nationality, region), Votain delegates to **World ID Credentials** instead of building the document-reading and ZK-proof pipeline from scratch.
+
+| Source | What it provides | Status for Spain | Notes |
+|--------|------------------|------------------|-------|
+| **World ID Credentials** | Local NFC read of passport/national-ID chip, ICAO 9303 PKI verification, ZK proofs of `ageOver18`, `nationality`, etc. | ✅ Spanish passport works (ICAO universal). ❌ Spanish DNI not yet supported (Feb 2026) | Primary identity source. Integrated via IDKit. The dApp sees only yes/no per requested attribute. |
+| **EUDI Wallet (eIDAS 2.0)** | EU-wide digital identity wallet with SD-JWT VC. Mandatory in EU late 2026 to 2027. | 🟡 Pilot stage. Spain DNI integration scheduled. | Future work (thesis chapter 10). Backend SD-JWT issuer is already SD-JWT VC compatible, so integration is a connector, not a rewrite. |
+| **Demo issuer (TFG fallback)** | Self-declared attributes during onboarding, signed by Votain's backend EdDSA key. Carries an explicit `evidence: "self-declared"` claim. | Always available | Used during development and for the TFG demo so testers without a supported passport can still vote. UI shows a clear disclaimer. |
+
+All three sources emit an SD-JWT VC with the same attribute schema (`country`, `ageOver18`, `region`). The rest of Votain is source-agnostic.
+
+**Layer impact**:
+
+- **Backend (H6)**: scope of "selective disclosure" reduces. No need to implement attribute extraction from scratch. Instead, integrate World ID Credentials via IDKit and keep the demo issuer for fallback. Architect the SD-JWT issuer as a thin connector layer that can plug in EUDI Wallet later.
+- **Frontend Onboarding (H2 visual, H7 real)**: extra step in the onboarding flow where the user picks "Verify with my passport (World ID)" or "Demo identity (development only)".
+- **Election eligibility check (H7)**: same code path regardless of which source emitted the SD-JWT. The eligibility checklist in Screen 8 just reads the VC.
+- **Thesis (H12.3)**: dedicated section on comparison of the three sources, trust model of each, and roadmap to EUDI Wallet.
 
 ---
 
@@ -72,156 +118,162 @@ The dApp **must look and work well on both PC and mobile**. This is an acceptanc
 
 Each milestone produces a concrete artifact that the user validates before advancing.
 
-**Validation**: live demo → screenshots in `docs/progress/H<n>/` → textual confirmation "validated H<n>".
+**Validation**: live demo, screenshots in `docs/progress/H<n>/`, textual confirmation "validated H<n>".
 
-**After each milestone**: update `docs/dev/state.md` + list changes for commit.
+**After each milestone**: update `docs/dev/state.md` and list changes for commit.
 
 ---
 
 ## Milestones
 
-### Milestone 0 — Bootstrap, dependency upgrade, AI docs ✅ COMPLETED 2026-05-23
+### Milestone 0. Bootstrap, dependency upgrade, dev docs ✅ COMPLETED 2026-05-23
 
-- [x] Dependency audit and upgrade (contracts, backend, frontend)
-- [x] Biconomy → ZeroDev migration in frontend/package.json
-- [x] Root CLAUDE.md + 3 sub-CLAUDE.md
-- [x] docs/PLAN.md + docs/dev/{architecture,glossary,conventions,state}.md
-- [x] .env.example in backend/ and frontend/
-- [ ] Confirm LaTeX thesis template — PENDING user response
-- [ ] Verify free tier access: ZeroDev, Fleek, Pinata, Phala, World ID
-- [ ] MCPs: Playwright MCP verified at 3 viewports
+- [x] Dependency audit and upgrade (contracts, backend, frontend).
+- [x] Biconomy to ZeroDev migration in `frontend/package.json`.
+- [x] Root `CONTRIBUTING.md` + per-module `DEVELOPMENT.md`.
+- [x] `docs/PLAN.md` + `docs/dev/{architecture,glossary,conventions,state}.md`.
+- [x] `.env.example` in `backend/` and `frontend/`.
+- [x] Hardhat 3 migration (config, tests, deploy script).
+- [x] Solidity 0.8.35 and TypeScript target ESNext.
+- [x] MIT to AGPL-3.0 relicense for dual-licensing strategy.
+- [x] Playwright MCP installed and configured (`@playwright/mcp` via `node` + full path to `cli.js`, `--headless` flag, Chromium installed). Actual screenshot verification at 3 viewports happens in H1 when implementing screens.
+- [ ] Confirm LaTeX thesis template. PENDING user response.
+- [ ] Verify free tier access: ZeroDev, Fleek, Pinata, Phala, World ID.
 
 ---
 
-## PHASE A — Visual design of all 24 screens (H1-H4)
+## PHASE A. Visual design of all 24 screens (H1 to H4)
 
-> Screens use hardcoded data. Navigation works. Blockchain/backend actions → toast "integration pending".
+> Screens use hardcoded data. Navigation works. Blockchain or backend actions show toast "integration pending".
 
-### Milestone 1 — Design system and base components (3-5 days)
+### Milestone 1. Design system and base components (3 to 5 days)
 
 **Goal**: building blocks aligned with `stich.md` (Liquid Glass iOS 26, dark mode, cold accent palette).
 
-- [ ] Design tokens: `tailwind.config.ts`, `index.css` (colors, typography, radii, blur, mesh background)
-- [ ] UI components in `src/components/ui/`: Button (review variants), Card, Badge (8 states + Verified blockchain + IPFS + Tie + Role), Modal/Dialog, Input/Textarea/Select, RadioCard (min 48px), Checkbox/Switch, Skeleton, Spinner/ProgressDots/Stepper, Toast, Countdown (timezone-aware), BarChart (horizontal), Avatar/IdentityCommitment, Dropdown/LanguageSelector, EligibilityChecklistRow, GasBalanceWidget, BlockchainBadge/IPFSBadge
-- [ ] Layout components: Header (role indicator), Footer, BottomTabNav (mobile), TopNav (desktop)
-- [ ] Fix Onboarding tests (i18n setup in vitest)
-- [ ] `/dev/components` showcase page (DEV only)
+- [ ] Design tokens: `tailwind.config.ts`, `index.css` (colors, typography, radii, blur, mesh background).
+- [ ] UI components in `src/components/ui/`: Button (review variants), Card, Badge (8 states + Verified blockchain + IPFS + Tie + Role), Modal/Dialog, Input/Textarea/Select, RadioCard (min 48px), Checkbox/Switch, Skeleton, Spinner/ProgressDots/Stepper, Toast, Countdown (timezone-aware), BarChart (horizontal), Avatar/IdentityCommitment, Dropdown/LanguageSelector, EligibilityChecklistRow, GasBalanceWidget, BlockchainBadge/IPFSBadge.
+- [ ] Layout components: Header (role indicator), Footer, BottomTabNav (mobile), TopNav (desktop).
+- [ ] Fix Onboarding tests (i18n setup in vitest).
+- [ ] `/dev/components` showcase page (DEV only).
 
-**Validation**: `/dev/components` shows all components in their variants. Mobile + desktop responsive. Lighthouse a11y ≥90.
-
----
-
-### Milestone 2 — Public + Voter screens (Screens 1-3, 4-13, 23, 24) (6-9 days)
-
-- [ ] `src/data/seed.ts` — 6 elections (all phases), candidates, fake voters
-- [ ] Screen 1: Discovery (card grid, filters, search, empty states)
-- [ ] Screen 2: Public Preview (details, countdown, read-only candidates, auth overlay CTA)
-- [ ] Screen 3: Public Results (bar chart, glowing winner, tie state, export JSON)
-- [ ] Screen 23: How It Works (4 step cards)
-- [ ] Screen 4: Onboarding step 0 (language + IP auto-detect)
-- [ ] Screen 5: World ID Verification (functional — already implemented in backend)
-- [ ] Screen 6: Re-verification UI states
-- [ ] Screen 7: Voter Election List (phase-aware CTAs, countdown red <1h)
-- [ ] Screen 8: Election Detail Enrollment (hardcoded eligibility checklist)
-- [ ] Screen 9: Election Detail Active (candidate selector, blank vote)
-- [ ] Screen 10: ZK Proof Generation (3-step overlay, simulated setTimeout)
-- [ ] Screen 11: Vote Confirmation (animated checkmark, hardcoded reference)
-- [ ] Screen 12: Change Vote (selector + modal)
-- [ ] Screen 13: Voter History (seed data)
-- [ ] Screen 24: Verify Receipt (input + seed data)
-
-**Validation**: full public+voter flow on mobile and desktop, coherent with `stich.md`. Video in `docs/progress/H2/`.
+**Validation**: `/dev/components` shows all components in their variants. Mobile and desktop responsive. Lighthouse a11y ≥90.
 
 ---
 
-### Milestone 3 — Organizer screens (Screens 14-20) (5-7 days)
+### Milestone 2. Public + Voter screens (Screens 1 to 3, 4 to 13, 23, 24) (6 to 9 days)
 
-- [ ] Screen 14: Passkey + Wallet Setup (step UI, WRONG NETWORK state)
-- [ ] Screen 15: Organizer Dashboard (glass cards, hardcoded metrics)
-- [ ] Screen 16: Create Election (4-step wizard, timeline, dynamic candidates)
-- [ ] Screen 17: Election Detail Organizer (phase-gated controls, passkey confirm modals)
-- [ ] Screen 18: Gas Management (color-coded balance, deposit form)
-- [ ] Screen 19: Registered Members (truncated identity commitments, search)
-- [ ] Screen 20: Organizer Profile (edit display name, passkeys list)
+- [ ] `src/data/seed.ts`. 8 elections covering all phases AND all 4 voting types: at least one `SIMPLE_PLURALITY` multi-candidate (e.g. student council), one `ABSOLUTE_MAJORITY` Yes/No referendum, one `SUPERMAJORITY_TWO_THIRDS` bylaw change, one `WITNESS_THRESHOLD` wedding with N=4 testigos. Include candidates and fake voters per election.
+- [ ] Screen 1. Discovery (card grid, filters, search, empty states).
+- [ ] Screen 2. Public Preview (details, countdown, read-only candidates, auth overlay CTA, voting-type badge with threshold rule shown explicitly: "most votes wins" for `SIMPLE_PLURALITY`, ">50%" for `ABSOLUTE_MAJORITY`, "≥2/3" for `SUPERMAJORITY_TWO_THIRDS`, "≥4 testigos" for `WITNESS_THRESHOLD`).
+- [ ] Screen 3. Public Results (renders four layouts: bar chart with highest-bar winner for `SIMPLE_PLURALITY`, bar chart with threshold line for `ABSOLUTE_MAJORITY`, Yes/No outcome card for `SUPERMAJORITY_TWO_THIRDS` and `WITNESS_THRESHOLD`, glowing winner, tie state, "Threshold not met" state, export JSON).
+- [ ] Screen 23. How It Works (4 step cards).
+- [ ] Screen 4. Onboarding step 0 (language + IP auto-detect).
+- [ ] Screen 5. World ID Verification (functional, already implemented in backend).
+- [ ] Screen 6. Re-verification UI states.
+- [ ] Screen 7. Voter Election List (phase-aware CTAs, countdown red <1h).
+- [ ] Screen 8. Election Detail Enrollment (hardcoded eligibility checklist).
+- [ ] Screen 9. Election Detail Active (candidate selector for `SIMPLE_PLURALITY` and `ABSOLUTE_MAJORITY`, Yes/No selector for `SUPERMAJORITY_TWO_THIRDS` and `WITNESS_THRESHOLD`, blank vote always available).
+- [ ] Screen 10. ZK Proof Generation (3-step overlay, simulated `setTimeout`).
+- [ ] Screen 11. Vote Confirmation (animated checkmark, hardcoded reference).
+- [ ] Screen 12. Change Vote (selector + modal).
+- [ ] Screen 13. Voter History (seed data).
+- [ ] Screen 24. Verify Receipt (input + seed data).
 
-**Validation**: full organizer flow. Actions trigger correct modals but respond with toast "integration pending". Mobile + desktop responsive.
-
----
-
-### Milestone 4 — Shared screens + full i18n + visual polish (Screens 21, 22) (3-4 days)
-
-- [ ] Screen 21: Error & Empty States (14 variants)
-- [ ] Screen 22: Transaction Pending Modal (pending/success/failed simulated)
-- [ ] i18n audit: all strings from H2-H3 translated to 13 JSON files
-- [ ] IP-based language auto-detect (ipapi.co free, 1k req/day)
-- [ ] Visual polish: 24 screens coherent
-- [ ] Framer Motion animations + motion-reduce respect
-- [ ] WCAG 2.1 AA (Lighthouse / axe)
-- [ ] Lighthouse ≥85 performance, code-splitting lazy WASM/Paillier
-- [ ] E2E tests with Playwright: smoke test all 24 screens
-- [ ] Clean up TODOs, console.logs
-
-**Validation**: full dApp ✅. Major checkpoint → move to real integration.
-
-> 🛑 **Major checkpoint — Phase A complete**: dApp has all 24 screens with final design, functional navigation, and i18n. Next phase: real integration.
+**Validation**: full public and voter flow on mobile and desktop, coherent with `stich.md`. Video in `docs/progress/H2/`.
 
 ---
 
-## PHASE B — Real integration (H5-H9)
+### Milestone 3. Organizer screens (Screens 14 to 20) (5 to 7 days)
 
-### Milestone 5 — Production contracts + frontend client (4-6 days)
+- [ ] Screen 14. Passkey + Wallet Setup (step UI, WRONG NETWORK state).
+- [ ] Screen 15. Organizer Dashboard (glass cards, hardcoded metrics).
+- [ ] Screen 16. Create Election (5-step wizard: basics, **voting type + threshold**, timeline, dynamic candidates or Yes/No, settings/eligibility). The voting-type step lets the organizer pick `SIMPLE_PLURALITY` (default) / `ABSOLUTE_MAJORITY` / `SUPERMAJORITY_TWO_THIRDS` / `WITNESS_THRESHOLD`. When `WITNESS_THRESHOLD` is selected, show an N input (default 2, min 1).
+- [ ] Screen 17. Election Detail Organizer (phase-gated controls, passkey confirm modals).
+- [ ] Screen 18. Gas Management (color-coded balance, deposit form).
+- [ ] Screen 19. Registered Members (truncated identity commitments, search).
+- [ ] Screen 20. Organizer Profile (edit display name, passkeys list).
 
-Part A — Contracts: official Semaphore verifier, new functions, coverage ≥80%, Amoy deploy + PolygonScan verify
-Part B — Frontend: `src/lib/contracts.ts`, `src/lib/zerodev.ts`, `src/hooks/usePasskeys.ts`, `src/lib/semaphore.ts`, `src/lib/paillier.ts`
-
-### Milestone 6 — Complete backend issuer (3-4 days)
-
-Selective disclosure, Status List 2021, SD-JWT presentation, tests, rate limiting
-
-### Milestone 7 — Voter flow real integration (5-7 days)
-
-World ID + Enrollment + real ZK Proof + Vote + History
-
-### Milestone 8 — Organizer flow real integration (5-7 days)
-
-Real WebAuthn Passkey + Create Election tx + phase-gated controls
-
-### Milestone 9 — Tally script + IPFS results (3-4 days)
-
-`tally-votes.ts`, Pinata, `publishResults`, Privacy Quorum
+**Validation**: full organizer flow. Actions trigger correct modals but respond with toast "integration pending". Mobile and desktop responsive.
 
 ---
 
-## PHASE C — Decentralized deployments (H10-H11)
+### Milestone 4. Shared screens + full i18n + visual polish (Screens 21, 22) (3 to 4 days)
 
-### Milestone 10 — Frontend on IPFS + Fleek CD (1-2 days)
-### Milestone 11 — Backend on Phala TEE (4-6 days)
+- [ ] Screen 21. Error & Empty States (14 variants).
+- [ ] Screen 22. Transaction Pending Modal (pending/success/failed simulated).
+- [ ] i18n audit. All strings from H2 and H3 translated to 13 JSON files.
+- [ ] IP-based language auto-detect (ipapi.co free, 1k req/day).
+- [ ] Visual polish. 24 screens coherent.
+- [ ] Framer Motion animations + motion-reduce respect.
+- [ ] WCAG 2.1 AA (Lighthouse / axe).
+- [ ] Lighthouse ≥85 performance, code-splitting lazy WASM/Paillier.
+- [ ] E2E tests with Playwright. Smoke test all 24 screens.
+- [ ] Clean up TODOs, console.logs.
+
+**Validation**: full dApp ✅. Major checkpoint, move to real integration.
+
+> 🛑 **Major checkpoint, Phase A complete**: dApp has all 24 screens with final design, functional navigation and i18n. Next phase is real integration.
 
 ---
 
-## PHASE D — Thesis + Defense (H12-H13)
+## PHASE B. Real integration (H5 to H9)
 
-### Milestone 12 — LaTeX thesis (~80-120 pp.) — parallel from H0
-- H12.1 (parallel H0-H2): template + chapters 1-2
-- H12.2 (parallel H3-H5): chapters 3-4
-- H12.3 (parallel H6-H8): chapter 5 + start 6
-- H12.4 (parallel H9-H11): chapters 6-7
-- H12.5 (post H11): chapters 8-10 + appendices
+### Milestone 5. Production contracts + frontend client (4 to 6 days)
 
-### Milestone 13 — Defense (4-5 days, final week)
+Part A. Contracts: official Semaphore verifier, new functions (`cancelElection`, `closeEnrollmentEarly`, `closeVotingEarly`, `publishResults`, `markVoided`), `VotingType` enum (`SIMPLE_PLURALITY`, `ABSOLUTE_MAJORITY`, `SUPERMAJORITY_TWO_THIRDS`, `WITNESS_THRESHOLD`) + `thresholdValue` field on `ElectionV4` + per-type winner-determination logic in `publishResults`, coverage ≥80%, Amoy deploy + PolygonScan verify.
+Part B. Frontend: `src/lib/contracts.ts`, `src/lib/zerodev.ts`, `src/hooks/usePasskeys.ts`, `src/lib/semaphore.ts`, `src/lib/paillier.ts`.
 
-Slides Beamer/Slidev 15-20 slides, demo video, timed rehearsals
+### Milestone 6. Complete backend issuer (3 to 4 days)
+
+Status List 2021, SD-JWT presentation endpoint, tests, rate limiting. **Selective disclosure is delegated to World ID Credentials** (no need to implement passport NFC reading or PKI verification ourselves). Backend integrates IDKit's credential flow and keeps the demo issuer for users without a supported passport. SD-JWT VC schema (`country`, `ageOver18`, `region`) is normalised across both sources so the rest of the stack is identity-source agnostic.
+
+### Milestone 7. Voter flow real integration (5 to 7 days)
+
+World ID + Enrollment + real ZK Proof + Vote + History.
+
+### Milestone 8. Organizer flow real integration (5 to 7 days)
+
+Real WebAuthn Passkey + Create Election tx + phase-gated controls.
+
+### Milestone 9. Tally script + IPFS results (3 to 4 days)
+
+`tally-votes.ts`, Pinata, `publishResults`, Privacy Quorum. After the Paillier homomorphic sum is decrypted, branch on `VotingType` to compute the winner or Approved/Rejected verdict (most-votes / >50% / ≥2/3 / ≥N) and embed it in the published JSON.
+
+---
+
+## PHASE C. Decentralized deployments (H10 to H11)
+
+### Milestone 10. Frontend on IPFS + Fleek CD (1 to 2 days)
+
+### Milestone 11. Backend on Phala TEE (4 to 6 days)
+
+---
+
+## PHASE D. Thesis + Defense (H12 to H13)
+
+### Milestone 12. LaTeX thesis (~80 to 120 pp.), parallel from H0
+
+- H12.1 (parallel H0 to H2): template + chapters 1 and 2.
+- H12.2 (parallel H3 to H5): chapters 3 and 4.
+- H12.3 (parallel H6 to H8): chapter 5 + start of 6.
+- H12.4 (parallel H9 to H11): chapters 6 and 7.
+- H12.5 (post H11): chapters 8 to 10 + appendices.
+
+### Milestone 13. Defense (4 to 5 days, final week)
+
+Slides Beamer/Slidev 15 to 20 slides, demo video, timed rehearsals.
 
 ---
 
 ## Agent operating rules (BINDING)
 
 1. **NEVER `git commit` / `git push`**. Only list changes for the user to commit.
-2. **Phase A**: hardcoded data. NO technical mocks.
-3. **Phase B**: real integration. No mocks.
-4. **Always latest versions**: `npm-check-updates` before each milestone.
-5. **Always free tier**: evaluate alternative before using any paid service.
-6. **After each milestone**: update `docs/dev/state.md`.
-7. **Each new screen in Phase A**: Playwright at 3 viewports. Screenshots in `docs/progress/H<n>/screens/<name>/`.
-8. **All code comments and .md files must be in English**. No Spanish (or other language) in source code or AI docs.
-9. **Each milestone gets its own git branch**. Before committing any work for milestone N, create branch `hN/<slug>` from the current state (e.g., `h0/bootstrap`, `h1/design-system`, `h2/voter-screens`). The user creates the branch and commits; the agent only lists the changes.
+2. **Phase A**. Hardcoded data. NO technical mocks.
+3. **Phase B**. Real integration. No mocks.
+4. **Always latest versions**. Run `npm-check-updates` before each milestone.
+5. **Always free tier**. Evaluate an alternative before using any paid service.
+6. **After each milestone**. Update `docs/dev/state.md`.
+7. **Each new screen in Phase A**. Playwright at 3 viewports. Screenshots in `docs/progress/H<n>/screens/<name>/`.
+8. **All code comments and `.md` files must be in English**. No Spanish (or other language) in source code or developer docs.
+9. **No em dashes (`—`) or hyphens as clause separators in documentation**. Use periods, commas or colons. Hyphens are only allowed inside compound words (e.g. "end-to-end"), technical identifiers (e.g. "ERC-4337"), version numbers, file paths and command flags.
+10. **Each milestone gets its own git branch**. Before committing any work for milestone N, create branch `hN/<slug>` from the current state (e.g. `h0/bootstrap`, `h1/design-system`, `h2/voter-screens`). The user creates the branch and commits. The agent only lists the changes.

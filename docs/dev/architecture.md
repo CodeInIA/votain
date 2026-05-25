@@ -1,4 +1,4 @@
-# Votain — System Architecture
+# Votain. System Architecture
 
 ## Overview
 
@@ -110,9 +110,9 @@
 ### frontend/ (stich.md screens)
 
 **Public flow** (no auth):
-- Screen 1: Discovery — browse elections
-- Screen 2: Public Preview — election detail without auth
-- Screen 3: Public Results — verifiable results
+- Screen 1. Discovery. Browse elections.
+- Screen 2. Public Preview. Election detail without auth.
+- Screen 3. Public Results. Verifiable results.
 - Screen 23: How It Works
 
 **Voter flow** (authenticated via World ID):
@@ -144,17 +144,42 @@
 ## Election state machine
 
 ```
-Draft → Enrollment → Active → Tallying → Closed
+Draft → Enrollment → Active → Tallying → Closed (Approved / Rejected)
                   ↓          ↓
-               Cancelled   Voided (quorum not reached)
+               Cancelled   Voided (Privacy Quorum not reached)
 ```
+
+## Voting types
+
+Each election declares one of four winner-determination rules. The cryptographic primitive (Paillier homomorphic sum of Semaphore-proof-anchored ciphertexts) is identical across all four; only the post-decryption check differs.
+
+| `VotingType` | Approval rule | Example |
+|--------------|---------------|---------|
+| `SIMPLE_PLURALITY` | Candidate with most votes wins (margin can be a single vote) | Local elections, club president |
+| `ABSOLUTE_MAJORITY` | yes-votes > 50% of total eligible voters | Public elections with majority requirement |
+| `SUPERMAJORITY_TWO_THIRDS` | yes-votes ≥ ⌈2/3⌉ of total eligible voters | Bylaw changes |
+| `WITNESS_THRESHOLD` | yes-votes ≥ N (absolute number) | Wedding (N=4 testigos), multi-sig |
+
+The `ElectionV4` contract stores `VotingType votingType` and `uint thresholdValue` (used only for `WITNESS_THRESHOLD`). `publishResults` enforces the rule on chain after the off-chain tally script decrypts the homomorphic sum.
+
+## Identity sources for selective disclosure
+
+Eligibility attributes (age, nationality, region) are carried in SD-JWT VCs. Votain supports three plug-in sources that all emit the same schema, so the rest of the stack is source-agnostic.
+
+| Source | What it does | Trust model |
+|--------|--------------|-------------|
+| **World ID Credentials** | World App reads the user's passport NFC chip locally, verifies ICAO 9303 PKI, generates ZK proofs for requested attributes | Trust the chip issuer (national passport authority) and Worldcoin's verifier. No raw document data leaves the device |
+| **EUDI Wallet (eIDAS 2.0)** | User's national digital identity wallet emits an SD-JWT VC against a requested presentation definition | Trust the national eID PKI. Future work, mandatory in EU late 2026 to 2027 |
+| **Demo issuer** | Votain's backend signs an SD-JWT with user-declared attributes (used during TFG demo) | No real verification. UI shows `evidence: "self-declared"` disclaimer. Not for production |
+
+The frontend onboarding flow lets the user pick the source. The backend SD-JWT issuer acts as a thin connector layer rather than implementing document reading itself.
 
 ## Deployment targets
 
 | Component | Solution | Reason |
 |-----------|----------|--------|
 | Frontend | Fleek IPFS + GitHub CD | Immutable, decentralized, IPFS badge |
-| Backend | Phala Network TEE | Signs VCs — requires trusted environment |
+| Backend | Phala Network TEE | Signs VCs, requires trusted environment |
 | Contracts | Polygon Amoy (testnet) | Free EVM, Semaphore available |
 | IPFS tally | Pinata free (1 GB) | Immutable audit trail |
 | CI/CD | GitHub Actions (2000 min/month) | Free, automated |

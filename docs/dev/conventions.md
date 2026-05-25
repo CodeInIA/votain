@@ -1,43 +1,46 @@
-# Votain — Conventions and Operating Rules
+# Votain. Conventions and Operating Rules
 
 ## Operating rules (BINDING for all agents)
 
 1. **NEVER `git commit` / `git push` / destructive operations** without explicit user confirmation. After each milestone, list the changes for the user to review and commit.
 
-2. **Phase A (H1-H4) — hardcoded data**: screens use data from `src/data/seed.ts` or inline. **NO** technical mocks (fake interfaces, fake Promise.resolve, simulated services). Buttons that require blockchain/backend show a toast "Integration pending".
+2. **Phase A (H1 to H4), hardcoded data**. Screens use data from `src/data/seed.ts` or inline. **NO** technical mocks (fake interfaces, fake `Promise.resolve`, simulated services). Buttons that require blockchain or backend show a toast "Integration pending".
 
-3. **Phase B (H5-H9) — real integration**: connect directly to backend + Amoy contracts. No mocks. If a screen needs a new endpoint/function, add it in the same milestone.
+3. **Phase B (H5 to H9), real integration**. Connect directly to backend and Amoy contracts. No mocks. If a screen needs a new endpoint or function, add it in the same milestone.
 
-4. **Always latest versions**: before each milestone, run `NODE_OPTIONS="--use-system-ca" npx npm-check-updates` on all 3 modules. Update one by one, verifying tests/build pass. If a new version breaks something and cannot be fixed in reasonable time, pin to the last stable and document in `state.md`.
+4. **Always latest versions**. Before each milestone, run `NODE_OPTIONS="--use-system-ca" npx npm-check-updates` on all 3 modules. Update one by one, verifying tests and build pass. If a new version breaks something and cannot be fixed in reasonable time, pin to the last stable and document in `state.md`.
 
-5. **Always free tier**: do not propose services with recurring costs. If in doubt, verify before proceeding.
+5. **Always free tier**. Do not propose services with recurring costs. If in doubt, verify before proceeding.
 
-6. **Responsive required**: every new screen must be validated at:
+6. **Responsive required**. Every new screen must be validated at:
    - Mobile: 375×667 (iPhone SE)
    - Tablet: 768×1024 (iPad)
    - Desktop: 1440×900
+
    Using Playwright MCP. Screenshots in `docs/progress/H<n>/screens/<name>/`.
 
-7. **After each milestone**: update `docs/dev/state.md` with current state, versions, and technical debt.
+7. **After each milestone**. Update `docs/dev/state.md` with current state, versions and technical debt.
 
-8. **This plan lives in `docs/PLAN.md`**: any future agent must read it before touching anything.
+8. **This plan lives in `docs/PLAN.md`**. Any future agent must read it before touching anything.
 
-9. **All code comments and .md files must be written in English**. No Spanish (or other language) in source files or developer docs. The `.env` file is named `.env` (not `.env.local`).
+9. **All code comments and `.md` files must be written in English**. No Spanish (or other language) in source files or developer docs. The `.env` file is named `.env`, not `.env.local`.
 
-10. **Each milestone gets its own git branch**. Before committing any work for milestone N, the user creates branch `hN/<slug>` from the current state (e.g., `h0/bootstrap`, `h1/design-system`, `h2/voter-screens`). The agent only lists changes; the user creates the branch and commits.
+10. **No em dashes (`—`) or hyphens as clause separators in documentation**. Use periods, commas or colons. Hyphens are only allowed inside compound words (e.g. "end-to-end"), technical identifiers (e.g. "ERC-4337"), version numbers, file paths and command flags. Em dashes look AI-generated; the substitution is conscious.
+
+11. **Each milestone gets its own git branch**. Before committing any work for milestone N, the user creates branch `hN/<slug>` from the current state (e.g. `h0/bootstrap`, `h1/design-system`, `h2/voter-screens`). The agent only lists changes. The user creates the branch and commits.
 
 ## TypeScript / JavaScript conventions
 
 ### ethers v6 (NOT ethers v5)
 
 ```typescript
-// CORRECT — ethers v6
+// CORRECT, ethers v6
 import { ethers } from "ethers";
 const value = ethers.parseEther("1.0");
 const balance = await provider.getBalance(address);  // returns bigint
 const big = 1000000000000000000n;  // native BigInt, NOT BigNumber
 
-// WRONG — do not use in this project
+// WRONG, do not use in this project
 import { BigNumber } from "ethers";  // NO
 ethers.utils.parseEther(...)  // NO, does not exist in v6
 ```
@@ -69,7 +72,7 @@ pragma solidity ^0.8.35;
 // Plugin: @tailwindcss/vite (not the classic Tailwind 3 postcss plugin)
 ```
 
-### i18n — flat keys
+### i18n, flat keys
 
 ```typescript
 // CORRECT: flat keys with section prefix
@@ -78,17 +81,17 @@ t('election.status_active')
 t('common.back')
 
 // WRONG: nesting
-t('election.status.active')  // NO — JSON files use a single level of nesting per section
+t('election.status.active')  // NO, JSON files use a single level of nesting per section
 ```
 
 ### File and component naming
 
 ```
-components/ui/Button.tsx        — PascalCase for components
-hooks/usePasskeys.ts            — camelCase with "use" prefix
-lib/contracts.ts                — camelCase
-data/seed.ts                    — camelCase
-pages/voter/Onboarding.tsx      — PascalCase
+components/ui/Button.tsx        PascalCase for components
+hooks/usePasskeys.ts            camelCase with "use" prefix
+lib/contracts.ts                camelCase
+data/seed.ts                    camelCase
+pages/voter/Onboarding.tsx      PascalCase
 ```
 
 ## UI conventions (stich.md)
@@ -114,9 +117,9 @@ pages/voter/Onboarding.tsx      — PascalCase
 
 ### Touch target minimums
 
-- Buttons on mobile: minimum **44×44px** (WCAG 2.5.5)
-- Interactive elements: minimum **44px** on the smallest dimension
-- Spacing between targets: minimum **8px**
+- Buttons on mobile: minimum **44×44px** (WCAG 2.5.5).
+- Interactive elements: minimum **44px** on the smallest dimension.
+- Spacing between targets: minimum **8px**.
 
 ### Election phase badge colors
 
@@ -131,16 +134,14 @@ pages/voter/Onboarding.tsx      — PascalCase
 
 ## Available MCPs and status
 
-> Update this section after H0 verification.
-
 | MCP | Status | Notes |
 |-----|--------|-------|
-| Playwright MCP | Pending verification | `@modelcontextprotocol/server-playwright` |
-| Stitch MCP | Not available as official MCP | Fallback: read `stich.md` directly via Read tool |
+| Playwright MCP | ✅ Active | `@playwright/mcp` via `node` + full path to `cli.js`, `--headless`. Chromium installed in `ms-playwright/` |
+| Stitch MCP | ✅ Active (HTTP transport) | Available via `stitch.googleapis.com/mcp`. Fallback: read `stich.md` directly |
 | Chrome DevTools MCP | Pending verification | Or equivalent |
 | Filesystem MCP | Available (built into Claude Code) | Read assets from `OneDrive/UNI/4/TFG/stich/` |
 
-**If a MCP fails**: warn the user before proceeding, do not improvise.
+**If a MCP fails**: warn the user before proceeding. Do not improvise.
 
 ## Development environment
 
@@ -156,7 +157,7 @@ npm >= 10
 ## Expected commit structure (user, not agent)
 
 ```
-H0: bootstrap, dependency upgrade, docs IA
+H0: bootstrap, dependency upgrade, dev docs
 H1: design system and base components
 H2: public and voter screens (visual)
 H3: organizer screens (visual)
@@ -168,6 +169,6 @@ H8: organizer flow integration
 H9: tally script + IPFS results
 H10: frontend IPFS deployment
 H11: backend Phala TEE
-H12.x: thesis chapters X-Y
+H12.x: thesis chapters X to Y
 H13: defense slides + video
 ```

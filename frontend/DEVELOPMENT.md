@@ -1,4 +1,4 @@
-# frontend/ — Developer Guide
+# frontend/. Developer Guide
 
 ## Stack
 
@@ -9,14 +9,14 @@
 - **react-router-dom** 7.15.1
 - **framer-motion** 12.40.0
 - **i18next** 26.2.0 + react-i18next 17.0.8 (13 languages)
-- **@zerodev/sdk** 5.5.10 (Account Abstraction + Passkeys)
-- **@zerodev/passkey-validator** 5.6.0
-- **@zerodev/ecdsa-validator** 5.4.9
+- **`@zerodev/sdk`** 5.5.10 (Account Abstraction + Passkeys)
+- **`@zerodev/passkey-validator`** 5.6.0
+- **`@zerodev/ecdsa-validator`** 5.4.9
 - **ethers** 6.16.0
-- **@semaphore-protocol/{identity,group,proof}** 4.14.2
+- **`@semaphore-protocol/{identity,group,proof}`** 4.14.2
 - **paillier-bigint** 3.4.3
-- **@worldcoin/idkit** 4.1.6 + **@worldcoin/idkit-core** 4.1.6
-- **@sd-jwt/core** 0.19 + **@sd-jwt/present** 0.19
+- **`@worldcoin/idkit`** 4.1.6 + **`@worldcoin/idkit-core`** 4.1.6
+- **`@sd-jwt/core`** 0.19 + **`@sd-jwt/present`** 0.19
 - **lucide-react** 1.16.0
 
 ## Current routes
@@ -64,10 +64,10 @@ src/
 
 ## i18n
 
-- 13 active languages (see `src/i18n/locales/`)
-- Flat keys: `"section.key"` — no nesting
-- Browser auto-detect (IP-detect added in H4)
-- **Never** hardcode text strings — always use `t('key')`
+- 13 active languages (see `src/i18n/locales/`).
+- Flat keys: `"section.key"`, no nesting.
+- Browser auto-detect (IP-detect added in H4).
+- **Never** hardcode text strings. Always use `t('key')`.
 
 ## Current phase: VISUAL DESIGN (Phase A)
 
@@ -101,13 +101,13 @@ VITE_PLATFORM_REGISTRY_ADDRESS=
 VITE_PAYMASTER_ADDRESS=
 ```
 
-## Technical debt (see docs/dev/state.md)
+## Technical debt (see `docs/dev/state.md`)
 
-- Onboarding.test.tsx: 4 tests fail due to missing i18n setup in vitest (pre-existing, fix in H1)
-- Stub pages not implemented (H1-H4)
-- ZeroDev real integration (H5): `src/lib/zerodev.ts` + `src/hooks/usePasskeys.ts`
-- `src/lib/contracts.ts` with typed ABIs (H5)
-- `src/lib/semaphore.ts` + `src/lib/paillier.ts` (H5)
+- `Onboarding.test.tsx`: 4 tests fail due to missing i18n setup in vitest (pre-existing, fix in H1).
+- Stub pages not implemented (H1 to H4).
+- ZeroDev real integration (H5): `src/lib/zerodev.ts` + `src/hooks/usePasskeys.ts`.
+- `src/lib/contracts.ts` with typed ABIs (H5).
+- `src/lib/semaphore.ts` + `src/lib/paillier.ts` (H5).
 
 ## Target deployment
 

@@ -1,12 +1,12 @@
-# backend/ — Developer Guide
+# backend/. Developer Guide
 
 ## Stack
 
 - **Node.js** v24+ (ESM)
 - **Express** v5.2
-- **tsx** v4.22 — runs TypeScript directly, no compile step
-- **@sd-jwt/core** v0.19 — Selective Disclosure JWT (EdDSA signer)
-- **@worldcoin/idkit-core** v4.1.6 — World ID v4 proof verification
+- **tsx** v4.22. Runs TypeScript directly, no compile step.
+- **`@sd-jwt/core`** v0.19. Selective Disclosure JWT (EdDSA signer).
+- **`@worldcoin/idkit-core`** v4.1.6. World ID v4 proof verification.
 - **TypeScript** 6.0.3
 
 ## Current endpoints
@@ -17,7 +17,7 @@
 | GET | `/api/me` | Active session from `voter_vc` cookie |
 | POST | `/api/logout` | Clear `voter_vc` cookie |
 | POST | `/api/rp-signature` | Sign World ID request with `DEVELOPER_KEY` |
-| POST | `/api/verify-human` | Verify World ID v4 proof → issue SD-JWT as httpOnly cookie (7 days) |
+| POST | `/api/verify-human` | Verify World ID v4 proof, issue SD-JWT as httpOnly cookie (7 days) |
 
 ## Issuer architecture
 
@@ -38,8 +38,8 @@ npm run dev    # tsx watch src/index.ts (hot-reload)
 ## Required environment variables
 
 ```bash
-# Copy from .env.example
-ISSUER_PRIVATE_KEY=    # Ed25519 PKCS8 base64 — generate with:
+# Copy from .env.example.
+ISSUER_PRIVATE_KEY=    # Ed25519 PKCS8 base64. Generate with:
                        # node -e "const {generateKeyPairSync}=require('crypto'); const {privateKey}=generateKeyPairSync('ed25519',{privateKeyEncoding:{type:'pkcs8',format:'der'}}); console.log(privateKey.toString('base64'))"
 WORLD_ID_APP_ID=       # App ID from World ID Developer Portal
 DEVELOPER_KEY=         # API key from World ID Developer Portal
@@ -50,14 +50,14 @@ NODE_ENV=development
 PORT=3000
 ```
 
-## Technical debt (see docs/dev/state.md)
+## Technical debt (see `docs/dev/state.md`)
 
-- Selective disclosure attributes in SD-JWT: `country`, `ageOver18`, `region` as `_sd` array (H6)
-- Status List 2021 endpoint `/credentials/status/:listId` (H6)
-- SD-JWT presentation endpoint with `@sd-jwt/present` (H6)
-- Tests: World ID v4 verification, replay rejection, SD-JWT round-trip (H6)
-- Rate limiting with `express-rate-limit` (H6)
-- Deployment on Phala Network TEE (H11)
+- Selective disclosure attributes in SD-JWT: `country`, `ageOver18`, `region` as `_sd` array (H6).
+- Status List 2021 endpoint `/credentials/status/:listId` (H6).
+- SD-JWT presentation endpoint with `@sd-jwt/present` (H6).
+- Tests: World ID v4 verification, replay rejection, SD-JWT round-trip (H6).
+- Rate limiting with `express-rate-limit` (H6).
+- Deployment on Phala Network TEE (H11).
 
 ## Target deployment
 

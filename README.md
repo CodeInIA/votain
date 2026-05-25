@@ -1,46 +1,127 @@
-# Votain: End-to-End Verifiable Voting System
+# Votain
 
-Votain is a next-generation electoral platform designed to provide an end-to-end verifiable, anonymous, and coercion-resistant voting environment. Built as the final degree project (TFG), it integrates advanced cryptography and blockchain tech to ensure absolute transparency and user privacy.
+> End-to-end verifiable, anonymous, coercion-resistant voting dApp on Polygon Amoy.
 
-## Project Architecture
+Votain is a Bachelor's thesis project (TFG) demonstrating how modern cryptographic primitives (Zero-Knowledge Proofs, Account Abstraction, Verifiable Credentials and Homomorphic Encryption) can be combined into a voting system where every voter can verify their ballot is counted, no one can be coerced, and no central authority can tamper with results.
 
-The system is being built in multiple phases to ensure robust architecture and scalability:
+## Why Votain
 
-- **Phase 1: Smart Contracts (Current State)**
-  Core blockchain infrastructure deployed on an EVM-compatible network. Includes Zero-Knowledge proof validation (Semaphore V4), coercion resistance mechanics, and gasless voting support via Account Abstraction (ERC-4337). Located in the `contracts/` directory.
+| Property | How it is achieved |
+|----------|--------------------|
+| **End-to-end verifiable** | Every vote is a Paillier ciphertext stored on-chain; the tally is published with an IPFS audit trail anyone can re-execute |
+| **Anonymous** | Semaphore V4 zero-knowledge proofs hide voter identity inside the eligible-voters group |
+| **Coercion resistant** | Per-nullifier nonce lets a coerced voter silently override a prior ballot. Only the highest-nonce vote counts |
+| **Sybil resistant** | World ID v4 proof of personhood, bound to a per-election scope |
+| **Gasless for voters** | ERC-4337 + ZeroDev paymaster sponsors UserOps; voters never hold tokens |
+| **Decentralized deployment** | Frontend on IPFS (Fleek), issuer in Intel TDX TEE (Phala), contracts on Polygon Amoy |
 
-- **Phase 2: ZK Identity and VC Issuer (Upcoming)**
-  The backend service responsible for issuing Verifiable Credentials (VCs). It will bridge systems like World ID or traditional KYC into a Semaphore identity commitment ensuring strict Sybil-resistance before allowing a user to register to an election.
+## Architecture overview
 
-- **Phase 3: Frontend Application (Upcoming)**
-  A React (TypeScript) based client interface where voters can generate their ZK proofs locally, verify their ballots, and submit metadata-stripped cast votes through a relayer network.
-
-## Key Technologies
-
-- **Zero-Knowledge Proofs**: [Semaphore V4](https://semaphore.pse.dev/) for anonymous membership and exact proof-of-vote without revealing identity.
-- **Account Abstraction & Meta-Transactions**: [ERC-4337](https://eips.ethereum.org/EIPS/eip-4337) and [ERC-2771](https://eips.ethereum.org/EIPS/eip-2771) (Biconomy) for sponsoring voter gas fees.
-- **Smart Contracts**: Solidity 0.8.34, Hardhat, Ethers v6, and Chai v4.
-- **Sybil Resistance**: Integration blueprints with World ID and custom registry mapping.
-
-## Monorepo Structure
-
-```text
-votain/
-├── contracts/        # Phase 1: Solidity Smart contracts, tests, and deployment scripts
-├── issuer-backend/   # Phase 2: (To be implemented) ZK identity and credentials
-└── frontend/         # Phase 3: (To be implemented) Web application
+```
+User (passkey + World ID)
+    ├── React 19 + Vite + Tailwind 4 + ZeroDev v5  ◄──── IPFS (Fleek)
+    │
+    ├── SD-JWT issuance ── Backend (Node + Express)  ◄──── Phala TEE
+    │                      Verifies World ID, issues VC
+    │
+    └── UserOp ─────────── Polygon Amoy
+                           ElectionFactory · ElectionV4
+                           ElectionPaymaster · PlatformRegistry
+                           Semaphore V4 Verifier · ERC-4337 EntryPoint
+                                                  │
+                                                  ▼
+                           Off-chain tally script (Paillier homomorphic sum)
+                           → Result JSON pinned on IPFS (Pinata)
+                           → publishResults(cid, tally) on-chain
 ```
 
-## Setup & Execution
+Full diagram in [`docs/dev/architecture.md`](docs/dev/architecture.md).
 
-For detailed instructions on the smart contract environments, navigate to the `contracts/` directory and observe its specific `README.md`.
+## Monorepo layout
+
+```
+votain/
+├── contracts/         # Solidity 0.8.35 + Hardhat 3 + Semaphore V4
+├── backend/           # Node.js Express SD-JWT issuer (target: Phala TEE)
+├── frontend/          # React 19 + Vite + ZeroDev v5 (target: IPFS / Fleek)
+├── scripts-tally/     # off-chain Paillier tally + IPFS publication (planned)
+├── docs/
+│   ├── PLAN.md        # iterative milestone plan (source of truth)
+│   ├── dev/           # developer documentation
+│   │   ├── architecture.md
+│   │   ├── conventions.md
+│   │   ├── glossary.md
+│   │   └── state.md   # current milestone, versions, technical debt
+│   └── progress/      # per-milestone screenshots and demos
+└── memoria/           # LaTeX thesis (parallel track)
+```
+
+## Tech stack
+
+**Contracts**: Solidity 0.8.35, Hardhat 3, ethers v6, OpenZeppelin 5, [`@semaphore-protocol/contracts`](https://semaphore.pse.dev/) 4.x, ERC-4337 EntryPoint v0.7, ERC-2771 trusted forwarder.
+
+**Backend**: Node.js 24, Express 5, [`@sd-jwt/core`](https://github.com/openwallet-foundation-labs/sd-jwt-js) (EdDSA / Ed25519), [`@worldcoin/idkit-core`](https://docs.world.org/) v4, tsx.
+
+**Frontend**: React 19, Vite (Rolldown), Tailwind CSS 4, [`@zerodev/sdk`](https://docs.zerodev.app/) v5 with passkey validator, [`@semaphore-protocol/{identity,group,proof}`](https://semaphore.pse.dev/), [`paillier-bigint`](https://github.com/juanelas/paillier-bigint), [`@worldcoin/idkit`](https://docs.world.org/), i18next (13 languages), framer-motion.
+
+Pinned versions live in [`docs/dev/state.md`](docs/dev/state.md).
+
+## Quick start
 
 ```bash
+# Contracts (5/5 tests passing on Hardhat 3)
 cd contracts
 npm install
 npx hardhat test
+npx hardhat compile
+
+# Backend (requires .env with ISSUER_PRIVATE_KEY, see backend/.env.example)
+cd backend
+npm install
+npm run dev                          # http://localhost:3000
+
+# Frontend
+cd frontend
+npm install
+npm run dev                          # http://localhost:5173
+npm run build
 ```
+
+> **Windows / corporate network**: prepend `NODE_OPTIONS="--use-system-ca"` to any `npm install` or `npm-check-updates` command to avoid SSL chain errors.
+
+## Project status
+
+Currently in **Phase A, visual design**. See [`docs/PLAN.md`](docs/PLAN.md) for the full iterative plan.
+
+| Milestone | Description | Status |
+|-----------|-------------|--------|
+| H0 | Bootstrap, dependency upgrade, dev docs | ✅ |
+| H1 | Design system and base components | 🟡 in progress |
+| H2 to H4 | 24 screens (visual, hardcoded data) | ⏳ |
+| H5 | Production contracts + ZeroDev client | ⏳ |
+| H6 | Backend issuer feature complete | ⏳ |
+| H7, H8 | Real voter and organizer integration | ⏳ |
+| H9 | Tally + IPFS results | ⏳ |
+| H10 | Frontend on IPFS (Fleek) | ⏳ |
+| H11 | Backend on Phala TEE | ⏳ |
+| H12, H13 | Thesis and defense | ⏳ |
+
+## Documentation
+
+- [`CONTRIBUTING.md`](CONTRIBUTING.md). Developer guide, monorepo conventions.
+- [`docs/PLAN.md`](docs/PLAN.md). Milestone plan and operating rules.
+- [`docs/dev/architecture.md`](docs/dev/architecture.md). Full system architecture.
+- [`docs/dev/conventions.md`](docs/dev/conventions.md). Coding conventions, color tokens, i18n keys.
+- [`docs/dev/glossary.md`](docs/dev/glossary.md). Semaphore, nullifier, SD-JWT, ERC-4337, Paillier, TEE.
+- [`docs/dev/state.md`](docs/dev/state.md). Current state, pinned versions, technical debt.
+- Per-module guides: [`contracts/DEVELOPMENT.md`](contracts/DEVELOPMENT.md), [`backend/DEVELOPMENT.md`](backend/DEVELOPMENT.md), [`frontend/DEVELOPMENT.md`](frontend/DEVELOPMENT.md).
 
 ## License
 
-MIT
+Votain is released under the **GNU Affero General Public License v3.0 (AGPL-3.0)**. See [`LICENSE`](LICENSE) for the full text.
+
+This means you are free to use, modify and redistribute Votain, but if you run a modified version as a network-accessible service you must publish your source. **Commercial licenses without AGPL obligations are available**. Contact the author.
+
+## Author
+
+Sergio Barrios Paz. Bachelor's thesis (TFG), Universidad Rey Juan Carlos (ETSII), 2026.
