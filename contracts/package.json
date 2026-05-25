@@ -18,7 +18,7 @@
     "hardhat"
   ],
   "author": "Sergio Barrios Paz",
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "type": "module",
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox-mocha-ethers": "^3.0.6",

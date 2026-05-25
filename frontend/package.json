@@ -1,8 +1,9 @@
 {
   "name": "frontend",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "license": "AGPL-3.0-only",
   "scripts": {
     "dev": "vite --host",
     "build": "tsc -b && vite build",
