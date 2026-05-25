@@ -1,4 +1,4 @@
-{
+﻿{
   "landing": {
     "title": "Votain",
     "voter_cta": "शुरू करें",
@@ -329,7 +329,17 @@
     "sign_out_confirm": "साइन आउट",
     "signed_out": "साइन आउट हो गए"
   },
-  "errors": {
+  "tx": {
+    "title_pending": "लेनदेन प्रगति पर है",
+    "title_success": "लेनदेन पुष्टि हुई",
+    "title_failed": "लेनदेन विफल हुआ",
+    "step_submitting": "रिलेयर के माध्यम से सबमिट हो रहा है…",
+    "step_confirming": "ब्लॉकचेन पुष्टि की प्रतीक्षा में…",
+    "step_done": "ऑन-चेन दर्ज हुआ",
+    "do_not_close": "यह विंडो बंद मत करें",
+    "view_tx": "PolygonScan पर देखें",
+    "aria_label": "लेनदेन की स्थिति"
+  },  "errors": {
     "not_found": "पृष्ठ नहीं मिला",
     "not_found_desc": "जो पृष्ठ आप ढूंढ रहे हैं वह मौजूद नहीं है या स्थानांतरित हो गया है।",
     "go_home": "होम पर जाएं"

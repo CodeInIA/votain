@@ -1,4 +1,4 @@
-{
+﻿{
   "landing": {
     "title": "Votain",
     "voter_cta": "开始",
@@ -329,7 +329,17 @@
     "sign_out_confirm": "退出",
     "signed_out": "已退出"
   },
-  "errors": {
+  "tx": {
+    "title_pending": "交易进行中",
+    "title_success": "交易已确认",
+    "title_failed": "交易失败",
+    "step_submitting": "通过中继器提交…",
+    "step_confirming": "等待区块链确认…",
+    "step_done": "已记录上链",
+    "do_not_close": "请勿关闭此窗口",
+    "view_tx": "在 PolygonScan 上查看",
+    "aria_label": "交易状态"
+  },  "errors": {
     "not_found": "页面未找到",
     "not_found_desc": "您访问的页面不存在或已移动。",
     "go_home": "返回首页"

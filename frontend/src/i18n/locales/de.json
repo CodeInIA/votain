@@ -1,4 +1,4 @@
-{
+﻿{
   "landing": {
     "title": "Votain",
     "voter_cta": "Loslegen",
@@ -329,7 +329,17 @@
     "sign_out_confirm": "Abmelden",
     "signed_out": "Abgemeldet"
   },
-  "errors": {
+  "tx": {
+    "title_pending": "Transaktion läuft",
+    "title_success": "Transaktion bestätigt",
+    "title_failed": "Transaktion fehlgeschlagen",
+    "step_submitting": "Senden über Relayer…",
+    "step_confirming": "Warte auf Blockchain-Bestätigung…",
+    "step_done": "On-chain gespeichert",
+    "do_not_close": "Dieses Fenster nicht schließen",
+    "view_tx": "Auf PolygonScan ansehen",
+    "aria_label": "Transaktionsstatus"
+  },  "errors": {
     "not_found": "Seite nicht gefunden",
     "not_found_desc": "Die gesuchte Seite existiert nicht oder wurde verschoben.",
     "go_home": "Zur Startseite"

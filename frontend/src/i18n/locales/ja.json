@@ -1,4 +1,4 @@
-{
+﻿{
   "landing": {
     "title": "Votain",
     "voter_cta": "始める",
@@ -329,7 +329,17 @@
     "sign_out_confirm": "サインアウト",
     "signed_out": "サインアウトしました"
   },
-  "errors": {
+  "tx": {
+    "title_pending": "トランザクション処理中",
+    "title_success": "トランザクション確認済み",
+    "title_failed": "トランザクション失敗",
+    "step_submitting": "リレイヤー経由で送信中…",
+    "step_confirming": "ブロックチェーン確認待ち…",
+    "step_done": "オンチェーンに記録済み",
+    "do_not_close": "このウィンドウを閉じないでください",
+    "view_tx": "PolygonScanで表示",
+    "aria_label": "トランザクションステータス"
+  },  "errors": {
     "not_found": "ページが見つかりません",
     "not_found_desc": "お探しのページは存在しないか、移動されました。",
     "go_home": "ホームへ"

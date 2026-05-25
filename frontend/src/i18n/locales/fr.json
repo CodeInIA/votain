@@ -1,4 +1,4 @@
-{
+﻿{
   "landing": {
     "title": "Votain",
     "voter_cta": "Commencer",
@@ -329,7 +329,17 @@
     "sign_out_confirm": "Se déconnecter",
     "signed_out": "Déconnecté"
   },
-  "errors": {
+  "tx": {
+    "title_pending": "Transaction en cours",
+    "title_success": "Transaction confirmée",
+    "title_failed": "Transaction échouée",
+    "step_submitting": "Envoi via le relayeur…",
+    "step_confirming": "En attente de confirmation blockchain…",
+    "step_done": "Enregistré on-chain",
+    "do_not_close": "Ne fermez pas cette fenêtre",
+    "view_tx": "Voir sur PolygonScan",
+    "aria_label": "Statut de la transaction"
+  },  "errors": {
     "not_found": "Page introuvable",
     "not_found_desc": "La page que vous cherchez n'existe pas ou a été déplacée.",
     "go_home": "Aller à l'accueil"

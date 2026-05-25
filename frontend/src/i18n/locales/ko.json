@@ -1,4 +1,4 @@
-{
+﻿{
   "landing": {
     "title": "Votain",
     "voter_cta": "시작하기",
@@ -329,7 +329,17 @@
     "sign_out_confirm": "로그아웃",
     "signed_out": "로그아웃됨"
   },
-  "errors": {
+  "tx": {
+    "title_pending": "트랜잭션 진행 중",
+    "title_success": "트랜잭션 확인됨",
+    "title_failed": "트랜잭션 실패",
+    "step_submitting": "릴레이어를 통해 제출 중…",
+    "step_confirming": "블록체인 확인 대기 중…",
+    "step_done": "온체인에 기록됨",
+    "do_not_close": "이 창을 닫지 마세요",
+    "view_tx": "PolygonScan에서 보기",
+    "aria_label": "트랜잭션 상태"
+  },  "errors": {
     "not_found": "페이지를 찾을 수 없음",
     "not_found_desc": "찾고 있는 페이지가 존재하지 않거나 이동되었습니다.",
     "go_home": "홈으로 이동"

@@ -1,6 +1,6 @@
 # Votain — Agent State
 
-## Current milestone: H2 (Public + Voter screens)
+## Current milestone: H4 complete ✅ — Phase A DONE
 
 ## Completed milestones
 
@@ -13,61 +13,81 @@
 ### H1 — Design system & base components ✅ (2026-05-25)
 All 9 tests pass. Production build clean. No TS errors.
 
-**UI components created** (`frontend/src/components/ui/`):
-- Button (cva, 5 variants: gradient/default/primary/secondary/ghost)
-- Badge (cva, 14 variants: phase states + role + blockchain badges)
-- Card + CardHeader/CardTitle/CardDescription/CardContent/CardFooter (glass, depth prop)
-- Input / Textarea / Select (forwardRef, label/hint/error, leftIcon/rightIcon)
-- Modal (portal, AnimatePresence, Escape key)
-- RadioCard + RadioGroup (48px touch target, gradient border on selection)
-- Checkbox
-- Switch
-- Skeleton + SkeletonCard
-- Spinner (sm/md/lg) + ProgressDots (onboarding dots)
-- Stepper + OverlayStepper (ZK proof steps)
-- Toast + ToastProvider + useToast (portal, 4 variants)
-- Countdown (timezone-aware, red <1h)
-- ResultBarChart (CSS %, winner glow) + MiniBarChart (Recharts)
-- Avatar + IdentityCommitment (copyable truncated address)
-- LanguageSelector (animated dropdown, 13 languages)
-- EligibilityRow (met/not-met/unknown states)
-- GasWidget (good/low/critical thresholds)
-- BlockchainBadge + IPFSBadge
+**UI components** (`frontend/src/components/ui/`): Avatar, Badge, BarChart, BlockchainBadge,
+Button, Card, Checkbox, Countdown, ElectionCard, EligibilityRow, GasWidget, Input, LanguageSelector,
+MiniBarChart (dev-only), Modal, RadioCard, Skeleton, Spinner, Stepper, Switch, Toast,
+TransactionPendingModal (H4)
 
-**Layout components** (`frontend/src/components/layout/`):
-- BottomTabNav (mobile fixed bottom, 4 tabs)
-- TopNav (desktop, role-aware: public/voter/organizer)
-- Footer (updated with LanguageSelector)
+**Layout** (`frontend/src/components/layout/`): BottomTabNav, TopNav, Footer, PageLayout
 
-**Other changes:**
-- `frontend/src/data/languages.ts` — 13 languages with flag/code/name/nativeName
-- `frontend/src/App.tsx` — wrapped in ToastProvider, lazy /dev/components route (DEV only)
-- `frontend/src/pages/dev/Components.tsx` — full component showcase (DEV only)
-- `frontend/src/pages/voter/Onboarding.tsx` — 5-step flow (4 info + verify), auto-detects browser language on mount
-- `frontend/src/i18n/locales/en.json` — extended with nav/phase/badge/common keys
+### H2 — Public + Voter screens ✅ (2026-05-25)
+All screens implemented with hardcoded data from `src/data/seed.ts`:
+- Discover, ElectionPreview, ElectionResults, HowItWorks, VerifyReceipt
+- VoterElections, ElectionDetail, ZkProofGeneration, VoteConfirmation, ChangeVote,
+  VoterHistory, ReVerification
 
-**recharts** installed with `NODE_OPTIONS=--use-system-ca` workaround (corporate SSL proxy).
-recharts only imported in the DEV-only ComponentsShowcase — tree-shaken from production build.
+### H3 — Organizer screens ✅ (2026-05-25)
+- OrganizerAuth, OrganizerDashboard, CreateElection, ElectionManagement,
+  GasManagement, MemberList, OrganizerProfile
 
-**Validation screenshots** saved to `C:\Users\virus\OneDrive\UNI\4\TFG\progress\H1\`
+### H4 — Shared screens + i18n + polish ✅ (2026-05-26)
 
-## Next: H2 — Public + Voter screens
+**TransactionPendingModal** (`frontend/src/components/ui/TransactionPendingModal.tsx`)
+- 3 states: pending (spinner + relayer steps), success (green checkmark), failed (red X)
+- Integrated into ElectionDetail (enroll) and CreateElection (deploy) with 2.5s simulation
+- Showcased in `/dev/components` (DEV only)
 
-Screens to implement (data hardcoded in `src/data/seed.ts`):
-- Discovery (1): election grid, filters, search, empty states
-- Public Preview (2): details, badges, countdown, candidates read-only
-- Public Results (3): bar chart, winner glow, tie state, export JSON
-- How It Works (23): 4 steps
-- Onboarding (4): already done
-- World ID Verification (5): already integrated
-- Re-verification (6): UI states
-- Voter Election List (7): phase-aware CTAs, countdown red <1h
-- Election Detail Enrollment (8): eligibility checklist, enroll CTA (toast)
-- Election Detail Active (9): candidate selector, blank vote, gas banner
-- ZK Proof Generation (10): 3-step overlay with setTimeout simulation
-- Vote Confirmation (11): checkmark animation, reference number, PolygonScan link
-- Change Vote (12): same selector, confirmation modal
-- Voter History (13): list from seed
-- Verify Receipt (24): input + success/not-found from seed
+**i18n**
+- All 13 locales (en, es, fr, de, pt, it, nl, zh, ar, ru, hi, ja, ko) updated with `tx.*` namespace
+- Fixed duplicate `"common"` key in `en.json` (invalid JSON, now clean)
+- All 13 files validated: 28 top-level keys, parse OK
 
-First action: create `src/data/seed.ts` with 6 elections covering all phases.
+**Reduced-motion support**
+- `MotionGlobalConfig.skipAnimations` set globally in `main.tsx` when `prefers-reduced-motion: reduce`
+- CSS `@media (prefers-reduced-motion: reduce)` rule added in `index.css`
+- `TransactionPendingModal` uses `useRef`-based reduced-motion check for spring animations
+
+**E2E tests** (`frontend/e2e/smoke.spec.ts`)
+- Playwright config for desktop (1440×900), tablet (768×1024), mobile (375×667)
+- 24-screen smoke suite: navigate, wait for hydration, assert no crash + no JS errors
+- Install: `npx playwright install chromium` (network SSL issue blocked install in this session)
+- Run: `npm run test:e2e`
+
+**Build**: clean, 528ms, no TS errors
+
+---
+
+## Phase A — COMPLETE ✅
+
+All 24 screens implemented visually with hardcoded seed data. Full i18n for 13 languages.
+Navigation works across all routes. Actions that need blockchain fire toast or simulated TX modal.
+
+**Commit**: `feat(frontend): Phase A — design system (H1), 24 screens (H2+H3), i18n 13 languages`
+  + `feat(frontend): H4 — TransactionPendingModal, i18n tx namespace, reduced-motion, E2E scaffold`
+
+---
+
+## Next: Phase B — Real integration
+
+### H5 — Contracts production-ready on Amoy + frontend client
+- Replace MockVerifier with official Semaphore V4 verifier
+- Lock down ElectionPaymaster.sponsorVote
+- Add cancelElection, closeEnrollmentEarly, closeVotingEarly, publishResults, markVoided
+- Tests ≥80% coverage with solidity-coverage
+- deploy.ts → deployments/amoy.json
+- Deploy + verify on PolygonScan
+- src/lib/contracts.ts (ethers v6 + ABIs TypeChain + addresses)
+- src/lib/zerodev.ts (KernelAccount v3 + paymaster + bundler)
+- src/hooks/usePasskeys.ts (WebAuthn with @zerodev/passkey-validator)
+
+### H6 — Backend issuer
+- Selective disclosure attributes in SD-JWT
+- Status List 2021 endpoint
+- Rate limiting
+- Tests
+
+### H7 — Real voter flow integration
+### H8 — Real organizer flow integration
+### H9 — Tally script + IPFS + results
+### H10 — Frontend on IPFS via Fleek CD
+### H11 — Backend on Phala TEE

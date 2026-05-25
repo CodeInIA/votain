@@ -327,6 +327,17 @@
     "sign_out_confirm": "Cerrar sesión",
     "signed_out": "Sesión cerrada"
   },
+  "tx": {
+    "title_pending": "Transacción en progreso",
+    "title_success": "Transacción confirmada",
+    "title_failed": "Transacción fallida",
+    "step_submitting": "Enviando a través del relayer…",
+    "step_confirming": "Esperando confirmación en blockchain…",
+    "step_done": "Registrado en la cadena",
+    "do_not_close": "No cierres esta ventana",
+    "view_tx": "Ver en PolygonScan",
+    "aria_label": "Estado de la transacción"
+  },
   "errors": {
     "not_found": "Página no encontrada",
     "not_found_desc": "La página que buscas no existe o ha sido movida.",

@@ -1,4 +1,4 @@
-{
+﻿{
   "landing": {
     "title": "Votain",
     "voter_cta": "Começar",
@@ -329,7 +329,17 @@
     "sign_out_confirm": "Sair",
     "signed_out": "Saiu"
   },
-  "errors": {
+  "tx": {
+    "title_pending": "Transação em andamento",
+    "title_success": "Transação confirmada",
+    "title_failed": "Transação falhou",
+    "step_submitting": "Enviando via relayer…",
+    "step_confirming": "Aguardando confirmação blockchain…",
+    "step_done": "Registrado on-chain",
+    "do_not_close": "Não feche esta janela",
+    "view_tx": "Ver no PolygonScan",
+    "aria_label": "Status da transação"
+  },  "errors": {
     "not_found": "Página não encontrada",
     "not_found_desc": "A página que você está procurando não existe ou foi movida.",
     "go_home": "Ir para o início"

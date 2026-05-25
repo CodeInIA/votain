@@ -19,6 +19,7 @@ import { LanguageSelector } from '../../components/ui/LanguageSelector';
 import { EligibilityRow } from '../../components/ui/EligibilityRow';
 import { GasWidget } from '../../components/ui/GasWidget';
 import { BlockchainBadge, IPFSBadge } from '../../components/ui/BlockchainBadge';
+import { TransactionPendingModal, type TxState } from '../../components/ui/TransactionPendingModal';
 import { ToastProvider, useToast } from '../../components/ui/Toast';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -66,6 +67,7 @@ export default function ComponentsShowcase() {
   const [switched, setSwitched] = useState(false);
   const [dotsStep, setDotsStep] = useState(1);
   const [inputVal, setInputVal] = useState('');
+  const [txState, setTxState] = useState<TxState>('idle');
 
   const futureDate = new Date(Date.now() + 45 * 60_000); // 45 min from now
   const urgentDate = new Date(Date.now() + 20 * 60_000); // 20 min (urgent)
@@ -317,6 +319,22 @@ export default function ComponentsShowcase() {
               <Button variant="gradient" onClick={() => setModalOpen(false)} className="flex-1">Confirm</Button>
             </div>
           </Modal>
+        </Section>
+
+        {/* Transaction Pending Modal */}
+        <Section title="Transaction Pending Modal">
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => setTxState('pending')}>Show Pending</Button>
+            <Button onClick={() => setTxState('success')}>Show Success</Button>
+            <Button onClick={() => setTxState('failed')}>Show Failed</Button>
+          </div>
+          <TransactionPendingModal
+            state={txState}
+            txHash={txState === 'success' ? '0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890' : undefined}
+            errorMessage={txState === 'failed' ? 'Transaction reverted: insufficient gas' : undefined}
+            onClose={() => setTxState('idle')}
+            onRetry={() => { setTxState('pending'); setTimeout(() => setTxState('success'), 2000); }}
+          />
         </Section>
 
         {/* Toast */}

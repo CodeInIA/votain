@@ -9,7 +9,7 @@ import { Card } from '../../components/ui/Card';
 import { Input, Textarea, Select } from '../../components/ui/Input';
 import { Switch } from '../../components/ui/Switch';
 import { Modal } from '../../components/ui/Modal';
-import { useToast } from '../../components/ui/Toast';
+import { TransactionPendingModal, type TxState } from '../../components/ui/TransactionPendingModal';
 
 interface Candidate { name: string; description: string }
 
@@ -37,10 +37,10 @@ const INITIAL: FormState = {
 export default function CreateElection() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { toast } = useToast();
   const [step, setStep]       = useState(0);
   const [form, setForm]       = useState<FormState>(INITIAL);
   const [deployModal, setDeployModal] = useState(false);
+  const [txState, setTxState] = useState<TxState>('idle');
 
   const STEPS = [
     { label: t('create.step_info') },
@@ -63,8 +63,11 @@ export default function CreateElection() {
 
   const handleDeploy = () => {
     setDeployModal(false);
-    toast({ title: t('create.deploy_pending'), description: t('common.integration_pending'), variant: 'info' });
-    setTimeout(() => navigate('/organizer/dashboard'), 1500);
+    setTxState('pending');
+    setTimeout(() => {
+      setTxState('success');
+      setTimeout(() => navigate('/organizer/dashboard'), 1800);
+    }, 2500);
   };
 
   return (
@@ -186,6 +189,11 @@ export default function CreateElection() {
             <Button variant="gradient" className="flex-1" onClick={handleDeploy}>{t('create.deploy')}</Button>
           </div>
         </Modal>
+
+        <TransactionPendingModal
+          state={txState}
+          onClose={() => setTxState('idle')}
+        />
       </div>
     </PageLayout>
   );

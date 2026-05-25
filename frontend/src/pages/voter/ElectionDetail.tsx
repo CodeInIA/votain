@@ -10,18 +10,18 @@ import { RadioGroup } from '../../components/ui/RadioCard';
 import { EligibilityRow } from '../../components/ui/EligibilityRow';
 import { Countdown } from '../../components/ui/Countdown';
 import { GasWidget } from '../../components/ui/GasWidget';
-import { useToast } from '../../components/ui/Toast';
+import { TransactionPendingModal, type TxState } from '../../components/ui/TransactionPendingModal';
 import { getElection } from '../../data/seed';
 
 export default function ElectionDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { toast } = useToast();
   const election = getElection(id ?? '');
 
   const [selectedCandidate, setSelectedCandidate] = useState('');
   const [showGasWarning] = useState(false);
+  const [txState, setTxState] = useState<TxState>('idle');
 
   if (!election) {
     return (
@@ -39,7 +39,8 @@ export default function ElectionDetail() {
   const isActivePhase = election.phase === 'active';
 
   const handleEnroll = () => {
-    toast({ title: t('election.enroll_pending'), description: t('common.integration_pending'), variant: 'info' });
+    setTxState('pending');
+    setTimeout(() => setTxState('success'), 2500);
   };
 
   const handleVote = () => {
@@ -170,6 +171,11 @@ export default function ElectionDetail() {
           </Button>
         )}
       </div>
+
+      <TransactionPendingModal
+        state={txState}
+        onClose={() => setTxState('idle')}
+      />
     </PageLayout>
   );
 }

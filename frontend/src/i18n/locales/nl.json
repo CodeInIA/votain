@@ -1,4 +1,4 @@
-{
+﻿{
   "landing": {
     "title": "Votain",
     "voter_cta": "Beginnen",
@@ -329,7 +329,17 @@
     "sign_out_confirm": "Uitloggen",
     "signed_out": "Uitgelogd"
   },
-  "errors": {
+  "tx": {
+    "title_pending": "Transactie bezig",
+    "title_success": "Transactie bevestigd",
+    "title_failed": "Transactie mislukt",
+    "step_submitting": "Verzenden via relayer…",
+    "step_confirming": "Wachten op blockchain-bevestiging…",
+    "step_done": "On-chain vastgelegd",
+    "do_not_close": "Sluit dit venster niet",
+    "view_tx": "Bekijk op PolygonScan",
+    "aria_label": "Transactiestatus"
+  },  "errors": {
     "not_found": "Pagina niet gevonden",
     "not_found_desc": "De pagina die je zoekt bestaat niet of is verplaatst.",
     "go_home": "Naar home"

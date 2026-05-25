@@ -1,4 +1,4 @@
-{
+﻿{
   "landing": {
     "title": "Votain",
     "voter_cta": "ابدأ",
@@ -329,7 +329,17 @@
     "sign_out_confirm": "خروج",
     "signed_out": "تم تسجيل الخروج"
   },
-  "errors": {
+  "tx": {
+    "title_pending": "المعاملة قيد التنفيذ",
+    "title_success": "تم تأكيد المعاملة",
+    "title_failed": "فشلت المعاملة",
+    "step_submitting": "الإرسال عبر الوسيط…",
+    "step_confirming": "في انتظار تأكيد البلوكتشين…",
+    "step_done": "مسجل على السلسلة",
+    "do_not_close": "لا تغلق هذه النافذة",
+    "view_tx": "عرض على PolygonScan",
+    "aria_label": "حالة المعاملة"
+  },  "errors": {
     "not_found": "الصفحة غير موجودة",
     "not_found_desc": "الصفحة التي تبحث عنها غير موجودة أو تم نقلها.",
     "go_home": "الذهاب للرئيسية"
