@@ -1,32 +1,53 @@
 @import "tailwindcss";
 
 @theme {
+  /* ── Backgrounds ── */
   --color-background: #0a0a0f;
   --color-surface: #131318;
   --color-surface-low: #1b1b20;
+  --color-surface-mid: #1f1f25;
   --color-surface-lowest: #0e0e13;
   --color-surface-high: #2a292f;
   --color-surface-highest: #35343a;
 
+  /* ── Brand accents ── */
   --color-primary: #4F8EF7;
   --color-primary-dim: #acc7ff;
+  --color-primary-container: #508ff8;
   --color-secondary: #7C5CFC;
   --color-secondary-dim: #cabeff;
+  --color-secondary-container: #4918c8;
   --color-tertiary: #00D4FF;
   --color-tertiary-dim: #3cd7ff;
+  --color-tertiary-container: #009ebe;
 
+  /* ── On-surface text hierarchy ── */
   --color-on-surface: #e4e1e9;
   --color-on-surface-variant: #c2c6d5;
-  --color-primary-container: #508ff8;
-  --color-secondary-container: #4918c8;
+  --color-on-surface-meta: #7c7f8e;
+
+  /* ── Outlines ── */
+  --color-outline: #8c909e;
   --color-outline-variant: #424753;
+
+  /* ── Semantic ── */
+  --color-error: #ffb4ab;
+  --color-error-container: #93000a;
+  --color-on-error: #690005;
+  --color-success: #4ade80;
+  --color-warning: #facc15;
+
+  /* ── Typography ── */
+  --font-body: "Inter", system-ui, -apple-system, sans-serif;
+  --font-heading: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
 }
 
 @layer base {
   body {
     background-color: var(--color-background);
     color: var(--color-on-surface);
-    font-family: "Inter", system-ui, -apple-system, sans-serif;
+    font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
     margin: 0;
   }

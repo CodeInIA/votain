@@ -7,18 +7,17 @@ import {
   ChevronRight, ChevronLeft, ShieldCheck, Loader2, X,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
 import { Button } from '../../components/ui/Button';
 import { useWorldIdVerify } from '../../hooks/useWorldIdVerify';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+import { cn } from '../../lib/utils';
 
 const isMobile: boolean = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
 type InfoStep = { id: string; title: string; description: string; icon: ReactNode };
+
+const INFO_COUNT  = 4;
+const VERIFY_STEP = INFO_COUNT; // 4
+const TOTAL_STEPS = INFO_COUNT + 1; // 5
 
 export default function Onboarding() {
   const [step, setStep] = useState(0);
@@ -59,14 +58,13 @@ export default function Onboarding() {
     },
   ], [t]);
 
-  const VERIFY_STEP = infoSteps.length; // step index 4
-  const TOTAL_STEPS = infoSteps.length + 1; // 5 dots total
-  const isVerifyStep = step === VERIFY_STEP;
+  const isVerifyStepActive = step === VERIFY_STEP;
+  const infoStepData = !isVerifyStepActive ? infoSteps[step] : null;
 
-  const handleNext = () => setStep(step + 1);
-  const handleBack = () => {
+  const handleNext = (): void => setStep(s => s + 1);
+  const handleBack = (): void => {
     if (isVerifying || isLoadingQr) return;
-    if (step > 0) setStep(step - 1);
+    if (step > 0) setStep(s => s - 1);
     else navigate(-1);
   };
 
@@ -95,8 +93,7 @@ export default function Onboarding() {
       >
         <AnimatePresence mode="wait">
 
-          {/* Success state (verify step) */}
-          {isVerifyStep && isSuccess ? (
+          {isVerifyStepActive && isSuccess ? (
             <motion.div
               key="success"
               initial={{ opacity: 0, scale: 0.95 }}
@@ -112,8 +109,8 @@ export default function Onboarding() {
               <p className="text-on-surface-variant text-sm">{t('verify.redirecting')}</p>
             </motion.div>
 
-          /* QR / deep-link state (verify step) */
-          ) : isVerifyStep && connectorURI ? (
+          /* QR state */
+          ) : isVerifyStepActive && connectorURI ? (
             <motion.div
               key="qr"
               initial={{ opacity: 0, scale: 0.95 }}
@@ -148,7 +145,7 @@ export default function Onboarding() {
               </Button>
             </motion.div>
 
-          /* Normal step content (info steps 0-3 + verify step idle) */
+          /* Info steps + verify idle */
           ) : (
             <motion.div
               key={step}
@@ -159,33 +156,34 @@ export default function Onboarding() {
               className="w-full flex flex-col items-center min-h-72 sm:min-h-80"
             >
               <div className="mb-6 sm:mb-8 w-28 h-28 sm:w-32 sm:h-32 flex items-center justify-center bg-surface-lowest/40 rounded-full shadow-[inset_0_2px_20px_rgba(255,255,255,0.02)] border border-white/5 shrink-0">
-                {isVerifyStep ? (
+                {isVerifyStepActive ? (
                   <img src="/world-id-logo.svg" alt="World ID" className="w-16 h-16 sm:w-20 sm:h-20" style={{ filter: 'invert(1) brightness(200%)' }} />
                 ) : (
-                  infoSteps[step].icon
+                  infoStepData?.icon
                 )}
               </div>
               <div className="min-h-16 sm:min-h-20 flex items-center mb-3 sm:mb-4">
                 <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white drop-shadow-sm leading-tight px-2">
-                  {isVerifyStep ? t('verify.title') : infoSteps[step].title}
+                  {isVerifyStepActive ? t('verify.title') : infoStepData?.title}
                 </h1>
               </div>
               <p className="text-on-surface-variant text-sm sm:text-base leading-relaxed mb-6 sm:mb-8 h-28 sm:h-32 px-4 shrink-0 overflow-y-auto w-full scrollbar-none">
-                {isVerifyStep ? t('verify.description') : infoSteps[step].description}
+                {isVerifyStepActive ? t('verify.description') : infoStepData?.description}
               </p>
-              {isVerifyStep && qrError && <p className="text-red-400 text-sm mb-4">{qrError}</p>}
+              {isVerifyStepActive && qrError && <p className="text-red-400 text-sm mb-4">{qrError}</p>}
             </motion.div>
           )}
 
         </AnimatePresence>
 
-        {/* Dots + navigation button */}
+        {/* Dots + navigation */}
         {!isSuccess && !connectorURI && (
           <div className="w-full mt-4 sm:mt-6 flex flex-col items-center">
             <div className="flex gap-2 mb-6 sm:mb-8">
               {Array.from({ length: TOTAL_STEPS }, (_, i) => (
                 <button
                   key={i}
+                  type="button"
                   onClick={() => !isVerifying && !isLoadingQr && setStep(i)}
                   className={cn(
                     'h-1.5 rounded-full transition-all duration-500 cursor-pointer',
@@ -198,7 +196,7 @@ export default function Onboarding() {
             </div>
 
             <div className="flex w-full gap-3">
-              {isVerifyStep ? (
+              {isVerifyStepActive ? (
                 <Button
                   onClick={handleOpenWorldId}
                   size="lg"

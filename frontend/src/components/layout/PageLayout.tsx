@@ -1,0 +1,53 @@
+import type { ReactNode } from 'react';
+import { TopNav } from './TopNav';
+import { BottomTabNav } from './BottomTabNav';
+import { Footer } from './Footer';
+import { cn } from '../../lib/utils';
+
+interface PageLayoutProps {
+  children: ReactNode;
+  role?: 'voter' | 'organizer' | 'public';
+  showNav?: boolean;
+  showFooter?: boolean;
+  className?: string;
+  fullBleed?: boolean;
+}
+
+export function PageLayout({
+  children,
+  role = 'public',
+  showNav = true,
+  showFooter = false,
+  className,
+  fullBleed = false,
+}: PageLayoutProps) {
+  return (
+    <div className="relative min-h-dvh bg-background text-on-surface font-body overflow-x-hidden">
+      {/* Ambient background */}
+      <div className="fixed inset-0 z-0 pointer-events-none liquid-mesh" />
+      <div className="fixed top-[-10%] left-[-10%] w-[45%] h-[45%] bg-primary/8 blur-[140px] rounded-full pointer-events-none" />
+      <div className="fixed bottom-[-15%] right-[-15%] w-[55%] h-[55%] bg-secondary/8 blur-[160px] rounded-full pointer-events-none" />
+      <div className="fixed inset-0 z-0 w-full h-full opacity-10 pointer-events-none mix-blend-screen">
+        <div className="w-full h-full bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: "url('/landing-background.jpg')" }} />
+      </div>
+
+      {showNav && <TopNav role={role} />}
+
+      <main
+        className={cn(
+          'relative z-10',
+          !fullBleed && 'px-4 sm:px-6 lg:px-8',
+          showNav && 'pt-0',
+          role !== 'public' && 'pb-20 md:pb-8',
+          className
+        )}
+      >
+        {children}
+      </main>
+
+      {showFooter && <Footer />}
+      {showNav && role !== 'organizer' && <BottomTabNav />}
+    </div>
+  );
+}

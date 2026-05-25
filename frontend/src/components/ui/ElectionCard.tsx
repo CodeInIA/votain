@@ -1,0 +1,119 @@
+import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { Users, Calendar, ChevronRight } from 'lucide-react';
+import { Badge } from './Badge';
+import { Countdown } from './Countdown';
+import { Button } from './Button';
+import { cn } from '../../lib/utils';
+import type { Election, ElectionPhase } from '../../data/seed';
+
+function phaseVariant(phase: ElectionPhase) {
+  return phase as Parameters<typeof Badge>[0]['variant'];
+}
+
+interface ElectionCardProps {
+  election: Election;
+  voterView?: boolean;
+  className?: string;
+}
+
+export function ElectionCard({ election, voterView = false, className }: ElectionCardProps) {
+  const navigate = useNavigate();
+  const { t } = useTranslation();
+  const isLive = election.phase === 'active' || election.phase === 'enrolling';
+  const showCountdown = isLive && (election.phase === 'active' ? election.voteEnd : election.enrollEnd);
+  const deadline = election.phase === 'active' ? election.voteEnd : election.enrollEnd;
+  const pct = election.totalEnrolled > 0
+    ? Math.round((election.castVotes / election.totalEnrolled) * 100)
+    : 0;
+
+  const href = voterView
+    ? `/voter/election/${election.id}`
+    : `/election/${election.id}`;
+
+  return (
+    <div
+      className={cn(
+        'group relative flex flex-col gap-4 p-5 rounded-3xl border border-white/5 bg-surface-low/30 backdrop-blur-xl',
+        'hover:border-white/10 hover:bg-surface-low/40 transition-all duration-300 cursor-pointer',
+        className
+      )}
+      onClick={() => navigate(href)}
+      role="article"
+      tabIndex={0}
+      onKeyDown={e => e.key === 'Enter' && navigate(href)}
+    >
+      {/* Header row */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-xs text-on-surface-meta mb-1.5 truncate">{election.organizer}</p>
+          <h3 className="text-sm sm:text-base font-semibold text-on-surface leading-tight line-clamp-2">
+            {election.title}
+          </h3>
+        </div>
+        <Badge variant={phaseVariant(election.phase)} dot={isLive} className="shrink-0 mt-0.5">
+          {t(`phase.${election.phase}`)}
+        </Badge>
+      </div>
+
+      {/* Description */}
+      <p className="text-xs text-on-surface-variant leading-relaxed line-clamp-2">
+        {election.description}
+      </p>
+
+      {/* Stats row */}
+      <div className="flex items-center gap-4 text-xs text-on-surface-meta">
+        <span className="flex items-center gap-1.5">
+          <Users className="w-3.5 h-3.5" />
+          {election.totalEnrolled.toLocaleString()} {t('election.enrolled')}
+        </span>
+        {election.phase === 'active' && (
+          <span className="text-on-surface-meta">{pct}% {t('election.voted')}</span>
+        )}
+        <span className="flex items-center gap-1.5 ml-auto">
+          <Calendar className="w-3.5 h-3.5" />
+          {election.voteEnd.toLocaleDateString()}
+        </span>
+      </div>
+
+      {/* Countdown for live elections */}
+      {showCountdown && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-on-surface-meta">{t('election.ends_in')}:</span>
+          <Countdown deadline={deadline} size="sm" />
+        </div>
+      )}
+
+      {/* Participation bar for active elections */}
+      {election.phase === 'active' && (
+        <div className="h-1 rounded-full bg-surface-high overflow-hidden">
+          <div
+            className="h-full rounded-full bg-primary/60 transition-all duration-700"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      )}
+
+      {/* CTA */}
+      <div className="flex items-center justify-between mt-auto pt-1">
+        {voterView && election.isEnrolled && election.phase === 'active' && !election.hasVoted && (
+          <Button
+            variant="gradient"
+            size="sm"
+            className="rounded-full px-4"
+            onClick={e => { e.stopPropagation(); navigate(`/voter/election/${election.id}`); }}
+          >
+            {t('election.vote_now')}
+          </Button>
+        )}
+        {voterView && election.hasVoted && (
+          <Badge variant="voted" dot>{t('phase.voted')}</Badge>
+        )}
+        {!voterView && !election.hasVoted && (
+          <span className="text-xs text-on-surface-meta">{election.candidates.length - 1} {t('election.candidates')}</span>
+        )}
+        <ChevronRight className="w-4 h-4 text-on-surface-meta group-hover:text-on-surface transition-colors ml-auto" />
+      </div>
+    </div>
+  );
+}

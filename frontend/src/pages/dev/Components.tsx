@@ -1,0 +1,329 @@
+import { useState } from 'react';
+import { Shield } from 'lucide-react';
+import { Button } from '../../components/ui/Button';
+import { Badge } from '../../components/ui/Badge';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../../components/ui/Card';
+import { Input, Textarea, Select } from '../../components/ui/Input';
+import { Modal } from '../../components/ui/Modal';
+import { RadioGroup } from '../../components/ui/RadioCard';
+import { Checkbox } from '../../components/ui/Checkbox';
+import { Switch } from '../../components/ui/Switch';
+import { Skeleton, SkeletonCard } from '../../components/ui/Skeleton';
+import { Spinner, ProgressDots } from '../../components/ui/Spinner';
+import { Stepper, OverlayStepper } from '../../components/ui/Stepper';
+import { Countdown } from '../../components/ui/Countdown';
+import { ResultBarChart } from '../../components/ui/BarChart';
+import { MiniBarChart } from '../../components/ui/MiniBarChart';
+import { Avatar, IdentityCommitment } from '../../components/ui/Avatar';
+import { LanguageSelector } from '../../components/ui/LanguageSelector';
+import { EligibilityRow } from '../../components/ui/EligibilityRow';
+import { GasWidget } from '../../components/ui/GasWidget';
+import { BlockchainBadge, IPFSBadge } from '../../components/ui/BlockchainBadge';
+import { ToastProvider, useToast } from '../../components/ui/Toast';
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="mb-12">
+      <h2 className="text-xs font-bold uppercase tracking-widest text-on-surface-meta mb-4 pb-2 border-b border-white/5">
+        {title}
+      </h2>
+      <div className="flex flex-wrap gap-3 items-start">{children}</div>
+    </section>
+  );
+}
+
+function ToastDemo() {
+  const { toast } = useToast();
+  return (
+    <div className="flex gap-2 flex-wrap">
+      <Button size="sm" variant="default" onClick={() => toast({ title: 'Success!', description: 'Your vote was recorded.', variant: 'success' })}>
+        Toast success
+      </Button>
+      <Button size="sm" variant="default" onClick={() => toast({ title: 'Error', description: 'Something went wrong.', variant: 'error' })}>
+        Toast error
+      </Button>
+      <Button size="sm" variant="default" onClick={() => toast({ title: 'Warning', description: 'Gas balance is low.', variant: 'warning' })}>
+        Toast warning
+      </Button>
+      <Button size="sm" variant="default" onClick={() => toast({ title: 'Info', variant: 'info', description: 'Verification pending.' })}>
+        Toast info
+      </Button>
+    </div>
+  );
+}
+
+const SAMPLE_RESULTS = [
+  { name: 'Alice Johnson', votes: 847, isWinner: true },
+  { name: 'Bob Martinez', votes: 612, isTie: false },
+  { name: 'Carol Smith', votes: 391 },
+  { name: 'Blank Vote', votes: 150 },
+];
+
+export default function ComponentsShowcase() {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [radioVal, setRadioVal] = useState('alice');
+  const [checked, setChecked] = useState(false);
+  const [switched, setSwitched] = useState(false);
+  const [dotsStep, setDotsStep] = useState(1);
+  const [inputVal, setInputVal] = useState('');
+
+  const futureDate = new Date(Date.now() + 45 * 60_000); // 45 min from now
+  const urgentDate = new Date(Date.now() + 20 * 60_000); // 20 min (urgent)
+
+  return (
+    <ToastProvider>
+      <div className="min-h-dvh bg-background text-on-surface font-body p-8 max-w-5xl mx-auto">
+        <h1 className="text-3xl font-black tracking-tighter text-white mb-2">Design System</h1>
+        <p className="text-on-surface-variant text-sm mb-10">H1 Component Showcase — DEV only</p>
+
+        {/* Buttons */}
+        <Section title="Buttons">
+          <Button variant="gradient">Gradient</Button>
+          <Button variant="default">Default</Button>
+          <Button variant="primary">Primary</Button>
+          <Button variant="secondary">Secondary</Button>
+          <Button variant="ghost">Ghost</Button>
+          <Button variant="gradient" disabled>Disabled</Button>
+          <Button variant="gradient" size="sm">Small</Button>
+          <Button variant="gradient" size="lg">Large</Button>
+        </Section>
+
+        {/* Badges */}
+        <Section title="Phase Badges">
+          <Badge variant="enrolling" dot>Enrolling</Badge>
+          <Badge variant="enrolled" dot>Enrolled</Badge>
+          <Badge variant="active" dot>Active</Badge>
+          <Badge variant="voted" dot>Voted</Badge>
+          <Badge variant="tallying" dot>Tallying</Badge>
+          <Badge variant="closed" dot>Closed</Badge>
+          <Badge variant="voided" dot>Voided</Badge>
+          <Badge variant="cancelled" dot>Cancelled</Badge>
+          <Badge variant="voter">Verified Voter</Badge>
+          <Badge variant="organizer">Organizer</Badge>
+          <Badge variant="tie">Tie</Badge>
+        </Section>
+
+        {/* Transparency Badges */}
+        <Section title="Transparency Badges">
+          <BlockchainBadge href="#" />
+          <IPFSBadge href="#" />
+          <BlockchainBadge />
+          <IPFSBadge />
+        </Section>
+
+        {/* Card */}
+        <Section title="Cards">
+          {(['low', 'mid', 'high'] as const).map(depth => (
+            <Card key={depth} depth={depth} className="p-5 w-56">
+              <p className="text-xs text-on-surface-meta mb-1">depth="{depth}"</p>
+              <p className="text-sm font-medium text-on-surface">Glass Card</p>
+            </Card>
+          ))}
+          <Card className="w-72">
+            <CardHeader>
+              <CardTitle>Election Card</CardTitle>
+              <CardDescription>Full card with header, content, and footer sections.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-on-surface-variant">Card body content goes here.</p>
+            </CardContent>
+            <CardFooter>
+              <Button size="sm" variant="gradient">Action</Button>
+            </CardFooter>
+          </Card>
+        </Section>
+
+        {/* Inputs */}
+        <Section title="Inputs">
+          <div className="w-64 flex flex-col gap-3">
+            <Input
+              label="Election name"
+              placeholder="Enter election name"
+              value={inputVal}
+              onChange={e => setInputVal(e.target.value)}
+              leftIcon={<Shield className="w-4 h-4" />}
+            />
+            <Input label="Error state" placeholder="Invalid value" error="This field is required" />
+            <Textarea label="Description" placeholder="Describe the election…" rows={3} />
+            <Select
+              label="Security level"
+              options={[
+                { value: 'device', label: 'Device verification' },
+                { value: 'orb', label: 'Orb verification' },
+              ]}
+              placeholder="Select level"
+            />
+          </div>
+        </Section>
+
+        {/* RadioCard */}
+        <Section title="Radio Card (Candidate Selector)">
+          <div className="w-72">
+            <RadioGroup
+              value={radioVal}
+              onChange={setRadioVal}
+              options={[
+                { value: 'alice', label: 'Alice Johnson', description: 'Progressive Party candidate' },
+                { value: 'bob',   label: 'Bob Martinez',  description: 'Conservative Party candidate' },
+                { value: 'blank', label: 'Blank Vote / Abstain' },
+              ]}
+            />
+          </div>
+        </Section>
+
+        {/* Checkbox & Switch */}
+        <Section title="Checkbox & Switch">
+          <Checkbox
+            checked={checked}
+            onChange={setChecked}
+            label="I agree to the terms"
+            description="By checking this you accept our terms of service."
+          />
+          <Switch
+            checked={switched}
+            onChange={setSwitched}
+            label="Enable Orb verification"
+            description="Requires physical biometric scan"
+          />
+        </Section>
+
+        {/* Skeleton */}
+        <Section title="Skeleton Loaders">
+          <Skeleton className="w-32 h-4" />
+          <Skeleton className="w-20 h-20" circle />
+          <Skeleton lines={3} className="w-48" />
+          <SkeletonCard className="w-64" />
+        </Section>
+
+        {/* Spinner & ProgressDots */}
+        <Section title="Spinner & Progress Dots">
+          <Spinner size="sm" />
+          <Spinner size="md" />
+          <Spinner size="lg" />
+          <div className="flex flex-col gap-2 items-start">
+            <ProgressDots total={6} current={dotsStep} onDotClick={setDotsStep} />
+            <p className="text-xs text-on-surface-meta">Step {dotsStep + 1} of 6 (click dots)</p>
+          </div>
+        </Section>
+
+        {/* Stepper */}
+        <Section title="Steppers">
+          <div className="w-full">
+            <Stepper
+              current={1}
+              steps={[
+                { label: 'Info' },
+                { label: 'Timeline' },
+                { label: 'Candidates' },
+                { label: 'Deploy' },
+              ]}
+              className="mb-6"
+            />
+            <OverlayStepper
+              steps={[
+                { label: 'Preparing your private vote…', status: 'done' },
+                { label: 'Sending your vote securely…',  status: 'active' },
+                { label: 'Your vote is confirmed!',      status: 'pending' },
+              ]}
+            />
+          </div>
+        </Section>
+
+        {/* Countdown */}
+        <Section title="Countdown">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-on-surface-meta w-20">Normal:</span>
+              <Countdown deadline={futureDate} size="md" />
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-on-surface-meta w-20">Urgent (&lt;1h):</span>
+              <Countdown deadline={urgentDate} size="md" />
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-on-surface-meta w-20">Large:</span>
+              <Countdown deadline={futureDate} size="lg" />
+            </div>
+          </div>
+        </Section>
+
+        {/* BarChart */}
+        <Section title="Results Bar Chart">
+          <div className="w-full max-w-lg">
+            <ResultBarChart
+              candidates={SAMPLE_RESULTS}
+              totalVotes={SAMPLE_RESULTS.reduce((s, c) => s + c.votes, 0)}
+            />
+          </div>
+          <div className="w-48">
+            <MiniBarChart
+              data={[
+                { label: 'Mon', value: 40 },
+                { label: 'Tue', value: 70 },
+                { label: 'Wed', value: 55 },
+                { label: 'Thu', value: 90 },
+                { label: 'Fri', value: 30 },
+              ]}
+              height={80}
+            />
+          </div>
+        </Section>
+
+        {/* Avatar & Identity */}
+        <Section title="Avatar & Identity Commitment">
+          <Avatar size="xs" fallback="AJ" />
+          <Avatar size="sm" fallback="BM" />
+          <Avatar size="md" fallback="CS" />
+          <Avatar size="lg" fallback="VT" />
+          <IdentityCommitment
+            commitment="0x1234567890abcdef1234567890abcdef12345678"
+            copyable
+          />
+        </Section>
+
+        {/* Language Selector */}
+        <Section title="Language Selector">
+          <LanguageSelector />
+          <LanguageSelector align="left" />
+        </Section>
+
+        {/* Eligibility */}
+        <Section title="Eligibility Checklist">
+          <div className="w-72 bg-surface-low/40 rounded-2xl px-4 py-2">
+            <EligibilityRow label="Age ≥ 18 years" status="met" />
+            <EligibilityRow label="EU residency" status="not-met" description="You must be an EU resident to participate." />
+            <EligibilityRow label="Orb verification" status="unknown" description="Requires biometric scan at a World ID orb." />
+          </div>
+        </Section>
+
+        {/* Gas Widget */}
+        <Section title="Gas Balance Widget">
+          <GasWidget balanceMatic={2.5} estimatedVotesLeft={84} className="w-72" />
+          <GasWidget balanceMatic={0.5} estimatedVotesLeft={16} onDeposit={() => {}} className="w-72" />
+          <GasWidget balanceMatic={0.05} estimatedVotesLeft={2} onDeposit={() => {}} className="w-72" />
+        </Section>
+
+        {/* Modal */}
+        <Section title="Modal">
+          <Button variant="default" onClick={() => setModalOpen(true)}>Open Modal</Button>
+          <Modal
+            open={modalOpen}
+            onClose={() => setModalOpen(false)}
+            title="Confirm action"
+            description="This action cannot be undone. Are you sure you want to proceed?"
+          >
+            <div className="flex gap-3 mt-2">
+              <Button variant="ghost" onClick={() => setModalOpen(false)} className="flex-1">Cancel</Button>
+              <Button variant="gradient" onClick={() => setModalOpen(false)} className="flex-1">Confirm</Button>
+            </div>
+          </Modal>
+        </Section>
+
+        {/* Toast */}
+        <Section title="Toast Notifications">
+          <ToastDemo />
+        </Section>
+      </div>
+    </ToastProvider>
+  );
+}

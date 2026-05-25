@@ -1,0 +1,135 @@
+import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { ChevronLeft, Download, ExternalLink } from 'lucide-react';
+import { PageLayout } from '../../components/layout/PageLayout';
+import { Badge } from '../../components/ui/Badge';
+import { Button } from '../../components/ui/Button';
+import { Card } from '../../components/ui/Card';
+import { ResultBarChart } from '../../components/ui/BarChart';
+import { BlockchainBadge, IPFSBadge } from '../../components/ui/BlockchainBadge';
+import { getElection } from '../../data/seed';
+
+export default function ElectionResults() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { t } = useTranslation();
+  const election = getElection(id ?? '');
+
+  if (!election || !election.candidates.some(c => c.votes !== undefined)) {
+    return (
+      <PageLayout role="public" showNav>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+          <span className="text-5xl mb-4">📊</span>
+          <h2 className="text-xl font-bold text-on-surface mb-2">{t('results.not_available')}</h2>
+          <Button variant="ghost" onClick={() => navigate(-1)}>{t('common.back')}</Button>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  const totalVotes = election.candidates.reduce((s, c) => s + (c.votes ?? 0), 0);
+  const winner     = election.candidates.find(c => c.isWinner);
+  const hasTie     = election.candidates.some(c => c.isTie);
+
+  const handleExport = () => {
+    const data = {
+      election: election.title,
+      contractAddress: election.contractAddress,
+      ipfsCid: election.ipfsCid,
+      totalVotes,
+      results: election.candidates.map(c => ({
+        name: c.name,
+        votes: c.votes ?? 0,
+        pct: totalVotes > 0 ? Math.round(((c.votes ?? 0) / totalVotes) * 1000) / 10 : 0,
+      })),
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `votain-results-${election.id}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <PageLayout role="public" showNav>
+      <div className="max-w-3xl mx-auto pt-4 pb-24">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-1.5 text-sm text-on-surface-meta hover:text-on-surface mb-6 transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          {t('common.back')}
+        </button>
+
+        {/* Header */}
+        <div className="mb-6">
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <Badge variant="closed">{t('phase.closed')}</Badge>
+            <BlockchainBadge href={`https://amoy.polygonscan.com/address/${election.contractAddress}`} />
+            {election.ipfsCid && <IPFSBadge href={`https://ipfs.io/ipfs/${election.ipfsCid}`} />}
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white mb-1">
+            {t('results.title')}
+          </h1>
+          <p className="text-sm text-on-surface-variant">{election.title}</p>
+        </div>
+
+        {/* Summary card */}
+        <Card className="p-5 mb-4">
+          <div className="flex flex-wrap gap-6">
+            <div>
+              <p className="text-xs text-on-surface-meta mb-0.5">{t('results.total_votes')}</p>
+              <p className="text-2xl font-bold text-on-surface">{totalVotes.toLocaleString()}</p>
+            </div>
+            <div>
+              <p className="text-xs text-on-surface-meta mb-0.5">{t('results.participation')}</p>
+              <p className="text-2xl font-bold text-on-surface">
+                {election.totalEnrolled > 0
+                  ? Math.round((totalVotes / election.totalEnrolled) * 100)
+                  : 0}%
+              </p>
+            </div>
+            {winner && (
+              <div>
+                <p className="text-xs text-on-surface-meta mb-0.5">{t('results.winner')}</p>
+                <p className="text-base font-bold text-primary">{winner.name}</p>
+              </div>
+            )}
+            {hasTie && (
+              <Badge variant="tie" className="self-center">{t('badge.tie')}</Badge>
+            )}
+          </div>
+        </Card>
+
+        {/* Bar chart */}
+        <Card className="p-5 mb-6">
+          <h2 className="text-sm font-semibold text-on-surface mb-4">{t('results.breakdown')}</h2>
+          <ResultBarChart candidates={election.candidates as Parameters<typeof ResultBarChart>[0]['candidates']} totalVotes={totalVotes} />
+        </Card>
+
+        {/* Transparency actions */}
+        <div className="flex flex-wrap gap-3">
+          <Button variant="default" size="sm" className="rounded-full gap-2" onClick={handleExport}>
+            <Download className="w-4 h-4" />
+            {t('results.export_json')}
+          </Button>
+          {election.ipfsCid && (
+            <a
+              href={`https://ipfs.io/ipfs/${election.ipfsCid}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button variant="ghost" size="sm" className="rounded-full gap-2">
+                <ExternalLink className="w-4 h-4" />
+                {t('results.view_ipfs')}
+              </Button>
+            </a>
+          )}
+        </div>
+      </div>
+    </PageLayout>
+  );
+}
