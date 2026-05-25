@@ -31,6 +31,32 @@
 
 ## TypeScript / JavaScript conventions
 
+### Explicit typing (rule 12 — binding for all agents)
+
+All TypeScript code must use explicit types. No implicit `any`. Specific rules:
+
+- **Function parameters**: always annotated. `(id: string)`, `(proof: IDKitResult)`.
+- **Async function return types**: always `Promise<void>` or the appropriate generic. `async (): Promise<void>`.
+- **Catch bindings**: always `(error: unknown)` or `(e: unknown)`. Never bare `catch (error)`.
+- **`res.json()` casts**: cast at the source (`res.json() as Promise<MyType>`), not in the next `.then` callback.
+- **`useMemo` / `useState` generics**: annotate when the inferred type is ambiguous (`useMemo<MyType[]>(...)`).
+- **Module-level constants**: annotate when not obviously typed (`const isMobile: boolean = ...`).
+- **`as unknown`** is allowed only as a stepping stone before narrowing. Never `as any`.
+- **Named types for API shapes**: define a named type or interface for every `res.json()` response. Inline object literals in casts are acceptable only for small one-off shapes.
+
+```typescript
+// CORRECT
+const handleFoo = async (id: string): Promise<void> => { ... };
+catch (error: unknown) { ... }
+const data = await res.json() as Promise<{ nullifier?: string }>;
+const items = useMemo<Item[]>(() => [...], []);
+
+// WRONG
+const handleFoo = async (id) => { ... };     // implicit any on id
+catch (error) { ... }                         // implicit unknown (non-obvious)
+.then((data: Foo) => ...)                     // cast in the wrong place
+```
+
 ### ethers v6 (NOT ethers v5)
 
 ```typescript

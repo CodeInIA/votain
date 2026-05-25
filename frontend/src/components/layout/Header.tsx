@@ -21,7 +21,7 @@ export function Header() {
       <div className="flex items-center">
         <Button 
           variant="default" 
-          onClick={() => navigate('/voter/onboarding')}
+          onClick={() => navigate('/voter/signin')}
           className="flex items-center gap-2 rounded-full border-white/10 hover:bg-white/10 px-7 h-10 text-sm font-medium bg-transparent"
         >
           {t('landing.login', 'Log in')}

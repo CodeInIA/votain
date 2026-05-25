@@ -1,74 +1,22 @@
-import { useState, useMemo, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Fingerprint, ShieldAlert, CheckCircle,
-  ChevronRight, ChevronLeft, ShieldCheck, Loader2, X,
-} from 'lucide-react';
+import { ShieldCheck, Loader2, ChevronLeft, X } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-import { Button } from '../../components/ui/Button';
+import { Button } from '../ui/Button';
 import { useWorldIdVerify } from '../../hooks/useWorldIdVerify';
 
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+interface WorldIdVerifyProps {
+  onBack: () => void;
 }
 
-const isMobile: boolean = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-type InfoStep = { id: string; title: string; description: string; icon: ReactNode };
-
-export default function Onboarding() {
-  const [step, setStep] = useState(0);
-  const navigate = useNavigate();
+export function WorldIdVerify({ onBack }: WorldIdVerifyProps) {
   const { t } = useTranslation();
   const {
     isLoadingQr, isVerifying, isSuccess, connectorURI, qrError,
     handleOpenWorldId, handleCancelQr,
   } = useWorldIdVerify();
-
-  const infoSteps = useMemo<InfoStep[]>(() => [
-    {
-      id: 'what',
-      title: t('onboarding.what_title'),
-      description: t('onboarding.what_desc'),
-      icon: (
-        <img src="/votain-logo.webp" alt="Votain"
-          className="w-16 h-16 sm:w-20 sm:h-20 object-contain drop-shadow-[0_0_10px_rgba(79,142,247,0.3)]" />
-      ),
-    },
-    {
-      id: 'privacy',
-      title: t('onboarding.privacy_title'),
-      description: t('onboarding.privacy_desc'),
-      icon: <Fingerprint className="w-16 h-16 text-secondary-dim" strokeWidth={1.5} />,
-    },
-    {
-      id: 'coercion',
-      title: t('onboarding.coercion_title'),
-      description: t('onboarding.coercion_desc'),
-      icon: <ShieldAlert className="w-16 h-16 text-primary" strokeWidth={1.5} />,
-    },
-    {
-      id: 'free',
-      title: t('onboarding.free_title'),
-      description: t('onboarding.free_desc'),
-      icon: <CheckCircle className="w-16 h-16 text-tertiary" strokeWidth={1.5} />,
-    },
-  ], [t]);
-
-  const VERIFY_STEP = infoSteps.length; // step index 4
-  const TOTAL_STEPS = infoSteps.length + 1; // 5 dots total
-  const isVerifyStep = step === VERIFY_STEP;
-
-  const handleNext = () => setStep(step + 1);
-  const handleBack = () => {
-    if (isVerifying || isLoadingQr) return;
-    if (step > 0) setStep(step - 1);
-    else navigate(-1);
-  };
 
   return (
     <div className="relative min-h-dvh w-full bg-background text-on-surface font-body selection:bg-primary selection:text-white overflow-x-hidden flex flex-col items-center justify-center p-4">
@@ -80,7 +28,7 @@ export default function Onboarding() {
       </div>
 
       <Button
-        onClick={handleBack}
+        onClick={onBack}
         variant="ghost"
         className="absolute top-4 left-4 sm:top-6 sm:left-6 z-50 w-12 h-12 p-0 flex items-center justify-center rounded-full bg-surface-low/30 hover:bg-surface-low/50 backdrop-blur-xl border border-white/5 text-white shadow-lg"
         aria-label={t('common.back')}
@@ -94,9 +42,7 @@ export default function Onboarding() {
         className="w-full max-w-120 bg-surface-low/30 backdrop-blur-3xl rounded-4xl p-6 sm:p-10 border border-white/5 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] flex flex-col items-center text-center relative z-10"
       >
         <AnimatePresence mode="wait">
-
-          {/* Success state (verify step) */}
-          {isVerifyStep && isSuccess ? (
+          {isSuccess ? (
             <motion.div
               key="success"
               initial={{ opacity: 0, scale: 0.95 }}
@@ -112,8 +58,7 @@ export default function Onboarding() {
               <p className="text-on-surface-variant text-sm">{t('verify.redirecting')}</p>
             </motion.div>
 
-          /* QR / deep-link state (verify step) */
-          ) : isVerifyStep && connectorURI ? (
+          ) : connectorURI ? (
             <motion.div
               key="qr"
               initial={{ opacity: 0, scale: 0.95 }}
@@ -148,10 +93,9 @@ export default function Onboarding() {
               </Button>
             </motion.div>
 
-          /* Normal step content (info steps 0-3 + verify step idle) */
           ) : (
             <motion.div
-              key={step}
+              key="verify"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 1.02 }}
@@ -159,71 +103,32 @@ export default function Onboarding() {
               className="w-full flex flex-col items-center min-h-72 sm:min-h-80"
             >
               <div className="mb-6 sm:mb-8 w-28 h-28 sm:w-32 sm:h-32 flex items-center justify-center bg-surface-lowest/40 rounded-full shadow-[inset_0_2px_20px_rgba(255,255,255,0.02)] border border-white/5 shrink-0">
-                {isVerifyStep ? (
-                  <img src="/world-id-logo.svg" alt="World ID" className="w-16 h-16 sm:w-20 sm:h-20" style={{ filter: 'invert(1) brightness(200%)' }} />
-                ) : (
-                  infoSteps[step].icon
-                )}
+                <img src="/world-id-logo.svg" alt="World ID" className="w-16 h-16 sm:w-20 sm:h-20" style={{ filter: 'invert(1) brightness(200%)' }} />
               </div>
               <div className="min-h-16 sm:min-h-20 flex items-center mb-3 sm:mb-4">
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white drop-shadow-sm leading-tight px-2">
-                  {isVerifyStep ? t('verify.title') : infoSteps[step].title}
-                </h1>
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white drop-shadow-sm leading-tight px-2">{t('verify.title')}</h1>
               </div>
-              <p className="text-on-surface-variant text-sm sm:text-base leading-relaxed mb-6 sm:mb-8 h-28 sm:h-32 px-4 shrink-0 overflow-y-auto w-full scrollbar-none">
-                {isVerifyStep ? t('verify.description') : infoSteps[step].description}
-              </p>
-              {isVerifyStep && qrError && <p className="text-red-400 text-sm mb-4">{qrError}</p>}
+              <p className="text-on-surface-variant text-sm sm:text-base leading-relaxed mb-6 sm:mb-8 h-28 sm:h-32 px-4 shrink-0 overflow-y-auto w-full scrollbar-none">{t('verify.description')}</p>
+              {qrError && <p className="text-red-400 text-sm mb-4">{qrError}</p>}
             </motion.div>
           )}
-
         </AnimatePresence>
 
-        {/* Dots + navigation button */}
         {!isSuccess && !connectorURI && (
-          <div className="w-full mt-4 sm:mt-6 flex flex-col items-center">
-            <div className="flex gap-2 mb-6 sm:mb-8">
-              {Array.from({ length: TOTAL_STEPS }, (_, i) => (
-                <button
-                  key={i}
-                  onClick={() => !isVerifying && !isLoadingQr && setStep(i)}
-                  className={cn(
-                    'h-1.5 rounded-full transition-all duration-500 cursor-pointer',
-                    i === step ? 'w-8 bg-primary' : 'w-1.5 bg-outline-variant hover:bg-primary/50'
-                  )}
-                  aria-label={t('onboarding.go_to_step', { step: i + 1 })}
-                  disabled={isVerifying || isLoadingQr}
-                />
-              ))}
-            </div>
-
-            <div className="flex w-full gap-3">
-              {isVerifyStep ? (
-                <Button
-                  onClick={handleOpenWorldId}
-                  size="lg"
-                  variant="gradient"
-                  disabled={isVerifying || isLoadingQr}
-                  className="w-full rounded-full flex items-center justify-center gap-2 group text-lg font-semibold h-14"
-                >
-                  {isLoadingQr ? (
-                    <><Loader2 className="w-5 h-5 animate-spin" /><span className="opacity-80">{t('verify.btn_loading')}</span></>
-                  ) : (
-                    <><img src="/world-id-logo.svg" alt="World ID" className="w-5 h-5" />{t('verify.btn_verify')}</>
-                  )}
-                </Button>
+          <div className="w-full mt-4 sm:mt-6">
+            <Button
+              onClick={handleOpenWorldId}
+              size="lg"
+              variant="gradient"
+              disabled={isVerifying || isLoadingQr}
+              className="w-full rounded-full flex items-center justify-center gap-2 group text-lg font-semibold h-14"
+            >
+              {isLoadingQr ? (
+                <><Loader2 className="w-5 h-5 animate-spin" /><span className="opacity-80">{t('verify.btn_loading')}</span></>
               ) : (
-                <Button
-                  onClick={handleNext}
-                  size="lg"
-                  variant="gradient"
-                  className="w-full rounded-full flex items-center justify-center gap-2 group text-lg font-semibold h-14"
-                >
-                  {t('onboarding.btn_next')}
-                  <ChevronRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
-                </Button>
+                <><img src="/world-id-logo.svg" alt="World ID" className="w-5 h-5" />{t('verify.btn_verify')}</>
               )}
-            </div>
+            </Button>
           </div>
         )}
       </motion.div>

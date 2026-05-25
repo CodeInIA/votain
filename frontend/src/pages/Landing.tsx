@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { CircleHelp } from 'lucide-react';
@@ -8,6 +9,27 @@ import { Button } from '../components/ui/Button';
 export default function Landing() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2000);
+
+    fetch(`${import.meta.env.VITE_BACKEND_URL ?? ''}/api/me`, {
+      credentials: 'include',
+      signal: controller.signal,
+    })
+      .then(res => (res.ok ? res.json() as Promise<{ authenticated?: boolean }> : null))
+      .then((data: { authenticated?: boolean } | null) => {
+        if (data?.authenticated) navigate('/voter/dashboard', { replace: true });
+      })
+      .catch(() => {})
+      .finally(() => clearTimeout(timer));
+
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [navigate]);
 
   return (
     <div className="relative h-dvh w-full bg-background text-on-surface font-body selection:bg-primary selection:text-white overflow-hidden flex flex-col">
