@@ -61,6 +61,7 @@ export default function GasManagement() {
                   amount === v
                     ? 'bg-primary/10 border-primary/30 text-primary-dim'
                     : 'bg-surface-low/30 border-outline-variant/20 text-on-surface-meta hover:text-on-surface',
+                  'cursor-pointer',
                 ].join(' ')}
               >
                 {v}

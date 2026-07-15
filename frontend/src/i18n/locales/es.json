@@ -4,6 +4,7 @@
     "voter_cta": "Comenzar",
     "login": "Iniciar sesión",
     "browse": "Explorar elecciones",
+    "my_elections": "Mis elecciones",
     "how_it_works": "Cómo funciona",
     "footer": {
       "protocol": "Votain Protocol",
@@ -19,6 +20,8 @@
     "create_election_link": "Crear una elección"
   },
   "onboarding": {
+    "language_title": "Selecciona tu idioma",
+    "language_desc": "Detectado: {{detected}}",
     "what_title": "Bienvenido a Votain",
     "what_desc": "Vota de forma segura y secreta desde cualquier dispositivo. Nadie sabrá nunca qué has elegido.",
     "privacy_title": "100% Anónimo",
@@ -65,7 +68,8 @@
     "retry": "Intentar de nuevo",
     "close": "Cerrar",
     "confirm": "Confirmar",
-    "integration_pending": "Esta función se conectará en la fase de integración."
+    "integration_pending": "Esta función se conectará en la fase de integración.",
+    "all": "Todo"
   },
   "nav": {
     "discover": "Descubrir",
@@ -74,7 +78,10 @@
     "profile": "Perfil",
     "how_it_works": "Cómo funciona",
     "create_election": "Nueva elección",
-    "verified_voter": "Votante verificado"
+    "verified_voter": "Votante verificado",
+    "dashboard": "Panel",
+    "members": "Miembros",
+    "gas": "Gas"
   },
   "phase": {
     "enrolling": "Inscripción",
@@ -129,7 +136,9 @@
     "change_vote": "Cambiar mi voto",
     "reference": "Referencia: {{ref}}",
     "gas_low_banner": "Tu saldo de gas es bajo. Recarga para votar.",
-    "top_up": "Recargar"
+    "top_up": "Recargar",
+    "ends_in": "Termina en",
+    "vote_now": "Votar ahora"
   },
   "how": {
     "title": "Cómo funciona Votain",
@@ -212,7 +221,10 @@
     "why_title": "¿Por qué necesito verificarme de nuevo?",
     "last_verified": "Última verificación: {{date}}",
     "verify_btn": "Verificar de nuevo con World ID",
-    "pending": "Verificando…"
+    "pending": "Verificando…",
+    "reason1": "Mi credencial de World ID ha expirado",
+    "reason2": "Obtuve un nuevo dispositivo World ID",
+    "reason3": "Mi credencial fue revocada o restablecida"
   },
   "org_auth": {
     "title": "Acceso de Organizador",

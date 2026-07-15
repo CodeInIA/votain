@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { ShieldCheck, ExternalLink, Copy, Check } from 'lucide-react';
+import { ShieldCheck, ExternalLink, Copy, Check, SearchCheck } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Button } from '../../components/ui/Button';
 import { BlockchainBadge } from '../../components/ui/BlockchainBadge';
@@ -40,7 +40,7 @@ export default function VoteConfirmation() {
         >
           {/* Checkmark */}
           <div className="relative mb-6">
-            <div className="absolute inset-0 bg-green-500/20 blur-[40px] rounded-full" />
+            <div className="absolute inset-0 bg-green-500/20 blur-2xl rounded-full" />
             <div className="relative w-24 h-24 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center">
               <ShieldCheck className="w-12 h-12 text-green-400 drop-shadow-[0_0_15px_rgba(74,222,128,0.6)]" strokeWidth={1.5} />
             </div>
@@ -55,7 +55,7 @@ export default function VoteConfirmation() {
             <div className="flex items-center justify-between gap-2">
               <span className="font-mono text-sm text-on-surface font-semibold">{DEMO_REF}</span>
               <button type="button" onClick={handleCopy}
-                className="text-on-surface-meta hover:text-on-surface transition-colors">
+                className="text-on-surface-meta hover:text-on-surface transition-colors cursor-pointer">
                 {copied ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
               </button>
             </div>
@@ -84,6 +84,11 @@ export default function VoteConfirmation() {
                 {t('confirmation.view_tx')}
               </Button>
             </a>
+            <Button variant="ghost" className="w-full rounded-full gap-2"
+              onClick={() => navigate('/verify-receipt')}>
+              <SearchCheck className="w-4 h-4" />
+              {t('verify_receipt.title')}
+            </Button>
             <Button variant="ghost" className="w-full rounded-full"
               onClick={() => navigate('/voter/elections')}>
               {t('confirmation.back_elections')}

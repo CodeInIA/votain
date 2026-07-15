@@ -4,6 +4,7 @@
     "voter_cta": "Loslegen",
     "login": "Anmelden",
     "browse": "Wahlen durchsuchen",
+    "my_elections": "Meine Wahlen",
     "how_it_works": "Wie es funktioniert",
     "footer": {
       "protocol": "Votain Protocol",
@@ -67,7 +68,8 @@
     "retry": "Erneut versuchen",
     "close": "Schließen",
     "confirm": "Bestätigen",
-    "integration_pending": "Diese Funktion wird in der Integrationsphase verbunden."
+    "integration_pending": "Diese Funktion wird in der Integrationsphase verbunden.",
+    "all": "Alle"
   },
   "nav": {
     "discover": "Entdecken",
@@ -76,7 +78,10 @@
     "profile": "Profil",
     "how_it_works": "Wie es funktioniert",
     "create_election": "Neue Wahl",
-    "verified_voter": "Verifizierter Wähler"
+    "verified_voter": "Verifizierter Wähler",
+    "dashboard": "Dashboard",
+    "members": "Mitglieder",
+    "gas": "Gas"
   },
   "phase": {
     "enrolling": "Anmeldung",
@@ -131,7 +136,9 @@
     "change_vote": "Meine Stimme ändern",
     "reference": "Referenz: {{ref}}",
     "gas_low_banner": "Ihr Gasguthaben ist niedrig. Aufladen zum Abstimmen.",
-    "top_up": "Aufladen"
+    "top_up": "Aufladen",
+    "ends_in": "Endet in",
+    "vote_now": "Jetzt abstimmen"
   },
   "how": {
     "title": "Wie Votain funktioniert",
@@ -214,7 +221,10 @@
     "why_title": "Warum muss ich mich erneut verifizieren?",
     "last_verified": "Zuletzt verifiziert: {{date}}",
     "verify_btn": "Mit World ID erneut verifizieren",
-    "pending": "Verifizierung…"
+    "pending": "Verifizierung…",
+    "reason1": "Mein World ID-Ausweis ist abgelaufen",
+    "reason2": "Ich habe ein neues World ID-Gerät",
+    "reason3": "Mein Ausweis wurde widerrufen oder zurückgesetzt"
   },
   "org_auth": {
     "title": "Organisator-Zugang",

@@ -77,7 +77,7 @@ export default function CreateElection() {
         <button
           type="button"
           onClick={() => step > 0 ? setStep(s => s - 1) : navigate(-1)}
-          className="flex items-center gap-1.5 text-sm text-on-surface-meta hover:text-on-surface mb-5 transition-colors"
+          className="flex items-center gap-1.5 text-sm text-on-surface-meta hover:text-on-surface mb-5 transition-colors cursor-pointer"
         >
           <ChevronLeft className="w-4 h-4" />
           {t('common.back')}
@@ -134,7 +134,7 @@ export default function CreateElection() {
                   <Input placeholder={t('create.candidate_desc')} value={c.description} onChange={e => updateCandidate(i, 'description', e.target.value)} />
                 </div>
                 {form.candidates.length > 2 && (
-                  <button type="button" onClick={() => removeCandidate(i)} className="mt-2 text-error hover:text-error/70 transition-colors">
+                  <button type="button" onClick={() => removeCandidate(i)} className="mt-2 text-error hover:text-error/70 transition-colors cursor-pointer">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 )}

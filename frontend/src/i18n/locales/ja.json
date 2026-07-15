@@ -4,6 +4,7 @@
     "voter_cta": "始める",
     "login": "ログイン",
     "browse": "選挙を見る",
+    "my_elections": "私の選挙",
     "how_it_works": "仕組み",
     "footer": {
       "protocol": "Votain Protocol",
@@ -67,7 +68,8 @@
     "retry": "再試行",
     "close": "閉じる",
     "confirm": "確認",
-    "integration_pending": "この機能は統合フェーズで接続されます。"
+    "integration_pending": "この機能は統合フェーズで接続されます。",
+    "all": "すべて"
   },
   "nav": {
     "discover": "探す",
@@ -76,7 +78,10 @@
     "profile": "プロフィール",
     "how_it_works": "仕組み",
     "create_election": "新しい選挙",
-    "verified_voter": "確認済み投票者"
+    "verified_voter": "確認済み投票者",
+    "dashboard": "ダッシュボード",
+    "members": "メンバー",
+    "gas": "Gas"
   },
   "phase": {
     "enrolling": "登録中",
@@ -131,7 +136,9 @@
     "change_vote": "投票を変更",
     "reference": "参照番号: {{ref}}",
     "gas_low_banner": "ガス残高が不足しています。投票するにはチャージしてください。",
-    "top_up": "チャージ"
+    "top_up": "チャージ",
+    "ends_in": "終了まで",
+    "vote_now": "今すぐ投票"
   },
   "how": {
     "title": "Votainの仕組み",
@@ -214,7 +221,10 @@
     "why_title": "なぜ再確認が必要なのですか？",
     "last_verified": "最終確認: {{date}}",
     "verify_btn": "World IDで再確認",
-    "pending": "確認中…"
+    "pending": "確認中…",
+    "reason1": "私のWorld ID認証が期限切れになりました",
+    "reason2": "新しいWorld IDデバイスを取得しました",
+    "reason3": "私の認証が取り消しまたはリセットされました"
   },
   "org_auth": {
     "title": "主催者アクセス",

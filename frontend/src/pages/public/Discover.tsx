@@ -29,7 +29,7 @@ export default function Discover() {
   }, [query, phase]);
 
   return (
-    <PageLayout role="public" showNav showFooter={false}>
+    <PageLayout role="public" showNav>
       <div className="max-w-5xl mx-auto pt-6 pb-24">
         {/* Header */}
         <div className="mb-8">
@@ -48,14 +48,14 @@ export default function Discover() {
               onChange={e => setQuery(e.target.value)}
               leftIcon={<Search className="w-4 h-4" />}
               rightIcon={query ? (
-                <button onClick={() => setQuery('')}><X className="w-4 h-4" /></button>
+                <button onClick={() => setQuery('')} className="cursor-pointer"><X className="w-4 h-4" /></button>
               ) : undefined}
             />
           </div>
           <button
             type="button"
             onClick={() => setShowFilters(v => !v)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-outline-variant/20 bg-surface-low/30 backdrop-blur-sm text-sm text-on-surface-variant hover:text-on-surface hover:border-outline-variant/40 transition-all"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-outline-variant/20 bg-surface-low/30 backdrop-blur-sm text-sm text-on-surface-variant hover:text-on-surface hover:border-outline-variant/40 transition-all cursor-pointer"
           >
             <SlidersHorizontal className="w-4 h-4" />
             <span className="hidden sm:inline">{t('common.filter')}</span>
@@ -71,7 +71,7 @@ export default function Discover() {
                 key={p}
                 type="button"
                 onClick={() => setPhase(phase === p ? null : p)}
-                className="transition-all"
+                className="transition-all cursor-pointer"
               >
                 <Badge
                   variant={p}
@@ -98,7 +98,7 @@ export default function Discover() {
             {(query || phase) && (
               <button
                 type="button"
-                className="mt-4 text-sm text-primary hover:underline"
+                className="mt-4 text-sm text-primary hover:underline cursor-pointer"
                 onClick={() => { setQuery(''); setPhase(null); }}
               >
                 {t('common.clear_filters')}
@@ -108,7 +108,7 @@ export default function Discover() {
         ) : (
           <>
             <p className="text-xs text-on-surface-meta mb-4">
-              {filtered.length} {t('discover.results_count')}
+              {t('discover.results_count', { count: filtered.length })}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filtered.map(e => (

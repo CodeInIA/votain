@@ -70,11 +70,11 @@ describe('Landing Page Structure & Navigation', () => {
     // Checks that typical anchor links exist for agreements
     const terms = screen.getByRole('link', { name: 'landing.footer.terms' });
     const privacy = screen.getByRole('link', { name: 'landing.footer.privacy' });
-    const language = screen.getByRole('link', { name: 'landing.footer.language' });
-    
+    const howItWorks = screen.getByRole('link', { name: 'nav.how_it_works' });
+
     expect(terms).toBeVisible();
     expect(privacy).toBeVisible();
-    expect(language).toBeVisible();
+    expect(howItWorks).toBeVisible();
   });
 });
 

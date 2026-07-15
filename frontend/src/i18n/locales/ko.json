@@ -4,6 +4,7 @@
     "voter_cta": "시작하기",
     "login": "로그인",
     "browse": "선거 둘러보기",
+    "my_elections": "내 선거",
     "how_it_works": "작동 방식",
     "footer": {
       "protocol": "Votain Protocol",
@@ -67,7 +68,8 @@
     "retry": "다시 시도",
     "close": "닫기",
     "confirm": "확인",
-    "integration_pending": "이 기능은 통합 단계에서 연결됩니다."
+    "integration_pending": "이 기능은 통합 단계에서 연결됩니다.",
+    "all": "전체"
   },
   "nav": {
     "discover": "탐색",
@@ -76,7 +78,10 @@
     "profile": "프로필",
     "how_it_works": "작동 방식",
     "create_election": "새 선거",
-    "verified_voter": "인증된 유권자"
+    "verified_voter": "인증된 유권자",
+    "dashboard": "대시보드",
+    "members": "멤버",
+    "gas": "Gas"
   },
   "phase": {
     "enrolling": "등록 중",
@@ -131,7 +136,9 @@
     "change_vote": "투표 변경",
     "reference": "참조: {{ref}}",
     "gas_low_banner": "가스 잔액이 부족합니다. 투표하려면 충전하세요.",
-    "top_up": "충전"
+    "top_up": "충전",
+    "ends_in": "종료까지",
+    "vote_now": "지금 투표"
   },
   "how": {
     "title": "Votain 작동 방식",
@@ -214,7 +221,10 @@
     "why_title": "왜 재확인이 필요한가요?",
     "last_verified": "마지막 확인: {{date}}",
     "verify_btn": "World ID로 재확인",
-    "pending": "확인 중…"
+    "pending": "확인 중…",
+    "reason1": "내 World ID 자격증명이 만료되었습니다",
+    "reason2": "새 World ID 기기를 받았습니다",
+    "reason3": "내 자격증명이 취소 또는 재설정되었습니다"
   },
   "org_auth": {
     "title": "주최자 접속",

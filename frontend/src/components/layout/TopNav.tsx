@@ -1,9 +1,9 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Compass, Vote, Clock, User, Plus } from 'lucide-react';
+import { Compass, Vote, Clock, User, LayoutDashboard, Users, Zap } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/Button';
-import { LanguageSelector } from '../ui/LanguageSelector';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface NavItem {
   to: string;
@@ -15,40 +15,54 @@ const VOTER_ITEMS: NavItem[] = [
   { to: '/discover',        labelKey: 'nav.discover',  icon: <Compass className="w-4 h-4" /> },
   { to: '/voter/elections', labelKey: 'nav.elections', icon: <Vote    className="w-4 h-4" /> },
   { to: '/voter/history',   labelKey: 'nav.history',   icon: <Clock   className="w-4 h-4" /> },
-  { to: '/voter/profile',   labelKey: 'nav.profile',   icon: <User    className="w-4 h-4" /> },
+];
+
+const ORGANIZER_ITEMS: NavItem[] = [
+  { to: '/organizer/dashboard', labelKey: 'nav.dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
+  { to: '/discover',            labelKey: 'nav.discover',  icon: <Compass         className="w-4 h-4" /> },
+  { to: '/organizer/members',   labelKey: 'nav.members',   icon: <Users           className="w-4 h-4" /> },
+  { to: '/organizer/gas',       labelKey: 'nav.gas',       icon: <Zap             className="w-4 h-4" /> },
 ];
 
 const PUBLIC_ITEMS: NavItem[] = [
-  { to: '/discover',     labelKey: 'nav.discover',     icon: <Compass className="w-4 h-4" /> },
-  { to: '/how-it-works', labelKey: 'nav.how_it_works', icon: null },
+  { to: '/discover', labelKey: 'nav.discover', icon: <Compass className="w-4 h-4" /> },
 ];
 
 interface TopNavProps {
   role?: 'voter' | 'organizer' | 'public';
 }
 
-export function TopNav({ role = 'public' }: TopNavProps) {
+export function TopNav({ role: _role = 'public' }: TopNavProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const items = role === 'voter' ? VOTER_ITEMS : PUBLIC_ITEMS;
+  const { voterLoggedIn, organizerLoggedIn } = useAuth();
+
+  // Auth state takes full precedence over the role prop passed by the page.
+  const items = organizerLoggedIn ? ORGANIZER_ITEMS :
+                voterLoggedIn     ? VOTER_ITEMS :
+                                    PUBLIC_ITEMS;
+
+  const homeRoute = organizerLoggedIn ? '/organizer/dashboard' :
+                    voterLoggedIn     ? '/voter/elections' :
+                                        '/';
 
   return (
     <nav
-      className="hidden md:flex items-center gap-6 px-8 py-3 border-b border-white/5 bg-surface/60 backdrop-blur-xl"
+      className="flex items-center gap-3 md:gap-6 px-4 md:px-8 py-3 border-b border-white/5 bg-surface/60 backdrop-blur-xl"
       aria-label="Top navigation"
     >
       {/* Logo */}
       <button
         type="button"
-        onClick={() => navigate('/')}
-        className="flex items-center gap-3 shrink-0 hover:opacity-80 transition-opacity"
+        onClick={() => navigate(homeRoute)}
+        className="flex items-center gap-3 shrink-0 hover:opacity-80 transition-opacity cursor-pointer"
       >
         <img src="/votain-logo.webp" alt="Votain" className="w-8 h-8 object-contain" />
         <img src="/votain-wordmark.svg" alt="" className="h-4 object-contain translate-y-0.5" />
       </button>
 
-      {/* Nav links */}
-      <div className="flex items-center gap-1 flex-1">
+      {/* Nav links — desktop only */}
+      <div className="hidden md:flex items-center gap-1 flex-1">
         {items.map(item => (
           <NavLink
             key={item.to}
@@ -67,28 +81,31 @@ export function TopNav({ role = 'public' }: TopNavProps) {
       </div>
 
       {/* Right actions */}
-      <div className="flex items-center gap-3 shrink-0">
-        <LanguageSelector />
-        {role === 'organizer' ? (
-          <Button
-            variant="gradient"
-            size="sm"
-            onClick={() => navigate('/organizer/elections/new')}
-            className="rounded-full gap-1.5 px-4"
+      <div className="flex items-center gap-3 shrink-0 ml-auto">
+        {organizerLoggedIn ? (
+          <button
+            type="button"
+            onClick={() => navigate('/organizer/profile')}
+            className="relative w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center hover:bg-primary/20 transition-colors cursor-pointer"
+            aria-label={t('nav.profile')}
           >
-            <Plus className="w-3.5 h-3.5" />
-            {t('nav.create_election')}
-          </Button>
-        ) : role === 'voter' ? (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-tertiary/10 text-tertiary text-xs font-semibold ring-1 ring-tertiary/20">
-            <span className="w-1.5 h-1.5 rounded-full bg-tertiary" />
-            {t('nav.verified_voter')}
-          </div>
+            <User className="w-4 h-4 text-primary" />
+          </button>
+        ) : voterLoggedIn ? (
+          <button
+            type="button"
+            onClick={() => navigate('/voter/profile')}
+            className="relative w-8 h-8 rounded-full bg-tertiary/10 border border-tertiary/20 flex items-center justify-center hover:bg-tertiary/20 transition-colors cursor-pointer"
+            aria-label={t('nav.profile')}
+          >
+            <User className="w-4 h-4 text-tertiary" />
+            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-tertiary border-2 border-background" />
+          </button>
         ) : (
           <Button
             variant="default"
             size="sm"
-            onClick={() => navigate('/voter/signin')}
+            onClick={() => navigate('/voter/onboarding')}
             className="rounded-full border-white/10 hover:bg-white/10 px-5"
           >
             {t('landing.login')}

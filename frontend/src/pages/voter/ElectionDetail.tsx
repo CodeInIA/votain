@@ -56,7 +56,7 @@ export default function ElectionDetail() {
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-sm text-on-surface-meta hover:text-on-surface mb-5 transition-colors"
+          className="flex items-center gap-1.5 text-sm text-on-surface-meta hover:text-on-surface mb-5 transition-colors cursor-pointer"
         >
           <ChevronLeft className="w-4 h-4" />
           {t('common.back')}
@@ -100,7 +100,7 @@ export default function ElectionDetail() {
             <AlertTriangle className="w-4.5 h-4.5 text-warning shrink-0" />
             <p className="text-xs text-warning">{t('election.gas_low_banner')}</p>
             <Button variant="ghost" size="sm" className="ml-auto shrink-0 text-warning hover:text-warning/80"
-              onClick={() => navigate('/voter/gas')}>
+              onClick={() => navigate('/voter/profile')}>
               {t('election.top_up')}
             </Button>
           </div>

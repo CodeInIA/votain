@@ -4,6 +4,7 @@
     "voter_cta": "Get started",
     "login": "Sign in",
     "browse": "Browse elections",
+    "my_elections": "My elections",
     "how_it_works": "How it works",
     "footer": {
       "protocol": "Votain Protocol",
@@ -58,7 +59,10 @@
     "profile": "Profile",
     "how_it_works": "How it works",
     "create_election": "New Election",
-    "verified_voter": "Verified Voter"
+    "verified_voter": "Verified Voter",
+    "dashboard": "Dashboard",
+    "members": "Members",
+    "gas": "Gas"
   },
   "phase": {
     "enrolling": "Enrolling",
@@ -97,7 +101,8 @@
     "retry": "Try again",
     "close": "Close",
     "confirm": "Confirm",
-    "integration_pending": "This feature will be connected in the integration phase."
+    "integration_pending": "This feature will be connected in the integration phase.",
+    "all": "All"
   },
   "discover": {
     "title": "Elections",
@@ -131,7 +136,9 @@
     "change_vote": "Change my vote",
     "reference": "Reference: {{ref}}",
     "gas_low_banner": "Your gas balance is low. Top up to vote.",
-    "top_up": "Top up"
+    "top_up": "Top up",
+    "ends_in": "Ends in",
+    "vote_now": "Vote now"
   },
   "how": {
     "title": "How Votain works",
@@ -214,7 +221,10 @@
     "why_title": "Why do I need to re-verify?",
     "last_verified": "Last verified: {{date}}",
     "verify_btn": "Re-verify with World ID",
-    "pending": "Verifying…"
+    "pending": "Verifying…",
+    "reason1": "My World ID credential has expired",
+    "reason2": "I got a new World ID device",
+    "reason3": "My credential was revoked or reset"
   },
   "org_auth": {
     "title": "Organizer Access",

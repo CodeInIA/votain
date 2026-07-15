@@ -4,6 +4,7 @@
     "voter_cta": "开始",
     "login": "登录",
     "browse": "浏览选举",
+    "my_elections": "我的选举",
     "how_it_works": "工作原理",
     "footer": {
       "protocol": "Votain Protocol",
@@ -67,7 +68,8 @@
     "retry": "重试",
     "close": "关闭",
     "confirm": "确认",
-    "integration_pending": "此功能将在集成阶段连接。"
+    "integration_pending": "此功能将在集成阶段连接。",
+    "all": "全部"
   },
   "nav": {
     "discover": "发现",
@@ -76,7 +78,10 @@
     "profile": "个人资料",
     "how_it_works": "工作原理",
     "create_election": "新建选举",
-    "verified_voter": "已验证选民"
+    "verified_voter": "已验证选民",
+    "dashboard": "仪表板",
+    "members": "成员",
+    "gas": "Gas"
   },
   "phase": {
     "enrolling": "报名中",
@@ -131,7 +136,9 @@
     "change_vote": "更改我的投票",
     "reference": "参考编号：{{ref}}",
     "gas_low_banner": "您的 Gas 余额不足，请充值后投票。",
-    "top_up": "充值"
+    "top_up": "充值",
+    "ends_in": "结束于",
+    "vote_now": "立即投票"
   },
   "how": {
     "title": "Votain 工作原理",
@@ -214,7 +221,10 @@
     "why_title": "为什么需要重新验证？",
     "last_verified": "上次验证：{{date}}",
     "verify_btn": "使用 World ID 重新验证",
-    "pending": "验证中…"
+    "pending": "验证中…",
+    "reason1": "我的World ID凭证已过期",
+    "reason2": "我获得了新的World ID设备",
+    "reason3": "我的凭证被撤销或重置"
   },
   "org_auth": {
     "title": "组织者访问",

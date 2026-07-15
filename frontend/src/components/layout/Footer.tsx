@@ -1,6 +1,6 @@
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
-import { LanguageSelector } from '../ui/LanguageSelector';
 
 export function Footer({ className }: { className?: string }) {
   const { t } = useTranslation();
@@ -21,13 +21,10 @@ export function Footer({ className }: { className?: string }) {
         <div className="flex items-center gap-5 text-xs text-on-surface-meta">
           <a href="#" className="hover:text-on-surface transition-colors">{t('landing.footer.terms')}</a>
           <a href="#" className="hover:text-on-surface transition-colors">{t('landing.footer.privacy')}</a>
-          <a href="#" className="hover:text-on-surface transition-colors">{t('landing.footer.language')}</a>
+          <Link to="/how-it-works" className="hover:text-on-surface transition-colors">{t('nav.how_it_works')}</Link>
         </div>
 
-        <div className="flex items-center gap-3">
-          <LanguageSelector align="right" />
-          <span className="text-xs text-on-surface-meta">{t('landing.footer.copyright')}</span>
-        </div>
+        <span className="text-xs text-on-surface-meta">{t('landing.footer.copyright')}</span>
       </div>
     </footer>
   );

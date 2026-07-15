@@ -5,31 +5,20 @@ import { CircleHelp } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
 import { Button } from '../components/ui/Button';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Landing() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { voterLoggedIn, organizerLoggedIn } = useAuth();
 
   useEffect(() => {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 2000);
-
-    fetch(`${import.meta.env.VITE_BACKEND_URL ?? ''}/api/me`, {
-      credentials: 'include',
-      signal: controller.signal,
-    })
-      .then(res => (res.ok ? res.json() as Promise<{ authenticated?: boolean }> : null))
-      .then((data: { authenticated?: boolean } | null) => {
-        if (data?.authenticated) navigate('/voter/dashboard', { replace: true });
-      })
-      .catch(() => {})
-      .finally(() => clearTimeout(timer));
-
-    return () => {
-      controller.abort();
-      clearTimeout(timer);
-    };
-  }, [navigate]);
+    if (voterLoggedIn) {
+      navigate('/voter/elections', { replace: true });
+    } else if (organizerLoggedIn) {
+      navigate('/organizer/dashboard', { replace: true });
+    }
+  }, [navigate, voterLoggedIn, organizerLoggedIn]);
 
   return (
     <div className="relative h-dvh w-full bg-background text-on-surface font-body selection:bg-primary selection:text-white overflow-hidden flex flex-col">
@@ -67,23 +56,34 @@ export default function Landing() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-full pt-[min(1rem,2dvh)]">
-            <Button
-              variant="gradient"
-              size="lg"
-              onClick={() => navigate('/voter/onboarding')}
-              className="w-full sm:w-72 rounded-full px-8 h-11 sm:h-12 text-sm sm:text-base font-semibold flex items-center justify-center gap-3 shrink-0"
-            >
-              <img 
-                alt="" 
-                aria-hidden="true" 
-                className="w-5 h-5 object-contain opacity-95 shrink-0" 
-                style={{ filter: "brightness(0) saturate(100%) invert(8%) sepia(37%) saturate(5435%) hue-rotate(204deg) brightness(90%) contrast(103%)" }}
-                src="/world-id-logo.svg" 
-              />
-              <span className="truncate">{t('landing.voter_cta')}</span>
-            </Button>
+            {voterLoggedIn ? (
+              <Button
+                variant="gradient"
+                size="lg"
+                onClick={() => navigate('/voter/elections')}
+                className="w-full sm:w-72 rounded-full px-8 h-11 sm:h-12 text-sm sm:text-base font-semibold flex items-center justify-center gap-3 shrink-0"
+              >
+                <span className="truncate">{t('landing.my_elections')}</span>
+              </Button>
+            ) : (
+              <Button
+                variant="gradient"
+                size="lg"
+                onClick={() => navigate('/voter/onboarding')}
+                className="w-full sm:w-72 rounded-full px-8 h-11 sm:h-12 text-sm sm:text-base font-semibold flex items-center justify-center gap-3 shrink-0"
+              >
+                <img
+                  alt=""
+                  aria-hidden="true"
+                  className="w-5 h-5 object-contain opacity-95 shrink-0"
+                  style={{ filter: "brightness(0) saturate(100%) invert(8%) sepia(37%) saturate(5435%) hue-rotate(204deg) brightness(90%) contrast(103%)" }}
+                  src="/world-id-logo.svg"
+                />
+                <span className="truncate">{t('landing.voter_cta')}</span>
+              </Button>
+            )}
 
-            <Button 
+            <Button
               variant="default"
               size="lg"
               onClick={() => navigate('/discover')}

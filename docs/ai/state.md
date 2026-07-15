@@ -1,6 +1,6 @@
 # Votain — Agent State
 
-## Current milestone: H4 complete ✅ — Phase A DONE
+## Current milestone: Phase A DONE ✅ (H4 + UX polish pass) — next up: H5 (Phase B)
 
 ## Completed milestones
 
@@ -14,9 +14,11 @@
 All 9 tests pass. Production build clean. No TS errors.
 
 **UI components** (`frontend/src/components/ui/`): Avatar, Badge, BarChart, BlockchainBadge,
-Button, Card, Checkbox, Countdown, ElectionCard, EligibilityRow, GasWidget, Input, LanguageSelector,
-MiniBarChart (dev-only), Modal, RadioCard, Skeleton, Spinner, Stepper, Switch, Toast,
-TransactionPendingModal (H4)
+Button, Card, Countdown, ElectionCard, EligibilityRow, GasWidget, Input (+ Textarea + Select),
+LanguageSelector (Radix Select), Modal (portal), RadioCard, Skeleton, Spinner, Stepper, Switch,
+Toast, TransactionPendingModal (H4)
+
+> Removed as unused during polish: ActionCard, Checkbox, MiniBarChart.
 
 **Layout** (`frontend/src/components/layout/`): BottomTabNav, TopNav, Footer, PageLayout
 
@@ -54,6 +56,42 @@ All screens implemented with hardcoded data from `src/data/seed.ts`:
 - Run: `npm run test:e2e`
 
 **Build**: clean, 528ms, no TS errors
+
+### UX polish pass ✅ (2026-05-26 → 2026-07-15)
+
+**Auth model** (`frontend/src/contexts/AuthContext.tsx`, new)
+- Persistent voter + organizer sessions in localStorage (`votain_voter_logged_in`, `votain_organizer_logged_in`)
+- `voterSignOut` / `organizerSignOut` clear storage; World ID verify (`useWorldIdVerify`) sets voter login
+- Landing `/` auto-redirects by role: voter → `/voter/elections`, organizer → `/organizer/dashboard`
+- Removed the H0-era `/api/me` backend check on Landing (Phase A is local-only; it also broke sign-out)
+
+**Navigation**
+- `TopNav` and `BottomTabNav` are driven ONLY by auth state (the page `role` prop is ignored):
+  public sees Discover; voter sees Discover/Elections/History; organizer sees Dashboard/Discover/Members/Gas
+- Profile is a top-right avatar icon (desktop + mobile); logo click routes to the role's home
+- Language selector removed from header/footer — lives in both profile pages
+- "How it works" moved from header to Footer + profile pages (mobile-only card with Terms/Privacy)
+- TopNav visible on mobile (logo + wordmark + profile); nav links desktop-only; tabs on mobile
+
+**Layout**
+- `PageLayout`: `h-dvh` flex column — sticky header, scrollable `<main>`, pinned Footer (desktop-only), BottomTabNav (mobile)
+- Footer on all app pages via PageLayout default; Landing keeps its own full Footer
+- New route `/voter/profile` (VoterProfile page: verification status, verify-receipt/re-verify links, language, legal links, sign out)
+
+**Component correctness**
+- `LanguageSelector` rebuilt on **@radix-ui/react-select** (portal, popper positioning + collision flip,
+  keyboard nav, ARIA). Fixes: dropdown under sibling cards (backdrop-filter stacking context),
+  non-rounded selected item, Chromium compositing artifact (content is now opaque, no backdrop-blur)
+- `MemberList` raw `<select>` → design-system `Select`
+- Theme-consistent scrollbars in `index.css` (thin, rounded, `--color-outline-variant`); real `.scrollbar-none` utility (was a no-op class)
+- `cursor-pointer` on all raw `<button>` elements across pages
+- Removed pointless back arrows (MemberList); OrganizerAuth got onboarding-style round back button + no footer
+
+**i18n**: added `nav.dashboard/members/gas`, `landing.my_elections`, `common.all`,
+`election.ends_in/vote_now`, `reverify.reason1-3` to all 13 locales; fixed `discover.results_count` interpolation
+
+**Tests/config**: `Landing.test.tsx` footer assertion updated; `vite.config.ts` excludes `e2e/**` from Vitest
+(9/9 unit tests green; production build clean)
 
 ---
 

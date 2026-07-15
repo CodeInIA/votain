@@ -47,7 +47,7 @@ export default function ElectionManagement() {
     <PageLayout role="organizer" showNav>
       <div className="max-w-3xl mx-auto pt-4 pb-24">
         <button type="button" onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-sm text-on-surface-meta hover:text-on-surface mb-5 transition-colors">
+          className="flex items-center gap-1.5 text-sm text-on-surface-meta hover:text-on-surface mb-5 transition-colors cursor-pointer">
           <ChevronLeft className="w-4 h-4" />{t('common.back')}
         </button>
 

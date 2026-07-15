@@ -1,11 +1,10 @@
 import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, Download, Users, Filter } from 'lucide-react';
+import { Download, Users, Filter } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
+import { Input, Select } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
 import { Avatar } from '../../components/ui/Avatar';
 import { ELECTIONS } from '../../data/seed';
@@ -31,7 +30,6 @@ const SEED_MEMBERS: Member[] = ELECTIONS.slice(0, 4).flatMap((e, ei) =>
 );
 
 export default function MemberList() {
-  const navigate = useNavigate();
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [electionFilter, setElectionFilter] = useState('all');
@@ -66,14 +64,6 @@ export default function MemberList() {
   return (
     <PageLayout role="organizer" showNav>
       <div className="max-w-3xl mx-auto pt-4 pb-24">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-sm text-on-surface-meta hover:text-on-surface mb-5 transition-colors"
-        >
-          <ChevronLeft className="w-4 h-4" />{t('common.back')}
-        </button>
-
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-black tracking-tight text-white">{t('members.title')}</h1>
@@ -94,18 +84,16 @@ export default function MemberList() {
               onChange={e => setQuery(e.target.value)}
             />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 sm:w-64">
             <Filter className="w-4 h-4 text-on-surface-meta shrink-0" />
-            <select
+            <Select
               value={electionFilter}
               onChange={e => setElectionFilter(e.target.value)}
-              className="bg-surface-high border border-outline-variant/20 rounded-xl px-3 py-2 text-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-primary/50"
-            >
-              <option value="all">{t('members.all_elections')}</option>
-              {elections.map(e => (
-                <option key={e.id} value={e.id}>{e.title}</option>
-              ))}
-            </select>
+              options={[
+                { value: 'all', label: t('members.all_elections') },
+                ...elections.map(e => ({ value: e.id, label: e.title })),
+              ]}
+            />
           </div>
         </Card>
 

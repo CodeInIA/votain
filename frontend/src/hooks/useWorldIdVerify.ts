@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { IDKit, orbLegacy, type IDKitResult } from '@worldcoin/idkit-core';
+import { useAuth } from '../contexts/AuthContext';
 
 export function useWorldIdVerify() {
   const [isLoadingQr, setIsLoadingQr] = useState(false);
@@ -11,6 +12,7 @@ export function useWorldIdVerify() {
   const [qrError, setQrError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { setVoterLoggedIn } = useAuth();
 
   const handleVerify = async (proof: IDKitResult): Promise<void> => {
     try {
@@ -30,10 +32,11 @@ export function useWorldIdVerify() {
       const data = await res.json() as { nullifier?: string };
       if (data.nullifier) localStorage.setItem('voter_nullifier', data.nullifier);
 
+      setVoterLoggedIn(true);
       setConnectorURI(null);
       setIsVerifying(false);
       setIsSuccess(true);
-      setTimeout(() => navigate('/voter/dashboard'), 1500);
+      setTimeout(() => navigate('/voter/elections'), 1500);
     } catch (error: unknown) {
       console.error('Verification failed:', error);
       setQrError(t('verify.error_backend'));

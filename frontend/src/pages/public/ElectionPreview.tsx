@@ -39,7 +39,7 @@ export default function ElectionPreview() {
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-sm text-on-surface-meta hover:text-on-surface mb-6 transition-colors"
+          className="flex items-center gap-1.5 text-sm text-on-surface-meta hover:text-on-surface mb-6 transition-colors cursor-pointer"
         >
           <ChevronLeft className="w-4 h-4" />
           {t('common.back')}

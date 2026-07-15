@@ -4,6 +4,7 @@
     "voter_cta": "Beginnen",
     "login": "Inloggen",
     "browse": "Verkiezingen bekijken",
+    "my_elections": "Mijn verkiezingen",
     "how_it_works": "Hoe het werkt",
     "footer": {
       "protocol": "Votain Protocol",
@@ -67,7 +68,8 @@
     "retry": "Opnieuw proberen",
     "close": "Sluiten",
     "confirm": "Bevestigen",
-    "integration_pending": "Deze functie wordt verbonden in de integratiefase."
+    "integration_pending": "Deze functie wordt verbonden in de integratiefase.",
+    "all": "Alles"
   },
   "nav": {
     "discover": "Ontdekken",
@@ -76,7 +78,10 @@
     "profile": "Profiel",
     "how_it_works": "Hoe het werkt",
     "create_election": "Nieuwe verkiezing",
-    "verified_voter": "Geverifieerde kiezer"
+    "verified_voter": "Geverifieerde kiezer",
+    "dashboard": "Dashboard",
+    "members": "Leden",
+    "gas": "Gas"
   },
   "phase": {
     "enrolling": "Inschrijving",
@@ -131,7 +136,9 @@
     "change_vote": "Mijn stem wijzigen",
     "reference": "Referentie: {{ref}}",
     "gas_low_banner": "Je gassaldo is laag. Aanvullen om te stemmen.",
-    "top_up": "Aanvullen"
+    "top_up": "Aanvullen",
+    "ends_in": "Eindigt over",
+    "vote_now": "Nu stemmen"
   },
   "how": {
     "title": "Hoe Votain werkt",
@@ -214,7 +221,10 @@
     "why_title": "Waarom moet ik opnieuw verifiëren?",
     "last_verified": "Laatst geverifieerd: {{date}}",
     "verify_btn": "Opnieuw verifiëren met World ID",
-    "pending": "Verifiëren…"
+    "pending": "Verifiëren…",
+    "reason1": "Mijn World ID-credential is verlopen",
+    "reason2": "Ik heb een nieuw World ID-apparaat",
+    "reason3": "Mijn credential is ingetrokken of gereset"
   },
   "org_auth": {
     "title": "Organisatortoegang",

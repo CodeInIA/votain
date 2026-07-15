@@ -6,14 +6,12 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Input, Textarea, Select } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
 import { RadioGroup } from '../../components/ui/RadioCard';
-import { Checkbox } from '../../components/ui/Checkbox';
 import { Switch } from '../../components/ui/Switch';
 import { Skeleton, SkeletonCard } from '../../components/ui/Skeleton';
 import { Spinner, ProgressDots } from '../../components/ui/Spinner';
 import { Stepper, OverlayStepper } from '../../components/ui/Stepper';
 import { Countdown } from '../../components/ui/Countdown';
 import { ResultBarChart } from '../../components/ui/BarChart';
-import { MiniBarChart } from '../../components/ui/MiniBarChart';
 import { Avatar, IdentityCommitment } from '../../components/ui/Avatar';
 import { LanguageSelector } from '../../components/ui/LanguageSelector';
 import { EligibilityRow } from '../../components/ui/EligibilityRow';
@@ -63,14 +61,13 @@ const SAMPLE_RESULTS = [
 export default function ComponentsShowcase() {
   const [modalOpen, setModalOpen] = useState(false);
   const [radioVal, setRadioVal] = useState('alice');
-  const [checked, setChecked] = useState(false);
   const [switched, setSwitched] = useState(false);
   const [dotsStep, setDotsStep] = useState(1);
   const [inputVal, setInputVal] = useState('');
   const [txState, setTxState] = useState<TxState>('idle');
 
-  const futureDate = new Date(Date.now() + 45 * 60_000); // 45 min from now
-  const urgentDate = new Date(Date.now() + 20 * 60_000); // 20 min (urgent)
+  const futureDate = new Date(Date.now() + 45 * 60_000);
+  const urgentDate = new Date(Date.now() + 20 * 60_000);
 
   return (
     <ToastProvider>
@@ -78,7 +75,6 @@ export default function ComponentsShowcase() {
         <h1 className="text-3xl font-black tracking-tighter text-white mb-2">Design System</h1>
         <p className="text-on-surface-variant text-sm mb-10">H1 Component Showcase — DEV only</p>
 
-        {/* Buttons */}
         <Section title="Buttons">
           <Button variant="gradient">Gradient</Button>
           <Button variant="default">Default</Button>
@@ -90,7 +86,6 @@ export default function ComponentsShowcase() {
           <Button variant="gradient" size="lg">Large</Button>
         </Section>
 
-        {/* Badges */}
         <Section title="Phase Badges">
           <Badge variant="enrolling" dot>Enrolling</Badge>
           <Badge variant="enrolled" dot>Enrolled</Badge>
@@ -105,7 +100,6 @@ export default function ComponentsShowcase() {
           <Badge variant="tie">Tie</Badge>
         </Section>
 
-        {/* Transparency Badges */}
         <Section title="Transparency Badges">
           <BlockchainBadge href="#" />
           <IPFSBadge href="#" />
@@ -113,7 +107,6 @@ export default function ComponentsShowcase() {
           <IPFSBadge />
         </Section>
 
-        {/* Card */}
         <Section title="Cards">
           {(['low', 'mid', 'high'] as const).map(depth => (
             <Card key={depth} depth={depth} className="p-5 w-56">
@@ -135,7 +128,6 @@ export default function ComponentsShowcase() {
           </Card>
         </Section>
 
-        {/* Inputs */}
         <Section title="Inputs">
           <div className="w-64 flex flex-col gap-3">
             <Input
@@ -158,7 +150,6 @@ export default function ComponentsShowcase() {
           </div>
         </Section>
 
-        {/* RadioCard */}
         <Section title="Radio Card (Candidate Selector)">
           <div className="w-72">
             <RadioGroup
@@ -173,14 +164,7 @@ export default function ComponentsShowcase() {
           </div>
         </Section>
 
-        {/* Checkbox & Switch */}
-        <Section title="Checkbox & Switch">
-          <Checkbox
-            checked={checked}
-            onChange={setChecked}
-            label="I agree to the terms"
-            description="By checking this you accept our terms of service."
-          />
+        <Section title="Switch">
           <Switch
             checked={switched}
             onChange={setSwitched}
@@ -189,7 +173,6 @@ export default function ComponentsShowcase() {
           />
         </Section>
 
-        {/* Skeleton */}
         <Section title="Skeleton Loaders">
           <Skeleton className="w-32 h-4" />
           <Skeleton className="w-20 h-20" circle />
@@ -197,7 +180,6 @@ export default function ComponentsShowcase() {
           <SkeletonCard className="w-64" />
         </Section>
 
-        {/* Spinner & ProgressDots */}
         <Section title="Spinner & Progress Dots">
           <Spinner size="sm" />
           <Spinner size="md" />
@@ -208,7 +190,6 @@ export default function ComponentsShowcase() {
           </div>
         </Section>
 
-        {/* Stepper */}
         <Section title="Steppers">
           <div className="w-full">
             <Stepper
@@ -231,7 +212,6 @@ export default function ComponentsShowcase() {
           </div>
         </Section>
 
-        {/* Countdown */}
         <Section title="Countdown">
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-3">
@@ -249,7 +229,6 @@ export default function ComponentsShowcase() {
           </div>
         </Section>
 
-        {/* BarChart */}
         <Section title="Results Bar Chart">
           <div className="w-full max-w-lg">
             <ResultBarChart
@@ -257,21 +236,8 @@ export default function ComponentsShowcase() {
               totalVotes={SAMPLE_RESULTS.reduce((s, c) => s + c.votes, 0)}
             />
           </div>
-          <div className="w-48">
-            <MiniBarChart
-              data={[
-                { label: 'Mon', value: 40 },
-                { label: 'Tue', value: 70 },
-                { label: 'Wed', value: 55 },
-                { label: 'Thu', value: 90 },
-                { label: 'Fri', value: 30 },
-              ]}
-              height={80}
-            />
-          </div>
         </Section>
 
-        {/* Avatar & Identity */}
         <Section title="Avatar & Identity Commitment">
           <Avatar size="xs" fallback="AJ" />
           <Avatar size="sm" fallback="BM" />
@@ -283,13 +249,11 @@ export default function ComponentsShowcase() {
           />
         </Section>
 
-        {/* Language Selector */}
         <Section title="Language Selector">
           <LanguageSelector />
           <LanguageSelector align="left" />
         </Section>
 
-        {/* Eligibility */}
         <Section title="Eligibility Checklist">
           <div className="w-72 bg-surface-low/40 rounded-2xl px-4 py-2">
             <EligibilityRow label="Age ≥ 18 years" status="met" />
@@ -298,14 +262,12 @@ export default function ComponentsShowcase() {
           </div>
         </Section>
 
-        {/* Gas Widget */}
         <Section title="Gas Balance Widget">
           <GasWidget balanceMatic={2.5} estimatedVotesLeft={84} className="w-72" />
           <GasWidget balanceMatic={0.5} estimatedVotesLeft={16} onDeposit={() => {}} className="w-72" />
           <GasWidget balanceMatic={0.05} estimatedVotesLeft={2} onDeposit={() => {}} className="w-72" />
         </Section>
 
-        {/* Modal */}
         <Section title="Modal">
           <Button variant="default" onClick={() => setModalOpen(true)}>Open Modal</Button>
           <Modal
@@ -321,7 +283,6 @@ export default function ComponentsShowcase() {
           </Modal>
         </Section>
 
-        {/* Transaction Pending Modal */}
         <Section title="Transaction Pending Modal">
           <div className="flex flex-wrap gap-2">
             <Button onClick={() => setTxState('pending')}>Show Pending</Button>
@@ -337,7 +298,6 @@ export default function ComponentsShowcase() {
           />
         </Section>
 
-        {/* Toast */}
         <Section title="Toast Notifications">
           <ToastDemo />
         </Section>

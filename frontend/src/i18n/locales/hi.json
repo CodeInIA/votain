@@ -4,6 +4,7 @@
     "voter_cta": "शुरू करें",
     "login": "साइन इन करें",
     "browse": "चुनाव देखें",
+    "my_elections": "मेरे चुनाव",
     "how_it_works": "यह कैसे काम करता है",
     "footer": {
       "protocol": "Votain Protocol",
@@ -67,7 +68,8 @@
     "retry": "पुनः प्रयास करें",
     "close": "बंद करें",
     "confirm": "पुष्टि करें",
-    "integration_pending": "यह सुविधा एकीकरण चरण में जुड़ेगी।"
+    "integration_pending": "यह सुविधा एकीकरण चरण में जुड़ेगी।",
+    "all": "सभी"
   },
   "nav": {
     "discover": "खोजें",
@@ -76,7 +78,10 @@
     "profile": "प्रोफ़ाइल",
     "how_it_works": "यह कैसे काम करता है",
     "create_election": "नया चुनाव",
-    "verified_voter": "सत्यापित मतदाता"
+    "verified_voter": "सत्यापित मतदाता",
+    "dashboard": "डैशबोर्ड",
+    "members": "सदस्य",
+    "gas": "Gas"
   },
   "phase": {
     "enrolling": "नामांकन",
@@ -131,7 +136,9 @@
     "change_vote": "मेरा वोट बदलें",
     "reference": "संदर्भ: {{ref}}",
     "gas_low_banner": "आपका गैस बैलेंस कम है। मतदान के लिए टॉप अप करें।",
-    "top_up": "टॉप अप करें"
+    "top_up": "टॉप अप करें",
+    "ends_in": "समाप्त होता है",
+    "vote_now": "अभी मतदान करें"
   },
   "how": {
     "title": "Votain कैसे काम करता है",
@@ -214,7 +221,10 @@
     "why_title": "मुझे पुनः सत्यापित क्यों करना है?",
     "last_verified": "अंतिम सत्यापन: {{date}}",
     "verify_btn": "World ID से पुनः सत्यापित करें",
-    "pending": "सत्यापन हो रहा है…"
+    "pending": "सत्यापन हो रहा है…",
+    "reason1": "मेरी World ID क्रेडेंशियल समाप्त हो गई",
+    "reason2": "मुझे नया World ID डिवाइस मिला",
+    "reason3": "मेरी क्रेडेंशियल रद्द या रीसेट की गई"
   },
   "org_auth": {
     "title": "आयोजक पहुंच",

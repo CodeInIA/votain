@@ -4,6 +4,7 @@
     "voter_cta": "Inizia",
     "login": "Accedi",
     "browse": "Sfoglia elezioni",
+    "my_elections": "Le mie elezioni",
     "how_it_works": "Come funziona",
     "footer": {
       "protocol": "Votain Protocol",
@@ -67,7 +68,8 @@
     "retry": "Riprova",
     "close": "Chiudi",
     "confirm": "Conferma",
-    "integration_pending": "Questa funzione sarà collegata nella fase di integrazione."
+    "integration_pending": "Questa funzione sarà collegata nella fase di integrazione.",
+    "all": "Tutti"
   },
   "nav": {
     "discover": "Scopri",
@@ -76,7 +78,10 @@
     "profile": "Profilo",
     "how_it_works": "Come funziona",
     "create_election": "Nuova elezione",
-    "verified_voter": "Elettore verificato"
+    "verified_voter": "Elettore verificato",
+    "dashboard": "Cruscotto",
+    "members": "Membri",
+    "gas": "Gas"
   },
   "phase": {
     "enrolling": "Iscrizione",
@@ -131,7 +136,9 @@
     "change_vote": "Cambia il mio voto",
     "reference": "Riferimento: {{ref}}",
     "gas_low_banner": "Il tuo saldo gas è basso. Ricarica per votare.",
-    "top_up": "Ricarica"
+    "top_up": "Ricarica",
+    "ends_in": "Termina tra",
+    "vote_now": "Vota ora"
   },
   "how": {
     "title": "Come funziona Votain",
@@ -214,7 +221,10 @@
     "why_title": "Perché devo riverificare?",
     "last_verified": "Ultima verifica: {{date}}",
     "verify_btn": "Riverifica con World ID",
-    "pending": "Verifica in corso…"
+    "pending": "Verifica in corso…",
+    "reason1": "La mia credenziale World ID è scaduta",
+    "reason2": "Ho ottenuto un nuovo dispositivo World ID",
+    "reason3": "La mia credenziale è stata revocata o reimpostata"
   },
   "org_auth": {
     "title": "Accesso Organizzatore",

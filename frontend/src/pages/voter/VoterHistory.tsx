@@ -58,7 +58,7 @@ export default function VoterHistory() {
                 key={v.referenceNumber}
                 type="button"
                 onClick={() => navigate(`/election/${v.electionId}/results`)}
-                className="group flex items-center gap-4 p-4 rounded-2xl border border-white/5 bg-surface-low/30 backdrop-blur-xl hover:border-white/10 hover:bg-surface-low/40 transition-all text-left"
+                className="group flex items-center gap-4 p-4 rounded-2xl border border-white/5 bg-surface-low/30 backdrop-blur-xl hover:border-white/10 hover:bg-surface-low/40 transition-all text-left cursor-pointer"
               >
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-on-surface line-clamp-1">{v.electionTitle}</p>

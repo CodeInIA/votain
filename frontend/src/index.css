@@ -51,9 +51,47 @@
     -webkit-font-smoothing: antialiased;
     margin: 0;
   }
+
+  /* ── Scrollbars (theme-consistent) ── */
+  * {
+    scrollbar-width: thin;                                /* Firefox */
+    scrollbar-color: var(--color-outline-variant) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: color-mix(in srgb, var(--color-outline-variant) 70%, transparent);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-outline-variant);
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
 }
 
 @layer utilities {
+  .scrollbar-none {
+    scrollbar-width: none;      /* Firefox */
+    -ms-overflow-style: none;   /* legacy Edge */
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
   .glass-panel {
     background-color: color-mix(in srgb, var(--color-surface-low) 60%, transparent);
     backdrop-filter: blur(20px);

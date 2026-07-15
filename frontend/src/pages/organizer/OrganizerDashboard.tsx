@@ -65,7 +65,7 @@ export default function OrganizerDashboard() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>{t('dashboard.my_elections')}</CardTitle>
-                <button type="button" className="text-xs text-primary hover:underline"
+                <button type="button" className="text-xs text-primary hover:underline cursor-pointer"
                   onClick={() => navigate('/organizer/elections/new')}>
                   {t('common.view_all')}
                 </button>
@@ -77,7 +77,7 @@ export default function OrganizerDashboard() {
                       key={e.id}
                       type="button"
                       onClick={() => navigate(`/organizer/election/${e.id}`)}
-                      className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-white/3 transition-colors text-left"
+                      className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-white/3 transition-colors text-left cursor-pointer"
                     >
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-on-surface truncate">{e.title}</p>
@@ -111,7 +111,7 @@ export default function OrganizerDashboard() {
                       key={a.href}
                       type="button"
                       onClick={() => navigate(a.href)}
-                      className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/5 transition-colors text-left text-sm text-on-surface-variant hover:text-on-surface"
+                      className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/5 transition-colors text-left text-sm text-on-surface-variant hover:text-on-surface cursor-pointer"
                     >
                       <Icon className="w-4 h-4 text-on-surface-meta" />
                       {a.label}

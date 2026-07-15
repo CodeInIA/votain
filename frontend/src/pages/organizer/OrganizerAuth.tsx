@@ -2,16 +2,18 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { KeyRound, Wallet, ChevronRight, AlertTriangle } from 'lucide-react';
+import { KeyRound, Wallet, ChevronRight, ChevronLeft, AlertTriangle } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Button } from '../../components/ui/Button';
 import { Stepper } from '../../components/ui/Stepper';
 import { useToast } from '../../components/ui/Toast';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function OrganizerAuth() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { toast } = useToast();
+  const { setOrganizerLoggedIn } = useAuth();
   const [step, setStep] = useState(0);
   const [wrongNetwork, setWrongNetwork] = useState(false);
 
@@ -32,12 +34,23 @@ export default function OrganizerAuth() {
   const handleSwitchNetwork = () => {
     setWrongNetwork(false);
     toast({ title: t('org_auth.wallet_pending'), description: t('common.integration_pending'), variant: 'info' });
-    setTimeout(() => navigate('/organizer/dashboard'), 1000);
+    setTimeout(() => {
+      setOrganizerLoggedIn(true);
+      navigate('/organizer/dashboard');
+    }, 1000);
   };
 
   return (
-    <PageLayout role="public" showNav={false}>
-      <div className="min-h-dvh flex flex-col items-center justify-center p-4">
+    <PageLayout role="public" showNav={false} showFooter={false}>
+      <div className="relative min-h-dvh flex flex-col items-center justify-center p-4">
+        <Button
+          onClick={() => navigate(-1)}
+          variant="ghost"
+          className="absolute top-4 left-4 sm:top-6 sm:left-6 z-50 w-12 h-12 p-0 flex items-center justify-center rounded-full bg-surface-low/30 hover:bg-surface-low/50 backdrop-blur-xl border border-white/5 text-white shadow-lg"
+          aria-label={t('common.back')}
+        >
+          <ChevronLeft className="w-6 h-6" />
+        </Button>
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}

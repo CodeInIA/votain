@@ -1,13 +1,15 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, KeyRound, Trash2, LogOut, User, Plus } from 'lucide-react';
+import { ChevronLeft, KeyRound, Trash2, LogOut, User, Plus, Info, FileText, Shield } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
+import { LanguageSelector } from '../../components/ui/LanguageSelector';
 import { useToast } from '../../components/ui/Toast';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface PasskeyEntry {
   id: string;
@@ -25,6 +27,7 @@ export default function OrganizerProfile() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { toast } = useToast();
+  const { organizerSignOut } = useAuth();
 
   const [displayName, setDisplayName] = useState('VotainOrg');
   const [editingName, setEditingName] = useState(false);
@@ -49,8 +52,9 @@ export default function OrganizerProfile() {
 
   const signOut = () => {
     setSignOutModal(false);
+    organizerSignOut();
     toast({ title: t('profile.signed_out'), variant: 'info' });
-    setTimeout(() => navigate('/organizer/auth'), 1000);
+    setTimeout(() => navigate('/', { replace: true }), 500);
   };
 
   return (
@@ -59,7 +63,7 @@ export default function OrganizerProfile() {
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-sm text-on-surface-meta hover:text-on-surface mb-5 transition-colors"
+          className="flex items-center gap-1.5 text-sm text-on-surface-meta hover:text-on-surface mb-5 transition-colors cursor-pointer"
         >
           <ChevronLeft className="w-4 h-4" />{t('common.back')}
         </button>
@@ -109,7 +113,7 @@ export default function OrganizerProfile() {
             <button
               type="button"
               onClick={addPasskey}
-              className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors"
+              className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               {t('profile.add_passkey')}
@@ -129,13 +133,37 @@ export default function OrganizerProfile() {
                 <button
                   type="button"
                   onClick={() => setDeleteModal(pk.id)}
-                  className="text-error hover:text-error/70 transition-colors p-1"
+                  className="text-error hover:text-error/70 transition-colors p-1 cursor-pointer"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             ))}
           </div>
+        </Card>
+
+        {/* Language */}
+        <Card className="p-5 mb-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-on-surface">{t('landing.footer.language')}</p>
+            <LanguageSelector align="right" />
+          </div>
+        </Card>
+
+        {/* Legal links — mobile only (desktop sees them in the footer) */}
+        <Card className="p-2 mb-4 md:hidden">
+          <Link to="/how-it-works" className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 transition-colors text-sm text-on-surface-variant hover:text-on-surface">
+            <Info className="w-4 h-4 shrink-0" />
+            {t('nav.how_it_works')}
+          </Link>
+          <a href="#" className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 transition-colors text-sm text-on-surface-variant hover:text-on-surface">
+            <FileText className="w-4 h-4 shrink-0" />
+            {t('landing.footer.terms')}
+          </a>
+          <a href="#" className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 transition-colors text-sm text-on-surface-variant hover:text-on-surface">
+            <Shield className="w-4 h-4 shrink-0" />
+            {t('landing.footer.privacy')}
+          </a>
         </Card>
 
         {/* Sign out */}

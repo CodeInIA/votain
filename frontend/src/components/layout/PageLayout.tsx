@@ -17,12 +17,12 @@ export function PageLayout({
   children,
   role = 'public',
   showNav = true,
-  showFooter = false,
+  showFooter = true,
   className,
   fullBleed = false,
 }: PageLayoutProps) {
   return (
-    <div className="relative min-h-dvh bg-background text-on-surface font-body overflow-x-hidden">
+    <div className="relative flex flex-col h-dvh bg-background text-on-surface font-body overflow-x-hidden">
       {/* Ambient background */}
       <div className="fixed inset-0 z-0 pointer-events-none liquid-mesh" />
       <div className="fixed top-[-10%] left-[-10%] w-[45%] h-[45%] bg-primary/8 blur-[140px] rounded-full pointer-events-none" />
@@ -36,18 +36,17 @@ export function PageLayout({
 
       <main
         className={cn(
-          'relative z-10',
+          'relative z-10 flex-1 overflow-y-auto',
           !fullBleed && 'px-4 sm:px-6 lg:px-8',
-          showNav && 'pt-0',
-          role !== 'public' && 'pb-20 md:pb-8',
+          role !== 'public' && 'pb-20 md:pb-4',
           className
         )}
       >
         {children}
       </main>
 
-      {showFooter && <Footer />}
-      {showNav && role !== 'organizer' && <BottomTabNav />}
+      {showFooter && <div className="hidden md:block shrink-0"><Footer /></div>}
+      {showNav && <BottomTabNav />}
     </div>
   );
 }

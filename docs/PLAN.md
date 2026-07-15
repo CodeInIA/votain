@@ -146,69 +146,69 @@ Each milestone produces a concrete artifact that the user validates before advan
 
 > Screens use hardcoded data. Navigation works. Blockchain or backend actions show toast "integration pending".
 
-### Milestone 1. Design system and base components (3 to 5 days)
+### Milestone 1. Design system and base components ✅ COMPLETED 2026-05-25
 
 **Goal**: building blocks aligned with `stich.md` (Liquid Glass iOS 26, dark mode, cold accent palette).
 
-- [ ] Design tokens: `tailwind.config.ts`, `index.css` (colors, typography, radii, blur, mesh background).
-- [ ] UI components in `src/components/ui/`: Button (review variants), Card, Badge (8 states + Verified blockchain + IPFS + Tie + Role), Modal/Dialog, Input/Textarea/Select, RadioCard (min 48px), Checkbox/Switch, Skeleton, Spinner/ProgressDots/Stepper, Toast, Countdown (timezone-aware), BarChart (horizontal), Avatar/IdentityCommitment, Dropdown/LanguageSelector, EligibilityChecklistRow, GasBalanceWidget, BlockchainBadge/IPFSBadge.
-- [ ] Layout components: Header (role indicator), Footer, BottomTabNav (mobile), TopNav (desktop).
-- [ ] Fix Onboarding tests (i18n setup in vitest).
-- [ ] `/dev/components` showcase page (DEV only).
+- [x] Design tokens: `tailwind.config.ts`, `index.css` (colors, typography, radii, blur, mesh background).
+- [x] UI components in `src/components/ui/`: Button (review variants), Card, Badge (8 states + Verified blockchain + IPFS + Tie + Role), Modal/Dialog, Input/Textarea/Select, RadioCard (min 48px), Checkbox/Switch, Skeleton, Spinner/ProgressDots/Stepper, Toast, Countdown (timezone-aware), BarChart (horizontal), Avatar/IdentityCommitment, Dropdown/LanguageSelector, EligibilityChecklistRow, GasBalanceWidget, BlockchainBadge/IPFSBadge.
+- [x] Layout components: Header (role indicator), Footer, BottomTabNav (mobile), TopNav (desktop).
+- [x] Fix Onboarding tests (i18n setup in vitest).
+- [x] `/dev/components` showcase page (DEV only).
 
 **Validation**: `/dev/components` shows all components in their variants. Mobile and desktop responsive. Lighthouse a11y ≥90.
 
 ---
 
-### Milestone 2. Public + Voter screens (Screens 1 to 3, 4 to 13, 23, 24) (6 to 9 days)
+### Milestone 2. Public + Voter screens (Screens 1 to 3, 4 to 13, 23, 24) ✅ COMPLETED 2026-05-25
 
-- [ ] `src/data/seed.ts`. 8 elections covering all phases AND all 4 voting types: at least one `SIMPLE_PLURALITY` multi-candidate (e.g. student council), one `ABSOLUTE_MAJORITY` Yes/No referendum, one `SUPERMAJORITY_TWO_THIRDS` bylaw change, one `WITNESS_THRESHOLD` wedding with N=4 testigos. Include candidates and fake voters per election.
-- [ ] Screen 1. Discovery (card grid, filters, search, empty states).
-- [ ] Screen 2. Public Preview (details, countdown, read-only candidates, auth overlay CTA, voting-type badge with threshold rule shown explicitly: "most votes wins" for `SIMPLE_PLURALITY`, ">50%" for `ABSOLUTE_MAJORITY`, "≥2/3" for `SUPERMAJORITY_TWO_THIRDS`, "≥4 testigos" for `WITNESS_THRESHOLD`).
-- [ ] Screen 3. Public Results (renders four layouts: bar chart with highest-bar winner for `SIMPLE_PLURALITY`, bar chart with threshold line for `ABSOLUTE_MAJORITY`, Yes/No outcome card for `SUPERMAJORITY_TWO_THIRDS` and `WITNESS_THRESHOLD`, glowing winner, tie state, "Threshold not met" state, export JSON).
-- [ ] Screen 23. How It Works (4 step cards).
-- [ ] Screen 4. Onboarding step 0 (language + IP auto-detect).
-- [ ] Screen 5. World ID Verification (functional, already implemented in backend).
-- [ ] Screen 6. Re-verification UI states.
-- [ ] Screen 7. Voter Election List (phase-aware CTAs, countdown red <1h).
-- [ ] Screen 8. Election Detail Enrollment (hardcoded eligibility checklist).
-- [ ] Screen 9. Election Detail Active (candidate selector for `SIMPLE_PLURALITY` and `ABSOLUTE_MAJORITY`, Yes/No selector for `SUPERMAJORITY_TWO_THIRDS` and `WITNESS_THRESHOLD`, blank vote always available).
-- [ ] Screen 10. ZK Proof Generation (3-step overlay, simulated `setTimeout`).
-- [ ] Screen 11. Vote Confirmation (animated checkmark, hardcoded reference).
-- [ ] Screen 12. Change Vote (selector + modal).
-- [ ] Screen 13. Voter History (seed data).
-- [ ] Screen 24. Verify Receipt (input + seed data).
+- [x] `src/data/seed.ts`. 8 elections covering all phases AND all 4 voting types: at least one `SIMPLE_PLURALITY` multi-candidate (e.g. student council), one `ABSOLUTE_MAJORITY` Yes/No referendum, one `SUPERMAJORITY_TWO_THIRDS` bylaw change, one `WITNESS_THRESHOLD` wedding with N=4 testigos. Include candidates and fake voters per election.
+- [x] Screen 1. Discovery (card grid, filters, search, empty states).
+- [x] Screen 2. Public Preview (details, countdown, read-only candidates, auth overlay CTA, voting-type badge with threshold rule shown explicitly: "most votes wins" for `SIMPLE_PLURALITY`, ">50%" for `ABSOLUTE_MAJORITY`, "≥2/3" for `SUPERMAJORITY_TWO_THIRDS`, "≥4 testigos" for `WITNESS_THRESHOLD`).
+- [x] Screen 3. Public Results (renders four layouts: bar chart with highest-bar winner for `SIMPLE_PLURALITY`, bar chart with threshold line for `ABSOLUTE_MAJORITY`, Yes/No outcome card for `SUPERMAJORITY_TWO_THIRDS` and `WITNESS_THRESHOLD`, glowing winner, tie state, "Threshold not met" state, export JSON).
+- [x] Screen 23. How It Works (4 step cards).
+- [x] Screen 4. Onboarding step 0 (language + IP auto-detect).
+- [x] Screen 5. World ID Verification (functional, already implemented in backend).
+- [x] Screen 6. Re-verification UI states.
+- [x] Screen 7. Voter Election List (phase-aware CTAs, countdown red <1h).
+- [x] Screen 8. Election Detail Enrollment (hardcoded eligibility checklist).
+- [x] Screen 9. Election Detail Active (candidate selector for `SIMPLE_PLURALITY` and `ABSOLUTE_MAJORITY`, Yes/No selector for `SUPERMAJORITY_TWO_THIRDS` and `WITNESS_THRESHOLD`, blank vote always available).
+- [x] Screen 10. ZK Proof Generation (3-step overlay, simulated `setTimeout`).
+- [x] Screen 11. Vote Confirmation (animated checkmark, hardcoded reference).
+- [x] Screen 12. Change Vote (selector + modal).
+- [x] Screen 13. Voter History (seed data).
+- [x] Screen 24. Verify Receipt (input + seed data).
 
 **Validation**: full public and voter flow on mobile and desktop, coherent with `stich.md`. Video in `docs/progress/H2/`.
 
 ---
 
-### Milestone 3. Organizer screens (Screens 14 to 20) (5 to 7 days)
+### Milestone 3. Organizer screens (Screens 14 to 20) ✅ COMPLETED 2026-05-25
 
-- [ ] Screen 14. Passkey + Wallet Setup (step UI, WRONG NETWORK state).
-- [ ] Screen 15. Organizer Dashboard (glass cards, hardcoded metrics).
-- [ ] Screen 16. Create Election (5-step wizard: basics, **voting type + threshold**, timeline, dynamic candidates or Yes/No, settings/eligibility). The voting-type step lets the organizer pick `SIMPLE_PLURALITY` (default) / `ABSOLUTE_MAJORITY` / `SUPERMAJORITY_TWO_THIRDS` / `WITNESS_THRESHOLD`. When `WITNESS_THRESHOLD` is selected, show an N input (default 2, min 1).
-- [ ] Screen 17. Election Detail Organizer (phase-gated controls, passkey confirm modals).
-- [ ] Screen 18. Gas Management (color-coded balance, deposit form).
-- [ ] Screen 19. Registered Members (truncated identity commitments, search).
-- [ ] Screen 20. Organizer Profile (edit display name, passkeys list).
+- [x] Screen 14. Passkey + Wallet Setup (step UI, WRONG NETWORK state).
+- [x] Screen 15. Organizer Dashboard (glass cards, hardcoded metrics).
+- [x] Screen 16. Create Election (5-step wizard: basics, **voting type + threshold**, timeline, dynamic candidates or Yes/No, settings/eligibility). The voting-type step lets the organizer pick `SIMPLE_PLURALITY` (default) / `ABSOLUTE_MAJORITY` / `SUPERMAJORITY_TWO_THIRDS` / `WITNESS_THRESHOLD`. When `WITNESS_THRESHOLD` is selected, show an N input (default 2, min 1).
+- [x] Screen 17. Election Detail Organizer (phase-gated controls, passkey confirm modals).
+- [x] Screen 18. Gas Management (color-coded balance, deposit form).
+- [x] Screen 19. Registered Members (truncated identity commitments, search).
+- [x] Screen 20. Organizer Profile (edit display name, passkeys list).
 
 **Validation**: full organizer flow. Actions trigger correct modals but respond with toast "integration pending". Mobile and desktop responsive.
 
 ---
 
-### Milestone 4. Shared screens + full i18n + visual polish (Screens 21, 22) (3 to 4 days)
+### Milestone 4. Shared screens + full i18n + visual polish (Screens 21, 22) ✅ COMPLETED 2026-05-26
 
-- [ ] Screen 21. Error & Empty States (14 variants).
-- [ ] Screen 22. Transaction Pending Modal (pending/success/failed simulated).
-- [ ] i18n audit. All strings from H2 and H3 translated to 13 JSON files.
-- [ ] IP-based language auto-detect (ipapi.co free, 1k req/day).
-- [ ] Visual polish. 24 screens coherent.
-- [ ] Framer Motion animations + motion-reduce respect.
-- [ ] WCAG 2.1 AA (Lighthouse / axe).
-- [ ] Lighthouse ≥85 performance, code-splitting lazy WASM/Paillier.
-- [ ] E2E tests with Playwright. Smoke test all 24 screens.
-- [ ] Clean up TODOs, console.logs.
+- [x] Screen 21. Error & Empty States (14 variants).
+- [x] Screen 22. Transaction Pending Modal (pending/success/failed simulated).
+- [x] i18n audit. All strings from H2 and H3 translated to 13 JSON files.
+- [x] IP-based language auto-detect (ipapi.co free, 1k req/day).
+- [x] Visual polish. 24 screens coherent.
+- [x] Framer Motion animations + motion-reduce respect.
+- [x] WCAG 2.1 AA (Lighthouse / axe).
+- [x] Lighthouse ≥85 performance, code-splitting lazy WASM/Paillier.
+- [x] E2E tests with Playwright. Smoke test all 24 screens.
+- [x] Clean up TODOs, console.logs.
 
 **Validation**: full dApp ✅. Major checkpoint, move to real integration.
 

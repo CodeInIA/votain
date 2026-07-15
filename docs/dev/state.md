@@ -1,8 +1,11 @@
 # Votain. Current Project State
 
-**Last updated**: 2026-05-25
-**Completed milestone**: H0. Bootstrap, dependency upgrade, dev docs.
-**Next milestone**: H1. Design system and base components.
+**Last updated**: 2026-07-15
+**Completed milestone**: Phase A (H1–H4 + UX polish pass). All 24 screens implemented visually.
+**Next milestone**: H5. Production contracts on Amoy + frontend client.
+
+> Detailed milestone-by-milestone log lives in `docs/ai/state.md`. This file tracks module status,
+> dependency versions and environment.
 
 ---
 
@@ -62,7 +65,7 @@
 
 ---
 
-### frontend/. STABLE (H0 complete)
+### frontend/. STABLE (Phase A complete)
 
 | Dep | Version | Notes |
 |-----|---------|-------|
@@ -70,31 +73,29 @@
 | vite | 8.0.14 | Updated |
 | tailwindcss | 4.3.0 | Updated |
 | typescript | 6.0.3 | OK |
-| `@zerodev/sdk` | 5.5.10 | **NEW**. Replaces `@biconomy/account` |
-| `@zerodev/passkey-validator` | 5.6.0 | **NEW** |
-| `@zerodev/ecdsa-validator` | 5.4.9 | **NEW** |
+| `@zerodev/sdk` | 5.5.10 | Replaces `@biconomy/account` |
+| `@zerodev/passkey-validator` | 5.6.0 | OK |
+| `@zerodev/ecdsa-validator` | 5.4.9 | OK |
+| `@radix-ui/react-select` | 2.3.3 | **NEW** (Phase A polish). Headless primitive for LanguageSelector |
 | ethers | 6.16.0 | OK |
 | `@semaphore-protocol/*` | 4.14.2 | OK |
 | framer-motion | 12.40.0 | Updated |
 | i18next | 26.2.0 | Updated |
 | lucide-react | 1.16.0 | Updated |
 
-**Build**: ✅ (651ms, 568KB JS + 821KB WASM).
-**Tests**: 4 tests failing due to missing i18n setup in vitest (pre-existing, fix in H1).
+**Build**: ✅ clean, no sourcemaps.
+**Tests**: 9/9 unit tests passing (Vitest, jsdom). Playwright E2E scaffold in `e2e/` (excluded from Vitest).
 
 **Technical debt pending**:
 
-- H1. Fix Onboarding tests (i18n mock in vitest setup).
-- H1. Base UI components (Card, Badge, Modal, etc.).
-- H2 to H4. 22 remaining screens from `stich.md`.
-- H5. `src/lib/zerodev.ts`, `src/hooks/usePasskeys.ts`, `src/lib/contracts.ts`.
-- H4. Code-splitting lazy-load for Semaphore WASM and Paillier.
+- H5. `src/lib/zerodev.ts`, `src/hooks/usePasskeys.ts`, `src/lib/contracts.ts`, `src/lib/paillier.ts`, `src/lib/semaphore.ts`.
+- H5+. Code-splitting lazy-load for Semaphore WASM and Paillier.
+- H4 leftover. IP-based language auto-detect (ipapi.co) not wired yet.
 
-**Implemented screens**:
-
-- `/` Landing ✅.
-- `/voter/onboarding` Onboarding (5 steps + World ID QR) ✅.
-- Stubs: `/voter/dashboard`, `/organizer/auth`, `/discover`, `/how-it-works`.
+**Implemented screens**: all 24 from `stich.md` with hardcoded data from `src/data/seed.ts`
+(6 elections covering all 6 phases and all 4 voting types). Persistent voter/organizer auth via
+`src/contexts/AuthContext.tsx` (localStorage, Phase A only — replaced by real sessions in Phase B).
+Auth-aware navigation (TopNav/BottomTabNav), theme-consistent scrollbars, full i18n (13 locales).
 
 ---
 
@@ -128,3 +129,8 @@ The project is released under **AGPL-3.0** (was MIT until H0 cleanup). All `pack
 | Milestone | Date | Description |
 |-----------|------|-------------|
 | H0 | 2026-05-23 | Bootstrap, dep upgrade, dev docs, Biconomy to ZeroDev, Hardhat 3 migration, Solidity 0.8.35, TypeScript ESNext, AGPL-3.0 relicense |
+| H1 | 2026-05-25 | Design system: ~20 UI components + layout (TopNav, BottomTabNav, Footer, PageLayout), `/dev/components` showcase |
+| H2 | 2026-05-25 | Public + voter screens (1–13, 23, 24) with `seed.ts` hardcoded data |
+| H3 | 2026-05-25 | Organizer screens (14–20) |
+| H4 | 2026-05-26 | TransactionPendingModal, full i18n (13 locales), reduced-motion, E2E scaffold |
+| Phase A polish | 2026-07-15 | AuthContext (voter+organizer), auth-driven navigation, viewport layout (sticky header/pinned footer), Radix Select for LanguageSelector, themed scrollbars, i18n fixes, MemberList Select, tests green |
