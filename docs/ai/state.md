@@ -93,6 +93,20 @@ All screens implemented with hardcoded data from `src/data/seed.ts`:
 **Tests/config**: `Landing.test.tsx` footer assertion updated; `vite.config.ts` excludes `e2e/**` from Vitest
 (9/9 unit tests green; production build clean)
 
+### Dependency refresh ✅ (2026-07-15, after Phase A merge to dev)
+
+All three modules upgraded to latest (`npm-check-updates`), verified green:
+
+- **contracts**: Hardhat 3.9.1, TypeScript 7.0.2, Semaphore contracts 4.14.3 — 5/5 tests pass
+- **backend**: `@sd-jwt/core` 0.20.0 (project moved to OpenWallet Foundation — `@sd-jwt/types`
+  no longer exists as a dep; `SDJWTConfig`/`JwtPayload` now import from `@sd-jwt/core`),
+  IDKit-core 4.2.1, TypeScript 7.0.2, `@types/node` 26 (required a `crypto.createPublicKey`
+  fix in `utils/keys.ts` — derive public key from private PEM export). `issue()` smoke-tested
+- **frontend**: Vite 8.1.4, React 19.2.7, Tailwind 4.3.2, ethers 6.17, IDKit 4.2,
+  react-router 7.18.1, i18next 26.3.6 — tsc clean, 9/9 tests, build OK
+  - ⚠️ TypeScript **pinned at 6.0.3**: `typescript-eslint@8.64` peer-requires `<6.1.0`
+  - ⚠️ `@sd-jwt/present` stays 0.19.0 (no stable 0.20 published) — revisit in H6/H7
+
 ---
 
 ## Phase A — COMPLETE ✅

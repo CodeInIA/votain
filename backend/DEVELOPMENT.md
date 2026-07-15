@@ -1,13 +1,15 @@
 # backend/. Developer Guide
 
-## Stack
+## Stack (versions as of 2026-07-15)
 
 - **Node.js** v24+ (ESM)
-- **Express** v5.2
-- **tsx** v4.22. Runs TypeScript directly, no compile step.
-- **`@sd-jwt/core`** v0.19. Selective Disclosure JWT (EdDSA signer).
-- **`@worldcoin/idkit-core`** v4.1.6. World ID v4 proof verification.
-- **TypeScript** 6.0.3
+- **Express** v5.2.1
+- **tsx** v4.23. Runs TypeScript directly, no compile step.
+- **`@sd-jwt/core`** v0.20. Selective Disclosure JWT (EdDSA signer). Project moved to
+  OpenWallet Foundation — `SDJWTConfig`/`JwtPayload` types import from `@sd-jwt/core`
+  directly (the old `@sd-jwt/types` package is dead, do not re-add it).
+- **`@worldcoin/idkit-core`** v4.2.1. World ID v4 proof verification.
+- **TypeScript** 7.0.2 (native compiler)
 
 ## Current endpoints
 

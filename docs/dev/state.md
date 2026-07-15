@@ -1,6 +1,6 @@
 # Votain. Current Project State
 
-**Last updated**: 2026-07-15
+**Last updated**: 2026-07-15 (dependency refresh after Phase A merge to dev)
 **Completed milestone**: Phase A (H1–H4 + UX polish pass). All 24 screens implemented visually.
 **Next milestone**: H5. Production contracts on Amoy + frontend client.
 
@@ -11,22 +11,21 @@
 
 ## Module status
 
-### contracts/. STABLE (H0 complete)
+### contracts/. STABLE (deps refreshed 2026-07-15)
 
 | Dep | Version | Notes |
 |-----|---------|-------|
-| hardhat | 3.x | Latest. Migrated to HH3 config format (`defineConfig`, `plugins`) |
-| `@nomicfoundation/hardhat-toolbox-mocha-ethers` | * | HH3 toolbox (replaces `hardhat-toolbox@hh2`) |
-| chai | 6.x | ESM-only. Compatible with HH3 |
+| hardhat | 3.9.1 | HH3 config format (`defineConfig`, `plugins`) |
+| `@nomicfoundation/hardhat-toolbox-mocha-ethers` | 3.0.7 | HH3 toolbox (replaces `hardhat-toolbox@hh2`) |
 | `@openzeppelin/contracts` | 5.6.1 | OK |
-| `@semaphore-protocol/contracts` | 4.14.2 | OK |
-| ethers | 6.16.0 | OK |
-| dotenv | 17.4.2 | Updated |
-| typescript | 6.0.3 | Updated |
+| `@semaphore-protocol/contracts` | 4.14.3 | OK |
+| dotenv | 17.4.2 | OK |
+| typescript | 7.0.2 | Native (Go) compiler — works with HH3 toolchain |
+| `@types/node` | 26.1.1 | OK |
 | Solidity | 0.8.35 | Latest stable |
-| TypeScript target | ESNext | Bumped from ES2023 |
+| TypeScript target | ESNext | |
 
-**Tests**: 5/5 passing ✅ (HH3 + chai v6).
+**Tests**: 5/5 passing ✅.
 
 **Technical debt pending (H5)**:
 
@@ -41,16 +40,16 @@
 
 ---
 
-### backend/. STABLE (H0 complete)
+### backend/. STABLE (deps refreshed 2026-07-15)
 
 | Dep | Version | Notes |
 |-----|---------|-------|
-| express | 5.2.x | OK |
-| `@sd-jwt/core` | 0.19.0 | OK |
-| `@worldcoin/idkit-core` | 4.1.6 | Updated from 4.1.2 |
-| tsx | 4.22.3 | Updated from 4.21.0 |
-| typescript | 6.0.3 | OK |
-| `@types/node` | 25.9.1 | Updated |
+| express | 5.2.1 | OK |
+| `@sd-jwt/core` | 0.20.0 | **Migrated to OpenWallet Foundation.** No longer ships `@sd-jwt/types` (removed as dep); `SDJWTConfig`/`JwtPayload` are now imported from `@sd-jwt/core` directly. `issue()` round-trip smoke-tested ✅ |
+| `@worldcoin/idkit-core` | 4.2.1 | OK |
+| tsx | 4.23.1 | OK |
+| typescript | 7.0.2 | Native compiler, tsc clean |
+| `@types/node` | 26.1.1 | Narrowed `crypto.createPublicKey` overloads — `keys.ts` now derives the public key from the private key PEM export |
 
 **Status**: starts OK (requires `.env` with `ISSUER_PRIVATE_KEY`) ✅.
 
@@ -65,23 +64,29 @@
 
 ---
 
-### frontend/. STABLE (Phase A complete)
+### frontend/. STABLE (Phase A complete, deps refreshed 2026-07-15)
 
 | Dep | Version | Notes |
 |-----|---------|-------|
-| react | 19.2.6 | Updated |
-| vite | 8.0.14 | Updated |
-| tailwindcss | 4.3.0 | Updated |
-| typescript | 6.0.3 | OK |
+| react / react-dom | 19.2.7 | OK |
+| vite | 8.1.4 | OK |
+| tailwindcss | 4.3.2 | OK |
+| typescript | **6.0.3 (pinned)** | `typescript-eslint@8.64` requires `<6.1.0` — do NOT bump to 7.x until typescript-eslint supports it |
 | `@zerodev/sdk` | 5.5.10 | Replaces `@biconomy/account` |
 | `@zerodev/passkey-validator` | 5.6.0 | OK |
 | `@zerodev/ecdsa-validator` | 5.4.9 | OK |
-| `@radix-ui/react-select` | 2.3.3 | **NEW** (Phase A polish). Headless primitive for LanguageSelector |
-| ethers | 6.16.0 | OK |
-| `@semaphore-protocol/*` | 4.14.2 | OK |
-| framer-motion | 12.40.0 | Updated |
-| i18next | 26.2.0 | Updated |
-| lucide-react | 1.16.0 | Updated |
+| `@radix-ui/react-select` | 2.3.3 | Headless primitive for LanguageSelector |
+| country-flag-emoji-polyfill | 0.1.8 | Flag emoji font for Windows/Chromium |
+| ethers | 6.17.0 | OK |
+| `@semaphore-protocol/*` | 4.14.3 | OK |
+| `@worldcoin/idkit` / `idkit-core` | 4.2.0 / 4.2.1 | OK, hook typechecks |
+| `@sd-jwt/core` | 0.20.0 | OWF migration (see backend note) |
+| `@sd-jwt/present` | 0.19.0 | **No stable 0.20 yet** — revisit when wiring presentation in H6/H7 |
+| framer-motion | 12.42.2 | OK |
+| i18next / react-i18next | 26.3.6 / 17.0.9 | OK |
+| react-router-dom | 7.18.1 | OK |
+| lucide-react | 1.24.0 | OK |
+| recharts | 3.9.2 | OK |
 
 **Build**: ✅ clean, no sourcemaps.
 **Tests**: 9/9 unit tests passing (Vitest, jsdom). Playwright E2E scaffold in `e2e/` (excluded from Vitest).
@@ -134,3 +139,4 @@ The project is released under **AGPL-3.0** (was MIT until H0 cleanup). All `pack
 | H3 | 2026-05-25 | Organizer screens (14–20) |
 | H4 | 2026-05-26 | TransactionPendingModal, full i18n (13 locales), reduced-motion, E2E scaffold |
 | Phase A polish | 2026-07-15 | AuthContext (voter+organizer), auth-driven navigation, viewport layout (sticky header/pinned footer), Radix Select for LanguageSelector, themed scrollbars, i18n fixes, MemberList Select, tests green |
+| Deps refresh | 2026-07-15 | All 3 modules to latest: Hardhat 3.9.1, TS 7.0.2 (contracts+backend), sd-jwt 0.20 (OWF migration, types re-exported from core), IDKit 4.2, ethers 6.17, Vite 8.1.4. Frontend TS pinned at 6.0.3 (typescript-eslint constraint). All tests green |

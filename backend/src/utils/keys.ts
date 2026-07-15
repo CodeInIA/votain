@@ -13,7 +13,11 @@ export function getIssuerKeyPair() {
     format: 'der',
     type: 'pkcs8'
   });
-  const publicKey = crypto.createPublicKey(privateKey);
+  // createPublicKey derives the public key from a private key PEM. @types/node 26
+  // narrowed the overloads and no longer accepts a KeyObject argument directly.
+  const publicKey = crypto.createPublicKey(
+    privateKey.export({ format: 'pem', type: 'pkcs8' }) as string
+  );
   
   return { publicKey, privateKey };
 }

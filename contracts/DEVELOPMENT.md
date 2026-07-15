@@ -1,14 +1,15 @@
 # contracts/. Developer Guide
 
-## Stack
+## Stack (versions as of 2026-07-15)
 
 - Solidity 0.8.35
-- Hardhat 3.x (`hardhat.config.ts`, `defineConfig`, `plugins` array)
-- `@nomicfoundation/hardhat-toolbox-mocha-ethers` (HH3 toolbox with mocha + ethers)
+- Hardhat 3.9 (`hardhat.config.ts`, `defineConfig`, `plugins` array)
+- `@nomicfoundation/hardhat-toolbox-mocha-ethers` 3.0.7 (HH3 toolbox with mocha + ethers)
 - ethers v6 (native BigInt, NO BigNumber)
 - chai v6 (ESM-only, compatible with HH3)
+- TypeScript 7.0.2 (native compiler)
 - `@openzeppelin/contracts` ^5.6.1
-- `@semaphore-protocol/contracts` ^4.14.2
+- `@semaphore-protocol/contracts` ^4.14.3
 
 ## Contracts
 

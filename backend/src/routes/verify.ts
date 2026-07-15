@@ -1,6 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { SDJwtInstance } from '@sd-jwt/core';
-import type { SDJWTConfig, JwtPayload } from '@sd-jwt/types';
+import { SDJwtInstance, type SDJWTConfig, type JwtPayload } from '@sd-jwt/core';
 import crypto from 'crypto';
 import { getIssuerKeyPair, issueSigner } from '../utils/keys.js';
 import { signRequest } from '@worldcoin/idkit-core/signing';
