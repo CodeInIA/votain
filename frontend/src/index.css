@@ -37,9 +37,11 @@
   --color-success: #4ade80;
   --color-warning: #facc15;
 
-  /* ── Typography ── */
-  --font-body: "Inter", system-ui, -apple-system, sans-serif;
-  --font-heading: "Inter", system-ui, -apple-system, sans-serif;
+  /* ── Typography ──
+     "Twemoji Country Flags" (injected by country-flag-emoji-polyfill) only
+     contains flag glyphs; all other characters fall through to Inter. */
+  --font-body: "Twemoji Country Flags", "Inter", system-ui, -apple-system, sans-serif;
+  --font-heading: "Twemoji Country Flags", "Inter", system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
 }
 
@@ -50,6 +52,24 @@
     font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
     margin: 0;
+  }
+
+  /* ── Buttons: restore pointer cursor (Tailwind v4 defaults to cursor:default) ── */
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+
+  /* ── Number inputs: hide native spinners (presets/buttons handle stepping) ── */
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  input[type='number'] {
+    -moz-appearance: textfield;
+    appearance: textfield;
   }
 
   /* ── Scrollbars (theme-consistent) ── */

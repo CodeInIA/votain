@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
+import { BackButton } from '../../components/ui/BackButton';
 import { Card } from '../../components/ui/Card';
 import { RadioGroup } from '../../components/ui/RadioCard';
 import { EligibilityRow } from '../../components/ui/EligibilityRow';
@@ -53,14 +54,7 @@ export default function ElectionDetail() {
   return (
     <PageLayout role="voter" showNav>
       <div className="max-w-2xl mx-auto pt-4 pb-28">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-sm text-on-surface-meta hover:text-on-surface mb-5 transition-colors cursor-pointer"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          {t('common.back')}
-        </button>
+        <BackButton className="mb-5" />
 
         {/* Phase badge + title */}
         <div className="mb-5">

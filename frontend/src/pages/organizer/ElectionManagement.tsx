@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, XCircle, Clock, BarChart3, Users } from 'lucide-react';
+import { XCircle, Clock, BarChart3, Users } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
+import { BackButton } from '../../components/ui/BackButton';
 import { Card } from '../../components/ui/Card';
 import { Modal } from '../../components/ui/Modal';
 import { Countdown } from '../../components/ui/Countdown';
@@ -46,10 +47,7 @@ export default function ElectionManagement() {
   return (
     <PageLayout role="organizer" showNav>
       <div className="max-w-3xl mx-auto pt-4 pb-24">
-        <button type="button" onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-sm text-on-surface-meta hover:text-on-surface mb-5 transition-colors cursor-pointer">
-          <ChevronLeft className="w-4 h-4" />{t('common.back')}
-        </button>
+        <BackButton className="mb-5" />
 
         {/* Header */}
         <div className="mb-5">

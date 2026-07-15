@@ -1,4 +1,4 @@
-﻿{
+{
   "landing": {
     "title": "Votain",
     "voter_cta": "시작하기",
@@ -138,7 +138,8 @@
     "gas_low_banner": "가스 잔액이 부족합니다. 투표하려면 충전하세요.",
     "top_up": "충전",
     "ends_in": "종료까지",
-    "vote_now": "지금 투표"
+    "vote_now": "지금 투표",
+    "voted": "투표함"
   },
   "how": {
     "title": "Votain 작동 방식",
@@ -311,7 +312,8 @@
     "deposit_pending": "입금 처리 중…",
     "history": "트랜잭션 기록",
     "deposit": "입금",
-    "used": "사용된 가스"
+    "used": "사용된 가스",
+    "votes_remaining": "약 {{count}}표 남음"
   },
   "members": {
     "title": "등록된 회원",
@@ -349,7 +351,8 @@
     "do_not_close": "이 창을 닫지 마세요",
     "view_tx": "PolygonScan에서 보기",
     "aria_label": "트랜잭션 상태"
-  },  "errors": {
+  },
+  "errors": {
     "not_found": "페이지를 찾을 수 없음",
     "not_found_desc": "찾고 있는 페이지가 존재하지 않거나 이동되었습니다.",
     "go_home": "홈으로 이동"

@@ -1,4 +1,4 @@
-﻿{
+{
   "landing": {
     "title": "Votain",
     "voter_cta": "始める",
@@ -138,7 +138,8 @@
     "gas_low_banner": "ガス残高が不足しています。投票するにはチャージしてください。",
     "top_up": "チャージ",
     "ends_in": "終了まで",
-    "vote_now": "今すぐ投票"
+    "vote_now": "今すぐ投票",
+    "voted": "投票済み"
   },
   "how": {
     "title": "Votainの仕組み",
@@ -311,7 +312,8 @@
     "deposit_pending": "入金処理中…",
     "history": "トランザクション履歴",
     "deposit": "入金",
-    "used": "使用済みガス"
+    "used": "使用済みガス",
+    "votes_remaining": "残り約{{count}}票"
   },
   "members": {
     "title": "登録メンバー",
@@ -349,7 +351,8 @@
     "do_not_close": "このウィンドウを閉じないでください",
     "view_tx": "PolygonScanで表示",
     "aria_label": "トランザクションステータス"
-  },  "errors": {
+  },
+  "errors": {
     "not_found": "ページが見つかりません",
     "not_found_desc": "お探しのページは存在しないか、移動されました。",
     "go_home": "ホームへ"

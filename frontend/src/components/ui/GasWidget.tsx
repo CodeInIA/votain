@@ -1,5 +1,7 @@
+import { useTranslation } from 'react-i18next';
 import { Fuel, AlertTriangle, TrendingDown } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { Button } from './Button';
 
 interface GasWidgetProps {
   balanceMatic: number;
@@ -15,6 +17,7 @@ function getLevel(balance: number): 'good' | 'low' | 'critical' {
 }
 
 export function GasWidget({ balanceMatic, estimatedVotesLeft, onDeposit, className }: GasWidgetProps) {
+  const { t } = useTranslation();
   const level = getLevel(balanceMatic);
 
   return (
@@ -51,19 +54,19 @@ export function GasWidget({ balanceMatic, estimatedVotesLeft, onDeposit, classNa
         </p>
         {estimatedVotesLeft !== undefined && (
           <p className="text-xs text-on-surface-meta">
-            ~{estimatedVotesLeft} votes remaining
+            {t('gas.votes_remaining', { count: estimatedVotesLeft })}
           </p>
         )}
       </div>
 
       {onDeposit && (level === 'low' || level === 'critical') && (
-        <button
-          type="button"
+        <Button
+          size="sm"
           onClick={onDeposit}
-          className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary/20 text-primary-dim hover:bg-primary/30 transition-colors shrink-0"
+          className="text-xs font-semibold bg-primary/20 text-primary-dim border-0 hover:bg-primary/30 shrink-0"
         >
-          Top up
-        </button>
+          {t('election.top_up')}
+        </Button>
       )}
     </div>
   );

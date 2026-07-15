@@ -1,9 +1,10 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Users, Calendar, ChevronLeft, Lock, ExternalLink } from 'lucide-react';
+import { Users, Calendar, Lock, ExternalLink } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
+import { BackButton } from '../../components/ui/BackButton';
 import { Card } from '../../components/ui/Card';
 import { Countdown } from '../../components/ui/Countdown';
 import { BlockchainBadge } from '../../components/ui/BlockchainBadge';
@@ -35,15 +36,7 @@ export default function ElectionPreview() {
   return (
     <PageLayout role="public" showNav>
       <div className="max-w-3xl mx-auto pt-4 pb-24">
-        {/* Back */}
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-sm text-on-surface-meta hover:text-on-surface mb-6 transition-colors cursor-pointer"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          {t('common.back')}
-        </button>
+        <BackButton className="mb-6" />
 
         {/* Title block */}
         <div className="mb-6">

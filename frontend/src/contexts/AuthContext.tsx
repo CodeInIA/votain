@@ -1,7 +1,8 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 
 const VOTER_KEY = 'votain_voter_logged_in';
 const ORGANIZER_KEY = 'votain_organizer_logged_in';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? '';
 
 interface AuthState {
   voterLoggedIn: boolean;
@@ -35,10 +36,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setVoterLoggedInState(v);
   };
 
+  // A valid voter_vc cookie (httpOnly, set by the issuer after World ID
+  // verification) restores the voter session even if localStorage was cleared.
+  useEffect(() => {
+    if (localStorage.getItem(VOTER_KEY) === 'true') return;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2000);
+
+    fetch(`${BACKEND_URL}/api/me`, { credentials: 'include', signal: controller.signal })
+      .then(res => (res.ok ? res.json() as Promise<{ authenticated?: boolean; nullifier?: string }> : null))
+      .then(data => {
+        if (data?.authenticated) {
+          if (data.nullifier) localStorage.setItem('voter_nullifier', data.nullifier);
+          setVoterLoggedIn(true);
+        }
+      })
+      .catch(() => {})
+      .finally(() => clearTimeout(timer));
+
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, []);
+
   const voterSignOut = () => {
     localStorage.removeItem(VOTER_KEY);
     localStorage.removeItem('voter_nullifier');
     setVoterLoggedInState(false);
+    // Clear the httpOnly VC cookie so /api/me does not restore the session.
+    fetch(`${BACKEND_URL}/api/logout`, { method: 'POST', credentials: 'include' }).catch(() => {});
   };
 
   const setOrganizerLoggedIn = (v: boolean) => {

@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Search, SlidersHorizontal, X } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
+import { Button } from '../../components/ui/Button';
 import { ElectionCard } from '../../components/ui/ElectionCard';
 import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
@@ -52,15 +53,14 @@ export default function Discover() {
               ) : undefined}
             />
           </div>
-          <button
-            type="button"
+          <Button
             onClick={() => setShowFilters(v => !v)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-outline-variant/20 bg-surface-low/30 backdrop-blur-sm text-sm text-on-surface-variant hover:text-on-surface hover:border-outline-variant/40 transition-all cursor-pointer"
+            className="gap-2 h-11 px-4 rounded-2xl text-sm text-on-surface-variant hover:text-on-surface"
           >
             <SlidersHorizontal className="w-4 h-4" />
             <span className="hidden sm:inline">{t('common.filter')}</span>
             {phase && <span className="w-2 h-2 rounded-full bg-primary" />}
-          </button>
+          </Button>
         </div>
 
         {/* Phase filter chips */}

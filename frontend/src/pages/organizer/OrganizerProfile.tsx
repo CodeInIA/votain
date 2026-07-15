@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, KeyRound, Trash2, LogOut, User, Plus, Info, FileText, Shield } from 'lucide-react';
+import { KeyRound, Trash2, LogOut, User, Plus, Info, FileText, Shield } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import { BackButton } from '../../components/ui/BackButton';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
 import { LanguageSelector } from '../../components/ui/LanguageSelector';
@@ -60,13 +61,7 @@ export default function OrganizerProfile() {
   return (
     <PageLayout role="organizer" showNav>
       <div className="max-w-xl mx-auto pt-4 pb-24">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-sm text-on-surface-meta hover:text-on-surface mb-5 transition-colors cursor-pointer"
-        >
-          <ChevronLeft className="w-4 h-4" />{t('common.back')}
-        </button>
+        <BackButton className="mb-5" />
 
         <h1 className="text-2xl font-black tracking-tight text-white mb-6">{t('profile.title')}</h1>
 

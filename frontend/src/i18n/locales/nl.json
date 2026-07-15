@@ -1,4 +1,4 @@
-﻿{
+{
   "landing": {
     "title": "Votain",
     "voter_cta": "Beginnen",
@@ -138,7 +138,8 @@
     "gas_low_banner": "Je gassaldo is laag. Aanvullen om te stemmen.",
     "top_up": "Aanvullen",
     "ends_in": "Eindigt over",
-    "vote_now": "Nu stemmen"
+    "vote_now": "Nu stemmen",
+    "voted": "gestemd"
   },
   "how": {
     "title": "Hoe Votain werkt",
@@ -311,7 +312,8 @@
     "deposit_pending": "Storting in behandeling…",
     "history": "Transactiegeschiedenis",
     "deposit": "Storting",
-    "used": "Gas gebruikt"
+    "used": "Gas gebruikt",
+    "votes_remaining": "~{{count}} stemmen resterend"
   },
   "members": {
     "title": "Geregistreerde leden",
@@ -349,7 +351,8 @@
     "do_not_close": "Sluit dit venster niet",
     "view_tx": "Bekijk op PolygonScan",
     "aria_label": "Transactiestatus"
-  },  "errors": {
+  },
+  "errors": {
     "not_found": "Pagina niet gevonden",
     "not_found_desc": "De pagina die je zoekt bestaat niet of is verplaatst.",
     "go_home": "Naar home"

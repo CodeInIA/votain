@@ -12,8 +12,8 @@ interface NavItem {
 }
 
 const VOTER_ITEMS: NavItem[] = [
-  { to: '/discover',        labelKey: 'nav.discover',  icon: <Compass className="w-4 h-4" /> },
   { to: '/voter/elections', labelKey: 'nav.elections', icon: <Vote    className="w-4 h-4" /> },
+  { to: '/discover',        labelKey: 'nav.discover',  icon: <Compass className="w-4 h-4" /> },
   { to: '/voter/history',   labelKey: 'nav.history',   icon: <Clock   className="w-4 h-4" /> },
 ];
 

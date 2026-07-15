@@ -138,7 +138,8 @@
     "gas_low_banner": "Tu saldo de gas es bajo. Recarga para votar.",
     "top_up": "Recargar",
     "ends_in": "Termina en",
-    "vote_now": "Votar ahora"
+    "vote_now": "Votar ahora",
+    "voted": "ha votado"
   },
   "how": {
     "title": "Cómo funciona Votain",
@@ -311,7 +312,8 @@
     "deposit_pending": "Depósito pendiente…",
     "history": "Historial de transacciones",
     "deposit": "Depósito",
-    "used": "Gas usado"
+    "used": "Gas usado",
+    "votes_remaining": "~{{count}} votos restantes"
   },
   "members": {
     "title": "Miembros Registrados",

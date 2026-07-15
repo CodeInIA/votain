@@ -1,4 +1,4 @@
-﻿{
+{
   "landing": {
     "title": "Votain",
     "voter_cta": "开始",
@@ -138,7 +138,8 @@
     "gas_low_banner": "您的 Gas 余额不足，请充值后投票。",
     "top_up": "充值",
     "ends_in": "结束于",
-    "vote_now": "立即投票"
+    "vote_now": "立即投票",
+    "voted": "已投票"
   },
   "how": {
     "title": "Votain 工作原理",
@@ -311,7 +312,8 @@
     "deposit_pending": "充值待处理…",
     "history": "交易历史",
     "deposit": "充值",
-    "used": "已使用 Gas"
+    "used": "已使用 Gas",
+    "votes_remaining": "剩余约 {{count}} 票"
   },
   "members": {
     "title": "已注册成员",
@@ -349,7 +351,8 @@
     "do_not_close": "请勿关闭此窗口",
     "view_tx": "在 PolygonScan 上查看",
     "aria_label": "交易状态"
-  },  "errors": {
+  },
+  "errors": {
     "not_found": "页面未找到",
     "not_found_desc": "您访问的页面不存在或已移动。",
     "go_home": "返回首页"

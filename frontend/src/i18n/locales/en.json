@@ -138,7 +138,8 @@
     "gas_low_banner": "Your gas balance is low. Top up to vote.",
     "top_up": "Top up",
     "ends_in": "Ends in",
-    "vote_now": "Vote now"
+    "vote_now": "Vote now",
+    "voted": "voted"
   },
   "how": {
     "title": "How Votain works",
@@ -311,7 +312,8 @@
     "deposit_pending": "Deposit pending…",
     "history": "Transaction history",
     "deposit": "Deposit",
-    "used": "Gas used"
+    "used": "Gas used",
+    "votes_remaining": "~{{count}} votes remaining"
   },
   "members": {
     "title": "Registered Members",

@@ -1,4 +1,4 @@
-﻿{
+{
   "landing": {
     "title": "Votain",
     "voter_cta": "Inizia",
@@ -138,7 +138,8 @@
     "gas_low_banner": "Il tuo saldo gas è basso. Ricarica per votare.",
     "top_up": "Ricarica",
     "ends_in": "Termina tra",
-    "vote_now": "Vota ora"
+    "vote_now": "Vota ora",
+    "voted": "hanno votato"
   },
   "how": {
     "title": "Come funziona Votain",
@@ -311,7 +312,8 @@
     "deposit_pending": "Deposito in corso…",
     "history": "Cronologia transazioni",
     "deposit": "Deposito",
-    "used": "Gas utilizzato"
+    "used": "Gas utilizzato",
+    "votes_remaining": "~{{count}} voti rimanenti"
   },
   "members": {
     "title": "Membri Registrati",
@@ -349,7 +351,8 @@
     "do_not_close": "Non chiudere questa finestra",
     "view_tx": "Vedi su PolygonScan",
     "aria_label": "Stato della transazione"
-  },  "errors": {
+  },
+  "errors": {
     "not_found": "Pagina non trovata",
     "not_found_desc": "La pagina che stai cercando non esiste o è stata spostata.",
     "go_home": "Vai alla home"

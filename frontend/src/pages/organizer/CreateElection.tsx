@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus, Trash2, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, ChevronRight, AlertTriangle } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Stepper } from '../../components/ui/Stepper';
 import { Button } from '../../components/ui/Button';
+import { BackButton } from '../../components/ui/BackButton';
 import { Card } from '../../components/ui/Card';
 import { Input, Textarea, Select } from '../../components/ui/Input';
 import { Switch } from '../../components/ui/Switch';
@@ -73,15 +74,10 @@ export default function CreateElection() {
   return (
     <PageLayout role="organizer" showNav>
       <div className="max-w-2xl mx-auto pt-4 pb-24">
-        {/* Back */}
-        <button
-          type="button"
+        <BackButton
+          className="mb-5"
           onClick={() => step > 0 ? setStep(s => s - 1) : navigate(-1)}
-          className="flex items-center gap-1.5 text-sm text-on-surface-meta hover:text-on-surface mb-5 transition-colors cursor-pointer"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          {t('common.back')}
-        </button>
+        />
 
         <h1 className="text-xl font-black tracking-tight text-white mb-6">{t('create.title')}</h1>
         <Stepper steps={STEPS} current={step} className="mb-8" />
