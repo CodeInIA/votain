@@ -2,7 +2,7 @@
 
 ## Stack (versions as of 2026-07-15)
 
-- Solidity 0.8.35
+- Solidity 0.8.36
 - Hardhat 3.9 (`hardhat.config.ts`, `defineConfig`, `plugins` array)
 - `@nomicfoundation/hardhat-toolbox-mocha-ethers` 3.0.7 (HH3 toolbox with mocha + ethers)
 - ethers v6 (native BigInt, NO BigNumber)
@@ -35,7 +35,7 @@ npx hardhat run scripts/deploy.ts --network amoy
 `hardhat.config.ts` (ESM TypeScript, HH3 format):
 
 - `defineConfig({ plugins: [hardhatToolboxMochaEthers], ... })`
-- Solidity 0.8.35, profiles `default` and `production` (with optimizer).
+- Solidity 0.8.36, profiles `default` and `production` (with optimizer).
 - Network `amoy`: uses `AMOY_RPC_URL` and `PRIVATE_KEY` from `.env`.
 
 ## Required environment variables

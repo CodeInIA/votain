@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.35;
+pragma solidity ^0.8.36;
 
 import "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 import "@semaphore-protocol/contracts/interfaces/ISemaphoreVerifier.sol";

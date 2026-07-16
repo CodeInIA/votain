@@ -71,10 +71,10 @@ import { BigNumber } from "ethers";  // NO
 ethers.utils.parseEther(...)  // NO, does not exist in v6
 ```
 
-### Solidity 0.8.35
+### Solidity 0.8.36
 
 ```solidity
-pragma solidity ^0.8.35;
+pragma solidity ^0.8.36;
 // EVM target: paris (no PUSH0, compatible with Polygon Amoy)
 // OZ v5.x: @openzeppelin/contracts ^5.6.1
 // Semaphore: @semaphore-protocol/contracts ^4.14.2

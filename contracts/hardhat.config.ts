@@ -7,13 +7,13 @@ export default defineConfig({
   solidity: {
     profiles: {
       default: {
-        version: "0.8.35",
+        version: "0.8.36",
         settings: {
           evmVersion: "paris",
         },
       },
       production: {
-        version: "0.8.35",
+        version: "0.8.36",
         settings: {
           evmVersion: "paris",
           optimizer: { enabled: true, runs: 200 },

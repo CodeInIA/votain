@@ -97,7 +97,7 @@ All screens implemented with hardcoded data from `src/data/seed.ts`:
 
 All three modules upgraded to latest (`npm-check-updates`), verified green:
 
-- **contracts**: Hardhat 3.9.1, TypeScript 7.0.2, Semaphore contracts 4.14.3 — 5/5 tests pass
+- **contracts**: Hardhat 3.9.1, TypeScript 7.0.2, Semaphore contracts 4.14.3, Solidity 0.8.36 (config + all pragmas) — compiles clean, 5/5 tests pass
 - **backend**: `@sd-jwt/core` 0.20.0 (project moved to OpenWallet Foundation — `@sd-jwt/types`
   no longer exists as a dep; `SDJWTConfig`/`JwtPayload` now import from `@sd-jwt/core`),
   IDKit-core 4.2.1, TypeScript 7.0.2, `@types/node` 26 (required a `crypto.createPublicKey`

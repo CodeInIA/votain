@@ -22,7 +22,7 @@
 | dotenv | 17.4.2 | OK |
 | typescript | 7.0.2 | Native (Go) compiler — works with HH3 toolchain |
 | `@types/node` | 26.1.1 | OK |
-| Solidity | 0.8.35 | Latest stable |
+| Solidity | 0.8.36 | Latest stable |
 | TypeScript target | ESNext | |
 
 **Tests**: 5/5 passing ✅.
