@@ -347,7 +347,9 @@
     "results_published": "Results published",
     "tally_publishing": "Publishing…",
     "export_key": "Export decryption key (backup)",
-    "key_exported": "Decryption key exported"
+    "key_exported": "Decryption key exported",
+    "import_key": "Import decryption key",
+    "key_imported": "Decryption key imported"
   },
   "gas": {
     "title": "Gas Management",

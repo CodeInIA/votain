@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, type ChangeEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { XCircle, Clock, BarChart3, Users, KeyRound } from 'lucide-react';
@@ -16,7 +16,7 @@ import { useToast } from '../../components/ui/useToast';
 import { useElection } from '../../hooks/useElections';
 import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
 import { cancelElection, closeVotingEarly, closeEnrollmentEarly, markVoided, publishResults } from '../../lib/organizer';
-import { computeTally, hasTallyKey, resolveTallyKey, MissingTallyKeyError, type TallyResult } from '../../lib/tally';
+import { computeTally, hasTallyKey, resolveTallyKey, importTallyKey, MissingTallyKeyError, type TallyResult } from '../../lib/tally';
 import { nextBoundary, PULSE_PHASES } from '../../lib/phase';
 
 export default function ElectionManagement() {
@@ -32,6 +32,7 @@ export default function ElectionManagement() {
   const [busy, setBusy] = useState(false);
   const [tallyPreview, setTallyPreview] = useState<TallyResult | null>(null);
   const [tallyError, setTallyError]     = useState<string | null>(null);
+  const keyFileInput = useRef<HTMLInputElement>(null);
 
   if (loading) {
     return (
@@ -134,6 +135,24 @@ export default function ElectionManagement() {
       toast({ title: t('election_mgmt.key_exported'), variant: 'success' });
     } catch (e) {
       setTallyError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Import a key exported on another device so this one can run the tally.
+  const handleImportKey = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-selecting the same file
+    if (!file) return;
+    setBusy(true);
+    setTallyError(null);
+    try {
+      await importTallyKey(election.contractAddress, await file.text());
+      toast({ title: t('election_mgmt.key_imported'), variant: 'success' });
+      setTallyModal(true); // key is now present — let them compute the tally
+    } catch (err) {
+      setTallyError(err instanceof Error ? err.message : String(err));
     } finally {
       setBusy(false);
     }
@@ -247,13 +266,21 @@ export default function ElectionManagement() {
             <Users className="w-4 h-4 mr-2" />
             {t('election_mgmt.view_members')}
           </Button>
-          {/* Back up the decryption key any time — most useful right after
-              creation, before the tallying phase (and the tally modal) exists. */}
-          {tallyKeyPresent && (
+          {/* Decryption key: if this device has it, offer a backup export; if
+              not (e.g. a second device), import the file exported elsewhere. */}
+          <input ref={keyFileInput} type="file" accept="application/json,.json"
+            className="hidden" onChange={handleImportKey} />
+          {tallyKeyPresent ? (
             <Button variant="ghost" className="w-full rounded-2xl" disabled={busy}
               onClick={handleExportKey}>
               <KeyRound className="w-4 h-4 mr-2" />
               {t('election_mgmt.export_key')}
+            </Button>
+          ) : (
+            <Button variant="ghost" className="w-full rounded-2xl" disabled={busy}
+              onClick={() => keyFileInput.current?.click()}>
+              <KeyRound className="w-4 h-4 mr-2" />
+              {t('election_mgmt.import_key')}
             </Button>
           )}
         </Card>
@@ -315,14 +342,21 @@ export default function ElectionManagement() {
               </div>
             )}
             {!tallyKeyPresent && (
-              <p className="text-xs text-warning">{t('election_mgmt.tally_key_missing')}</p>
+              <>
+                <p className="text-xs text-warning">{t('election_mgmt.tally_key_missing')}</p>
+                <Button variant="default" className="w-full gap-2" disabled={busy}
+                  onClick={() => keyFileInput.current?.click()}>
+                  <KeyRound className="w-4 h-4" />
+                  {t('election_mgmt.import_key')}
+                </Button>
+              </>
             )}
             {tallyError && <p className="text-xs text-error">{tallyError}</p>}
 
             <div className="flex gap-3">
               <Button variant="ghost" className="flex-1" disabled={busy} onClick={closeTallyModal}>{t('common.close')}</Button>
               {!tallyKeyPresent ? (
-                // Nothing actionable here, but the election can still be voided.
+                // No key here: the election can still be voided if that's the intent.
                 <Button variant="default" className="flex-1 border-error/30 text-error hover:bg-error/10" disabled={busy}
                   onClick={() => runAction(t('election_mgmt.voided_done'), markVoided, () => setTallyModal(false))}>
                   {t('election_mgmt.void_confirm')}

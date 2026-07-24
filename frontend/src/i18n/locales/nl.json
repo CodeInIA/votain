@@ -347,7 +347,9 @@
     "results_published": "Resultaten gepubliceerd",
     "tally_publishing": "Publiceren…",
     "export_key": "Ontsleutelsleutel exporteren (back-up)",
-    "key_exported": "Ontsleutelsleutel geëxporteerd"
+    "key_exported": "Ontsleutelsleutel geëxporteerd",
+    "import_key": "Ontsleutelsleutel importeren",
+    "key_imported": "Ontsleutelsleutel geïmporteerd"
   },
   "gas": {
     "title": "Gasbeheer",

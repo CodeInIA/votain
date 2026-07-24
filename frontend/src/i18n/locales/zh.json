@@ -347,7 +347,9 @@
     "results_published": "结果已发布",
     "tally_publishing": "正在发布…",
     "export_key": "导出解密密钥（备份）",
-    "key_exported": "解密密钥已导出"
+    "key_exported": "解密密钥已导出",
+    "import_key": "导入解密密钥",
+    "key_imported": "解密密钥已导入"
   },
   "gas": {
     "title": "Gas 管理",

@@ -347,7 +347,9 @@
     "results_published": "Résultats publiés",
     "tally_publishing": "Publication…",
     "export_key": "Exporter la clé de déchiffrement (sauvegarde)",
-    "key_exported": "Clé de déchiffrement exportée"
+    "key_exported": "Clé de déchiffrement exportée",
+    "import_key": "Importer la clé de déchiffrement",
+    "key_imported": "Clé de déchiffrement importée"
   },
   "gas": {
     "title": "Gestion du gaz",

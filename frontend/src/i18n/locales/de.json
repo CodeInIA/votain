@@ -347,7 +347,9 @@
     "results_published": "Ergebnisse veröffentlicht",
     "tally_publishing": "Wird veröffentlicht…",
     "export_key": "Entschlüsselungsschlüssel exportieren (Backup)",
-    "key_exported": "Entschlüsselungsschlüssel exportiert"
+    "key_exported": "Entschlüsselungsschlüssel exportiert",
+    "import_key": "Entschlüsselungsschlüssel importieren",
+    "key_imported": "Entschlüsselungsschlüssel importiert"
   },
   "gas": {
     "title": "Gas-Verwaltung",

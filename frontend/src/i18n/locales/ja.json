@@ -347,7 +347,9 @@
     "results_published": "結果を公開しました",
     "tally_publishing": "公開中…",
     "export_key": "復号鍵をエクスポート（バックアップ）",
-    "key_exported": "復号鍵をエクスポートしました"
+    "key_exported": "復号鍵をエクスポートしました",
+    "import_key": "復号鍵をインポート",
+    "key_imported": "復号鍵をインポートしました"
   },
   "gas": {
     "title": "ガス管理",

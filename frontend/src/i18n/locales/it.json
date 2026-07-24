@@ -347,7 +347,9 @@
     "results_published": "Risultati pubblicati",
     "tally_publishing": "Pubblicazione…",
     "export_key": "Esporta chiave di decifratura (backup)",
-    "key_exported": "Chiave di decifratura esportata"
+    "key_exported": "Chiave di decifratura esportata",
+    "import_key": "Importa chiave di decifratura",
+    "key_imported": "Chiave di decifratura importata"
   },
   "gas": {
     "title": "Gestione Gas",

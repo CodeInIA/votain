@@ -12,7 +12,7 @@
  * recomputes the same result independently and pins the audit trail to IPFS.
  */
 import { getElection } from "./contracts";
-import { loadElectionPrivateKey } from "./organizer";
+import { loadElectionPrivateKey, storeElectionPrivateKey } from "./organizer";
 import { addCiphertexts, decryptTally, restoreKeyPair, type SerializedKeyPair } from "./paillier";
 import { deriveElectionKeys } from "./tallyKey";
 import { hasPrfCredential } from "./passkeyPrf";
@@ -30,26 +30,29 @@ export interface TallyResult {
 }
 
 /**
- * Resolves the decryption keypair the same way `computeTally` does — derived
- * from the passkey for `keyNonce` elections, or the stored key otherwise.
- * Returns null when unavailable on this device.
+ * Resolves the decryption keypair. A key stored locally — either the fallback
+ * random key or one IMPORTED from an exported file — always wins, so a device
+ * without the organizer's passkey can still tally after importing. Otherwise a
+ * `keyNonce` election re-derives it from the passkey PRF. Null when unavailable.
  */
 export async function resolveTallyKey(
   address: string,
   keyNonce?: string,
 ): Promise<SerializedKeyPair | null> {
-  return keyNonce ? deriveElectionKeys(keyNonce) : loadElectionPrivateKey(address);
+  const stored = loadElectionPrivateKey(address);
+  if (stored) return stored;
+  return keyNonce ? deriveElectionKeys(keyNonce) : null;
 }
 
 /**
  * Best-effort check of whether this device can obtain the decryption key without
- * a passkey prompt-and-fail. Derivable elections carry a public `keyNonce`, so a
- * PRF passkey on this device is enough; legacy random-key elections need the key
- * in local storage. Not a guarantee (the passkey could be a different one), just
- * enough to warn up front instead of failing on the button press.
+ * a passkey prompt-and-fail: an imported/stored key, or (for `keyNonce`
+ * elections) a PRF passkey. Not a guarantee — enough to warn up front instead
+ * of failing on the button press.
  */
 export function hasTallyKey(address: string, keyNonce?: string): boolean {
-  return keyNonce ? hasPrfCredential() : loadElectionPrivateKey(address) !== null;
+  if (loadElectionPrivateKey(address)) return true;
+  return keyNonce ? hasPrfCredential() : false;
 }
 
 export class MissingTallyKeyError extends Error {
@@ -57,6 +60,28 @@ export class MissingTallyKeyError extends Error {
     super("No decryption key available on this device for this election");
     this.name = "MissingTallyKeyError";
   }
+}
+
+/**
+ * Imports a decryption key exported from another device, after validating that
+ * it is well-formed AND belongs to this election (matches the on-chain public
+ * key). Stored locally so `computeTally` can then use it.
+ */
+export async function importTallyKey(address: string, fileText: string): Promise<void> {
+  let keys: SerializedKeyPair;
+  try {
+    keys = JSON.parse(fileText) as SerializedKeyPair;
+  } catch {
+    throw new Error("Not a valid key file (invalid JSON)");
+  }
+  if (!keys?.publicKey?.n || !keys?.publicKey?.g || !keys?.privateKey?.lambda || !keys?.privateKey?.mu) {
+    throw new Error("Not a valid Votain tally key file");
+  }
+  const pkJson = (await getElection(address).paillierPublicKey()) as string;
+  if (keys.publicKey.n !== (JSON.parse(pkJson) as { n: string }).n) {
+    throw new Error("This key does not belong to this election");
+  }
+  storeElectionPrivateKey(address, keys);
 }
 
 /**
@@ -80,13 +105,8 @@ export async function computeTally(address: string): Promise<TallyResult> {
     keyNonce = meta.keyNonce;
   } catch { /* no metadata — treat as no quorum, no derivable key */ }
 
-  // Derivable elections: re-derive from the passkey (prompts). Legacy: local key.
-  let keys: SerializedKeyPair | null;
-  if (keyNonce) {
-    keys = await deriveElectionKeys(keyNonce);
-  } else {
-    keys = loadElectionPrivateKey(address);
-  }
+  // Imported/stored key first, else re-derive from the passkey (prompts).
+  const keys = await resolveTallyKey(address, keyNonce);
   if (!keys) throw new MissingTallyKeyError();
 
   const { publicKey, privateKey } = restoreKeyPair(keys);

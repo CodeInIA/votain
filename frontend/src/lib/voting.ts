@@ -9,6 +9,7 @@
  *   4. Send castVote as a gas-sponsored UserOperation via ZeroDev.
  */
 import { getElection, ELECTION_ABI } from "./contracts";
+import { chainInfo } from "./deployments";
 import { encryptBallot } from "./paillier";
 import {
   computeNullifier,
@@ -18,6 +19,35 @@ import {
   getStoredIdentity,
 } from "./semaphore";
 import { sendSponsoredCall } from "./zerodev";
+
+// Hardhat's well-known account #1 (a PUBLIC test key, no value on any real
+// network). Used ONLY to relay voter txs on the local chain, which has no
+// ERC-4337 bundler/paymaster. Strictly gated on chainId 31337 below.
+const LOCAL_CHAIN_ID = 31337;
+const LOCAL_RELAY_KEY = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d";
+
+/**
+ * Sends a voter contract call. On the local dev chain it goes through a funded
+ * Hardhat account directly (no ZeroDev on localhost); on Amoy it is a
+ * gas-sponsored ERC-4337 UserOperation via ZeroDev.
+ */
+async function sendVoterCall(params: {
+  to: `0x${string}`;
+  humanReadableAbi: readonly string[];
+  functionName: string;
+  args: unknown[];
+}): Promise<{ txHash: string; userOpHash: string }> {
+  if (chainInfo.chainId === LOCAL_CHAIN_ID) {
+    const { Contract, JsonRpcProvider, Wallet } = await import("ethers");
+    const provider = new JsonRpcProvider(chainInfo.rpcUrl, chainInfo.chainId, { staticNetwork: true });
+    const signer = new Wallet(LOCAL_RELAY_KEY, provider);
+    const c = new Contract(params.to, params.humanReadableAbi as string[], signer);
+    const tx = await c[params.functionName](...params.args);
+    const receipt = await tx.wait();
+    return { txHash: receipt.hash, userOpHash: receipt.hash };
+  }
+  return sendSponsoredCall(params);
+}
 
 export interface VoteResult {
   txHash: string;
@@ -30,7 +60,7 @@ export interface VoteResult {
 /** Enrolls the local Semaphore identity into an election (sponsored UserOp). */
 export async function enrollInElection(electionAddress: string): Promise<{ txHash: string }> {
   const identity = await getOrCreateIdentity();
-  const { txHash } = await sendSponsoredCall({
+  const { txHash } = await sendVoterCall({
     to: electionAddress as `0x${string}`,
     humanReadableAbi: ELECTION_ABI,
     functionName: "enroll",
@@ -58,8 +88,8 @@ export async function castVote(electionAddress: string, optionIndex: number): Pr
   const group = await fetchElectionGroup(electionAddress);
   const proof = await generateVoteProof(identity, group, ciphertext, nonce, BigInt(scope));
 
-  // 4. Sponsored UserOp
-  const { txHash, userOpHash } = await sendSponsoredCall({
+  // 4. Sponsored UserOp (Amoy) or direct local tx
+  const { txHash, userOpHash } = await sendVoterCall({
     to: electionAddress as `0x${string}`,
     humanReadableAbi: ELECTION_ABI,
     functionName: "castVote",
