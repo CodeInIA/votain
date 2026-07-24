@@ -46,6 +46,15 @@
 }
 
 @layer base {
+  /* Votain has no light theme, so tell the browser up front: native popups
+     (date-picker calendar, autofill, etc.) render themselves dark instead of
+     following the OS theme. Setting color-scheme on individual inputs alone
+     is not enough — Chromium's date-picker popup follows the document's
+     color-scheme, not just the triggering element's. */
+  :root {
+    color-scheme: dark;
+  }
+
   body {
     background-color: var(--color-background);
     color: var(--color-on-surface);
@@ -58,6 +67,15 @@
   button:not(:disabled),
   [role='button']:not(:disabled) {
     cursor: pointer;
+  }
+
+  /* ── Native date inputs (touch devices only — see DatePicker.tsx) ──
+     The UA-shadow indicator icon renders black on our dark fields and ignores
+     `filter`/`opacity` in Chromium, so hide it and let the themed lucide icon
+     stand in. Tapping the field itself still opens the OS picker. */
+  input[type='date']::-webkit-calendar-picker-indicator,
+  input[type='datetime-local']::-webkit-calendar-picker-indicator {
+    display: none;
   }
 
   /* ── Number inputs: hide native spinners (presets/buttons handle stepping) ── */

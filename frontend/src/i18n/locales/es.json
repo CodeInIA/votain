@@ -91,7 +91,9 @@
     "tallying": "Recuento",
     "closed": "Cerrada",
     "voided": "Anulada",
-    "cancelled": "Cancelada"
+    "cancelled": "Cancelada",
+    "upcoming": "Próximamente",
+    "pending_vote": "Votación próxima"
   },
   "badge": {
     "blockchain": "Verificado en blockchain",
@@ -102,7 +104,11 @@
     "simple_plurality": "Mayoría simple",
     "absolute_majority": "Mayoría absoluta",
     "two_thirds": "Mayoría de dos tercios",
-    "witness_threshold": "Umbral de testigos"
+    "witness_threshold": "Umbral de testigos",
+    "simple_plurality_desc": "Gana quien más votos obtenga",
+    "absolute_majority_desc": "El ganador necesita más del 50% de los votos",
+    "two_thirds_desc": "Sí/No — se aprueba con al menos 2/3 de los votos",
+    "witness_threshold_desc": "Sí/No — se aprueba con al menos N confirmaciones"
   },
   "discover": {
     "title": "Elecciones",
@@ -139,7 +145,16 @@
     "top_up": "Recargar",
     "ends_in": "Termina en",
     "vote_now": "Votar ahora",
-    "voted": "ha votado"
+    "voted": "ha votado",
+    "cta_tallying": "La votación ha terminado. Se están recontando los resultados.",
+    "cta_voided": "Esta elección fue anulada. No se publicarán resultados.",
+    "cta_cancelled": "Esta elección fue cancelada.",
+    "cta_not_enrolled": "La inscripción se cerró antes de que te unieras, así que no puedes votar en esta elección.",
+    "enrollment_opens": "La inscripción abre",
+    "voting_opens": "La votación abre",
+    "cta_upcoming": "La inscripción aún no ha abierto.",
+    "cta_pending_vote": "La inscripción está cerrada. La votación aún no ha empezado.",
+    "starts_in": "Empieza en"
   },
   "how": {
     "title": "Cómo funciona Votain",
@@ -240,7 +255,9 @@
     "wallet_pending": "Conectando…",
     "wrong_network": "Red incorrecta",
     "wrong_network_desc": "Cambia a Polygon Amoy para continuar.",
-    "switch_network": "Cambiar a Polygon Amoy"
+    "switch_network": "Cambiar a Polygon Amoy",
+    "no_wallet_title": "No se detectó ninguna wallet",
+    "no_wallet_desc": "Instala MetaMask (u otra wallet EVM) para firmar como organizador."
   },
   "dashboard": {
     "title": "Panel de Organizador",
@@ -253,7 +270,8 @@
     "votes_cast": "Votos emitidos",
     "quick_actions": "Acciones rápidas",
     "members": "Miembros",
-    "gas": "Gestión de gas"
+    "gas": "Gestión de gas",
+    "no_elections": "Aún no hay elecciones. Crea la primera."
   },
   "create": {
     "title": "Crear Elección",
@@ -278,13 +296,22 @@
     "require_orb_desc": "Los votantes deben verificarse con el Orb de World ID (mayor garantía).",
     "privacy_quorum": "Quórum de privacidad",
     "quorum_hint": "Votos mínimos necesarios antes de revelar los resultados.",
-    "deposit_matic": "Depósito de gas (MATIC)",
     "deposit_hint": "Gas inicial para cubrir las comisiones de transacción de los votantes.",
     "immutability_warning": "Una vez desplegada, los parámetros de la elección no pueden cambiarse. Revísalo todo con cuidado.",
     "deploy": "Desplegar elección",
     "deploy_confirm_title": "¿Desplegar en la blockchain?",
-    "deploy_confirm_desc": "Esto desplegará un contrato inteligente y deducirá {{amount}} MATIC de tu saldo de gas.",
-    "deploy_pending": "Desplegando contrato…"
+    "deploy_confirm_desc": "Esto desplegará un contrato inteligente y deducirá {{amount}} {{currency}} de tu saldo de gas.",
+    "deploy_pending": "Desplegando contrato…",
+    "witness_threshold_n": "Testigos requeridos (N)",
+    "witness_threshold_hint": "Votos afirmativos mínimos para aprobar",
+    "yes_no_note": "Este tipo de votación usa una papeleta fija Sí / No.",
+    "deposit_token": "Depósito de gas ({{currency}})",
+    "leave_confirm_title": "¿Descartar los cambios?",
+    "leave_confirm_desc": "Se perderán los cambios si sales de esta página.",
+    "discard_changes": "Descartar cambios",
+    "separate_enrollment": "Ventana de inscripción propia",
+    "separate_enrollment_desc": "Define tus propias fechas de registro, con una fecha límite que puede ser anterior al inicio de la votación.",
+    "enrollment_until_vote_start": "La inscripción está abierta desde el despliegue hasta que empieza la votación."
   },
   "election_mgmt": {
     "actions": "Acciones",
@@ -294,26 +321,47 @@
     "close_confirm": "Sí, cerrar",
     "unlock_tally": "Desbloquear recuento",
     "tally_title": "¿Desbloquear el recuento de resultados?",
-    "tally_desc": "Esto permitirá que el script de recuento descifre y publique los resultados.",
+    "tally_desc": "Tu dispositivo descifrará el resultado agregado. Podrás revisar los votos antes de publicarlos en la cadena.",
     "tally_confirm": "Desbloquear",
     "cancel": "Cancelar elección",
     "cancel_title": "¿Cancelar esta elección?",
     "cancel_desc": "Todos los votantes inscritos serán notificados. Esta acción es irreversible.",
     "cancel_confirm": "Sí, cancelar",
     "view_results": "Ver resultados",
-    "view_members": "Ver miembros"
+    "view_members": "Ver miembros",
+    "void_title": "Anular elección",
+    "void_confirm": "Anular",
+    "close_enrollment_early": "Cerrar inscripción anticipadamente",
+    "close_enrollment_title": "¿Cerrar la inscripción ahora?",
+    "close_enrollment_desc": "La votación comenzará de inmediato para todos los ya inscritos.",
+    "voting_closed_done": "Votación cerrada",
+    "enrollment_closed_done": "Inscripción cerrada",
+    "cancelled_done": "Elección cancelada",
+    "voided_done": "Elección anulada",
+    "tally_compute": "Calcular recuento",
+    "tally_computing": "Descifrando…",
+    "tally_publish": "Publicar resultados",
+    "tally_voters": "{{count}} votantes tras descartar los votos sustituidos",
+    "tally_quorum_short": "No se alcanzó el quórum de privacidad ({{voters}} de {{quorum}}). Anula la elección en vez de publicar.",
+    "tally_key_missing": "La clave de descifrado de esta elección no está en este dispositivo. Abre Votain en el dispositivo desde el que creaste la elección.",
+    "results_published": "Resultados publicados",
+    "tally_publishing": "Publicando…",
+    "export_key": "Exportar clave de descifrado (respaldo)",
+    "key_exported": "Clave de descifrado exportada"
   },
   "gas": {
     "title": "Gestión de Gas",
     "deposit_title": "Depositar gas",
-    "amount_matic": "Cantidad (MATIC)",
-    "amount_hint": "Mínimo 0,1 MATIC. Cada voto cuesta aproximadamente 0,03 MATIC.",
-    "deposit_btn": "Depositar {{amount}} MATIC",
+    "amount_hint": "Mínimo 0,1 {{currency}}. Cada voto cuesta aproximadamente 0,03 {{currency}}.",
+    "deposit_btn": "Depositar {{amount}} {{currency}}",
     "deposit_pending": "Depósito pendiente…",
     "history": "Historial de transacciones",
     "deposit": "Depósito",
     "used": "Gas usado",
-    "votes_remaining": "~{{count}} votos restantes"
+    "votes_remaining": "~{{count}} votos restantes",
+    "amount_token": "Cantidad ({{currency}})",
+    "withdraw": "Retirada",
+    "history_empty": "Aún no hay movimientos de gas."
   },
   "members": {
     "title": "Miembros Registrados",
@@ -339,7 +387,13 @@
     "sign_out_title": "¿Cerrar sesión?",
     "sign_out_desc": "Volverás a la pantalla de inicio de sesión.",
     "sign_out_confirm": "Cerrar sesión",
-    "signed_out": "Sesión cerrada"
+    "signed_out": "Sesión cerrada",
+    "this_device": "Este dispositivo",
+    "no_passkey": "No hay ninguna passkey registrada en este dispositivo.",
+    "passkey_removed": "Passkey eliminada",
+    "linked_wallet": "Wallet vinculada",
+    "wallet_note": "Solo se usa para firmar transacciones. Inicias sesión con tu passkey.",
+    "no_wallet_linked": "Aún no hay wallet vinculada."
   },
   "tx": {
     "title_pending": "Transacción en progreso",
@@ -355,6 +409,23 @@
   "errors": {
     "not_found": "Página no encontrada",
     "not_found_desc": "La página que buscas no existe o ha sido movida.",
-    "go_home": "Ir al inicio"
+    "go_home": "Ir al inicio",
+    "generic_title": "Algo salió mal"
+  },
+  "demo": {
+    "banner": "Datos de demostración — sin contratos desplegados. Nada de esto está en cadena."
+  },
+  "validation": {
+    "required": "Este campo es obligatorio",
+    "threshold_min": "Debe ser al menos 1",
+    "after_enroll_start": "Debe ser posterior al inicio de inscripción",
+    "after_enroll_end": "No puede empezar antes de que cierre la inscripción",
+    "after_vote_start": "Debe ser posterior al inicio de la votación",
+    "must_be_future": "Debe ser una fecha futura",
+    "candidates_min": "Añade al menos 2 candidatos con nombre",
+    "candidates_unique": "Los nombres de los candidatos deben ser únicos",
+    "quorum_min": "Debe ser al menos 1",
+    "number_positive": "Introduce un número válido y no negativo",
+    "fix_previous_steps": "Faltan campos obligatorios o son inválidos. Vuelve atrás y revisa los pasos anteriores."
   }
 }

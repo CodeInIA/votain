@@ -91,7 +91,9 @@
     "tallying": "Telling",
     "closed": "Gesloten",
     "voided": "Ongeldig",
-    "cancelled": "Geannuleerd"
+    "cancelled": "Geannuleerd",
+    "upcoming": "Binnenkort",
+    "pending_vote": "Stemmen binnenkort"
   },
   "badge": {
     "blockchain": "Geverifieerd op blockchain",
@@ -102,7 +104,11 @@
     "simple_plurality": "Enkelvoudige meerderheid",
     "absolute_majority": "Absolute meerderheid",
     "two_thirds": "Twee-derde meerderheid",
-    "witness_threshold": "Getuigendrempel"
+    "witness_threshold": "Getuigendrempel",
+    "simple_plurality_desc": "De meeste stemmen wint",
+    "absolute_majority_desc": "Winnaar heeft meer dan 50% van de stemmen nodig",
+    "two_thirds_desc": "Ja/Nee — goedgekeurd met minstens 2/3 van de stemmen",
+    "witness_threshold_desc": "Ja/Nee — goedgekeurd met minstens N bevestigingen"
   },
   "discover": {
     "title": "Verkiezingen",
@@ -139,7 +145,16 @@
     "top_up": "Aanvullen",
     "ends_in": "Eindigt over",
     "vote_now": "Nu stemmen",
-    "voted": "gestemd"
+    "voted": "gestemd",
+    "cta_tallying": "De stemming is beëindigd. De resultaten worden geteld.",
+    "cta_voided": "Deze verkiezing is ongeldig verklaard. Er worden geen resultaten gepubliceerd.",
+    "cta_cancelled": "Deze verkiezing is geannuleerd.",
+    "cta_not_enrolled": "De inschrijving sloot voordat u zich aanmeldde, dus u kunt hier niet stemmen.",
+    "enrollment_opens": "Inschrijving opent",
+    "voting_opens": "Stemmen opent",
+    "cta_upcoming": "De inschrijving is nog niet geopend.",
+    "cta_pending_vote": "De inschrijving is gesloten. Het stemmen is nog niet begonnen.",
+    "starts_in": "Begint over"
   },
   "how": {
     "title": "Hoe Votain werkt",
@@ -240,7 +255,9 @@
     "wallet_pending": "Verbinden…",
     "wrong_network": "Verkeerd netwerk",
     "wrong_network_desc": "Schakel over naar Polygon Amoy om door te gaan.",
-    "switch_network": "Overschakelen naar Polygon Amoy"
+    "switch_network": "Overschakelen naar Polygon Amoy",
+    "no_wallet_title": "Geen wallet gedetecteerd",
+    "no_wallet_desc": "Installeer MetaMask (of een andere EVM-wallet) om als organisator te ondertekenen."
   },
   "dashboard": {
     "title": "Organisatordashboard",
@@ -253,7 +270,8 @@
     "votes_cast": "Uitgebrachte stemmen",
     "quick_actions": "Snelle acties",
     "members": "Leden",
-    "gas": "Gasbeheer"
+    "gas": "Gasbeheer",
+    "no_elections": "Nog geen verkiezingen. Maak de eerste."
   },
   "create": {
     "title": "Verkiezing aanmaken",
@@ -278,13 +296,22 @@
     "require_orb_desc": "Kiezers moeten verifiëren met de World ID Orb.",
     "privacy_quorum": "Privacyquorum",
     "quorum_hint": "Minimum stemmen vereist voordat resultaten worden onthuld.",
-    "deposit_matic": "Gasstorting (MATIC)",
     "deposit_hint": "Initieel gas om transactiekosten van kiezers te dekken.",
     "immutability_warning": "Eenmaal geïmplementeerd kunnen de parameters niet worden gewijzigd. Controleer alles zorgvuldig.",
     "deploy": "Verkiezing implementeren",
     "deploy_confirm_title": "Implementeren op de blockchain?",
-    "deploy_confirm_desc": "Dit implementeert een slim contract en trekt {{amount}} MATIC af van je saldo.",
-    "deploy_pending": "Contract implementeren…"
+    "deploy_confirm_desc": "Dit implementeert een slim contract en trekt {{amount}} {{currency}} af van je saldo.",
+    "deploy_pending": "Contract implementeren…",
+    "witness_threshold_n": "Vereiste getuigen (N)",
+    "witness_threshold_hint": "Minimum Ja-stemmen om goed te keuren",
+    "yes_no_note": "Dit stemtype gebruikt een vast Ja / Nee-stembiljet.",
+    "deposit_token": "Gasstorting ({{currency}})",
+    "leave_confirm_title": "Wijzigingen negeren?",
+    "leave_confirm_desc": "Uw wijzigingen gaan verloren als u deze pagina verlaat.",
+    "discard_changes": "Wijzigingen negeren",
+    "separate_enrollment": "Aangepast inschrijvingsvenster",
+    "separate_enrollment_desc": "Stel je eigen registratiedatums in, met een deadline die vóór de start van het stemmen kan liggen.",
+    "enrollment_until_vote_start": "Inschrijving is open vanaf de uitrol tot het stemmen begint."
   },
   "election_mgmt": {
     "actions": "Acties",
@@ -294,26 +321,47 @@
     "close_confirm": "Ja, sluiten",
     "unlock_tally": "Telling ontgrendelen",
     "tally_title": "Resultaattelling ontgrendelen?",
-    "tally_desc": "Dit stelt het telscript in staat om de resultaten te decoderen en te publiceren.",
+    "tally_desc": "Uw apparaat ontsleutelt het geaggregeerde resultaat. U kunt de telling controleren voordat u die on-chain publiceert.",
     "tally_confirm": "Ontgrendelen",
     "cancel": "Verkiezing annuleren",
     "cancel_title": "Deze verkiezing annuleren?",
     "cancel_desc": "Alle ingeschreven kiezers worden op de hoogte gesteld. Deze actie is onomkeerbaar.",
     "cancel_confirm": "Ja, annuleren",
     "view_results": "Resultaten bekijken",
-    "view_members": "Leden bekijken"
+    "view_members": "Leden bekijken",
+    "void_title": "Verkiezing ongeldig maken",
+    "void_confirm": "Ongeldig maken",
+    "close_enrollment_early": "Inschrijving vroegtijdig sluiten",
+    "close_enrollment_title": "Inschrijving nu sluiten?",
+    "close_enrollment_desc": "Stemmen begint onmiddellijk voor iedereen die al is ingeschreven.",
+    "voting_closed_done": "Stemming gesloten",
+    "enrollment_closed_done": "Inschrijving gesloten",
+    "cancelled_done": "Verkiezing geannuleerd",
+    "voided_done": "Verkiezing ongeldig verklaard",
+    "tally_compute": "Telling berekenen",
+    "tally_computing": "Ontsleutelen…",
+    "tally_publish": "Resultaten publiceren",
+    "tally_voters": "{{count}} kiezers na verwijdering van vervangen stemmen",
+    "tally_quorum_short": "Privacyquorum niet gehaald ({{voters}} van {{quorum}}). Verklaar ongeldig i.p.v. publiceren.",
+    "tally_key_missing": "De ontsleutelsleutel van deze verkiezing staat niet op dit apparaat. Open Votain op het apparaat waarmee u de verkiezing hebt aangemaakt.",
+    "results_published": "Resultaten gepubliceerd",
+    "tally_publishing": "Publiceren…",
+    "export_key": "Ontsleutelsleutel exporteren (back-up)",
+    "key_exported": "Ontsleutelsleutel geëxporteerd"
   },
   "gas": {
     "title": "Gasbeheer",
     "deposit_title": "Gas storten",
-    "amount_matic": "Bedrag (MATIC)",
-    "amount_hint": "Minimum 0,1 MATIC. Elke stem kost ongeveer 0,03 MATIC.",
-    "deposit_btn": "{{amount}} MATIC storten",
+    "amount_hint": "Minimum 0,1 {{currency}}. Elke stem kost ongeveer 0,03 {{currency}}.",
+    "deposit_btn": "{{amount}} {{currency}} storten",
     "deposit_pending": "Storting in behandeling…",
     "history": "Transactiegeschiedenis",
     "deposit": "Storting",
     "used": "Gas gebruikt",
-    "votes_remaining": "~{{count}} stemmen resterend"
+    "votes_remaining": "~{{count}} stemmen resterend",
+    "amount_token": "Bedrag ({{currency}})",
+    "withdraw": "Opname",
+    "history_empty": "Nog geen gasbewegingen."
   },
   "members": {
     "title": "Geregistreerde leden",
@@ -339,7 +387,13 @@
     "sign_out_title": "Uitloggen?",
     "sign_out_desc": "Je wordt teruggebracht naar het inlogscherm.",
     "sign_out_confirm": "Uitloggen",
-    "signed_out": "Uitgelogd"
+    "signed_out": "Uitgelogd",
+    "this_device": "Dit apparaat",
+    "no_passkey": "Geen passkey geregistreerd op dit apparaat.",
+    "passkey_removed": "Passkey verwijderd",
+    "linked_wallet": "Gekoppelde wallet",
+    "wallet_note": "Alleen gebruikt om transacties te ondertekenen. Je logt in met je passkey.",
+    "no_wallet_linked": "Nog geen wallet gekoppeld."
   },
   "tx": {
     "title_pending": "Transactie bezig",
@@ -355,6 +409,23 @@
   "errors": {
     "not_found": "Pagina niet gevonden",
     "not_found_desc": "De pagina die je zoekt bestaat niet of is verplaatst.",
-    "go_home": "Naar home"
+    "go_home": "Naar home",
+    "generic_title": "Er ging iets mis"
+  },
+  "demo": {
+    "banner": "Demogegevens — geen contracten uitgerold. Niets hiervan staat on-chain."
+  },
+  "validation": {
+    "required": "Dit veld is verplicht",
+    "threshold_min": "Moet minstens 1 zijn",
+    "after_enroll_start": "Moet na de start van de inschrijving zijn",
+    "after_enroll_end": "Kan niet beginnen voordat de inschrijving sluit",
+    "after_vote_start": "Moet na de start van de stemming zijn",
+    "must_be_future": "Moet in de toekomst liggen",
+    "candidates_min": "Voeg minstens 2 kandidaten met een naam toe",
+    "candidates_unique": "Kandidaatnamen moeten uniek zijn",
+    "quorum_min": "Moet minstens 1 zijn",
+    "number_positive": "Voer een geldig, niet-negatief getal in",
+    "fix_previous_steps": "Verplichte velden ontbreken of zijn ongeldig. Ga terug en controleer de vorige stappen."
   }
 }

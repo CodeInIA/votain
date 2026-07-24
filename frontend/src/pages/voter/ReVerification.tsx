@@ -1,15 +1,18 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ShieldAlert, ShieldCheck } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
-import { useToast } from '../../components/ui/Toast';
+import { useToast } from '../../components/ui/useToast';
 
 export default function ReVerification() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { toast } = useToast();
+  // Demo "last verified" date, snapshot once so render stays pure.
+  const [lastVerified] = useState(() => new Date(Date.now() - 30 * 86_400_000).toLocaleDateString());
 
   const handleVerify = () => {
     toast({ title: t('reverify.pending'), description: t('common.integration_pending'), variant: 'info' });
@@ -61,7 +64,7 @@ export default function ReVerification() {
         {/* Already verified state (demo) */}
         <div className="mt-10 flex items-center gap-2 text-xs text-success">
           <ShieldCheck className="w-4 h-4" />
-          {t('reverify.last_verified', { date: new Date(Date.now() - 30 * 86_400_000).toLocaleDateString() })}
+          {t('reverify.last_verified', { date: lastVerified })}
         </div>
       </div>
     </PageLayout>

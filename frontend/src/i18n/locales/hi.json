@@ -91,7 +91,9 @@
     "tallying": "मतगणना",
     "closed": "बंद",
     "voided": "रद्द",
-    "cancelled": "निरस्त"
+    "cancelled": "निरस्त",
+    "upcoming": "आगामी",
+    "pending_vote": "मतदान जल्द"
   },
   "badge": {
     "blockchain": "ब्लॉकचेन पर सत्यापित",
@@ -102,7 +104,11 @@
     "simple_plurality": "साधारण बहुमत",
     "absolute_majority": "पूर्ण बहुमत",
     "two_thirds": "दो-तिहाई बहुमत",
-    "witness_threshold": "साक्षी सीमा"
+    "witness_threshold": "साक्षी सीमा",
+    "simple_plurality_desc": "सबसे अधिक वोट पाने वाला जीतता है",
+    "absolute_majority_desc": "विजेता को 50% से अधिक वोट चाहिए",
+    "two_thirds_desc": "हाँ/नहीं — कम से कम 2/3 वोटों से स्वीकृत",
+    "witness_threshold_desc": "हाँ/नहीं — कम से कम N पुष्टियों से स्वीकृत"
   },
   "discover": {
     "title": "चुनाव",
@@ -139,7 +145,16 @@
     "top_up": "टॉप अप करें",
     "ends_in": "समाप्त होता है",
     "vote_now": "अभी मतदान करें",
-    "voted": "ने मतदान किया"
+    "voted": "ने मतदान किया",
+    "cta_tallying": "मतदान समाप्त हो गया है। परिणामों की गणना की जा रही है।",
+    "cta_voided": "यह चुनाव रद्द कर दिया गया। कोई परिणाम प्रकाशित नहीं किया जाएगा।",
+    "cta_cancelled": "यह चुनाव रद्द कर दिया गया था।",
+    "cta_not_enrolled": "आपके जुड़ने से पहले नामांकन बंद हो गया, इसलिए आप इस चुनाव में मतदान नहीं कर सकते।",
+    "enrollment_opens": "नामांकन खुलता है",
+    "voting_opens": "मतदान खुलता है",
+    "cta_upcoming": "नामांकन अभी खुला नहीं है।",
+    "cta_pending_vote": "नामांकन बंद है। मतदान अभी शुरू नहीं हुआ है।",
+    "starts_in": "शुरू होगा"
   },
   "how": {
     "title": "Votain कैसे काम करता है",
@@ -240,7 +255,9 @@
     "wallet_pending": "कनेक्ट हो रहा है…",
     "wrong_network": "गलत नेटवर्क",
     "wrong_network_desc": "जारी रखने के लिए कृपया Polygon Amoy पर स्विच करें।",
-    "switch_network": "Polygon Amoy पर स्विच करें"
+    "switch_network": "Polygon Amoy पर स्विच करें",
+    "no_wallet_title": "कोई वॉलेट नहीं मिला",
+    "no_wallet_desc": "आयोजक के रूप में हस्ताक्षर करने के लिए MetaMask (या अन्य EVM वॉलेट) इंस्टॉल करें।"
   },
   "dashboard": {
     "title": "आयोजक डैशबोर्ड",
@@ -253,7 +270,8 @@
     "votes_cast": "डाले गए वोट",
     "quick_actions": "त्वरित क्रियाएं",
     "members": "सदस्य",
-    "gas": "गैस प्रबंधन"
+    "gas": "गैस प्रबंधन",
+    "no_elections": "अभी तक कोई चुनाव नहीं। पहला बनाएं।"
   },
   "create": {
     "title": "चुनाव बनाएं",
@@ -278,13 +296,22 @@
     "require_orb_desc": "मतदाताओं को World ID Orb से सत्यापित करना होगा।",
     "privacy_quorum": "गोपनीयता कोरम",
     "quorum_hint": "परिणाम प्रकट करने से पहले न्यूनतम वोट आवश्यक।",
-    "deposit_matic": "गैस जमा (MATIC)",
     "deposit_hint": "मतदाता लेनदेन शुल्क को कवर करने के लिए प्रारंभिक गैस।",
     "immutability_warning": "एक बार तैनात होने के बाद, चुनाव के मापदंड नहीं बदले जा सकते। सब कुछ ध्यान से जांचें।",
     "deploy": "चुनाव तैनात करें",
     "deploy_confirm_title": "ब्लॉकचेन पर तैनात करें?",
-    "deploy_confirm_desc": "यह एक स्मार्ट कॉन्ट्रैक्ट तैनात करेगा और आपके गैस बैलेंस से {{amount}} MATIC काटेगा।",
-    "deploy_pending": "कॉन्ट्रैक्ट तैनात हो रहा है…"
+    "deploy_confirm_desc": "यह एक स्मार्ट कॉन्ट्रैक्ट तैनात करेगा और आपके गैस बैलेंस से {{amount}} {{currency}} काटेगा।",
+    "deploy_pending": "कॉन्ट्रैक्ट तैनात हो रहा है…",
+    "witness_threshold_n": "आवश्यक गवाह (N)",
+    "witness_threshold_hint": "स्वीकृति के लिए न्यूनतम हाँ वोट",
+    "yes_no_note": "यह मतदान प्रकार एक निश्चित हाँ / नहीं मतपत्र का उपयोग करता है।",
+    "deposit_token": "गैस जमा ({{currency}})",
+    "leave_confirm_title": "बदलाव छोड़ें?",
+    "leave_confirm_desc": "यदि आप इस पेज से बाहर जाते हैं तो आपके बदलाव खो जाएंगे।",
+    "discard_changes": "बदलाव छोड़ें",
+    "separate_enrollment": "कस्टम नामांकन अवधि",
+    "separate_enrollment_desc": "अपनी स्वयं की पंजीकरण तिथियाँ तय करें, जिनकी समय-सीमा मतदान शुरू होने से पहले हो सकती है।",
+    "enrollment_until_vote_start": "नामांकन तैनाती से लेकर मतदान शुरू होने तक खुला रहता है।"
   },
   "election_mgmt": {
     "actions": "क्रियाएं",
@@ -294,26 +321,47 @@
     "close_confirm": "हां, बंद करें",
     "unlock_tally": "मतगणना अनलॉक करें",
     "tally_title": "परिणाम मतगणना अनलॉक करें?",
-    "tally_desc": "यह मतगणना स्क्रिप्ट को परिणाम डिक्रिप्ट और प्रकाशित करने देगा।",
+    "tally_desc": "आपका डिवाइस समेकित परिणाम डिक्रिप्ट करेगा। ऑन-चेन प्रकाशित करने से पहले आप गिनती जाँच सकते हैं।",
     "tally_confirm": "अनलॉक करें",
     "cancel": "चुनाव रद्द करें",
     "cancel_title": "यह चुनाव रद्द करें?",
     "cancel_desc": "सभी नामांकित मतदाताओं को सूचित किया जाएगा। यह क्रिया अपरिवर्तनीय है।",
     "cancel_confirm": "हां, रद्द करें",
     "view_results": "परिणाम देखें",
-    "view_members": "सदस्य देखें"
+    "view_members": "सदस्य देखें",
+    "void_title": "चुनाव रद्द करें",
+    "void_confirm": "रद्द करें",
+    "close_enrollment_early": "नामांकन जल्दी बंद करें",
+    "close_enrollment_title": "अभी नामांकन बंद करें?",
+    "close_enrollment_desc": "पहले से नामांकित सभी के लिए मतदान तुरंत शुरू हो जाएगा।",
+    "voting_closed_done": "मतदान बंद किया गया",
+    "enrollment_closed_done": "नामांकन बंद किया गया",
+    "cancelled_done": "चुनाव रद्द किया गया",
+    "voided_done": "चुनाव अमान्य किया गया",
+    "tally_compute": "मतगणना करें",
+    "tally_computing": "डिक्रिप्ट हो रहा है…",
+    "tally_publish": "परिणाम प्रकाशित करें",
+    "tally_voters": "प्रतिस्थापित वोट हटाने के बाद {{count}} मतदाता",
+    "tally_quorum_short": "गोपनीयता कोरम पूरा नहीं हुआ ({{voters}}/{{quorum}})। प्रकाशित करने के बजाय अमान्य करें।",
+    "tally_key_missing": "इस चुनाव की डिक्रिप्शन कुंजी इस डिवाइस पर नहीं है। जिस डिवाइस से चुनाव बनाया था उस पर Votain खोलें।",
+    "results_published": "परिणाम प्रकाशित",
+    "tally_publishing": "प्रकाशित हो रहा है…",
+    "export_key": "डिक्रिप्शन कुंजी निर्यात करें (बैकअप)",
+    "key_exported": "डिक्रिप्शन कुंजी निर्यात की गई"
   },
   "gas": {
     "title": "गैस प्रबंधन",
     "deposit_title": "गैस जमा करें",
-    "amount_matic": "राशि (MATIC)",
-    "amount_hint": "न्यूनतम 0.1 MATIC। प्रत्येक वोट लगभग 0.03 MATIC खर्च करता है।",
-    "deposit_btn": "{{amount}} MATIC जमा करें",
+    "amount_hint": "न्यूनतम 0.1 {{currency}}। प्रत्येक वोट लगभग 0.03 {{currency}} खर्च करता है।",
+    "deposit_btn": "{{amount}} {{currency}} जमा करें",
     "deposit_pending": "जमा लंबित है…",
     "history": "लेनदेन इतिहास",
     "deposit": "जमा",
     "used": "उपयोग किया गया गैस",
-    "votes_remaining": "~{{count}} वोट शेष"
+    "votes_remaining": "~{{count}} वोट शेष",
+    "amount_token": "राशि ({{currency}})",
+    "withdraw": "निकासी",
+    "history_empty": "अभी तक कोई गैस लेनदेन नहीं।"
   },
   "members": {
     "title": "पंजीकृत सदस्य",
@@ -339,7 +387,13 @@
     "sign_out_title": "साइन आउट करें?",
     "sign_out_desc": "आपको लॉगिन स्क्रीन पर वापस ले जाया जाएगा।",
     "sign_out_confirm": "साइन आउट",
-    "signed_out": "साइन आउट हो गए"
+    "signed_out": "साइन आउट हो गए",
+    "this_device": "यह डिवाइस",
+    "no_passkey": "इस डिवाइस पर कोई पासकी पंजीकृत नहीं है।",
+    "passkey_removed": "पासकी हटाई गई",
+    "linked_wallet": "जुड़ा वॉलेट",
+    "wallet_note": "केवल लेनदेन पर हस्ताक्षर करने के लिए। लॉगिन पासकी से होता है।",
+    "no_wallet_linked": "अभी कोई वॉलेट नहीं जुड़ा।"
   },
   "tx": {
     "title_pending": "लेनदेन प्रगति पर है",
@@ -355,6 +409,23 @@
   "errors": {
     "not_found": "पृष्ठ नहीं मिला",
     "not_found_desc": "जो पृष्ठ आप ढूंढ रहे हैं वह मौजूद नहीं है या स्थानांतरित हो गया है।",
-    "go_home": "होम पर जाएं"
+    "go_home": "होम पर जाएं",
+    "generic_title": "कुछ गलत हो गया"
+  },
+  "demo": {
+    "banner": "डेमो डेटा — कोई अनुबंध तैनात नहीं। यहाँ कुछ भी ऑन-चेन नहीं है।"
+  },
+  "validation": {
+    "required": "यह फ़ील्ड आवश्यक है",
+    "threshold_min": "कम से कम 1 होना चाहिए",
+    "after_enroll_start": "नामांकन प्रारंभ के बाद होना चाहिए",
+    "after_enroll_end": "नामांकन समाप्त होने से पहले शुरू नहीं हो सकता",
+    "after_vote_start": "मतदान प्रारंभ के बाद होना चाहिए",
+    "must_be_future": "भविष्य में होना चाहिए",
+    "candidates_min": "नाम के साथ कम से कम 2 उम्मीदवार जोड़ें",
+    "candidates_unique": "उम्मीदवारों के नाम अद्वितीय होने चाहिए",
+    "quorum_min": "कम से कम 1 होना चाहिए",
+    "number_positive": "वैध, गैर-ऋणात्मक संख्या दर्ज करें",
+    "fix_previous_steps": "आवश्यक फ़ील्ड अनुपलब्ध या अमान्य हैं। वापस जाकर पिछले चरण जाँचें।"
   }
 }

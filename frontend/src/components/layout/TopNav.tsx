@@ -28,16 +28,13 @@ const PUBLIC_ITEMS: NavItem[] = [
   { to: '/discover', labelKey: 'nav.discover', icon: <Compass className="w-4 h-4" /> },
 ];
 
-interface TopNavProps {
-  role?: 'voter' | 'organizer' | 'public';
-}
-
-export function TopNav({ role: _role = 'public' }: TopNavProps) {
+// No props: the nav is fully determined by auth state (which role is signed in),
+// so the page's role hint is not needed here.
+export function TopNav() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { voterLoggedIn, organizerLoggedIn } = useAuth();
 
-  // Auth state takes full precedence over the role prop passed by the page.
   const items = organizerLoggedIn ? ORGANIZER_ITEMS :
                 voterLoggedIn     ? VOTER_ITEMS :
                                     PUBLIC_ITEMS;
@@ -54,6 +51,7 @@ export function TopNav({ role: _role = 'public' }: TopNavProps) {
       {/* Logo */}
       <button
         type="button"
+        data-nav-href={homeRoute}
         onClick={() => navigate(homeRoute)}
         className="flex items-center gap-3 shrink-0 hover:opacity-80 transition-opacity cursor-pointer"
       >
@@ -85,6 +83,7 @@ export function TopNav({ role: _role = 'public' }: TopNavProps) {
         {organizerLoggedIn ? (
           <button
             type="button"
+            data-nav-href="/organizer/profile"
             onClick={() => navigate('/organizer/profile')}
             className="relative w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center hover:bg-primary/20 transition-colors cursor-pointer"
             aria-label={t('nav.profile')}
@@ -105,7 +104,7 @@ export function TopNav({ role: _role = 'public' }: TopNavProps) {
           <Button
             variant="default"
             size="sm"
-            onClick={() => navigate('/voter/onboarding')}
+            onClick={() => navigate('/voter/signin')}
             className="rounded-full border-white/10 hover:bg-white/10 px-5"
           >
             {t('landing.login')}

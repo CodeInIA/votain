@@ -149,14 +149,19 @@ pages/voter/Onboarding.tsx      PascalCase
 
 ### Election phase badge colors
 
-| Phase | Color |
-|-------|-------|
-| Enrollment | `#4F8EF7` (primary blue) |
-| Active | `#22C55E` (success green) |
-| Tallying | `#FBBF24` (warning yellow) |
-| Closed | `#9090A8` (on-surface-variant) |
-| Voided | `#FF4444` (error red) |
-| Cancelled | `#FF4444` (error red) |
+Source of truth: `frontend/src/components/ui/Badge.tsx` (`variant` map). Eight
+phases mirror `ElectionV4.Phase`.
+
+| Phase | Badge color |
+|-------|-------------|
+| Upcoming (before enrollment opens) | muted grey (`on-surface-variant`) |
+| Enrolling | yellow (`yellow-400`) |
+| Pending vote (enrollment closed, voting not yet open) | cyan (`tertiary` `#00D4FF`) |
+| Active | green (`green-400`) |
+| Tallying | purple (`secondary` `#7C5CFC`) |
+| Closed | muted grey (`on-surface-variant`) |
+| Voided | dim grey (`on-surface-meta`) |
+| Cancelled | error red (`#ffb4ab`) |
 
 ## Available MCPs and status
 

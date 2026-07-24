@@ -8,23 +8,34 @@ import { Button } from '../../components/ui/Button';
 import { BackButton } from '../../components/ui/BackButton';
 import { RadioGroup } from '../../components/ui/RadioCard';
 import { Modal } from '../../components/ui/Modal';
-import { getElection } from '../../data/seed';
+import { Spinner } from '../../components/ui/Spinner';
+import { useElection } from '../../hooks/useElections';
 
 export default function ChangeVote() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const election = getElection(id ?? '');
+  const { election, loading, live } = useElection(id);
 
   const [selected, setSelected] = useState(election?.userVote ?? '');
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  if (loading) {
+    return (
+      <PageLayout role="voter" showNav>
+        <div className="flex items-center justify-center min-h-[60vh]"><Spinner /></div>
+      </PageLayout>
+    );
+  }
 
   if (!election) return null;
 
   const handleConfirm = () => {
     setConfirmOpen(false);
+    // Re-vote is the same castVote path: same nullifier, next nonce is read on-chain.
+    const optionIndex = election.candidates.findIndex(c => c.id === selected);
     navigate(`/voter/election/${election.id}/zk-proof`, {
-      state: { candidateId: selected, isChangeVote: true },
+      state: { candidateId: selected, isChangeVote: true, optionIndex, live, address: election.contractAddress },
     });
   };
 

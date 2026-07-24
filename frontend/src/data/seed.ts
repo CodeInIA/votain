@@ -1,6 +1,8 @@
 export type ElectionPhase =
+  | 'upcoming'       // deployed, enrollment not yet open
   | 'enrolling'
   | 'enrolled'
+  | 'pending_vote'   // enrollment closed, voting not yet open (separate window w/ gap)
   | 'active'
   | 'voted'
   | 'tallying'
@@ -59,6 +61,9 @@ export interface Election {
   ipfsCid?: string;
   votingType: VotingType;
   privacyQuorum: number;
+  /** Public per-election salt for deriving the tally key from the organizer's
+   *  passkey. Present only on elections whose key is re-derivable (not stored). */
+  keyNonce?: string;
   isEnrolled?: boolean;
   hasVoted?: boolean;
   userVote?: string;

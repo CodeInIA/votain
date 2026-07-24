@@ -1,30 +1,47 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { ShieldCheck, ExternalLink, Copy, Check, SearchCheck } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Button } from '../../components/ui/Button';
 import { BlockchainBadge } from '../../components/ui/BlockchainBadge';
-import { getElection } from '../../data/seed';
+import { getElection as getSeedElection } from '../../data/seed';
 
-const DEMO_REF = 'VTN-2025-' + String(Math.floor(Math.random() * 90000) + 10000);
+const FALLBACK_REF = 'VTN-2025-' + String(Math.floor(Math.random() * 90000) + 10000);
+
+interface ConfirmationState {
+  referenceNumber?: string;
+  txHash?: string;
+  electionId?: string;
+}
 
 export default function VoteConfirmation() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation();
-  const election = getElection(id ?? '');
+  const state = (location.state ?? {}) as ConfirmationState;
+
+  const seedElection = id && !id.startsWith('0x') ? getSeedElection(id) : undefined;
+  const title = seedElection?.title;
+
+  const reference = state.referenceNumber ?? FALLBACK_REF;
+  const txHash = state.txHash;
+  const explorerUrl = txHash
+    ? `https://amoy.polygonscan.com/tx/${txHash}`
+    : 'https://amoy.polygonscan.com/';
+
   const [copied, setCopied] = useState(false);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const t = setTimeout(() => setVisible(true), 100);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setVisible(true), 100);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(DEMO_REF);
+    await navigator.clipboard.writeText(reference);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
@@ -53,28 +70,28 @@ export default function VoteConfirmation() {
           <div className="w-full mb-4 p-4 rounded-2xl bg-surface-lowest/40 border border-white/5">
             <p className="text-xs text-on-surface-meta mb-1">{t('confirmation.reference')}</p>
             <div className="flex items-center justify-between gap-2">
-              <span className="font-mono text-sm text-on-surface font-semibold">{DEMO_REF}</span>
+              <span className="font-mono text-sm text-on-surface font-semibold truncate">{reference}</span>
               <button type="button" onClick={handleCopy}
-                className="text-on-surface-meta hover:text-on-surface transition-colors cursor-pointer">
+                className="text-on-surface-meta hover:text-on-surface transition-colors cursor-pointer shrink-0">
                 {copied ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
               </button>
             </div>
           </div>
 
           {/* Election name */}
-          {election && (
-            <p className="text-xs text-on-surface-meta mb-6 px-2 line-clamp-2">{election.title}</p>
+          {title && (
+            <p className="text-xs text-on-surface-meta mb-6 px-2 line-clamp-2">{title}</p>
           )}
 
           {/* Blockchain badge */}
           <div className="mb-6">
-            <BlockchainBadge href={`https://amoy.polygonscan.com/tx/0xdemotx`} />
+            <BlockchainBadge href={explorerUrl} />
           </div>
 
           {/* Actions */}
           <div className="flex flex-col gap-3 w-full">
             <a
-              href={`https://amoy.polygonscan.com/tx/0xdemotx`}
+              href={explorerUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="w-full"

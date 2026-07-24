@@ -2,13 +2,15 @@ import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '../../lib/utils';
 
-export const badgeVariants = cva(
+const badgeVariants = cva(
   'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide uppercase select-none transition-colors',
   {
     variants: {
       variant: {
+        upcoming:     'bg-white/5 text-on-surface-variant ring-1 ring-white/10',
         enrolling:  'bg-yellow-400/10 text-yellow-400 ring-1 ring-yellow-400/20',
         enrolled:   'bg-primary/10 text-primary-dim ring-1 ring-primary/20',
+        pending_vote: 'bg-tertiary/10 text-tertiary ring-1 ring-tertiary/20',
         active:     'bg-green-400/10 text-green-400 ring-1 ring-green-400/20',
         voted:      'bg-green-600/10 text-green-300 ring-1 ring-green-600/20',
         tallying:   'bg-secondary/10 text-secondary-dim ring-1 ring-secondary/20',
@@ -34,8 +36,10 @@ export interface BadgeProps
 }
 
 const DOT_COLORS: Record<string, string> = {
+  upcoming:     'bg-on-surface-meta',
   enrolling:  'bg-yellow-400',
   enrolled:   'bg-primary',
+  pending_vote: 'bg-tertiary',
   active:     'bg-green-400',
   voted:      'bg-green-300',
   tallying:   'bg-secondary-dim',

@@ -72,7 +72,9 @@
     "tallying": "Tallying",
     "closed": "Closed",
     "voided": "Voided",
-    "cancelled": "Cancelled"
+    "cancelled": "Cancelled",
+    "upcoming": "Upcoming",
+    "pending_vote": "Voting soon"
   },
   "badge": {
     "blockchain": "Verified on blockchain",
@@ -83,7 +85,11 @@
     "simple_plurality": "Simple Plurality",
     "absolute_majority": "Absolute Majority",
     "two_thirds": "Two-thirds Majority",
-    "witness_threshold": "Witness Threshold"
+    "witness_threshold": "Witness Threshold",
+    "simple_plurality_desc": "Most votes wins",
+    "absolute_majority_desc": "Winner needs more than 50% of votes cast",
+    "two_thirds_desc": "Yes/No — approved with at least 2/3 of votes",
+    "witness_threshold_desc": "Yes/No — approved with at least N confirmations"
   },
   "common": {
     "back": "Back",
@@ -139,7 +145,16 @@
     "top_up": "Top up",
     "ends_in": "Ends in",
     "vote_now": "Vote now",
-    "voted": "voted"
+    "voted": "voted",
+    "cta_tallying": "Voting has ended. Results are being tallied.",
+    "cta_voided": "This election was voided. No results will be published.",
+    "cta_cancelled": "This election was cancelled.",
+    "cta_not_enrolled": "Enrollment closed before you joined, so you cannot vote in this election.",
+    "enrollment_opens": "Enrollment opens",
+    "voting_opens": "Voting opens",
+    "cta_upcoming": "Enrollment hasn't opened yet.",
+    "cta_pending_vote": "Enrollment is closed. Voting hasn't started yet.",
+    "starts_in": "Starts in"
   },
   "how": {
     "title": "How Votain works",
@@ -240,7 +255,9 @@
     "wallet_pending": "Connecting…",
     "wrong_network": "Wrong network",
     "wrong_network_desc": "Please switch to Polygon Amoy to continue.",
-    "switch_network": "Switch to Polygon Amoy"
+    "switch_network": "Switch to Polygon Amoy",
+    "no_wallet_title": "No wallet detected",
+    "no_wallet_desc": "Install MetaMask (or another EVM wallet) to sign as an organizer."
   },
   "dashboard": {
     "title": "Organizer Dashboard",
@@ -253,7 +270,8 @@
     "votes_cast": "Votes cast",
     "quick_actions": "Quick actions",
     "members": "Members",
-    "gas": "Gas management"
+    "gas": "Gas management",
+    "no_elections": "No elections yet. Create your first one."
   },
   "create": {
     "title": "Create Election",
@@ -278,13 +296,22 @@
     "require_orb_desc": "Voters must verify with the World ID Orb (highest assurance).",
     "privacy_quorum": "Privacy quorum",
     "quorum_hint": "Minimum votes required before results are revealed.",
-    "deposit_matic": "Gas deposit (MATIC)",
     "deposit_hint": "Initial gas to cover voter transaction fees.",
     "immutability_warning": "Once deployed, the election parameters cannot be changed. Review everything carefully.",
     "deploy": "Deploy election",
     "deploy_confirm_title": "Deploy to blockchain?",
-    "deploy_confirm_desc": "This will deploy a smart contract and deduct {{amount}} MATIC from your gas balance.",
-    "deploy_pending": "Deploying contract…"
+    "deploy_confirm_desc": "This will deploy a smart contract and deduct {{amount}} {{currency}} from your gas balance.",
+    "deploy_pending": "Deploying contract…",
+    "witness_threshold_n": "Required witnesses (N)",
+    "witness_threshold_hint": "Minimum Yes votes needed to approve",
+    "yes_no_note": "This voting type uses a fixed Yes / No ballot.",
+    "deposit_token": "Gas deposit ({{currency}})",
+    "leave_confirm_title": "Discard changes?",
+    "leave_confirm_desc": "Your changes will be lost if you leave this page.",
+    "discard_changes": "Discard changes",
+    "separate_enrollment": "Custom enrollment window",
+    "separate_enrollment_desc": "Set your own registration dates, with a deadline that can fall before voting opens.",
+    "enrollment_until_vote_start": "Registration is open from deployment until voting starts."
   },
   "election_mgmt": {
     "actions": "Actions",
@@ -294,26 +321,47 @@
     "close_confirm": "Yes, close",
     "unlock_tally": "Unlock tally",
     "tally_title": "Unlock result tallying?",
-    "tally_desc": "This will allow the tally script to decrypt and publish the results.",
+    "tally_desc": "Your device will decrypt the aggregated result. You can review the counts before publishing them on-chain.",
     "tally_confirm": "Unlock",
     "cancel": "Cancel election",
     "cancel_title": "Cancel this election?",
     "cancel_desc": "All enrolled voters will be notified. This action is irreversible.",
     "cancel_confirm": "Yes, cancel",
     "view_results": "View results",
-    "view_members": "View members"
+    "view_members": "View members",
+    "void_title": "Void election",
+    "void_confirm": "Void",
+    "close_enrollment_early": "Close enrollment early",
+    "close_enrollment_title": "Close enrollment now?",
+    "close_enrollment_desc": "Voting will start immediately for everyone already enrolled.",
+    "voting_closed_done": "Voting closed",
+    "enrollment_closed_done": "Enrollment closed",
+    "cancelled_done": "Election cancelled",
+    "voided_done": "Election voided",
+    "tally_compute": "Compute tally",
+    "tally_computing": "Decrypting…",
+    "tally_publish": "Publish results",
+    "tally_voters": "{{count}} voters after removing superseded votes",
+    "tally_quorum_short": "Privacy quorum not met ({{voters}} of {{quorum}}). Void the election instead of publishing.",
+    "tally_key_missing": "The decryption key for this election is not on this device. Open Votain on the device you created the election with.",
+    "results_published": "Results published",
+    "tally_publishing": "Publishing…",
+    "export_key": "Export decryption key (backup)",
+    "key_exported": "Decryption key exported"
   },
   "gas": {
     "title": "Gas Management",
     "deposit_title": "Deposit gas",
-    "amount_matic": "Amount (MATIC)",
-    "amount_hint": "Minimum 0.1 MATIC. Each vote costs approximately 0.03 MATIC.",
-    "deposit_btn": "Deposit {{amount}} MATIC",
+    "amount_hint": "Minimum 0.1 {{currency}}. Each vote costs approximately 0.03 {{currency}}.",
+    "deposit_btn": "Deposit {{amount}} {{currency}}",
     "deposit_pending": "Deposit pending…",
     "history": "Transaction history",
     "deposit": "Deposit",
     "used": "Gas used",
-    "votes_remaining": "~{{count}} votes remaining"
+    "votes_remaining": "~{{count}} votes remaining",
+    "amount_token": "Amount ({{currency}})",
+    "withdraw": "Withdrawal",
+    "history_empty": "No gas movements yet."
   },
   "members": {
     "title": "Registered Members",
@@ -339,7 +387,13 @@
     "sign_out_title": "Sign out?",
     "sign_out_desc": "You will be returned to the login screen.",
     "sign_out_confirm": "Sign out",
-    "signed_out": "Signed out"
+    "signed_out": "Signed out",
+    "this_device": "This device",
+    "no_passkey": "No passkey registered on this device.",
+    "passkey_removed": "Passkey removed",
+    "linked_wallet": "Linked wallet",
+    "wallet_note": "Only used to sign transactions. You sign in with your passkey.",
+    "no_wallet_linked": "No wallet linked yet."
   },
   "tx": {
     "title_pending": "Transaction in progress",
@@ -355,6 +409,23 @@
   "errors": {
     "not_found": "Page not found",
     "not_found_desc": "The page you're looking for doesn't exist or has been moved.",
-    "go_home": "Go home"
+    "go_home": "Go home",
+    "generic_title": "Something went wrong"
+  },
+  "demo": {
+    "banner": "Demo data — no contracts deployed. Nothing here is on-chain."
+  },
+  "validation": {
+    "required": "This field is required",
+    "threshold_min": "Must be at least 1",
+    "after_enroll_start": "Must be after enrollment start",
+    "after_enroll_end": "Cannot start before enrollment ends",
+    "after_vote_start": "Must be after voting start",
+    "must_be_future": "Must be in the future",
+    "candidates_min": "Add at least 2 candidates with a name",
+    "candidates_unique": "Candidate names must be unique",
+    "quorum_min": "Must be at least 1",
+    "number_positive": "Enter a valid, non-negative number",
+    "fix_previous_steps": "Some required fields are missing or invalid. Go back and review the previous steps."
   }
 }

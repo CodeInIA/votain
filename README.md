@@ -30,8 +30,9 @@ User (passkey + World ID)
                            Semaphore V4 Verifier · ERC-4337 EntryPoint
                                                   │
                                                   ▼
-                           Off-chain tally script (Paillier homomorphic sum)
-                           → Result JSON pinned on IPFS (Pinata)
+                           Tally (Paillier homomorphic sum): in-app in the
+                           browser, or the off-chain CLI (auditor path)
+                           → Result JSON pinned on IPFS (Pinata, CLI)
                            → publishResults(cid, tally) on-chain
 ```
 
@@ -44,7 +45,7 @@ votain/
 ├── contracts/         # Solidity 0.8.36 + Hardhat 3 + Semaphore V4
 ├── backend/           # Node.js Express SD-JWT issuer (target: Phala TEE)
 ├── frontend/          # React 19 + Vite + ZeroDev v5 (target: IPFS / Fleek)
-├── scripts-tally/     # off-chain Paillier tally + IPFS publication (planned)
+├── scripts-tally/     # off-chain Paillier tally + IPFS publication (auditor CLI)
 ├── docs/
 │   ├── PLAN.md        # iterative milestone plan (source of truth)
 │   ├── dev/           # developer documentation

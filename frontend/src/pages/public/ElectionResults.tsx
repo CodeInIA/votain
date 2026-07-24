@@ -8,13 +8,22 @@ import { BackButton } from '../../components/ui/BackButton';
 import { Card } from '../../components/ui/Card';
 import { ResultBarChart } from '../../components/ui/BarChart';
 import { BlockchainBadge, IPFSBadge } from '../../components/ui/BlockchainBadge';
-import { getElection } from '../../data/seed';
+import { Spinner } from '../../components/ui/Spinner';
+import { useElection } from '../../hooks/useElections';
 
 export default function ElectionResults() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const election = getElection(id ?? '');
+  const { election, loading } = useElection(id);
+
+  if (loading) {
+    return (
+      <PageLayout role="public" showNav>
+        <div className="flex items-center justify-center min-h-[60vh]"><Spinner /></div>
+      </PageLayout>
+    );
+  }
 
   if (!election || !election.candidates.some(c => c.votes !== undefined)) {
     return (

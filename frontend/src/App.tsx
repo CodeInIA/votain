@@ -1,7 +1,8 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ToastProvider } from './components/ui/Toast';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider } from './contexts/AuthProvider';
+import { RequireVoter, RequireOrganizer } from './components/auth/RequireAuth';
 import Landing from './pages/Landing';
 import Onboarding from './pages/voter/Onboarding';
 import SignIn from './pages/voter/SignIn';
@@ -66,23 +67,23 @@ export default function App() {
           <Route path="/voter/signin"       element={<SignIn />} />
           <Route path="/voter/re-verify"    element={<ReVerification />} />
 
-          {/* Voter app */}
-          <Route path="/voter/elections"               element={<VoterElections />} />
-          <Route path="/voter/election/:id"            element={<ElectionDetail />} />
-          <Route path="/voter/election/:id/zk-proof"   element={<ZkProofGeneration />} />
-          <Route path="/voter/election/:id/confirmation" element={<VoteConfirmation />} />
-          <Route path="/voter/election/:id/change-vote"  element={<ChangeVote />} />
-          <Route path="/voter/history"                 element={<VoterHistory />} />
-          <Route path="/voter/profile"                 element={<VoterProfile />} />
+          {/* Voter app — requires a voter session (httpOnly VC cookie) */}
+          <Route path="/voter/elections"               element={<RequireVoter><VoterElections /></RequireVoter>} />
+          <Route path="/voter/election/:id"            element={<RequireVoter><ElectionDetail /></RequireVoter>} />
+          <Route path="/voter/election/:id/zk-proof"   element={<RequireVoter><ZkProofGeneration /></RequireVoter>} />
+          <Route path="/voter/election/:id/confirmation" element={<RequireVoter><VoteConfirmation /></RequireVoter>} />
+          <Route path="/voter/election/:id/change-vote"  element={<RequireVoter><ChangeVote /></RequireVoter>} />
+          <Route path="/voter/history"                 element={<RequireVoter><VoterHistory /></RequireVoter>} />
+          <Route path="/voter/profile"                 element={<RequireVoter><VoterProfile /></RequireVoter>} />
 
-          {/* Organizer */}
+          {/* Organizer — requires passkey + connected wallet */}
           <Route path="/organizer/auth"           element={<OrganizerAuth />} />
-          <Route path="/organizer/dashboard"      element={<OrganizerDashboard />} />
-          <Route path="/organizer/elections/new"  element={<CreateElection />} />
-          <Route path="/organizer/election/:id"   element={<ElectionManagement />} />
-          <Route path="/organizer/gas"            element={<GasManagement />} />
-          <Route path="/organizer/members"        element={<MemberList />} />
-          <Route path="/organizer/profile"        element={<OrganizerProfile />} />
+          <Route path="/organizer/dashboard"      element={<RequireOrganizer><OrganizerDashboard /></RequireOrganizer>} />
+          <Route path="/organizer/elections/new"  element={<RequireOrganizer><CreateElection /></RequireOrganizer>} />
+          <Route path="/organizer/election/:id"   element={<RequireOrganizer><ElectionManagement /></RequireOrganizer>} />
+          <Route path="/organizer/gas"            element={<RequireOrganizer><GasManagement /></RequireOrganizer>} />
+          <Route path="/organizer/members"        element={<RequireOrganizer><MemberList /></RequireOrganizer>} />
+          <Route path="/organizer/profile"        element={<RequireOrganizer><OrganizerProfile /></RequireOrganizer>} />
 
           {/* DEV */}
           {ComponentsShowcase && (

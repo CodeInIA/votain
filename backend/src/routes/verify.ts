@@ -1,41 +1,10 @@
 import { Router, Request, Response } from 'express';
-import { SDJwtInstance, type SDJWTConfig, type JwtPayload } from '@sd-jwt/core';
-import crypto from 'crypto';
-import { getIssuerKeyPair, issueSigner } from '../utils/keys.js';
 import { signRequest } from '@worldcoin/idkit-core/signing';
+import { sdJwt, SELECTIVE_DISCLOSURE_FRAME, type VotainCredentialPayload } from '../sd/issuer.js';
+import { allocateIndex, DEFAULT_LIST_ID } from '../status/statusList.js';
+import { registerOnChain, isRegistrarConfigured } from '../chain/registrar.js';
 
 const router = Router();
-const { privateKey } = getIssuerKeyPair();
-
-type VotainCredentialPayload = JwtPayload & {
-  iss: string;
-  sub: string;
-  iat: number;
-  exp: number;
-};
-
-const generateSalt = (): string => crypto.randomBytes(16).toString('base64url');
-
-const sdJwtConfig: SDJWTConfig = {
-  signer: async (data: string): Promise<string> => {
-    return await issueSigner(data, privateKey);
-  },
-  hasher: async (data: string | Buffer | ArrayBuffer): Promise<Uint8Array> => {
-    let inputData: Buffer;
-    if (typeof data === 'string') {
-      inputData = Buffer.from(data, 'utf-8');
-    } else if (Buffer.isBuffer(data)) {
-      inputData = data;
-    } else {
-      inputData = Buffer.from(data);
-    }
-    return new Uint8Array(crypto.createHash('sha256').update(inputData).digest());
-  },
-  signAlg: 'EdDSA',
-  saltGenerator: generateSalt,
-};
-
-const sdJwt = new SDJwtInstance<VotainCredentialPayload>(sdJwtConfig);
 
 // ────────────────────────────────────────────────
 // GET /me — check for an active session
@@ -108,23 +77,29 @@ router.post('/rp-signature', async (req: Request, res: Response) => {
 
 // ────────────────────────────────────────────────
 // POST /verify-human
+// Verifies the World ID proof, issues the SD-JWT VC (selective disclosure +
+// revocation status) and registers the voter's Semaphore identity commitment
+// in the on-chain PlatformRegistry.
 // ────────────────────────────────────────────────
 router.post('/verify-human', async (req: Request, res: Response) => {
   try {
     const idkitResponse = req.body as {
       responses?: Array<{ nullifier?: string }>;
       nullifier_hash?: string;
+      identityCommitment?: string;
     };
 
     const rpId = process.env.WORLD_ID_RP_ID;
     if (!rpId) throw new Error('WORLD_ID_RP_ID not configured');
 
-    console.log('Verify payload received:', JSON.stringify(idkitResponse, null, 2));
+    // The Semaphore identity commitment travels alongside the World ID payload
+    // but must NOT be forwarded to World ID.
+    const { identityCommitment, ...worldIdPayload } = idkitResponse;
 
     const verifyRes = await fetch(`https://developer.world.org/api/v4/verify/${rpId}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(idkitResponse),
+      body: JSON.stringify(worldIdPayload),
     });
 
     if (!verifyRes.ok) {
@@ -138,15 +113,44 @@ router.post('/verify-human', async (req: Request, res: Response) => {
       idkitResponse.nullifier_hash ??
       '';
 
+    // Revocation entry for this credential
+    const statusIndex = allocateIndex();
+    const baseUrl = process.env.PUBLIC_URL ?? `http://localhost:${process.env.PORT ?? 3000}`;
+
     const now = Math.floor(Date.now() / 1000);
     const credentialPayload: VotainCredentialPayload = {
-      iss: 'https://issuer.votain.local',
+      iss: process.env.ISSUER_DID ?? 'https://issuer.votain.local',
       sub: nullifier_hash,
       iat: now,
       exp: now + 7 * 24 * 60 * 60,
+      vct: 'votain:voter-credential:v1',
+      // Selective-disclosure identity attributes. Demo issuer values until
+      // World ID Credentials selective disclosure is wired (see docs).
+      country: process.env.DEMO_VC_COUNTRY ?? 'ES',
+      ageOver18: true,
+      region: process.env.DEMO_VC_REGION ?? 'Madrid',
+      credentialStatus: {
+        id: `${baseUrl}/api/credentials/status/${DEFAULT_LIST_ID}#${statusIndex}`,
+        type: 'StatusList2021Entry',
+        statusPurpose: 'revocation',
+        statusListIndex: String(statusIndex),
+        statusListCredential: `${baseUrl}/api/credentials/status/${DEFAULT_LIST_ID}`,
+      },
     };
 
-    const issuedCredential = await sdJwt.issue(credentialPayload, {});
+    const issuedCredential = await sdJwt.issue(credentialPayload, SELECTIVE_DISCLOSURE_FRAME);
+
+    // Register the voter on-chain so elections accept their enrollment
+    let onchain = { registered: false as boolean, txHash: undefined as string | undefined };
+    if (identityCommitment && isRegistrarConfigured()) {
+      const result = await registerOnChain(nullifier_hash, identityCommitment);
+      onchain = { registered: result.registered, txHash: result.txHash };
+      if (!result.registered) {
+        console.warn('On-chain registration failed:', result.error);
+      }
+    } else if (identityCommitment) {
+      console.warn('Registrar not configured — skipping on-chain registration');
+    }
 
     // Store SD-JWT as an httpOnly cookie — never exposed to JS
     res.cookie('voter_vc', issuedCredential, {
@@ -160,6 +164,8 @@ router.post('/verify-human', async (req: Request, res: Response) => {
       success: true,
       message: 'Human verified successfully',
       nullifier: nullifier_hash,
+      onchainRegistered: onchain.registered,
+      registrationTx: onchain.txHash,
     });
 
   } catch (error: unknown) {

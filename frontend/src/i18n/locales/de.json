@@ -91,7 +91,9 @@
     "tallying": "Auszählung",
     "closed": "Geschlossen",
     "voided": "Ungültig",
-    "cancelled": "Abgebrochen"
+    "cancelled": "Abgebrochen",
+    "upcoming": "Demnächst",
+    "pending_vote": "Abstimmung bald"
   },
   "badge": {
     "blockchain": "Auf Blockchain verifiziert",
@@ -102,7 +104,11 @@
     "simple_plurality": "Einfache Mehrheit",
     "absolute_majority": "Absolute Mehrheit",
     "two_thirds": "Zwei-Drittel-Mehrheit",
-    "witness_threshold": "Zeugenschwelle"
+    "witness_threshold": "Zeugenschwelle",
+    "simple_plurality_desc": "Die meisten Stimmen gewinnen",
+    "absolute_majority_desc": "Sieger braucht über 50% der Stimmen",
+    "two_thirds_desc": "Ja/Nein — angenommen mit mindestens 2/3 der Stimmen",
+    "witness_threshold_desc": "Ja/Nein — angenommen mit mindestens N Bestätigungen"
   },
   "discover": {
     "title": "Wahlen",
@@ -139,7 +145,16 @@
     "top_up": "Aufladen",
     "ends_in": "Endet in",
     "vote_now": "Jetzt abstimmen",
-    "voted": "abgestimmt"
+    "voted": "abgestimmt",
+    "cta_tallying": "Die Abstimmung ist beendet. Die Ergebnisse werden ausgezählt.",
+    "cta_voided": "Diese Wahl wurde für ungültig erklärt. Es werden keine Ergebnisse veröffentlicht.",
+    "cta_cancelled": "Diese Wahl wurde abgesagt.",
+    "cta_not_enrolled": "Die Anmeldung wurde vor Ihrem Beitritt geschlossen, daher können Sie hier nicht abstimmen.",
+    "enrollment_opens": "Anmeldung öffnet",
+    "voting_opens": "Abstimmung öffnet",
+    "cta_upcoming": "Die Anmeldung ist noch nicht geöffnet.",
+    "cta_pending_vote": "Die Anmeldung ist geschlossen. Die Abstimmung hat noch nicht begonnen.",
+    "starts_in": "Beginnt in"
   },
   "how": {
     "title": "Wie Votain funktioniert",
@@ -240,7 +255,9 @@
     "wallet_pending": "Verbinden…",
     "wrong_network": "Falsches Netzwerk",
     "wrong_network_desc": "Bitte zu Polygon Amoy wechseln, um fortzufahren.",
-    "switch_network": "Zu Polygon Amoy wechseln"
+    "switch_network": "Zu Polygon Amoy wechseln",
+    "no_wallet_title": "Keine Wallet erkannt",
+    "no_wallet_desc": "Installieren Sie MetaMask (oder eine andere EVM-Wallet), um als Organisator zu signieren."
   },
   "dashboard": {
     "title": "Organisator-Dashboard",
@@ -253,7 +270,8 @@
     "votes_cast": "Abgegebene Stimmen",
     "quick_actions": "Schnellaktionen",
     "members": "Mitglieder",
-    "gas": "Gas-Verwaltung"
+    "gas": "Gas-Verwaltung",
+    "no_elections": "Noch keine Wahlen. Erstellen Sie die erste."
   },
   "create": {
     "title": "Wahl erstellen",
@@ -278,13 +296,22 @@
     "require_orb_desc": "Wähler müssen sich mit dem World ID Orb verifizieren.",
     "privacy_quorum": "Datenschutz-Quorum",
     "quorum_hint": "Mindestanzahl Stimmen, bevor Ergebnisse angezeigt werden.",
-    "deposit_matic": "Gas-Einzahlung (MATIC)",
     "deposit_hint": "Initiales Gas zur Deckung der Transaktionsgebühren der Wähler.",
     "immutability_warning": "Nach der Bereitstellung können die Parameter nicht mehr geändert werden. Sorgfältig prüfen.",
     "deploy": "Wahl bereitstellen",
     "deploy_confirm_title": "Auf der Blockchain bereitstellen?",
-    "deploy_confirm_desc": "Dies stellt einen Smart Contract bereit und zieht {{amount}} MATIC ab.",
-    "deploy_pending": "Vertrag wird bereitgestellt…"
+    "deploy_confirm_desc": "Dies stellt einen Smart Contract bereit und zieht {{amount}} {{currency}} ab.",
+    "deploy_pending": "Vertrag wird bereitgestellt…",
+    "witness_threshold_n": "Erforderliche Zeugen (N)",
+    "witness_threshold_hint": "Mindestanzahl Ja-Stimmen zur Annahme",
+    "yes_no_note": "Dieser Abstimmungstyp verwendet einen festen Ja/Nein-Stimmzettel.",
+    "deposit_token": "Gas-Einzahlung ({{currency}})",
+    "leave_confirm_title": "Änderungen verwerfen?",
+    "leave_confirm_desc": "Ihre Änderungen gehen verloren, wenn Sie diese Seite verlassen.",
+    "discard_changes": "Änderungen verwerfen",
+    "separate_enrollment": "Eigenes Anmeldefenster",
+    "separate_enrollment_desc": "Legen Sie eigene Anmeldedaten fest, mit einer Frist, die vor Beginn der Abstimmung liegen kann.",
+    "enrollment_until_vote_start": "Die Anmeldung ist von der Bereitstellung bis zum Beginn der Abstimmung geöffnet."
   },
   "election_mgmt": {
     "actions": "Aktionen",
@@ -294,26 +321,47 @@
     "close_confirm": "Ja, beenden",
     "unlock_tally": "Auszählung freischalten",
     "tally_title": "Ergebnisauszählung freischalten?",
-    "tally_desc": "Dies erlaubt dem Auszählungsskript, die Ergebnisse zu entschlüsseln und zu veröffentlichen.",
+    "tally_desc": "Ihr Gerät entschlüsselt das aggregierte Ergebnis. Sie können die Zählung prüfen, bevor Sie sie on-chain veröffentlichen.",
     "tally_confirm": "Freischalten",
     "cancel": "Wahl abbrechen",
     "cancel_title": "Diese Wahl abbrechen?",
     "cancel_desc": "Alle angemeldeten Wähler werden benachrichtigt. Diese Aktion ist unwiderruflich.",
     "cancel_confirm": "Ja, abbrechen",
     "view_results": "Ergebnisse anzeigen",
-    "view_members": "Mitglieder anzeigen"
+    "view_members": "Mitglieder anzeigen",
+    "void_title": "Wahl annullieren",
+    "void_confirm": "Annullieren",
+    "close_enrollment_early": "Anmeldung vorzeitig schließen",
+    "close_enrollment_title": "Anmeldung jetzt schließen?",
+    "close_enrollment_desc": "Die Abstimmung beginnt sofort für alle bereits Angemeldeten.",
+    "voting_closed_done": "Abstimmung geschlossen",
+    "enrollment_closed_done": "Anmeldung geschlossen",
+    "cancelled_done": "Wahl abgesagt",
+    "voided_done": "Wahl für ungültig erklärt",
+    "tally_compute": "Auszählung berechnen",
+    "tally_computing": "Entschlüsseln…",
+    "tally_publish": "Ergebnisse veröffentlichen",
+    "tally_voters": "{{count}} Wähler nach Entfernen ersetzter Stimmen",
+    "tally_quorum_short": "Datenschutz-Quorum nicht erreicht ({{voters}} von {{quorum}}). Wahl für ungültig erklären.",
+    "tally_key_missing": "Der Entschlüsselungsschlüssel dieser Wahl ist nicht auf diesem Gerät. Öffnen Sie Votain auf dem Gerät, mit dem Sie die Wahl erstellt haben.",
+    "results_published": "Ergebnisse veröffentlicht",
+    "tally_publishing": "Wird veröffentlicht…",
+    "export_key": "Entschlüsselungsschlüssel exportieren (Backup)",
+    "key_exported": "Entschlüsselungsschlüssel exportiert"
   },
   "gas": {
     "title": "Gas-Verwaltung",
     "deposit_title": "Gas einzahlen",
-    "amount_matic": "Betrag (MATIC)",
-    "amount_hint": "Mindestens 0,1 MATIC. Jede Stimme kostet ca. 0,03 MATIC.",
-    "deposit_btn": "{{amount}} MATIC einzahlen",
+    "amount_hint": "Mindestens 0,1 {{currency}}. Jede Stimme kostet ca. 0,03 {{currency}}.",
+    "deposit_btn": "{{amount}} {{currency}} einzahlen",
     "deposit_pending": "Einzahlung ausstehend…",
     "history": "Transaktionsverlauf",
     "deposit": "Einzahlung",
     "used": "Verwendetes Gas",
-    "votes_remaining": "~{{count}} verbleibende Stimmen"
+    "votes_remaining": "~{{count}} verbleibende Stimmen",
+    "amount_token": "Betrag ({{currency}})",
+    "withdraw": "Auszahlung",
+    "history_empty": "Noch keine Gas-Bewegungen."
   },
   "members": {
     "title": "Registrierte Mitglieder",
@@ -339,7 +387,13 @@
     "sign_out_title": "Abmelden?",
     "sign_out_desc": "Sie werden zum Anmeldebildschirm zurückgeleitet.",
     "sign_out_confirm": "Abmelden",
-    "signed_out": "Abgemeldet"
+    "signed_out": "Abgemeldet",
+    "this_device": "Dieses Gerät",
+    "no_passkey": "Auf diesem Gerät ist kein Passkey registriert.",
+    "passkey_removed": "Passkey entfernt",
+    "linked_wallet": "Verknüpfte Wallet",
+    "wallet_note": "Nur zum Signieren von Transaktionen. Die Anmeldung erfolgt per Passkey.",
+    "no_wallet_linked": "Noch keine Wallet verknüpft."
   },
   "tx": {
     "title_pending": "Transaktion läuft",
@@ -355,6 +409,23 @@
   "errors": {
     "not_found": "Seite nicht gefunden",
     "not_found_desc": "Die gesuchte Seite existiert nicht oder wurde verschoben.",
-    "go_home": "Zur Startseite"
+    "go_home": "Zur Startseite",
+    "generic_title": "Etwas ist schiefgelaufen"
+  },
+  "demo": {
+    "banner": "Demo-Daten — keine Verträge bereitgestellt. Nichts hiervon ist on-chain."
+  },
+  "validation": {
+    "required": "Dieses Feld ist erforderlich",
+    "threshold_min": "Muss mindestens 1 sein",
+    "after_enroll_start": "Muss nach dem Anmeldebeginn liegen",
+    "after_enroll_end": "Darf nicht vor Anmeldeschluss beginnen",
+    "after_vote_start": "Muss nach dem Abstimmungsbeginn liegen",
+    "must_be_future": "Muss in der Zukunft liegen",
+    "candidates_min": "Mindestens 2 Kandidaten mit Namen hinzufügen",
+    "candidates_unique": "Kandidatennamen müssen eindeutig sein",
+    "quorum_min": "Muss mindestens 1 sein",
+    "number_positive": "Gültige, nicht negative Zahl eingeben",
+    "fix_previous_steps": "Pflichtfelder fehlen oder sind ungültig. Gehen Sie zurück und prüfen Sie die vorherigen Schritte."
   }
 }

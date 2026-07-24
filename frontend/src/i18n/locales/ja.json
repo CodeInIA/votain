@@ -91,7 +91,9 @@
     "tallying": "集計中",
     "closed": "終了",
     "voided": "無効",
-    "cancelled": "中止"
+    "cancelled": "中止",
+    "upcoming": "開始前",
+    "pending_vote": "投票間近"
   },
   "badge": {
     "blockchain": "ブロックチェーン確認済み",
@@ -102,7 +104,11 @@
     "simple_plurality": "単純多数決",
     "absolute_majority": "絶対多数決",
     "two_thirds": "3分の2多数決",
-    "witness_threshold": "証人閾値"
+    "witness_threshold": "証人閾値",
+    "simple_plurality_desc": "最多得票者が当選",
+    "absolute_majority_desc": "当選には過半数（50%超）が必要",
+    "two_thirds_desc": "賛成/反対 — 2/3以上の賛成で可決",
+    "witness_threshold_desc": "賛成/反対 — N件以上の承認で可決"
   },
   "discover": {
     "title": "選挙",
@@ -139,7 +145,16 @@
     "top_up": "チャージ",
     "ends_in": "終了まで",
     "vote_now": "今すぐ投票",
-    "voted": "投票済み"
+    "voted": "投票済み",
+    "cta_tallying": "投票は終了しました。結果を集計しています。",
+    "cta_voided": "この選挙は無効となりました。結果は公表されません。",
+    "cta_cancelled": "この選挙は中止されました。",
+    "cta_not_enrolled": "あなたが参加する前に登録が締め切られたため、この選挙では投票できません。",
+    "enrollment_opens": "登録開始",
+    "voting_opens": "投票開始",
+    "cta_upcoming": "登録はまだ開始していません。",
+    "cta_pending_vote": "登録は締め切られました。投票はまだ始まっていません。",
+    "starts_in": "開始まで"
   },
   "how": {
     "title": "Votainの仕組み",
@@ -240,7 +255,9 @@
     "wallet_pending": "接続中…",
     "wrong_network": "ネットワークエラー",
     "wrong_network_desc": "続けるにはPolygon Amoyに切り替えてください。",
-    "switch_network": "Polygon Amoyに切り替え"
+    "switch_network": "Polygon Amoyに切り替え",
+    "no_wallet_title": "ウォレットが検出されません",
+    "no_wallet_desc": "主催者として署名するには MetaMask（または他の EVM ウォレット）をインストールしてください。"
   },
   "dashboard": {
     "title": "主催者ダッシュボード",
@@ -253,7 +270,8 @@
     "votes_cast": "投票数",
     "quick_actions": "クイックアクション",
     "members": "メンバー",
-    "gas": "ガス管理"
+    "gas": "ガス管理",
+    "no_elections": "まだ選挙がありません。最初のものを作成してください。"
   },
   "create": {
     "title": "選挙を作成",
@@ -278,13 +296,22 @@
     "require_orb_desc": "有権者はWorld ID Orbで確認する必要があります（最高保証）。",
     "privacy_quorum": "プライバシー定足数",
     "quorum_hint": "結果を公開するために必要な最低投票数。",
-    "deposit_matic": "ガスデポジット (MATIC)",
     "deposit_hint": "有権者のトランザクション手数料をカバーするための初期ガス。",
     "immutability_warning": "一度デプロイすると、選挙パラメータは変更できません。すべてを慎重に確認してください。",
     "deploy": "選挙をデプロイ",
     "deploy_confirm_title": "ブロックチェーンにデプロイ？",
-    "deploy_confirm_desc": "スマートコントラクトがデプロイされ、ガス残高から{{amount}} MATICが差し引かれます。",
-    "deploy_pending": "コントラクトをデプロイ中…"
+    "deploy_confirm_desc": "スマートコントラクトがデプロイされ、ガス残高から{{amount}} {{currency}}が差し引かれます。",
+    "deploy_pending": "コントラクトをデプロイ中…",
+    "witness_threshold_n": "必要な証人数 (N)",
+    "witness_threshold_hint": "承認に必要な最小賛成票数",
+    "yes_no_note": "この投票タイプは固定の賛成/反対の投票用紙を使用します。",
+    "deposit_token": "ガスデポジット ({{currency}})",
+    "leave_confirm_title": "変更を破棄しますか？",
+    "leave_confirm_desc": "このページを離れると変更内容は失われます。",
+    "discard_changes": "変更を破棄",
+    "separate_enrollment": "カスタム登録期間",
+    "separate_enrollment_desc": "登録の開始・締切日を自分で設定できます。締切は投票開始より前に設定できます。",
+    "enrollment_until_vote_start": "登録はデプロイ時から投票開始まで開いています。"
   },
   "election_mgmt": {
     "actions": "アクション",
@@ -294,26 +321,47 @@
     "close_confirm": "はい、終了する",
     "unlock_tally": "集計をロック解除",
     "tally_title": "結果集計をロック解除しますか？",
-    "tally_desc": "集計スクリプトが結果を復号して公開できるようになります。",
+    "tally_desc": "お使いの端末が集計結果を復号します。オンチェーンで公開する前に票数を確認できます。",
     "tally_confirm": "ロック解除",
     "cancel": "選挙を中止",
     "cancel_title": "この選挙を中止しますか？",
     "cancel_desc": "登録済みの有権者全員に通知されます。この操作は取り消せません。",
     "cancel_confirm": "はい、中止する",
     "view_results": "結果を見る",
-    "view_members": "メンバーを見る"
+    "view_members": "メンバーを見る",
+    "void_title": "選挙を無効化",
+    "void_confirm": "無効化",
+    "close_enrollment_early": "登録を早期に締め切る",
+    "close_enrollment_title": "今すぐ登録を締め切りますか？",
+    "close_enrollment_desc": "既に登録済みの全員について、投票が直ちに開始されます。",
+    "voting_closed_done": "投票を締め切りました",
+    "enrollment_closed_done": "登録を締め切りました",
+    "cancelled_done": "選挙を中止しました",
+    "voided_done": "選挙を無効にしました",
+    "tally_compute": "集計を計算",
+    "tally_computing": "復号中…",
+    "tally_publish": "結果を公開",
+    "tally_voters": "上書きされた票を除いて {{count}} 人の投票者",
+    "tally_quorum_short": "プライバシー定足数に未達です（{{quorum}} 中 {{voters}}）。公開せず無効にしてください。",
+    "tally_key_missing": "この選挙の復号鍵がこの端末にありません。選挙を作成した端末で Votain を開いてください。",
+    "results_published": "結果を公開しました",
+    "tally_publishing": "公開中…",
+    "export_key": "復号鍵をエクスポート（バックアップ）",
+    "key_exported": "復号鍵をエクスポートしました"
   },
   "gas": {
     "title": "ガス管理",
     "deposit_title": "ガスを入金",
-    "amount_matic": "金額 (MATIC)",
-    "amount_hint": "最低0.1 MATIC。各投票は約0.03 MATICかかります。",
-    "deposit_btn": "{{amount}} MATICを入金",
+    "amount_hint": "最低0.1 {{currency}}。各投票は約0.03 {{currency}}かかります。",
+    "deposit_btn": "{{amount}} {{currency}}を入金",
     "deposit_pending": "入金処理中…",
     "history": "トランザクション履歴",
     "deposit": "入金",
     "used": "使用済みガス",
-    "votes_remaining": "残り約{{count}}票"
+    "votes_remaining": "残り約{{count}}票",
+    "amount_token": "金額 ({{currency}})",
+    "withdraw": "出金",
+    "history_empty": "ガスの履歴はまだありません。"
   },
   "members": {
     "title": "登録メンバー",
@@ -339,7 +387,13 @@
     "sign_out_title": "サインアウトしますか？",
     "sign_out_desc": "ログイン画面に戻ります。",
     "sign_out_confirm": "サインアウト",
-    "signed_out": "サインアウトしました"
+    "signed_out": "サインアウトしました",
+    "this_device": "このデバイス",
+    "no_passkey": "このデバイスに登録されたパスキーはありません。",
+    "passkey_removed": "パスキーを削除しました",
+    "linked_wallet": "連携ウォレット",
+    "wallet_note": "取引の署名にのみ使用します。ログインはパスキーで行います。",
+    "no_wallet_linked": "まだウォレットが連携されていません。"
   },
   "tx": {
     "title_pending": "トランザクション処理中",
@@ -355,6 +409,23 @@
   "errors": {
     "not_found": "ページが見つかりません",
     "not_found_desc": "お探しのページは存在しないか、移動されました。",
-    "go_home": "ホームへ"
+    "go_home": "ホームへ",
+    "generic_title": "問題が発生しました"
+  },
+  "demo": {
+    "banner": "デモデータ — コントラクト未デプロイ。ここにあるものはオンチェーンではありません。"
+  },
+  "validation": {
+    "required": "この項目は必須です",
+    "threshold_min": "1 以上である必要があります",
+    "after_enroll_start": "登録開始より後である必要があります",
+    "after_enroll_end": "登録終了より前に開始できません",
+    "after_vote_start": "投票開始より後である必要があります",
+    "must_be_future": "未来の日時である必要があります",
+    "candidates_min": "名前付きの候補者を2人以上追加してください",
+    "candidates_unique": "候補者名は重複できません",
+    "quorum_min": "1 以上である必要があります",
+    "number_positive": "有効な0以上の数値を入力してください",
+    "fix_previous_steps": "必須項目が未入力または無効です。前のステップを確認してください。"
   }
 }

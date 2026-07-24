@@ -218,24 +218,24 @@ Each milestone produces a concrete artifact that the user validates before advan
 
 ## PHASE B. Real integration (H5 to H9)
 
-### Milestone 5. Production contracts + frontend client (4 to 6 days)
+### Milestone 5. Production contracts + frontend client ✅ CODE COMPLETE 2026-07 (Amoy deploy pending user key)
 
 Part A. Contracts: official Semaphore verifier, new functions (`cancelElection`, `closeEnrollmentEarly`, `closeVotingEarly`, `publishResults`, `markVoided`), `VotingType` enum (`SIMPLE_PLURALITY`, `ABSOLUTE_MAJORITY`, `SUPERMAJORITY_TWO_THIRDS`, `WITNESS_THRESHOLD`) + `thresholdValue` field on `ElectionV4` + per-type winner-determination logic in `publishResults`, coverage ≥80%, Amoy deploy + PolygonScan verify.
 Part B. Frontend: `src/lib/contracts.ts`, `src/lib/zerodev.ts`, `src/hooks/usePasskeys.ts`, `src/lib/semaphore.ts`, `src/lib/paillier.ts`.
 
-### Milestone 6. Complete backend issuer (3 to 4 days)
+### Milestone 6. Complete backend issuer ✅ COMPLETE 2026-07
 
 Status List 2021, SD-JWT presentation endpoint, tests, rate limiting. **Selective disclosure is delegated to World ID Credentials** (no need to implement passport NFC reading or PKI verification ourselves). Backend integrates IDKit's credential flow and keeps the demo issuer for users without a supported passport. SD-JWT VC schema (`country`, `ageOver18`, `region`) is normalised across both sources so the rest of the stack is identity-source agnostic.
 
-### Milestone 7. Voter flow real integration (5 to 7 days)
+### Milestone 7. Voter flow real integration ✅ COMPLETE 2026-07
 
 World ID + Enrollment + real ZK Proof + Vote + History.
 
-### Milestone 8. Organizer flow real integration (5 to 7 days)
+### Milestone 8. Organizer flow real integration ✅ COMPLETE 2026-07
 
 Real WebAuthn Passkey + Create Election tx + phase-gated controls.
 
-### Milestone 9. Tally script + IPFS results (3 to 4 days)
+### Milestone 9. Tally script + IPFS results ✅ COMPLETE 2026-07
 
 `tally-votes.ts`, Pinata, `publishResults`, Privacy Quorum. After the Paillier homomorphic sum is decrypted, branch on `VotingType` to compute the winner or Approved/Rejected verdict (most-votes / >50% / ≥2/3 / ≥N) and embed it in the published JSON.
 

@@ -18,7 +18,8 @@ import { EligibilityRow } from '../../components/ui/EligibilityRow';
 import { GasWidget } from '../../components/ui/GasWidget';
 import { BlockchainBadge, IPFSBadge } from '../../components/ui/BlockchainBadge';
 import { TransactionPendingModal, type TxState } from '../../components/ui/TransactionPendingModal';
-import { ToastProvider, useToast } from '../../components/ui/Toast';
+import { ToastProvider } from '../../components/ui/Toast';
+import { useToast } from '../../components/ui/useToast';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -66,8 +67,9 @@ export default function ComponentsShowcase() {
   const [inputVal, setInputVal] = useState('');
   const [txState, setTxState] = useState<TxState>('idle');
 
-  const futureDate = new Date(Date.now() + 45 * 60_000);
-  const urgentDate = new Date(Date.now() + 20 * 60_000);
+  // Snapshot once so render stays pure (showcase demo dates).
+  const [futureDate] = useState(() => new Date(Date.now() + 45 * 60_000));
+  const [urgentDate] = useState(() => new Date(Date.now() + 20 * 60_000));
 
   return (
     <ToastProvider>
@@ -263,9 +265,9 @@ export default function ComponentsShowcase() {
         </Section>
 
         <Section title="Gas Balance Widget">
-          <GasWidget balanceMatic={2.5} estimatedVotesLeft={84} className="w-72" />
-          <GasWidget balanceMatic={0.5} estimatedVotesLeft={16} onDeposit={() => {}} className="w-72" />
-          <GasWidget balanceMatic={0.05} estimatedVotesLeft={2} onDeposit={() => {}} className="w-72" />
+          <GasWidget balance={2.5} estimatedVotesLeft={84} className="w-72" />
+          <GasWidget balance={0.5} estimatedVotesLeft={16} onDeposit={() => {}} className="w-72" />
+          <GasWidget balance={0.05} estimatedVotesLeft={2} onDeposit={() => {}} className="w-72" />
         </Section>
 
         <Section title="Modal">

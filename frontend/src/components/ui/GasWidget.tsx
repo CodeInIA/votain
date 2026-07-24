@@ -1,10 +1,12 @@
 import { useTranslation } from 'react-i18next';
 import { Fuel, AlertTriangle, TrendingDown } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { chainInfo } from '../../lib/deployments';
 import { Button } from './Button';
 
 interface GasWidgetProps {
-  balanceMatic: number;
+  /** Sponsored gas balance, in the chain's native token. */
+  balance: number;
   estimatedVotesLeft?: number;
   onDeposit?: () => void;
   className?: string;
@@ -16,9 +18,9 @@ function getLevel(balance: number): 'good' | 'low' | 'critical' {
   return 'critical';
 }
 
-export function GasWidget({ balanceMatic, estimatedVotesLeft, onDeposit, className }: GasWidgetProps) {
+export function GasWidget({ balance, estimatedVotesLeft, onDeposit, className }: GasWidgetProps) {
   const { t } = useTranslation();
-  const level = getLevel(balanceMatic);
+  const level = getLevel(balance);
 
   return (
     <div className={cn(
@@ -50,7 +52,7 @@ export function GasWidget({ balanceMatic, estimatedVotesLeft, onDeposit, classNa
           level === 'low'      && 'text-yellow-300',
           level === 'critical' && 'text-error'
         )}>
-          {balanceMatic.toFixed(4)} MATIC
+          {balance.toFixed(4)} {chainInfo.currency}
         </p>
         {estimatedVotesLeft !== undefined && (
           <p className="text-xs text-on-surface-meta">

@@ -91,7 +91,9 @@
     "tallying": "计票中",
     "closed": "已关闭",
     "voided": "已作废",
-    "cancelled": "已取消"
+    "cancelled": "已取消",
+    "upcoming": "即将开始",
+    "pending_vote": "即将投票"
   },
   "badge": {
     "blockchain": "区块链已验证",
@@ -102,7 +104,11 @@
     "simple_plurality": "简单多数",
     "absolute_majority": "绝对多数",
     "two_thirds": "三分之二多数",
-    "witness_threshold": "见证人阈值"
+    "witness_threshold": "见证人阈值",
+    "simple_plurality_desc": "得票最多者获胜",
+    "absolute_majority_desc": "获胜者需超过 50% 的选票",
+    "two_thirds_desc": "赞成/反对 — 需至少 2/3 赞成票通过",
+    "witness_threshold_desc": "赞成/反对 — 需至少 N 个确认通过"
   },
   "discover": {
     "title": "选举",
@@ -139,7 +145,16 @@
     "top_up": "充值",
     "ends_in": "结束于",
     "vote_now": "立即投票",
-    "voted": "已投票"
+    "voted": "已投票",
+    "cta_tallying": "投票已结束，正在计票。",
+    "cta_voided": "本次选举已作废，将不会公布结果。",
+    "cta_cancelled": "本次选举已取消。",
+    "cta_not_enrolled": "报名在您加入前已截止，因此您无法参与本次投票。",
+    "enrollment_opens": "报名开放于",
+    "voting_opens": "投票开放于",
+    "cta_upcoming": "报名尚未开放。",
+    "cta_pending_vote": "报名已关闭，投票尚未开始。",
+    "starts_in": "开始于"
   },
   "how": {
     "title": "Votain 工作原理",
@@ -240,7 +255,9 @@
     "wallet_pending": "连接中…",
     "wrong_network": "网络错误",
     "wrong_network_desc": "请切换到 Polygon Amoy 继续。",
-    "switch_network": "切换到 Polygon Amoy"
+    "switch_network": "切换到 Polygon Amoy",
+    "no_wallet_title": "未检测到钱包",
+    "no_wallet_desc": "请安装 MetaMask（或其他 EVM 钱包）以组织者身份签名。"
   },
   "dashboard": {
     "title": "组织者仪表板",
@@ -253,7 +270,8 @@
     "votes_cast": "已投票",
     "quick_actions": "快速操作",
     "members": "成员",
-    "gas": "Gas 管理"
+    "gas": "Gas 管理",
+    "no_elections": "还没有选举。创建第一个。"
   },
   "create": {
     "title": "创建选举",
@@ -278,13 +296,22 @@
     "require_orb_desc": "选民必须使用 World ID Orb 进行验证（最高保障）。",
     "privacy_quorum": "隐私法定人数",
     "quorum_hint": "公布结果前所需的最低票数。",
-    "deposit_matic": "Gas 押金（MATIC）",
     "deposit_hint": "用于支付选民交易费用的初始 Gas。",
     "immutability_warning": "部署后，选举参数无法更改。请仔细检查所有内容。",
     "deploy": "部署选举",
     "deploy_confirm_title": "部署到区块链？",
-    "deploy_confirm_desc": "这将部署一个智能合约，并从您的 Gas 余额中扣除 {{amount}} MATIC。",
-    "deploy_pending": "正在部署合约…"
+    "deploy_confirm_desc": "这将部署一个智能合约，并从您的 Gas 余额中扣除 {{amount}} {{currency}}。",
+    "deploy_pending": "正在部署合约…",
+    "witness_threshold_n": "所需见证人 (N)",
+    "witness_threshold_hint": "批准所需的最少赞成票",
+    "yes_no_note": "此投票类型使用固定的赞成/反对选票。",
+    "deposit_token": "Gas 押金（{{currency}}）",
+    "leave_confirm_title": "放弃更改？",
+    "leave_confirm_desc": "如果离开此页面，您的更改将丢失。",
+    "discard_changes": "放弃更改",
+    "separate_enrollment": "自定义报名时段",
+    "separate_enrollment_desc": "自行设定报名的起止日期，截止时间可以早于投票开始。",
+    "enrollment_until_vote_start": "报名从部署开始一直开放，到投票开始时关闭。"
   },
   "election_mgmt": {
     "actions": "操作",
@@ -294,26 +321,47 @@
     "close_confirm": "是，结束",
     "unlock_tally": "解锁计票",
     "tally_title": "解锁结果计票？",
-    "tally_desc": "这将允许计票脚本解密并发布结果。",
+    "tally_desc": "您的设备将解密汇总结果。发布上链前，您可以先核对票数。",
     "tally_confirm": "解锁",
     "cancel": "取消选举",
     "cancel_title": "取消此选举？",
     "cancel_desc": "所有已报名选民将收到通知。此操作不可逆。",
     "cancel_confirm": "是，取消",
     "view_results": "查看结果",
-    "view_members": "查看成员"
+    "view_members": "查看成员",
+    "void_title": "作废选举",
+    "void_confirm": "作废",
+    "close_enrollment_early": "提前结束报名",
+    "close_enrollment_title": "现在结束报名？",
+    "close_enrollment_desc": "投票将立即为所有已报名者开始。",
+    "voting_closed_done": "投票已关闭",
+    "enrollment_closed_done": "报名已关闭",
+    "cancelled_done": "选举已取消",
+    "voided_done": "选举已作废",
+    "tally_compute": "计算票数",
+    "tally_computing": "正在解密…",
+    "tally_publish": "发布结果",
+    "tally_voters": "剔除被替代的选票后共 {{count}} 名选民",
+    "tally_quorum_short": "未达到隐私法定人数（{{voters}}/{{quorum}}）。请作废而非发布。",
+    "tally_key_missing": "本设备上没有此选举的解密密钥。请在创建该选举的设备上打开 Votain。",
+    "results_published": "结果已发布",
+    "tally_publishing": "正在发布…",
+    "export_key": "导出解密密钥（备份）",
+    "key_exported": "解密密钥已导出"
   },
   "gas": {
     "title": "Gas 管理",
     "deposit_title": "充值 Gas",
-    "amount_matic": "金额（MATIC）",
-    "amount_hint": "最低 0.1 MATIC。每次投票约需 0.03 MATIC。",
-    "deposit_btn": "充值 {{amount}} MATIC",
+    "amount_hint": "最低 0.1 {{currency}}。每次投票约需 0.03 {{currency}}。",
+    "deposit_btn": "充值 {{amount}} {{currency}}",
     "deposit_pending": "充值待处理…",
     "history": "交易历史",
     "deposit": "充值",
     "used": "已使用 Gas",
-    "votes_remaining": "剩余约 {{count}} 票"
+    "votes_remaining": "剩余约 {{count}} 票",
+    "amount_token": "金额（{{currency}}）",
+    "withdraw": "提现",
+    "history_empty": "暂无 gas 变动。"
   },
   "members": {
     "title": "已注册成员",
@@ -339,7 +387,13 @@
     "sign_out_title": "退出登录？",
     "sign_out_desc": "您将被带回登录页面。",
     "sign_out_confirm": "退出",
-    "signed_out": "已退出"
+    "signed_out": "已退出",
+    "this_device": "此设备",
+    "no_passkey": "此设备未注册通行密钥。",
+    "passkey_removed": "已移除通行密钥",
+    "linked_wallet": "已关联钱包",
+    "wallet_note": "仅用于签署交易。登录使用通行密钥。",
+    "no_wallet_linked": "尚未关联钱包。"
   },
   "tx": {
     "title_pending": "交易进行中",
@@ -355,6 +409,23 @@
   "errors": {
     "not_found": "页面未找到",
     "not_found_desc": "您访问的页面不存在或已移动。",
-    "go_home": "返回首页"
+    "go_home": "返回首页",
+    "generic_title": "出了点问题"
+  },
+  "demo": {
+    "banner": "演示数据 — 未部署合约。此处内容均不在链上。"
+  },
+  "validation": {
+    "required": "此字段为必填项",
+    "threshold_min": "至少为 1",
+    "after_enroll_start": "必须晚于报名开始时间",
+    "after_enroll_end": "不能早于报名结束时间",
+    "after_vote_start": "必须晚于投票开始时间",
+    "must_be_future": "必须是将来的时间",
+    "candidates_min": "请至少添加 2 位有姓名的候选人",
+    "candidates_unique": "候选人姓名必须唯一",
+    "quorum_min": "至少为 1",
+    "number_positive": "请输入有效的非负数",
+    "fix_previous_steps": "必填字段缺失或无效。请返回检查前面的步骤。"
   }
 }

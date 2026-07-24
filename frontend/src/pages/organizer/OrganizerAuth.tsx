@@ -6,38 +6,107 @@ import { KeyRound, Wallet, ChevronRight, ChevronLeft, AlertTriangle } from 'luci
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Button } from '../../components/ui/Button';
 import { Stepper } from '../../components/ui/Stepper';
-import { useToast } from '../../components/ui/Toast';
+import { useToast } from '../../components/ui/useToast';
 import { useAuth } from '../../contexts/AuthContext';
+import { useOrganizerWallet, getRememberedOrganizerAddress } from '../../hooks/useOrganizerWallet';
+import { authenticatePasskey } from '../../lib/passkeyPrf';
 
 export default function OrganizerAuth() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { toast } = useToast();
   const { setOrganizerLoggedIn } = useAuth();
+  const wallet = useOrganizerWallet();
   const [step, setStep] = useState(0);
   const [wrongNetwork, setWrongNetwork] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   const STEPS = [
     { label: t('org_auth.step_passkey') },
     { label: t('org_auth.step_wallet') },
   ];
 
-  const handlePasskey = () => {
-    toast({ title: t('org_auth.passkey_pending'), description: t('common.integration_pending'), variant: 'info' });
-    setTimeout(() => setStep(1), 1000);
+  const fail = (e: unknown) =>
+    toast({
+      title: t('errors.generic_title'),
+      description: e instanceof Error ? e.message : String(e),
+      variant: 'error',
+    });
+
+  /**
+   * Step 1 — real WebAuthn passkey. Registers one on first use, asserts it
+   * afterwards. Authentication NEVER falls back to a simulated pass: if the
+   * authenticator is unavailable or the user cancels, the step does not advance.
+   *
+   * Returning organizers sign in with the passkey ALONE: the wallet they linked
+   * on first login is remembered, and is only summoned again when a transaction
+   * actually needs signing. That is the whole point of a passkey.
+   */
+  const handlePasskey = async () => {
+    setBusy(true);
+    try {
+      await authenticatePasskey();
+      if (getRememberedOrganizerAddress()) {
+        finishLogin();       // returning organizer — no wallet prompt needed
+        return;
+      }
+      setStep(1);            // first time on this device — link a wallet
+    } catch (e) {
+      fail(e);
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const handleWallet = () => {
-    setWrongNetwork(true);
+  const finishLogin = () => {
+    setOrganizerLoggedIn(true);
+    navigate('/organizer/dashboard');
   };
 
-  const handleSwitchNetwork = () => {
-    setWrongNetwork(false);
-    toast({ title: t('org_auth.wallet_pending'), description: t('common.integration_pending'), variant: 'info' });
-    setTimeout(() => {
-      setOrganizerLoggedIn(true);
-      navigate('/organizer/dashboard');
-    }, 1000);
+  /**
+   * Step 2 — real wallet connection. Independent of whether contracts are
+   * deployed: an EOA is required to sign anything as an organizer.
+   */
+  const handleWallet = async () => {
+    if (!wallet.hasWallet) {
+      toast({
+        title: t('org_auth.no_wallet_title'),
+        description: t('org_auth.no_wallet_desc'),
+        variant: 'error',
+      });
+      return;
+    }
+    setBusy(true);
+    try {
+      const address = await wallet.connect();
+      if (!address) return; // user rejected — stay on this step
+      if (await wallet.isWrongNetwork()) {
+        setWrongNetwork(true);
+        return;
+      }
+      finishLogin();
+    } catch (e) {
+      fail(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleSwitchNetwork = async () => {
+    setBusy(true);
+    try {
+      await wallet.switchToAmoy();
+      if (await wallet.isWrongNetwork()) {
+        toast({ title: t('org_auth.wrong_network'), variant: 'error' });
+        return;
+      }
+      setWrongNetwork(false);
+      finishLogin();
+    } catch (e) {
+      fail(e);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -70,7 +139,7 @@ export default function OrganizerAuth() {
           {step === 0 && (
             <div className="flex flex-col gap-4">
               <p className="text-sm text-on-surface-variant text-center">{t('org_auth.passkey_desc')}</p>
-              <Button variant="gradient" size="lg" className="w-full rounded-full h-14 gap-2" onClick={handlePasskey}>
+              <Button variant="gradient" size="lg" className="w-full rounded-full h-14 gap-2" disabled={busy} onClick={handlePasskey}>
                 <KeyRound className="w-5 h-5" />
                 {t('org_auth.create_passkey')}
               </Button>
@@ -90,12 +159,12 @@ export default function OrganizerAuth() {
               )}
               <p className="text-sm text-on-surface-variant text-center">{t('org_auth.wallet_desc')}</p>
               {wrongNetwork ? (
-                <Button variant="gradient" size="lg" className="w-full rounded-full h-14 gap-2" onClick={handleSwitchNetwork}>
+                <Button variant="gradient" size="lg" className="w-full rounded-full h-14 gap-2" disabled={busy} onClick={handleSwitchNetwork}>
                   {t('org_auth.switch_network')}
                   <ChevronRight className="w-4 h-4" />
                 </Button>
               ) : (
-                <Button variant="default" size="lg" className="w-full rounded-full h-14 gap-2 border-white/10" onClick={handleWallet}>
+                <Button variant="default" size="lg" className="w-full rounded-full h-14 gap-2 border-white/10" disabled={busy} onClick={handleWallet}>
                   <Wallet className="w-5 h-5" />
                   {t('org_auth.connect_wallet')}
                 </Button>

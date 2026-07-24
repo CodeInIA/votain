@@ -29,7 +29,7 @@ export const issueSigner = async (
   privateKey: crypto.KeyObject
 ): Promise<string> => {
   const signature = crypto.sign(
-    null,                         // null = Ed25519 maneja el hash internamente
+    null,                         // null = Ed25519 handles the hash internally
     Buffer.from(data, 'utf-8'),
     privateKey
   );

@@ -18,6 +18,8 @@ contracts/typechain-types/
 contracts/types/
 contracts/coverage.json
 contracts/coverage/
+# Local deploy manifests are throwaway; amoy.json IS committed (frontend reads it)
+contracts/deployments/local.json
 
 # ------------- React Frontend -------------
 frontend/build/
@@ -31,3 +33,8 @@ frontend/*.tsbuildinfo
 backend/dist/
 backend/build/
 backend/logs/
+backend/data/status-list.json
+
+# ------------- Tally script -------------
+scripts-tally/paillier-key.json
+scripts-tally/tally-*.json

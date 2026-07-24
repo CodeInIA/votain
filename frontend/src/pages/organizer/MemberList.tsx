@@ -1,21 +1,27 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download, Users, Filter } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { Input, Select } from '../../components/ui/Input';
+import { Input } from '../../components/ui/Input';
+import { SelectMenu } from '../../components/ui/SelectMenu';
+import { Spinner } from '../../components/ui/Spinner';
 import { Badge } from '../../components/ui/Badge';
 import { Avatar } from '../../components/ui/Avatar';
 import { ELECTIONS } from '../../data/seed';
+import { useElections } from '../../hooks/useElections';
+import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
+import { fetchElectionMembers } from '../../lib/chainElections';
 
 interface Member {
   id: string;
   commitment: string;
-  enrolledAt: Date;
+  enrolledAt?: Date;
   electionId: string;
   electionTitle: string;
-  hasVoted: boolean;
+  /** Undefined on-chain (anonymity): cannot be linked to a commitment. */
+  hasVoted?: boolean;
 }
 
 const SEED_MEMBERS: Member[] = ELECTIONS.slice(0, 4).flatMap((e, ei) =>
@@ -31,25 +37,53 @@ const SEED_MEMBERS: Member[] = ELECTIONS.slice(0, 4).flatMap((e, ei) =>
 
 export default function MemberList() {
   const { t } = useTranslation();
+  const { elections: liveElections, live } = useElections();
+  const wallet = useOrganizerWallet();
   const [query, setQuery] = useState('');
   const [electionFilter, setElectionFilter] = useState('all');
+  const [members, setMembers] = useState<Member[]>(live ? [] : SEED_MEMBERS);
+  const [loading, setLoading] = useState(live);
 
-  const elections = useMemo(() => ELECTIONS.slice(0, 4), []);
+  // Live: only elections owned by the connected organizer.
+  const elections = useMemo(
+    () => live
+      ? liveElections.filter(e => e.organizerAddress.toLowerCase() === wallet.address?.toLowerCase())
+      : ELECTIONS.slice(0, 4),
+    [live, liveElections, wallet.address],
+  );
+
+  // `loading` starts true in live mode, so no synchronous setState is needed here.
+  useEffect(() => {
+    if (!live) return; // seed members are already the initial state
+    let cancelled = false;
+    void (async () => {
+      try {
+        const lists = await Promise.all(
+          elections.map(e => fetchElectionMembers(e.contractAddress, e.title)),
+        );
+        if (cancelled) return;
+        setMembers(lists.flat().map((m, i) => ({ id: `${m.electionId}-${i}`, ...m })));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [live, elections]);
 
   const filtered = useMemo(() => {
-    let list = SEED_MEMBERS;
+    let list = members;
     if (electionFilter !== 'all') list = list.filter(m => m.electionId === electionFilter);
     if (query.trim()) {
       const q = query.trim().toLowerCase();
       list = list.filter(m => m.commitment.toLowerCase().includes(q));
     }
     return list;
-  }, [query, electionFilter]);
+  }, [members, query, electionFilter]);
 
   const exportCSV = () => {
     const rows = [
-      ['Commitment', 'Election', 'Enrolled At', 'Has Voted'],
-      ...filtered.map(m => [m.commitment, m.electionTitle, m.enrolledAt.toISOString(), String(m.hasVoted)]),
+      ['Commitment', 'Election', 'Enrolled At'],
+      ...filtered.map(m => [m.commitment, m.electionTitle, m.enrolledAt?.toISOString() ?? '']),
     ];
     const csv = rows.map(r => r.join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -86,9 +120,9 @@ export default function MemberList() {
           </div>
           <div className="flex items-center gap-2 sm:w-64">
             <Filter className="w-4 h-4 text-on-surface-meta shrink-0" />
-            <Select
+            <SelectMenu
               value={electionFilter}
-              onChange={e => setElectionFilter(e.target.value)}
+              onChange={setElectionFilter}
               options={[
                 { value: 'all', label: t('members.all_elections') },
                 ...elections.map(e => ({ value: e.id, label: e.title })),
@@ -99,7 +133,9 @@ export default function MemberList() {
 
         {/* Member list */}
         <Card className="overflow-hidden">
-          {filtered.length === 0 ? (
+          {loading ? (
+            <div className="flex justify-center py-16"><Spinner /></div>
+          ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <Users className="w-10 h-10 text-on-surface-meta mb-3" />
               <p className="text-sm text-on-surface-meta">{t('members.empty')}</p>
@@ -114,10 +150,16 @@ export default function MemberList() {
                     <p className="text-xs text-on-surface-meta truncate">{m.electionTitle}</p>
                   </div>
                   <div className="text-right shrink-0">
-                    <Badge variant={m.hasVoted ? 'closed' : 'enrolling'}>
-                      {m.hasVoted ? t('members.voted') : t('members.enrolled')}
-                    </Badge>
-                    <p className="text-xs text-on-surface-meta mt-0.5">{m.enrolledAt.toLocaleDateString()}</p>
+                    {m.hasVoted !== undefined ? (
+                      <Badge variant={m.hasVoted ? 'closed' : 'enrolling'}>
+                        {m.hasVoted ? t('members.voted') : t('members.enrolled')}
+                      </Badge>
+                    ) : (
+                      <Badge variant="enrolling">{t('members.enrolled')}</Badge>
+                    )}
+                    {m.enrolledAt && (
+                      <p className="text-xs text-on-surface-meta mt-0.5">{m.enrolledAt.toLocaleDateString()}</p>
+                    )}
                   </div>
                 </div>
               ))}

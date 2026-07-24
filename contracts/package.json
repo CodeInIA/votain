@@ -10,7 +10,7 @@
     "test": "hardhat test",
     "build": "hardhat compile",
     "deploy:amoy": "hardhat run scripts/deploy.ts --network amoy",
-    "deploy:local": "hardhat run scripts/deploy.ts --network hardhat"
+    "deploy:local": "hardhat run scripts/deploy.ts"
   },
   "keywords": [
     "voting",

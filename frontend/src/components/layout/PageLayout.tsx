@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { TopNav } from './TopNav';
 import { BottomTabNav } from './BottomTabNav';
 import { Footer } from './Footer';
+import { DemoDataBanner } from './DemoDataBanner';
 import { cn } from '../../lib/utils';
 
 interface PageLayoutProps {
@@ -32,7 +33,9 @@ export function PageLayout({
           style={{ backgroundImage: "url('/landing-background.jpg')" }} />
       </div>
 
-      {showNav && <TopNav role={role} />}
+      <DemoDataBanner />
+
+      {showNav && <TopNav />}
 
       <main
         className={cn(

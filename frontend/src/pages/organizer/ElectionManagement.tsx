@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { XCircle, Clock, BarChart3, Users } from 'lucide-react';
+import { XCircle, Clock, BarChart3, Users, KeyRound } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
@@ -11,18 +11,35 @@ import { Modal } from '../../components/ui/Modal';
 import { Countdown } from '../../components/ui/Countdown';
 import { ResultBarChart } from '../../components/ui/BarChart';
 import { BlockchainBadge } from '../../components/ui/BlockchainBadge';
-import { useToast } from '../../components/ui/Toast';
-import { getElection } from '../../data/seed';
+import { Spinner } from '../../components/ui/Spinner';
+import { useToast } from '../../components/ui/useToast';
+import { useElection } from '../../hooks/useElections';
+import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
+import { cancelElection, closeVotingEarly, closeEnrollmentEarly, markVoided, publishResults } from '../../lib/organizer';
+import { computeTally, hasTallyKey, resolveTallyKey, MissingTallyKeyError, type TallyResult } from '../../lib/tally';
+import { nextBoundary, PULSE_PHASES } from '../../lib/phase';
 
 export default function ElectionManagement() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { toast } = useToast();
-  const election = getElection(id ?? '');
+  const wallet = useOrganizerWallet();
+  const { election, loading, live, refresh } = useElection(id);
   const [cancelModal, setCancelModal] = useState(false);
   const [closeModal, setCloseModal]   = useState(false);
   const [tallyModal, setTallyModal]   = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [tallyPreview, setTallyPreview] = useState<TallyResult | null>(null);
+  const [tallyError, setTallyError]     = useState<string | null>(null);
+
+  if (loading) {
+    return (
+      <PageLayout role="organizer" showNav>
+        <div className="flex items-center justify-center min-h-[60vh]"><Spinner /></div>
+      </PageLayout>
+    );
+  }
 
   if (!election) {
     return (
@@ -34,13 +51,110 @@ export default function ElectionManagement() {
     );
   }
 
-  const action = (msg: string) => {
-    toast({ title: msg, description: t('common.integration_pending'), variant: 'info' });
+  // Runs a lifecycle tx (live) or shows the "integration pending" toast (seed).
+  // `successLabel` states what happened ("Voting closed"), not what was asked
+  // ("Close voting now?") — the confirmation modal already asked the question.
+  const runAction = async (
+    successLabel: string,
+    fn: (signer: Awaited<ReturnType<typeof wallet.getSigner>>, address: string) => Promise<string>,
+    close: () => void,
+  ) => {
+    close();
+    if (!live) {
+      toast({ title: successLabel, description: t('common.integration_pending'), variant: 'info' });
+      return;
+    }
+    setBusy(true);
+    try {
+      if (wallet.wrongNetwork) await wallet.switchToAmoy();
+      const signer = await wallet.getSigner();
+      await fn(signer, election.contractAddress);
+      toast({ title: successLabel, variant: 'success' });
+      void refresh();
+    } catch (e) {
+      toast({ title: t('errors.generic_title'), description: e instanceof Error ? e.message : String(e), variant: 'error' });
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const canCancel  = ['enrolling', 'active'].includes(election.phase);
-  const canClose   = election.phase === 'active';
+  // Cancel is allowed any time before the election is decided (contract: before
+  // voteEnd), including before enrollment opens and in the pending-vote gap.
+  const canCancel  = ['upcoming', 'enrolling', 'pending_vote', 'active'].includes(election.phase);
+  const closingEnrollment = election.phase === 'enrolling';
+  // Only an *open* phase can be closed early: enrollment while enrolling, voting
+  // while active. Nothing to close in upcoming or the pending-vote gap.
+  const canClose   = ['enrolling', 'active'].includes(election.phase);
   const canTally   = election.phase === 'tallying';
+  const boundary   = nextBoundary(election);
+  // Known before the organizer clicks anything: without the key there is nothing
+  // to try, so say so up front instead of failing on the button press.
+  const tallyKeyPresent = hasTallyKey(election.contractAddress, election.keyNonce);
+
+  // Drop the decrypted counts on close so reopening always recomputes from the
+  // current chain state rather than showing a stale tally.
+  const closeTallyModal = () => {
+    setTallyModal(false);
+    setTallyPreview(null);
+    setTallyError(null);
+  };
+
+  const handleComputeTally = async () => {
+    setBusy(true);
+    setTallyError(null);
+    try {
+      setTallyPreview(await computeTally(election.contractAddress));
+    } catch (e) {
+      setTallyError(
+        e instanceof MissingTallyKeyError
+          ? t('election_mgmt.tally_key_missing')
+          : e instanceof Error ? e.message : String(e),
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Optional backup: download the decryption key so the tally can still be run
+  // from a device without the passkey (e.g. the offline CLI, or a hardware key
+  // that does not sync). The key is sensitive — this is an explicit action.
+  const handleExportKey = async () => {
+    setBusy(true);
+    setTallyError(null);
+    try {
+      const keys = await resolveTallyKey(election.contractAddress, election.keyNonce);
+      if (!keys) { setTallyError(t('election_mgmt.tally_key_missing')); return; }
+      const blob = new Blob([JSON.stringify(keys, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `votain-tally-key-${election.contractAddress}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: t('election_mgmt.key_exported'), variant: 'success' });
+    } catch (e) {
+      setTallyError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handlePublishResults = async () => {
+    if (!tallyPreview) return;
+    setBusy(true);
+    try {
+      if (wallet.wrongNetwork) await wallet.switchToAmoy();
+      const signer = await wallet.getSigner();
+      await publishResults(signer, election.contractAddress, tallyPreview.counts);
+      toast({ title: t('election_mgmt.results_published'), variant: 'success' });
+      closeTallyModal();
+      void refresh();
+    } catch (e) {
+      toast({ title: t('errors.generic_title'), description: e instanceof Error ? e.message : String(e), variant: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  };
   const hasResults = election.phase === 'closed' && election.candidates.some(c => c.votes !== undefined);
   const totalVotes = election.candidates.reduce((s, c) => s + (c.votes ?? 0), 0);
 
@@ -52,7 +166,7 @@ export default function ElectionManagement() {
         {/* Header */}
         <div className="mb-5">
           <div className="flex flex-wrap items-center gap-2 mb-2">
-            <Badge variant={election.phase as Parameters<typeof Badge>[0]['variant']} dot={election.phase === 'active' || election.phase === 'enrolling'}>
+            <Badge variant={election.phase as Parameters<typeof Badge>[0]['variant']} dot={PULSE_PHASES.has(election.phase)}>
               {t(`phase.${election.phase}`)}
             </Badge>
             <BlockchainBadge href={`https://amoy.polygonscan.com/address/${election.contractAddress}`} />
@@ -78,14 +192,12 @@ export default function ElectionManagement() {
           })}
         </div>
 
-        {/* Countdown */}
-        {(election.phase === 'active' || election.phase === 'enrolling') && (
+        {/* Countdown to the phase's next boundary (null in terminal phases). */}
+        {boundary && (
           <Card className="p-4 mb-4 flex items-center gap-4 flex-wrap">
             <div>
-              <p className="text-xs text-on-surface-meta mb-1">
-                {election.phase === 'enrolling' ? t('election.enrollment_closes') : t('election.voting_closes')}
-              </p>
-              <Countdown deadline={election.phase === 'enrolling' ? election.enrollEnd : election.voteEnd} size="md" />
+              <p className="text-xs text-on-surface-meta mb-1">{t(boundary.labelKey)}</p>
+              <Countdown deadline={boundary.deadline} size="md" />
             </div>
           </Card>
         )}
@@ -106,7 +218,7 @@ export default function ElectionManagement() {
             <Button variant="default" className="w-full rounded-2xl gap-2 border-warning/30 text-warning hover:bg-warning/10"
               onClick={() => setCloseModal(true)}>
               <Clock className="w-4 h-4" />
-              {t('election_mgmt.close_early')}
+              {t(closingEnrollment ? 'election_mgmt.close_enrollment_early' : 'election_mgmt.close_early')}
             </Button>
           )}
           {canTally && (
@@ -135,37 +247,101 @@ export default function ElectionManagement() {
             <Users className="w-4 h-4 mr-2" />
             {t('election_mgmt.view_members')}
           </Button>
+          {/* Back up the decryption key any time — most useful right after
+              creation, before the tallying phase (and the tally modal) exists. */}
+          {tallyKeyPresent && (
+            <Button variant="ghost" className="w-full rounded-2xl" disabled={busy}
+              onClick={handleExportKey}>
+              <KeyRound className="w-4 h-4 mr-2" />
+              {t('election_mgmt.export_key')}
+            </Button>
+          )}
         </Card>
 
         {/* Modals */}
         <Modal open={cancelModal} onClose={() => setCancelModal(false)}
           title={t('election_mgmt.cancel_title')} description={t('election_mgmt.cancel_desc')}>
           <div className="flex gap-3 mt-2">
-            <Button variant="ghost" className="flex-1" onClick={() => setCancelModal(false)}>{t('common.cancel')}</Button>
-            <Button variant="default" className="flex-1 border-error/30 text-error hover:bg-error/10"
-              onClick={() => { setCancelModal(false); action(t('election_mgmt.cancel_title')); }}>
+            <Button variant="ghost" className="flex-1" disabled={busy} onClick={() => setCancelModal(false)}>{t('common.cancel')}</Button>
+            <Button variant="default" className="flex-1 border-error/30 text-error hover:bg-error/10" disabled={busy}
+              onClick={() => runAction(t('election_mgmt.cancelled_done'), cancelElection, () => setCancelModal(false))}>
               {t('election_mgmt.cancel_confirm')}
             </Button>
           </div>
         </Modal>
         <Modal open={closeModal} onClose={() => setCloseModal(false)}
-          title={t('election_mgmt.close_title')} description={t('election_mgmt.close_desc')}>
+          title={t(closingEnrollment ? 'election_mgmt.close_enrollment_title' : 'election_mgmt.close_title')}
+          description={t(closingEnrollment ? 'election_mgmt.close_enrollment_desc' : 'election_mgmt.close_desc')}>
           <div className="flex gap-3 mt-2">
-            <Button variant="ghost" className="flex-1" onClick={() => setCloseModal(false)}>{t('common.cancel')}</Button>
-            <Button variant="gradient" className="flex-1"
-              onClick={() => { setCloseModal(false); action(t('election_mgmt.close_title')); }}>
+            <Button variant="ghost" className="flex-1" disabled={busy} onClick={() => setCloseModal(false)}>{t('common.cancel')}</Button>
+            <Button variant="gradient" className="flex-1" disabled={busy}
+              onClick={() => runAction(
+                closingEnrollment ? t('election_mgmt.enrollment_closed_done') : t('election_mgmt.voting_closed_done'),
+                closingEnrollment ? closeEnrollmentEarly : closeVotingEarly,
+                () => setCloseModal(false),
+              )}>
               {t('election_mgmt.close_confirm')}
             </Button>
           </div>
         </Modal>
-        <Modal open={tallyModal} onClose={() => setTallyModal(false)}
+        {/* Tallying phase: decrypt in the browser with the organizer's Paillier
+            key (which never leaves the device), review the counts, then sign the
+            publishing transaction. If the privacy quorum was not met the tally
+            must not be published — the election is voided instead. */}
+        <Modal open={tallyModal} onClose={closeTallyModal}
           title={t('election_mgmt.tally_title')} description={t('election_mgmt.tally_desc')}>
-          <div className="flex gap-3 mt-2">
-            <Button variant="ghost" className="flex-1" onClick={() => setTallyModal(false)}>{t('common.cancel')}</Button>
-            <Button variant="gradient" className="flex-1"
-              onClick={() => { setTallyModal(false); action(t('election_mgmt.tally_title')); }}>
-              {t('election_mgmt.tally_confirm')}
-            </Button>
+          <div className="flex flex-col gap-3 mt-2">
+            {tallyPreview && (
+              <div className="px-4 py-3 rounded-2xl bg-surface-lowest/60 border border-white/8 flex flex-col gap-2">
+                <p className="text-xs text-on-surface-meta">
+                  {t('election_mgmt.tally_voters', { count: tallyPreview.voters })}
+                </p>
+                {tallyPreview.counts.map((n, i) => (
+                  <div key={i} className="flex items-center justify-between text-sm">
+                    <span className="text-on-surface-variant truncate pr-3">
+                      {election.candidates[i]?.name ?? `#${i}`}
+                    </span>
+                    <span className="font-semibold text-on-surface tabular-nums">{n}</span>
+                  </div>
+                ))}
+                {!tallyPreview.quorumMet && (
+                  <p className="text-xs text-warning mt-1">
+                    {t('election_mgmt.tally_quorum_short', {
+                      voters: tallyPreview.voters,
+                      quorum: tallyPreview.privacyQuorum,
+                    })}
+                  </p>
+                )}
+              </div>
+            )}
+            {!tallyKeyPresent && (
+              <p className="text-xs text-warning">{t('election_mgmt.tally_key_missing')}</p>
+            )}
+            {tallyError && <p className="text-xs text-error">{tallyError}</p>}
+
+            <div className="flex gap-3">
+              <Button variant="ghost" className="flex-1" disabled={busy} onClick={closeTallyModal}>{t('common.close')}</Button>
+              {!tallyKeyPresent ? (
+                // Nothing actionable here, but the election can still be voided.
+                <Button variant="default" className="flex-1 border-error/30 text-error hover:bg-error/10" disabled={busy}
+                  onClick={() => runAction(t('election_mgmt.voided_done'), markVoided, () => setTallyModal(false))}>
+                  {t('election_mgmt.void_confirm')}
+                </Button>
+              ) : !tallyPreview ? (
+                <Button variant="gradient" className="flex-1" disabled={busy} onClick={handleComputeTally}>
+                  {busy ? t('election_mgmt.tally_computing') : t('election_mgmt.tally_compute')}
+                </Button>
+              ) : tallyPreview.quorumMet ? (
+                <Button variant="gradient" className="flex-1" disabled={busy} onClick={handlePublishResults}>
+                  {busy ? t('election_mgmt.tally_publishing') : t('election_mgmt.tally_publish')}
+                </Button>
+              ) : (
+                <Button variant="default" className="flex-1 border-error/30 text-error hover:bg-error/10" disabled={busy}
+                  onClick={() => runAction(t('election_mgmt.voided_done'), markVoided, () => setTallyModal(false))}>
+                  {t('election_mgmt.void_confirm')}
+                </Button>
+              )}
+            </div>
           </div>
         </Modal>
       </div>

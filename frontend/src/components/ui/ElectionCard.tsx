@@ -5,6 +5,7 @@ import { Badge } from './Badge';
 import { Countdown } from './Countdown';
 import { Button } from './Button';
 import { cn } from '../../lib/utils';
+import { nextBoundary } from '../../lib/phase';
 import type { Election, ElectionPhase } from '../../data/seed';
 
 function phaseVariant(phase: ElectionPhase) {
@@ -20,9 +21,9 @@ interface ElectionCardProps {
 export function ElectionCard({ election, voterView = false, className }: ElectionCardProps) {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  // Each waiting/live phase counts down to its own next boundary.
+  const deadline = nextBoundary(election)?.deadline;
   const isLive = election.phase === 'active' || election.phase === 'enrolling';
-  const showCountdown = isLive && (election.phase === 'active' ? election.voteEnd : election.enrollEnd);
-  const deadline = election.phase === 'active' ? election.voteEnd : election.enrollEnd;
   const pct = election.totalEnrolled > 0
     ? Math.round((election.castVotes / election.totalEnrolled) * 100)
     : 0;
@@ -76,10 +77,14 @@ export function ElectionCard({ election, voterView = false, className }: Electio
         </span>
       </div>
 
-      {/* Countdown for live elections */}
-      {showCountdown && (
+      {/* Countdown to this phase's next boundary */}
+      {deadline && (
         <div className="flex items-center gap-2">
-          <span className="text-xs text-on-surface-meta">{t('election.ends_in')}:</span>
+          <span className="text-xs text-on-surface-meta">
+            {(election.phase === 'upcoming' || election.phase === 'pending_vote')
+              ? t('election.starts_in')
+              : t('election.ends_in')}:
+          </span>
           <Countdown deadline={deadline} size="sm" />
         </div>
       )}

@@ -3,23 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, XCircle, AlertTriangle, Info, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
-
-export type ToastVariant = 'success' | 'error' | 'warning' | 'info';
-
-export interface ToastItem {
-  id: string;
-  title: string;
-  description?: string;
-  variant?: ToastVariant;
-  duration?: number;
-}
-
-interface ToastContextValue {
-  toast: (item: Omit<ToastItem, 'id'>) => void;
-  dismiss: (id: string) => void;
-}
-
-const ToastContext = React.createContext<ToastContextValue | null>(null);
+import { ToastContext, type ToastItem, type ToastVariant } from './useToast';
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = React.useState<ToastItem[]>([]);
@@ -43,12 +27,6 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {createPortal(<ToastList toasts={toasts} onDismiss={dismiss} />, document.body)}
     </ToastContext.Provider>
   );
-}
-
-export function useToast(): ToastContextValue {
-  const ctx = React.useContext(ToastContext);
-  if (!ctx) throw new Error('useToast must be used inside ToastProvider');
-  return ctx;
 }
 
 const ICONS: Record<ToastVariant, React.ReactNode> = {

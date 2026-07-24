@@ -27,6 +27,13 @@ export default defineConfig({
       url: process.env.AMOY_RPC_URL ?? "https://rpc-amoy.polygon.technology",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
+    // Local node (`npx hardhat node`) — lets the whole dApp run against a real
+    // chain without any funded key, using Hardhat's well-known dev accounts.
+    localhost: {
+      type: "http",
+      url: "http://127.0.0.1:8545",
+      chainId: 31337,
+    },
   },
   paths: {
     sources: "./contracts",

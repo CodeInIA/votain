@@ -1,6 +1,22 @@
 # Votain — Agent State
 
-## Current milestone: Phase A DONE ✅ (H4 + UX polish pass) — next up: H5 (Phase B)
+## Current milestone: post-Phase-B lifecycle + tally + UX pass ✅ — next up: live Amoy deploy
+
+### Post-Phase-B pass (2026-07)
+- Contract `phase()` now returns 8 states: added `UPCOMING` (before enrollment) and
+  `PENDING_VOTE` (enrollment closed, voting not open — only when `enrollEnd < voteStart`).
+  Fixed the early-close boundary (`< voteEnd`, was `<=`). +3 phase tests → 31/31.
+- **In-app tally**: organizer computes + publishes results from the app (browser Paillier
+  decrypt → wallet-signed `publishResults`). Key is **derived from the passkey PRF** with a
+  public per-election `keyNonce` in metadata — nothing stored at rest, re-derivable across
+  synced devices; export + offline CLI kept as backups. Deterministic Paillier keygen reuses
+  `bigint-crypto-utils` primality (`lib/tallyKey.ts`), validated standalone.
+- Organizer display name persisted (`votain_organizer_name`), used as `created by`.
+- Create-election: optional separate enrollment window, unsaved-changes guard, custom dark
+  `DatePicker` (Radix Popover) with time + native mobile fallback.
+- UX fixes: sign-in vs register routing, phase-driven CTAs, logged-in voter routing, sign-out
+  to landing, affirmative success toasts. Shared `lib/phase.ts` + `StatusNotice`; MemberList
+  dropdown → `SelectMenu`; eslint 0 problems (Fast-Refresh module splits).
 
 ## Completed milestones
 
@@ -119,27 +135,79 @@ Navigation works across all routes. Actions that need blockchain fire toast or s
 
 ---
 
-## Next: Phase B — Real integration
+## Phase B — Real integration ✅ CODE COMPLETE (2026-07, branch `phase-b/real-integration`)
 
-### H5 — Contracts production-ready on Amoy + frontend client
-- Replace MockVerifier with official Semaphore V4 verifier
-- Lock down ElectionPaymaster.sponsorVote
-- Add cancelElection, closeEnrollmentEarly, closeVotingEarly, publishResults, markVoided
-- Tests ≥80% coverage with solidity-coverage
-- deploy.ts → deployments/amoy.json
-- Deploy + verify on PolygonScan
-- src/lib/contracts.ts (ethers v6 + ABIs TypeChain + addresses)
-- src/lib/zerodev.ts (KernelAccount v3 + paymaster + bundler)
-- src/hooks/usePasskeys.ts (WebAuthn with @zerodev/passkey-validator)
+Implemented and green: contracts 28/28, backend 5/5, frontend 9/9, all typechecks + builds
+clean. Remaining step is a live Amoy deployment (needs the user's funded key + ZeroDev/Pinata
+accounts — see "Pending user actions").
 
-### H6 — Backend issuer
-- Selective disclosure attributes in SD-JWT
-- Status List 2021 endpoint
-- Rate limiting
-- Tests
+### H5 — Contracts production-ready + frontend client ✅
+**Contracts** (`ElectionV4` rewritten):
+- On-chain Semaphore group (LeanIMT via PoseidonT3) — `enroll(commitment)` gated to
+  PlatformRegistry-verified members; `castVote` validates the merkle root against the tree
+  (fixes the "any root accepted" hole), 1h grace for recently-superseded roots.
+- `VotingType` enum + `thresholdValue`; per-type outcome computed on-chain in `publishResults`.
+- Lifecycle: `cancelElection`, `closeEnrollmentEarly`, `closeVotingEarly`, `markVoided`,
+  `publishResults(cid, tally[])`. Terminal-state guards + `phase()` view.
+- `voteCiphertext` is `bytes` (Paillier ciphertexts exceed uint256); pubSignals apply
+  Semaphore's hash-to-field (`keccak >> 8`) to message+scope so official JS proofs verify.
+- Paillier public key + metadata JSON stored on-chain per election.
+- `ElectionPaymaster.sponsorVote` locked to configured EntryPoint v0.7 + trusted forwarder
+  (`setSponsors`, onlyOwner); added `withdraw`.
+- Official `SemaphoreVerifierV4` (Groth16) deployable; MockVerifier only for unit tests.
+- 28 tests, **94.4% line coverage**. `deploy.ts` deploys PoseidonT3 (deterministic CREATE2),
+  writes `contracts/deployments/<net>.json` AND mirrors it to `frontend/src/lib/deployments/`.
 
-### H7 — Real voter flow integration
-### H8 — Real organizer flow integration
-### H9 — Tally script + IPFS + results
+**Frontend client libs** (`src/lib/`):
+- `deployments.ts` — resolves addresses from manifest glob or VITE_* env; `isChainConfigured()`.
+- `contracts.ts` — ethers v6 clients + human-readable ABIs (factory/election/paymaster/registry).
+- `paillier.ts` — homomorphic ballot encoding (base-1e6 packing, blank = last option).
+- `semaphore.ts` — identity persistence, group from events, `computeNullifier` (Poseidon2, no
+  throwaway proof), `generateVoteProof` (point order matches ISemaphoreVerifier calldata).
+- `zerodev.ts` + `hooks/usePasskeys.ts` — Kernel v3.1 passkey smart accounts, sponsored UserOps.
+- `hooks/useOrganizerWallet.ts` — injected EOA + Amoy enforcement (add/switch chain).
+
+### H6 — Backend issuer ✅
+- `verify-human` registers `(nullifier, identityCommitment)` in PlatformRegistry on-chain
+  (`chain/registrar.ts`; skipped gracefully if unconfigured).
+- SD-JWT selective-disclosure attrs (`country`, `ageOver18`, `region`) via `sd/issuer.ts`.
+- Status List 2021 revocation (`status/statusList.ts`) + `credentialStatus` on every VC.
+- `routes/credentials.ts`: status list publication, admin revoke, issuer public key, `/present`
+  (SD-JWT presentation verify + revocation/expiry check).
+- `express-rate-limit` (global 120/min, verify-human 10/min). 5 tests.
+
+### H7 — Real voter flow ✅
+Chain-aware hooks (`useElections`, `useElection`) serve on-chain data when configured, seed
+otherwise. Discover/VoterElections/Preview/Detail/Results wired. Enroll = sponsored UserOp;
+ZkProofGeneration runs the real encrypt→proof→submit pipeline (`lib/voting.ts`); Confirmation
+shows the real tx + reference. History from VoteCast events (candidate hidden — anonymity).
+World ID verify creates the Semaphore identity and sends its commitment to the issuer.
+
+**Security hardening (2026-07-18)**: the Semaphore identity is derived on demand from a
+WebAuthn PRF passkey secret (`lib/passkeyPrf.ts`) — nothing sensitive at rest, XSS-proof;
+localStorage identity only as fallback when PRF is unsupported (never migrated once used).
+AuthContext reconciles the localStorage session flags against `/api/me` (voter, httpOnly
+cookie is source of truth) and `eth_accounts` (organizer) — spoofed flags get cleared.
+Known limitation for the thesis: the organizer's Paillier private key still lives in
+localStorage; production would seal it to a passkey the same way.
+
+### H8 — Real organizer flow ✅
+OrganizerAuth = MetaMask + Amoy enforcement. CreateElection deploys via factory with a freshly
+generated Paillier keypair (private key → localStorage; `lib/organizer.ts`). ElectionManagement
+runs real phase-gated txs. Gas deposit + balance real. Members from MemberEnrolled events.
+Dashboard filtered to the connected organizer.
+
+### H9 — Tally script ✅ (`scripts-tally/`)
+`tally-votes.ts`: VoteCast queryFilter → max-nonce-per-nullifier dedup (coercion resistance) →
+homomorphic Paillier sum → decrypt + unpack → privacy-quorum guard → per-type outcome →
+auditable JSON → optional Pinata pin (`--pin`) + `publishResults` on-chain (`--publish`).
+
+## Pending user actions (block a live Amoy run, not code)
+- Fund a deployer key with Amoy MATIC; set `contracts/.env` (PRIVATE_KEY, TRUSTED_FORWARDER
+  from ZeroDev) → `npm run deploy:amoy` → verify on PolygonScan.
+- ZeroDev dashboard: project RPC + passkey server URL → frontend `.env`.
+- Backend `.env`: REGISTRY_ADDRESS + REGISTRAR_PRIVATE_KEY (registry owner); Pinata JWT for tally.
+
+## Next: Phase C — Decentralized deployments
 ### H10 — Frontend on IPFS via Fleek CD
 ### H11 — Backend on Phala TEE

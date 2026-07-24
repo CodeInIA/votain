@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, type Transition } from 'framer-motion';
 import { CheckCircle2, XCircle, ExternalLink, RotateCcw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Button, buttonVariants } from './Button';
+import { Button } from './Button';
+import { buttonVariants } from './button-variants';
 import { Spinner } from './Spinner';
 import { cn } from '../../lib/utils';
 
@@ -24,12 +25,13 @@ interface TransactionPendingModalProps {
 }
 
 function usePrefersReducedMotion() {
-  const ref = useRef(
+  // Lazy state (not a ref) so the value is read purely during render.
+  const [reduced] = useState(() =>
     typeof window !== 'undefined'
       ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
       : false
   );
-  return ref.current;
+  return reduced;
 }
 
 export function TransactionPendingModal({

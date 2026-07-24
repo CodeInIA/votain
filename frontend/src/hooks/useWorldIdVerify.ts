@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { IDKit, orbLegacy, type IDKitResult } from '@worldcoin/idkit-core';
 import { useAuth } from '../contexts/AuthContext';
+import { getOrCreateIdentity } from '../lib/semaphore';
 
 export function useWorldIdVerify() {
   const [isLoadingQr, setIsLoadingQr] = useState(false);
@@ -16,11 +17,16 @@ export function useWorldIdVerify() {
 
   const handleVerify = async (proof: IDKitResult): Promise<void> => {
     try {
+      // Derive (or reuse) the voter's Semaphore identity from their passkey so
+      // the issuer can register its commitment on-chain alongside the World ID
+      // verification. May prompt the passkey — we're already in a user gesture.
+      const identity = await getOrCreateIdentity();
+
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/verify-human`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(proof),
+        body: JSON.stringify({ ...proof, identityCommitment: identity.commitment.toString() }),
       });
 
       if (!res.ok) {

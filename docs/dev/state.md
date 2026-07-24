@@ -1,8 +1,15 @@
 # Votain. Current Project State
 
-**Last updated**: 2026-07-15 (dependency refresh after Phase A merge to dev)
-**Completed milestone**: Phase A (H1–H4 + UX polish pass). All 24 screens implemented visually.
-**Next milestone**: H5. Production contracts on Amoy + frontend client.
+**Last updated**: 2026-07 (post-Phase-B lifecycle + tally + UX pass)
+**Completed milestone**: Phase B (H5–H9) — real integration code complete. Contracts, backend
+issuer, voter + organizer flows and tally all wired and green.
+**Since Phase B** (this pass): 8-phase lifecycle (`UPCOMING`/`PENDING_VOTE` added to the contract
+`phase()`), **in-app tally** with a Paillier key **derived from the organizer's passkey PRF**
+(nothing stored at rest; CLI kept as the auditor path), organizer display-name persistence,
+custom dark `DatePicker`, phase-aware voter/organizer/public screens, and shared phase helpers.
+Tests: contracts 31/31, backend 5/5, frontend 9/9; eslint clean, prod build OK.
+**Next milestone**: Live Amoy deployment (pending user's funded key + ZeroDev/Pinata accounts),
+then Phase C (H10 IPFS/Fleek, H11 Phala TEE).
 
 > Detailed milestone-by-milestone log lives in `docs/ai/state.md`. This file tracks module status,
 > dependency versions and environment.
@@ -140,3 +147,4 @@ The project is released under **AGPL-3.0** (was MIT until H0 cleanup). All `pack
 | H4 | 2026-05-26 | TransactionPendingModal, full i18n (13 locales), reduced-motion, E2E scaffold |
 | Phase A polish | 2026-07-15 | AuthContext (voter+organizer), auth-driven navigation, viewport layout (sticky header/pinned footer), Radix Select for LanguageSelector, themed scrollbars, i18n fixes, MemberList Select, tests green |
 | Deps refresh | 2026-07-15 | All 3 modules to latest: Hardhat 3.9.1, TS 7.0.2 (contracts+backend), sd-jwt 0.20 (OWF migration, types re-exported from core), IDKit 4.2, ethers 6.17, Vite 8.1.4. Frontend TS pinned at 6.0.3 (typescript-eslint constraint). All tests green |
+| H5–H9 (Phase B) | 2026-07 | Real integration. Contracts rewritten (on-chain Semaphore group, VotingType, lifecycle, locked paymaster, 94% cov); frontend chain client (`lib/{contracts,paillier,semaphore,zerodev,voting,organizer}.ts`, ZeroDev passkeys, chain-aware hooks); backend on-chain registrar + SD + Status List 2021 + `/present` + rate limiting; `scripts-tally/` homomorphic tally + IPFS. New `viem` (frontend) + `ethers`/`express-rate-limit` (backend) deps. Contracts 28/28, backend 5/5, frontend 9/9. Live Amoy deploy pending user key. Branch `phase-b/real-integration` |

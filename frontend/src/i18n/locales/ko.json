@@ -91,7 +91,9 @@
     "tallying": "집계 중",
     "closed": "종료",
     "voided": "무효",
-    "cancelled": "취소"
+    "cancelled": "취소",
+    "upcoming": "예정",
+    "pending_vote": "투표 곧"
   },
   "badge": {
     "blockchain": "블록체인 인증",
@@ -102,7 +104,11 @@
     "simple_plurality": "단순 다수결",
     "absolute_majority": "절대 다수결",
     "two_thirds": "3분의 2 다수결",
-    "witness_threshold": "증인 임계값"
+    "witness_threshold": "증인 임계값",
+    "simple_plurality_desc": "최다 득표자가 승리",
+    "absolute_majority_desc": "승자는 과반(50% 초과) 득표 필요",
+    "two_thirds_desc": "찬성/반대 — 2/3 이상 찬성으로 승인",
+    "witness_threshold_desc": "찬성/반대 — N명 이상 확인으로 승인"
   },
   "discover": {
     "title": "선거",
@@ -139,7 +145,16 @@
     "top_up": "충전",
     "ends_in": "종료까지",
     "vote_now": "지금 투표",
-    "voted": "투표함"
+    "voted": "투표함",
+    "cta_tallying": "투표가 종료되었습니다. 결과를 집계하고 있습니다.",
+    "cta_voided": "이 선거는 무효 처리되었습니다. 결과가 공개되지 않습니다.",
+    "cta_cancelled": "이 선거는 취소되었습니다.",
+    "cta_not_enrolled": "참여하기 전에 등록이 마감되어 이 선거에서는 투표할 수 없습니다.",
+    "enrollment_opens": "등록 시작",
+    "voting_opens": "투표 시작",
+    "cta_upcoming": "등록이 아직 열리지 않았습니다.",
+    "cta_pending_vote": "등록이 마감되었습니다. 투표가 아직 시작되지 않았습니다.",
+    "starts_in": "시작까지"
   },
   "how": {
     "title": "Votain 작동 방식",
@@ -240,7 +255,9 @@
     "wallet_pending": "연결 중…",
     "wrong_network": "잘못된 네트워크",
     "wrong_network_desc": "계속하려면 Polygon Amoy로 전환하세요.",
-    "switch_network": "Polygon Amoy로 전환"
+    "switch_network": "Polygon Amoy로 전환",
+    "no_wallet_title": "지갑이 감지되지 않음",
+    "no_wallet_desc": "주최자로 서명하려면 MetaMask(또는 다른 EVM 지갑)를 설치하세요."
   },
   "dashboard": {
     "title": "주최자 대시보드",
@@ -253,7 +270,8 @@
     "votes_cast": "투표 수",
     "quick_actions": "빠른 작업",
     "members": "회원",
-    "gas": "가스 관리"
+    "gas": "가스 관리",
+    "no_elections": "아직 선거가 없습니다. 첫 번째를 만드세요."
   },
   "create": {
     "title": "선거 만들기",
@@ -278,13 +296,22 @@
     "require_orb_desc": "유권자는 World ID Orb로 인증해야 합니다 (최고 보증).",
     "privacy_quorum": "프라이버시 정족수",
     "quorum_hint": "결과 공개 전 필요한 최소 투표 수.",
-    "deposit_matic": "가스 보증금 (MATIC)",
     "deposit_hint": "유권자 트랜잭션 수수료를 충당하기 위한 초기 가스.",
     "immutability_warning": "배포 후에는 선거 매개변수를 변경할 수 없습니다. 모든 것을 주의 깊게 검토하세요.",
     "deploy": "선거 배포",
     "deploy_confirm_title": "블록체인에 배포하시겠습니까?",
-    "deploy_confirm_desc": "스마트 계약이 배포되고 가스 잔액에서 {{amount}} MATIC이 차감됩니다.",
-    "deploy_pending": "계약 배포 중…"
+    "deploy_confirm_desc": "스마트 계약이 배포되고 가스 잔액에서 {{amount}} {{currency}}이 차감됩니다.",
+    "deploy_pending": "계약 배포 중…",
+    "witness_threshold_n": "필요한 증인 수 (N)",
+    "witness_threshold_hint": "승인에 필요한 최소 찬성표",
+    "yes_no_note": "이 투표 유형은 고정된 찬성/반대 투표용지를 사용합니다.",
+    "deposit_token": "가스 보증금 ({{currency}})",
+    "leave_confirm_title": "변경 사항을 취소하시겠습니까?",
+    "leave_confirm_desc": "이 페이지를 나가면 변경 사항이 저장되지 않습니다.",
+    "discard_changes": "변경 사항 취소",
+    "separate_enrollment": "맞춤 등록 기간",
+    "separate_enrollment_desc": "등록 시작·마감일을 직접 설정하세요. 마감은 투표 시작 전으로 지정할 수 있습니다.",
+    "enrollment_until_vote_start": "등록은 배포 시점부터 투표 시작 전까지 열려 있습니다."
   },
   "election_mgmt": {
     "actions": "작업",
@@ -294,26 +321,47 @@
     "close_confirm": "예, 종료",
     "unlock_tally": "집계 잠금 해제",
     "tally_title": "결과 집계를 잠금 해제하시겠습니까?",
-    "tally_desc": "집계 스크립트가 결과를 복호화하고 게시할 수 있습니다.",
+    "tally_desc": "기기에서 집계 결과를 복호화합니다. 온체인에 공개하기 전에 득표수를 확인할 수 있습니다.",
     "tally_confirm": "잠금 해제",
     "cancel": "선거 취소",
     "cancel_title": "이 선거를 취소하시겠습니까?",
     "cancel_desc": "등록된 유권자 모두에게 알림이 전송됩니다. 이 작업은 되돌릴 수 없습니다.",
     "cancel_confirm": "예, 취소",
     "view_results": "결과 보기",
-    "view_members": "회원 보기"
+    "view_members": "회원 보기",
+    "void_title": "선거 무효화",
+    "void_confirm": "무효화",
+    "close_enrollment_early": "등록 조기 마감",
+    "close_enrollment_title": "지금 등록을 마감하시겠습니까?",
+    "close_enrollment_desc": "이미 등록된 모든 사람에 대해 투표가 즉시 시작됩니다.",
+    "voting_closed_done": "투표가 마감되었습니다",
+    "enrollment_closed_done": "등록이 마감되었습니다",
+    "cancelled_done": "선거가 취소되었습니다",
+    "voided_done": "선거가 무효 처리되었습니다",
+    "tally_compute": "개표 계산",
+    "tally_computing": "복호화 중…",
+    "tally_publish": "결과 공개",
+    "tally_voters": "대체된 표를 제외하고 {{count}}명의 유권자",
+    "tally_quorum_short": "프라이버시 정족수 미달({{quorum}} 중 {{voters}}). 공개 대신 무효 처리하세요.",
+    "tally_key_missing": "이 선거의 복호화 키가 이 기기에 없습니다. 선거를 만든 기기에서 Votain을 열어 주세요.",
+    "results_published": "결과가 공개되었습니다",
+    "tally_publishing": "공개하는 중…",
+    "export_key": "복호화 키 내보내기(백업)",
+    "key_exported": "복호화 키를 내보냈습니다"
   },
   "gas": {
     "title": "가스 관리",
     "deposit_title": "가스 입금",
-    "amount_matic": "금액 (MATIC)",
-    "amount_hint": "최소 0.1 MATIC. 각 투표는 약 0.03 MATIC 소요.",
-    "deposit_btn": "{{amount}} MATIC 입금",
+    "amount_hint": "최소 0.1 {{currency}}. 각 투표는 약 0.03 {{currency}} 소요.",
+    "deposit_btn": "{{amount}} {{currency}} 입금",
     "deposit_pending": "입금 처리 중…",
     "history": "트랜잭션 기록",
     "deposit": "입금",
     "used": "사용된 가스",
-    "votes_remaining": "약 {{count}}표 남음"
+    "votes_remaining": "약 {{count}}표 남음",
+    "amount_token": "금액 ({{currency}})",
+    "withdraw": "출금",
+    "history_empty": "가스 내역이 없습니다."
   },
   "members": {
     "title": "등록된 회원",
@@ -339,7 +387,13 @@
     "sign_out_title": "로그아웃하시겠습니까?",
     "sign_out_desc": "로그인 화면으로 돌아갑니다.",
     "sign_out_confirm": "로그아웃",
-    "signed_out": "로그아웃됨"
+    "signed_out": "로그아웃됨",
+    "this_device": "이 기기",
+    "no_passkey": "이 기기에 등록된 패스키가 없습니다.",
+    "passkey_removed": "패스키가 삭제되었습니다",
+    "linked_wallet": "연결된 지갑",
+    "wallet_note": "거래 서명에만 사용됩니다. 로그인은 패스키로 합니다.",
+    "no_wallet_linked": "연결된 지갑이 없습니다."
   },
   "tx": {
     "title_pending": "트랜잭션 진행 중",
@@ -355,6 +409,23 @@
   "errors": {
     "not_found": "페이지를 찾을 수 없음",
     "not_found_desc": "찾고 있는 페이지가 존재하지 않거나 이동되었습니다.",
-    "go_home": "홈으로 이동"
+    "go_home": "홈으로 이동",
+    "generic_title": "문제가 발생했습니다"
+  },
+  "demo": {
+    "banner": "데모 데이터 — 배포된 컨트랙트 없음. 여기 있는 것은 온체인이 아닙니다."
+  },
+  "validation": {
+    "required": "필수 항목입니다",
+    "threshold_min": "최소 1 이상이어야 합니다",
+    "after_enroll_start": "등록 시작 이후여야 합니다",
+    "after_enroll_end": "등록 종료 전에 시작할 수 없습니다",
+    "after_vote_start": "투표 시작 이후여야 합니다",
+    "must_be_future": "미래 시점이어야 합니다",
+    "candidates_min": "이름이 있는 후보를 2명 이상 추가하세요",
+    "candidates_unique": "후보 이름은 중복될 수 없습니다",
+    "quorum_min": "최소 1 이상이어야 합니다",
+    "number_positive": "유효한 0 이상의 숫자를 입력하세요",
+    "fix_previous_steps": "필수 항목이 없거나 잘못되었습니다. 이전 단계를 확인하세요."
   }
 }

@@ -1,0 +1,21 @@
+{
+  "name": "votain-tally",
+  "version": "1.0.0",
+  "description": "Off-chain homomorphic tally + IPFS publication for Votain elections",
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "scripts": {
+    "tally": "tsx tally-votes.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "ethers": "^6.17.0",
+    "paillier-bigint": "^3.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "tsx": "^4.23.1",
+    "typescript": "^7.0.2"
+  }
+}

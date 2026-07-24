@@ -27,14 +27,14 @@
                                               │ queryFilter(VoteCast)
                                               ▼
                                ┌──────────────────────────────────┐
-                               │   TALLY SCRIPT (off-chain)       │
-                               │   scripts-tally/tally-votes.ts   │
+                               │   TALLY (in-app or off-chain CLI) │
+                               │   in browser · scripts-tally/     │
                                │                                   │
                                │  1. Filter VoteCast by nonce     │
                                │  2. Sum ciphertexts (Paillier)   │
-                               │  3. Decrypt with organizer key   │
+                               │  3. Decrypt w/ passkey-derived key│
                                │  4. Generate auditable JSON      │
-                               │  5. Pin to IPFS (Pinata free)    │
+                               │  5. Pin to IPFS (CLI only)       │
                                │  6. publishResults(cid, tally)  │
                                └──────────────────────────────────┘
 ```
@@ -76,14 +76,15 @@
    → Contract only counts the vote with the highest nonce per nullifier
    → Coerced user can vote again "under pressure" without revealing the previous vote
 
-6. TALLY
-   Organizer runs scripts-tally/tally-votes.ts
-   → Filters VoteCast events, keeps max nonce per nullifier
-   → Homomorphic sum of ciphertexts (Paillier)
-   → Decrypts with organizer's private key (stored with passkey)
-   → If votes < Privacy Quorum → Voided
-   → Publishes JSON to IPFS (Pinata)
-   → Calls ElectionV4.publishResults(cid, tally)
+6. TALLY (two interchangeable paths — same pipeline)
+   a) In-app (default): organizer opens the election → Compute tally → Publish.
+      Decryption runs in the browser; the Paillier key is DERIVED on demand from
+      the organizer's passkey PRF (public per-election keyNonce in metadata),
+      never stored at rest. Publishing is a wallet-signed publishResults tx.
+   b) Offline CLI (auditor path): scripts-tally/tally-votes.ts recomputes the
+      same result independently and pins the audit JSON to IPFS (Pinata).
+   Both: keep max nonce per nullifier → homomorphic sum → decrypt → if
+   votes < Privacy Quorum → Voided; else publishResults(cid, tally).
 ```
 
 ## Module breakdown
@@ -101,11 +102,18 @@
 
 | Route | Purpose |
 |-------|---------|
-| `POST /api/verify-human` | Verify World ID proof + issue SD-JWT |
+| `POST /api/verify-human` | Verify World ID proof, issue SD-JWT, register voter on-chain |
 | `POST /api/rp-signature` | Sign World ID request (DEVELOPER_KEY) |
 | `GET /api/me` | Return active session from cookie |
 | `POST /api/logout` | Invalidate cookie |
+| `GET /api/credentials/status/:listId` | Publish the Status List 2021 revocation credential |
+| `POST /api/credentials/status/:listId/revoke` | Revoke a credential by index (admin) |
+| `GET /api/issuer/public-key` | Issuer public key (for verifiers) |
+| `POST /api/present` | Verify an SD-JWT selective-disclosure presentation |
 | `GET /health` | Health check |
+
+Backend modules: `sd/issuer.ts` (SD-JWT issue/verify), `status/statusList.ts`
+(revocation bitstring), `chain/registrar.ts` (on-chain member registration).
 
 ### frontend/ (stich.md screens)
 
@@ -143,11 +151,22 @@
 
 ## Election state machine
 
+`ElectionV4.phase()` derives the phase from the timestamps (plus the terminal
+flags). `PENDING_VOTE` only occurs when a separate enrollment window leaves a gap
+(`enrollEnd < voteStart`); with no gap it collapses away.
+
 ```
-Draft → Enrollment → Active → Tallying → Closed (Approved / Rejected)
-                  ↓          ↓
-               Cancelled   Voided (Privacy Quorum not reached)
+Upcoming → Enrolling → PendingVote → Active → Tallying → Closed (Approved / Rejected)
+└──────────── any pre-decision phase ────────┘    │
+                     ↓                             ↓
+                 Cancelled                       Voided (Privacy Quorum not reached)
 ```
+
+- **Upcoming** — deployed, enrollment not open yet (`now < enrollStart`).
+- **Enrolling** — enrollment open (`enrollStart ≤ now < enrollEnd`).
+- **PendingVote** — enrollment closed, voting not open (`enrollEnd ≤ now < voteStart`).
+- **Active / Tallying** — voting open / ended, awaiting results.
+- **Closed / Voided / Cancelled** — terminal (results published / quorum unmet / cancelled).
 
 ## Voting types
 
@@ -160,7 +179,7 @@ Each election declares one of four winner-determination rules. The cryptographic
 | `SUPERMAJORITY_TWO_THIRDS` | yes-votes ≥ ⌈2/3⌉ of total eligible voters | Bylaw changes |
 | `WITNESS_THRESHOLD` | yes-votes ≥ N (absolute number) | Wedding (N=4 testigos), multi-sig |
 
-The `ElectionV4` contract stores `VotingType votingType` and `uint thresholdValue` (used only for `WITNESS_THRESHOLD`). `publishResults` enforces the rule on chain after the off-chain tally script decrypts the homomorphic sum.
+The `ElectionV4` contract stores `VotingType votingType` and `uint thresholdValue` (used only for `WITNESS_THRESHOLD`). `publishResults` enforces the rule on chain after the tally (in-app or CLI) decrypts the homomorphic sum.
 
 ## Identity sources for selective disclosure
 

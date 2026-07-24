@@ -7,19 +7,22 @@ import { ElectionCard } from '../../components/ui/ElectionCard';
 import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
 import { Skeleton } from '../../components/ui/Skeleton';
-import { ELECTIONS, type ElectionPhase } from '../../data/seed';
+import { useElections } from '../../hooks/useElections';
+import { useAuth } from '../../contexts/AuthContext';
+import { type ElectionPhase } from '../../data/seed';
 
 const PHASE_FILTERS: ElectionPhase[] = ['enrolling', 'active', 'tallying', 'closed'];
 
 export default function Discover() {
   const { t } = useTranslation();
+  const { voterLoggedIn } = useAuth();
   const [query, setQuery]           = useState('');
   const [phase, setPhase]           = useState<ElectionPhase | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-  const [loading]                   = useState(false);
+  const { elections, loading }      = useElections();
 
   const filtered = useMemo(() => {
-    return ELECTIONS.filter(e => {
+    return elections.filter(e => {
       const matchPhase = phase ? e.phase === phase : true;
       const matchQuery = query.trim()
         ? e.title.toLowerCase().includes(query.toLowerCase()) ||
@@ -27,7 +30,7 @@ export default function Discover() {
         : true;
       return matchPhase && matchQuery;
     });
-  }, [query, phase]);
+  }, [elections, query, phase]);
 
   return (
     <PageLayout role="public" showNav>
@@ -112,7 +115,7 @@ export default function Discover() {
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filtered.map(e => (
-                <ElectionCard key={e.id} election={e} />
+                <ElectionCard key={e.id} election={e} voterView={voterLoggedIn} />
               ))}
             </div>
           </>

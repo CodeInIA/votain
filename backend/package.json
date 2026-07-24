@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
-    "build": "tsc"
+    "build": "tsc",
+    "test": "node --import tsx --test src/**/*.test.ts"
   },
   "keywords": [
     "world-id",
@@ -24,7 +25,9 @@
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
-    "express": "^5.2.1"
+    "ethers": "^6.17.0",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.6.0"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",

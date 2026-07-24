@@ -9,13 +9,26 @@ import { Card } from '../../components/ui/Card';
 import { Countdown } from '../../components/ui/Countdown';
 import { BlockchainBadge } from '../../components/ui/BlockchainBadge';
 import { EligibilityRow } from '../../components/ui/EligibilityRow';
-import { getElection } from '../../data/seed';
+import { Spinner } from '../../components/ui/Spinner';
+import { StatusNotice } from '../../components/ui/StatusNotice';
+import { useElection } from '../../hooks/useElections';
+import { useAuth } from '../../contexts/AuthContext';
+import { PULSE_PHASES } from '../../lib/phase';
 
 export default function ElectionPreview() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const election = getElection(id ?? '');
+  const { voterLoggedIn } = useAuth();
+  const { election, loading } = useElection(id);
+
+  if (loading) {
+    return (
+      <PageLayout role="public" showNav>
+        <div className="flex items-center justify-center min-h-[60vh]"><Spinner /></div>
+      </PageLayout>
+    );
+  }
 
   if (!election) {
     return (
@@ -30,8 +43,75 @@ export default function ElectionPreview() {
   }
 
   const isActive   = election.phase === 'active';
-  const isClosed   = ['closed', 'voided', 'cancelled'].includes(election.phase);
   const hasResults = election.phase === 'closed' && election.ipfsCid;
+
+  const voterPage = `/voter/election/${election.id}`;
+
+  const infoPanel = (message: string) => <StatusNotice message={message} />;
+
+  const ctaButton = (label: string, to: string) => (
+    <Button variant="gradient" className="w-full sm:w-auto rounded-full px-6" onClick={() => navigate(to)}>
+      {label}
+    </Button>
+  );
+
+  /**
+   * The footer CTA depends on the election's phase and — for the live phases —
+   * on what this voter can actually do next. A terminal phase offers the same
+   * thing to everyone, so those are resolved before the auth check.
+   */
+  const renderCta = () => {
+    switch (election.phase) {
+      case 'upcoming':
+        return infoPanel(t('election.cta_upcoming'));
+      case 'pending_vote':
+        return infoPanel(t('election.cta_pending_vote'));
+      case 'cancelled':
+        return infoPanel(t('election.cta_cancelled'));
+      case 'voided':
+        return infoPanel(t('election.cta_voided'));
+      case 'closed':
+        return hasResults
+          ? (
+            <Button variant="default" className="w-full sm:w-auto rounded-full"
+              onClick={() => navigate(`/election/${election.id}/results`)}>
+              {t('election.view_results')}
+              <ExternalLink className="w-4 h-4 ml-2" />
+            </Button>
+          )
+          : infoPanel(t('results.not_available'));
+      case 'tallying':
+        return infoPanel(t('election.cta_tallying'));
+    }
+
+    // Live phases (enrolling / active) — these need a verified identity.
+    if (!voterLoggedIn) {
+      return (
+        <div className="bg-surface-low/30 backdrop-blur-xl rounded-3xl border border-white/5 p-5 flex flex-col sm:flex-row items-center gap-4">
+          <div className="flex items-center gap-3">
+            <Lock className="w-5 h-5 text-on-surface-meta shrink-0" />
+            <p className="text-sm text-on-surface-variant">{t('election.auth_cta')}</p>
+          </div>
+          <Button variant="gradient" className="w-full sm:w-auto rounded-full px-6"
+            onClick={() => navigate('/voter/onboarding')}>
+            {t('election.verify_to_vote')}
+          </Button>
+        </div>
+      );
+    }
+
+    if (election.phase === 'enrolling') {
+      return election.isEnrolled
+        ? infoPanel(t('election.already_enrolled'))
+        : ctaButton(t('election.enroll'), voterPage);
+    }
+
+    // active
+    if (election.hasVoted) return ctaButton(t('election.change_vote'), voterPage);
+    if (election.isEnrolled) return ctaButton(t('election.vote_now'), voterPage);
+    // Enrollment closed before this voter joined — they cannot vote here.
+    return infoPanel(t('election.cta_not_enrolled'));
+  };
 
   return (
     <PageLayout role="public" showNav>
@@ -41,7 +121,7 @@ export default function ElectionPreview() {
         {/* Title block */}
         <div className="mb-6">
           <div className="flex flex-wrap items-center gap-2 mb-3">
-            <Badge variant={election.phase as Parameters<typeof Badge>[0]['variant']} dot={isActive || election.phase === 'enrolling'}>
+            <Badge variant={election.phase as Parameters<typeof Badge>[0]['variant']} dot={PULSE_PHASES.has(election.phase)}>
               {t(`phase.${election.phase}`)}
             </Badge>
             <BlockchainBadge href={`https://amoy.polygonscan.com/address/${election.contractAddress}`} />
@@ -111,24 +191,7 @@ export default function ElectionPreview() {
         </Card>
 
         {/* CTA */}
-        {!isClosed ? (
-          <div className="bg-surface-low/30 backdrop-blur-xl rounded-3xl border border-white/5 p-5 flex flex-col sm:flex-row items-center gap-4">
-            <div className="flex items-center gap-3">
-              <Lock className="w-5 h-5 text-on-surface-meta shrink-0" />
-              <p className="text-sm text-on-surface-variant">{t('election.auth_cta')}</p>
-            </div>
-            <Button variant="gradient" className="w-full sm:w-auto rounded-full px-6"
-              onClick={() => navigate('/voter/onboarding')}>
-              {t('election.verify_to_vote')}
-            </Button>
-          </div>
-        ) : hasResults ? (
-          <Button variant="default" className="w-full sm:w-auto rounded-full"
-            onClick={() => navigate(`/election/${election.id}/results`)}>
-            {t('election.view_results')}
-            <ExternalLink className="w-4 h-4 ml-2" />
-          </Button>
-        ) : null}
+        {renderCta()}
       </div>
     </PageLayout>
   );

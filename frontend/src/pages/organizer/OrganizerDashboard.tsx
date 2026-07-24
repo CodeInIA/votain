@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Plus, Vote, Users, TrendingUp, Settings } from 'lucide-react';
@@ -6,13 +7,43 @@ import { Button } from '../../components/ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { GasWidget } from '../../components/ui/GasWidget';
-import { ELECTIONS } from '../../data/seed';
+import { Spinner } from '../../components/ui/Spinner';
+import { useElections } from '../../hooks/useElections';
+import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
+import { getGasBalance } from '../../lib/organizer';
+import { PULSE_PHASES } from '../../lib/phase';
+
+/** Approximate native-token cost of one sponsored vote. */
+const VOTE_COST = 0.03;
 
 export default function OrganizerDashboard() {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { elections, loading, live } = useElections();
+  const wallet = useOrganizerWallet();
+  const [gasBalance, setGasBalance] = useState(live ? 0 : 2.5);
 
-  const myElections = ELECTIONS.slice(0, 4);
+  // Real sponsored-gas balance for the connected organizer.
+  useEffect(() => {
+    if (!live || !wallet.address) return;
+    const organizer = wallet.address;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { formatEther } = await import('ethers');
+        const balance = await getGasBalance(organizer);
+        if (!cancelled) setGasBalance(Number(formatEther(balance)));
+      } catch (e) {
+        console.error('Could not read gas balance:', e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [live, wallet.address]);
+
+  // Live: only elections created by the connected organizer. Seed: first few.
+  const myElections = live
+    ? elections.filter(e => e.organizerAddress.toLowerCase() === wallet.address?.toLowerCase())
+    : elections.slice(0, 4);
   const totalEnrolled = myElections.reduce((s, e) => s + e.totalEnrolled, 0);
   const totalVotes    = myElections.reduce((s, e) => s + e.castVotes, 0);
   const activeCount   = myElections.filter(e => e.phase === 'active').length;
@@ -71,31 +102,41 @@ export default function OrganizerDashboard() {
                 </button>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="divide-y divide-white/5">
-                  {myElections.map(e => (
-                    <button
-                      key={e.id}
-                      type="button"
-                      onClick={() => navigate(`/organizer/election/${e.id}`)}
-                      className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-white/3 transition-colors text-left cursor-pointer"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-on-surface truncate">{e.title}</p>
-                        <p className="text-xs text-on-surface-meta">{e.totalEnrolled.toLocaleString()} enrolled · {e.castVotes.toLocaleString()} votes</p>
-                      </div>
-                      <Badge variant={e.phase as Parameters<typeof Badge>[0]['variant']} dot={e.phase === 'active' || e.phase === 'enrolling'}>
-                        {t(`phase.${e.phase}`)}
-                      </Badge>
-                    </button>
-                  ))}
-                </div>
+                {loading ? (
+                  <div className="flex justify-center py-10"><Spinner /></div>
+                ) : myElections.length === 0 ? (
+                  <p className="px-5 py-8 text-center text-sm text-on-surface-meta">{t('dashboard.no_elections')}</p>
+                ) : (
+                  <div className="divide-y divide-white/5">
+                    {myElections.map(e => (
+                      <button
+                        key={e.id}
+                        type="button"
+                        onClick={() => navigate(`/organizer/election/${e.id}`)}
+                        className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-white/3 transition-colors text-left cursor-pointer"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-on-surface truncate">{e.title}</p>
+                          <p className="text-xs text-on-surface-meta">{e.totalEnrolled.toLocaleString()} enrolled · {e.castVotes.toLocaleString()} votes</p>
+                        </div>
+                        <Badge variant={e.phase as Parameters<typeof Badge>[0]['variant']} dot={PULSE_PHASES.has(e.phase)}>
+                          {t(`phase.${e.phase}`)}
+                        </Badge>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
 
           {/* Sidebar */}
           <div className="flex flex-col gap-4">
-            <GasWidget balanceMatic={2.5} estimatedVotesLeft={84} onDeposit={() => navigate('/organizer/gas')} />
+            <GasWidget
+              balance={gasBalance}
+              estimatedVotesLeft={Math.floor(gasBalance / VOTE_COST)}
+              onDeposit={() => navigate('/organizer/gas')}
+            />
 
             <Card className="p-4">
               <h3 className="text-sm font-semibold text-on-surface mb-3">{t('dashboard.quick_actions')}</h3>

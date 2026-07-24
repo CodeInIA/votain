@@ -91,7 +91,9 @@
     "tallying": "فرز الأصوات",
     "closed": "مغلق",
     "voided": "ملغى",
-    "cancelled": "ملغى"
+    "cancelled": "ملغى",
+    "upcoming": "قريبًا",
+    "pending_vote": "التصويت قريبًا"
   },
   "badge": {
     "blockchain": "موثق على البلوكتشين",
@@ -102,7 +104,11 @@
     "simple_plurality": "الأغلبية البسيطة",
     "absolute_majority": "الأغلبية المطلقة",
     "two_thirds": "أغلبية الثلثين",
-    "witness_threshold": "عتبة الشهود"
+    "witness_threshold": "عتبة الشهود",
+    "simple_plurality_desc": "يفوز الحاصل على أكثر الأصوات",
+    "absolute_majority_desc": "يحتاج الفائز إلى أكثر من 50% من الأصوات",
+    "two_thirds_desc": "نعم/لا — يُعتمد بثلثي الأصوات على الأقل",
+    "witness_threshold_desc": "نعم/لا — يُعتمد بـ N تأكيدات على الأقل"
   },
   "discover": {
     "title": "الانتخابات",
@@ -139,7 +145,16 @@
     "top_up": "إضافة رصيد",
     "ends_in": "ينتهي خلال",
     "vote_now": "صوت الآن",
-    "voted": "صوّتوا"
+    "voted": "صوّتوا",
+    "cta_tallying": "انتهى التصويت. يجري فرز النتائج.",
+    "cta_voided": "تم إبطال هذه الانتخابات. لن يتم نشر أي نتائج.",
+    "cta_cancelled": "تم إلغاء هذه الانتخابات.",
+    "cta_not_enrolled": "أُغلق التسجيل قبل انضمامك، لذا لا يمكنك التصويت في هذه الانتخابات.",
+    "enrollment_opens": "يفتح التسجيل",
+    "voting_opens": "يفتح التصويت",
+    "cta_upcoming": "لم يُفتح التسجيل بعد.",
+    "cta_pending_vote": "التسجيل مغلق. لم يبدأ التصويت بعد.",
+    "starts_in": "يبدأ خلال"
   },
   "how": {
     "title": "كيف يعمل Votain",
@@ -240,7 +255,9 @@
     "wallet_pending": "جارٍ الاتصال…",
     "wrong_network": "شبكة خاطئة",
     "wrong_network_desc": "يرجى التبديل إلى Polygon Amoy للمتابعة.",
-    "switch_network": "التبديل إلى Polygon Amoy"
+    "switch_network": "التبديل إلى Polygon Amoy",
+    "no_wallet_title": "لم يتم اكتشاف محفظة",
+    "no_wallet_desc": "ثبّت MetaMask (أو محفظة EVM أخرى) للتوقيع كمنظّم."
   },
   "dashboard": {
     "title": "لوحة تحكم المنظم",
@@ -253,7 +270,8 @@
     "votes_cast": "الأصوات المدلى بها",
     "quick_actions": "إجراءات سريعة",
     "members": "الأعضاء",
-    "gas": "إدارة الغاز"
+    "gas": "إدارة الغاز",
+    "no_elections": "لا توجد انتخابات بعد. أنشئ الأول."
   },
   "create": {
     "title": "إنشاء انتخاب",
@@ -278,13 +296,22 @@
     "require_orb_desc": "يجب على الناخبين التحقق باستخدام World ID Orb.",
     "privacy_quorum": "النصاب القانوني للخصوصية",
     "quorum_hint": "الحد الأدنى من الأصوات قبل الكشف عن النتائج.",
-    "deposit_matic": "وديعة الغاز (MATIC)",
     "deposit_hint": "غاز أولي لتغطية رسوم معاملات الناخبين.",
     "immutability_warning": "بمجرد النشر، لا يمكن تغيير معاملات الانتخاب. راجع كل شيء بعناية.",
     "deploy": "نشر الانتخاب",
     "deploy_confirm_title": "نشر على البلوكتشين؟",
-    "deploy_confirm_desc": "سيتم نشر عقد ذكي وخصم {{amount}} MATIC من رصيدك.",
-    "deploy_pending": "جارٍ نشر العقد…"
+    "deploy_confirm_desc": "سيتم نشر عقد ذكي وخصم {{amount}} {{currency}} من رصيدك.",
+    "deploy_pending": "جارٍ نشر العقد…",
+    "witness_threshold_n": "الشهود المطلوبون (N)",
+    "witness_threshold_hint": "الحد الأدنى لأصوات نعم للموافقة",
+    "yes_no_note": "يستخدم نوع التصويت هذا بطاقة نعم / لا ثابتة.",
+    "deposit_token": "وديعة الغاز ({{currency}})",
+    "leave_confirm_title": "تجاهل التغييرات؟",
+    "leave_confirm_desc": "ستفقد التغييرات إذا غادرت هذه الصفحة.",
+    "discard_changes": "تجاهل التغييرات",
+    "separate_enrollment": "نافذة تسجيل مخصصة",
+    "separate_enrollment_desc": "حدّد تواريخ التسجيل الخاصة بك، مع موعد نهائي يمكن أن يسبق بدء التصويت.",
+    "enrollment_until_vote_start": "التسجيل مفتوح من وقت النشر حتى بدء التصويت."
   },
   "election_mgmt": {
     "actions": "الإجراءات",
@@ -294,26 +321,47 @@
     "close_confirm": "نعم، أغلق",
     "unlock_tally": "فتح الفرز",
     "tally_title": "فتح فرز النتائج؟",
-    "tally_desc": "سيسمح هذا لسكريبت الفرز بفك تشفير ونشر النتائج.",
+    "tally_desc": "سيقوم جهازك بفك تشفير النتيجة المجمّعة. يمكنك مراجعة الأعداد قبل نشرها على السلسلة.",
     "tally_confirm": "فتح",
     "cancel": "إلغاء الانتخاب",
     "cancel_title": "إلغاء هذا الانتخاب؟",
     "cancel_desc": "سيتم إخطار جميع الناخبين المسجلين. لا يمكن التراجع عن هذا الإجراء.",
     "cancel_confirm": "نعم، ألغِ",
     "view_results": "عرض النتائج",
-    "view_members": "عرض الأعضاء"
+    "view_members": "عرض الأعضاء",
+    "void_title": "إبطال الانتخاب",
+    "void_confirm": "إبطال",
+    "close_enrollment_early": "إغلاق التسجيل مبكرًا",
+    "close_enrollment_title": "إغلاق التسجيل الآن؟",
+    "close_enrollment_desc": "سيبدأ التصويت فورًا لجميع المسجلين بالفعل.",
+    "voting_closed_done": "أُغلق التصويت",
+    "enrollment_closed_done": "أُغلق التسجيل",
+    "cancelled_done": "أُلغيت الانتخابات",
+    "voided_done": "أُبطلت الانتخابات",
+    "tally_compute": "احسب الفرز",
+    "tally_computing": "جارٍ فك التشفير…",
+    "tally_publish": "نشر النتائج",
+    "tally_voters": "{{count}} ناخبًا بعد إزالة الأصوات المستبدلة",
+    "tally_quorum_short": "لم يتحقق نصاب الخصوصية ({{voters}} من {{quorum}}). أبطل الانتخابات بدلاً من النشر.",
+    "tally_key_missing": "مفتاح فك تشفير هذه الانتخابات غير موجود على هذا الجهاز. افتح Votain على الجهاز الذي أنشأت به الانتخابات.",
+    "results_published": "تم نشر النتائج",
+    "tally_publishing": "جارٍ النشر…",
+    "export_key": "تصدير مفتاح فك التشفير (نسخة احتياطية)",
+    "key_exported": "تم تصدير مفتاح فك التشفير"
   },
   "gas": {
     "title": "إدارة الغاز",
     "deposit_title": "إيداع الغاز",
-    "amount_matic": "المبلغ (MATIC)",
-    "amount_hint": "الحد الأدنى 0.1 MATIC. تكلف كل عملية تصويت حوالي 0.03 MATIC.",
-    "deposit_btn": "إيداع {{amount}} MATIC",
+    "amount_hint": "الحد الأدنى 0.1 {{currency}}. تكلف كل عملية تصويت حوالي 0.03 {{currency}}.",
+    "deposit_btn": "إيداع {{amount}} {{currency}}",
     "deposit_pending": "الإيداع قيد الانتظار…",
     "history": "سجل المعاملات",
     "deposit": "إيداع",
     "used": "الغاز المستخدم",
-    "votes_remaining": "~{{count}} صوتاً متبقياً"
+    "votes_remaining": "~{{count}} صوتاً متبقياً",
+    "amount_token": "المبلغ ({{currency}})",
+    "withdraw": "سحب",
+    "history_empty": "لا توجد حركات غاز بعد."
   },
   "members": {
     "title": "الأعضاء المسجلون",
@@ -339,7 +387,13 @@
     "sign_out_title": "تسجيل الخروج؟",
     "sign_out_desc": "ستعود إلى شاشة تسجيل الدخول.",
     "sign_out_confirm": "خروج",
-    "signed_out": "تم تسجيل الخروج"
+    "signed_out": "تم تسجيل الخروج",
+    "this_device": "هذا الجهاز",
+    "no_passkey": "لا يوجد مفتاح مرور مسجّل على هذا الجهاز.",
+    "passkey_removed": "تم حذف مفتاح المرور",
+    "linked_wallet": "المحفظة المرتبطة",
+    "wallet_note": "تُستخدم فقط لتوقيع المعاملات. تسجيل الدخول يتم بمفتاح المرور.",
+    "no_wallet_linked": "لا توجد محفظة مرتبطة بعد."
   },
   "tx": {
     "title_pending": "المعاملة قيد التنفيذ",
@@ -355,6 +409,23 @@
   "errors": {
     "not_found": "الصفحة غير موجودة",
     "not_found_desc": "الصفحة التي تبحث عنها غير موجودة أو تم نقلها.",
-    "go_home": "الذهاب للرئيسية"
+    "go_home": "الذهاب للرئيسية",
+    "generic_title": "حدث خطأ ما"
+  },
+  "demo": {
+    "banner": "بيانات تجريبية — لا توجد عقود منشورة. لا شيء هنا على السلسلة."
+  },
+  "validation": {
+    "required": "هذا الحقل مطلوب",
+    "threshold_min": "يجب أن يكون 1 على الأقل",
+    "after_enroll_start": "يجب أن يكون بعد بدء التسجيل",
+    "after_enroll_end": "لا يمكن أن يبدأ قبل انتهاء التسجيل",
+    "after_vote_start": "يجب أن يكون بعد بدء التصويت",
+    "must_be_future": "يجب أن يكون في المستقبل",
+    "candidates_min": "أضف مرشحَين على الأقل بأسماء",
+    "candidates_unique": "يجب أن تكون أسماء المرشحين فريدة",
+    "quorum_min": "يجب أن يكون 1 على الأقل",
+    "number_positive": "أدخل رقماً صالحاً وغير سالب",
+    "fix_previous_steps": "حقول مطلوبة مفقودة أو غير صالحة. ارجع وراجع الخطوات السابقة."
   }
 }

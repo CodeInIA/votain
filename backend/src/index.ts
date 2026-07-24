@@ -2,7 +2,9 @@ import './env.js';
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import rateLimit from 'express-rate-limit';
 import verifyRouter from './routes/verify.js';
+import credentialsRouter from './routes/credentials.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -19,7 +21,15 @@ app.use(cors(
 app.use(express.json());
 app.use(cookieParser());
 
+// Global API rate limit + a stricter one for the expensive verification path
+app.use('/api', rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: true, legacyHeaders: false }));
+app.use(
+  '/api/verify-human',
+  rateLimit({ windowMs: 60_000, limit: 10, standardHeaders: true, legacyHeaders: false }),
+);
+
 app.use('/api', verifyRouter);
+app.use('/api', credentialsRouter);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'Votain VC Issuer Backend is running' });

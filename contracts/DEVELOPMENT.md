@@ -11,24 +11,32 @@
 - `@openzeppelin/contracts` ^5.6.1
 - `@semaphore-protocol/contracts` ^4.14.3
 
-## Contracts
+## Contracts (Phase B — production-ready)
 
 | Contract | Description |
 |----------|-------------|
-| ElectionV4.sol | Single election: ERC-2771, Semaphore V4, Paillier vote, coercion resistance via nullifier+nonce |
-| ElectionFactory.sol | Deploys ElectionV4, manages MATIC deposit for Paymaster |
-| ElectionPaymaster.sol | ERC-4337 Paymaster. Sponsors gas for verified voters |
-| PlatformRegistry.sol | Identity commitment registry with owner access control |
-| mocks/MockVerifier.sol | Fake verifier for local tests. Replace with official Semaphore in H5 |
+| ElectionV4.sol | Single election. On-chain Semaphore V4 group (LeanIMT/PoseidonT3), `enroll` gated to PlatformRegistry members, `castVote` (bytes Paillier ciphertext) with merkle-root validation + coercion resistance (nullifier+nonce), `VotingType` enum + `thresholdValue`, lifecycle (cancel/closeEarly/void/publishResults with per-type outcome). ERC-2771 meta-tx. |
+| ElectionFactory.sol | Deploys ElectionV4 from a `Config` struct, routes MATIC deposit to the paymaster, enumerable `getElections(offset, limit)`. |
+| ElectionPaymaster.sol | Gas tank. `sponsorVote` locked to configured EntryPoint v0.7 + trusted forwarder (`setSponsors`, onlyOwner); `depositFor` / `withdraw`. |
+| PlatformRegistry.sol | Identity-commitment registry (issuer-owned). Gates enrollment. |
+| vendor/SemaphoreVerifierVendor.sol | `SemaphoreVerifierV4` — official Groth16 verifier (production). |
+| mocks/MockVerifier.sol | Always-true verifier, unit tests only. |
+
+**External library**: `PoseidonT3` (poseidon-solidity) is linked into ElectionV4/Factory. The
+deploy script deploys it deterministically (CREATE2) so it lands at the same address on every chain.
 
 ## Commands
 
 ```bash
-npx hardhat test
+npx hardhat test                    # 28 tests
+npx hardhat test --coverage         # 94.4% line coverage report → coverage/
 npx hardhat compile
-npx hardhat run scripts/deploy.ts --network hardhat
-npx hardhat run scripts/deploy.ts --network amoy
+npm run deploy:local                # in-process network
+npm run deploy:amoy                 # Polygon Amoy (needs .env PRIVATE_KEY)
 ```
+
+The deploy script writes `deployments/<network>.json` AND mirrors it into
+`frontend/src/lib/deployments/` so the frontend client picks up the addresses automatically.
 
 ## Config
 
@@ -42,13 +50,13 @@ npx hardhat run scripts/deploy.ts --network amoy
 
 ```
 AMOY_RPC_URL=https://rpc-amoy.polygon.technology
-PRIVATE_KEY=0x...    # deployer key. Never commit.
+PRIVATE_KEY=0x...          # deployer key (also PlatformRegistry owner). Never commit.
+TRUSTED_FORWARDER=0x...    # ZeroDev ERC-2771 forwarder on Amoy (else falls back to deployer)
+ENTRYPOINT_ADDRESS=        # optional, defaults to canonical EntryPoint v0.7
+USE_REAL_VERIFIER=true     # optional, use SemaphoreVerifierV4 on a local net too
 ```
 
-## Technical debt (see `docs/dev/state.md`)
+## Remaining (needs user)
 
-- Replace `MockVerifier` with official Semaphore V4 verifier (H5).
-- Add missing functions: `cancelElection`, `closeEnrollmentEarly`, `closeVotingEarly`, `publishResults`, `markVoided` (H5).
-- Coverage >= 80% with `solidity-coverage` (H5).
-- Deploy and verify on PolygonScan Amoy (H5).
-- Lock down `ElectionPaymaster.sponsorVote` to ERC-4337 EntryPoint + ZeroDev forwarder (H5).
+- Live Amoy deploy + PolygonScan verification (needs a funded `PRIVATE_KEY` and the ZeroDev
+  `TRUSTED_FORWARDER`). Everything else is done.

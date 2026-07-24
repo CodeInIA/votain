@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { KeyRound, Trash2, LogOut, User, Plus, Info, FileText, Shield } from 'lucide-react';
+import { KeyRound, Trash2, LogOut, User, Wallet, Info, FileText, Shield } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -9,46 +9,42 @@ import { BackButton } from '../../components/ui/BackButton';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
 import { LanguageSelector } from '../../components/ui/LanguageSelector';
-import { useToast } from '../../components/ui/Toast';
+import { useToast } from '../../components/ui/useToast';
 import { useAuth } from '../../contexts/AuthContext';
-
-interface PasskeyEntry {
-  id: string;
-  name: string;
-  createdAt: Date;
-  lastUsed: Date;
-}
-
-const SEED_PASSKEYS: PasskeyEntry[] = [
-  { id: 'pk1', name: 'MacBook Pro — Touch ID', createdAt: new Date(Date.now() - 30 * 86_400_000), lastUsed: new Date(Date.now() - 86_400_000) },
-  { id: 'pk2', name: 'iPhone 15 Pro — Face ID', createdAt: new Date(Date.now() - 15 * 86_400_000), lastUsed: new Date() },
-];
+import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
+import { getPasskeyInfo, clearPrfCredential } from '../../lib/passkeyPrf';
+import { getOrganizerName, setOrganizerName } from '../../lib/organizer';
 
 export default function OrganizerProfile() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { toast } = useToast();
   const { organizerSignOut } = useAuth();
+  const wallet = useOrganizerWallet();
 
-  const [displayName, setDisplayName] = useState('VotainOrg');
+  const [displayName, setDisplayName] = useState(getOrganizerName);
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(displayName);
-  const [passkeys, setPasskeys] = useState<PasskeyEntry[]>(SEED_PASSKEYS);
-  const [deleteModal, setDeleteModal] = useState<string | null>(null);
+  // The single passkey actually registered on this device (null if none).
+  const [passkey, setPasskey] = useState(() => getPasskeyInfo());
+  const [deleteModal, setDeleteModal] = useState(false);
   const [signOutModal, setSignOutModal] = useState(false);
 
   const saveName = () => {
-    setDisplayName(nameInput.trim() || displayName);
+    const next = nameInput.trim() || displayName;
+    setOrganizerName(next);
+    setDisplayName(next);
     setEditingName(false);
   };
 
-  const removePasskey = (id: string) => {
-    setPasskeys(p => p.filter(k => k.id !== id));
-    setDeleteModal(null);
-  };
-
-  const addPasskey = () => {
-    toast({ title: t('profile.add_passkey_pending'), description: t('common.integration_pending'), variant: 'info' });
+  /** Removing the passkey ends the session — it *is* the login credential. */
+  const removePasskey = () => {
+    clearPrfCredential();
+    setPasskey(null);
+    setDeleteModal(false);
+    organizerSignOut();
+    toast({ title: t('profile.passkey_removed'), variant: 'info' });
+    setTimeout(() => navigate('/organizer/auth', { replace: true }), 600);
   };
 
   const signOut = () => {
@@ -98,43 +94,53 @@ export default function OrganizerProfile() {
           )}
         </Card>
 
-        {/* Passkeys */}
+        {/* Passkey — the real credential registered on this device */}
         <Card className="p-5 mb-4">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-on-surface flex items-center gap-2">
-              <KeyRound className="w-4 h-4 text-primary" />
-              {t('profile.passkeys')}
-            </h2>
-            <button
-              type="button"
-              onClick={addPasskey}
-              className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              {t('profile.add_passkey')}
-            </button>
-          </div>
+          <h2 className="text-sm font-semibold text-on-surface flex items-center gap-2 mb-4">
+            <KeyRound className="w-4 h-4 text-primary" />
+            {t('profile.passkeys')}
+          </h2>
 
-          <div className="flex flex-col gap-2">
-            {passkeys.map(pk => (
-              <div key={pk.id} className="flex items-center gap-3 p-3 rounded-xl bg-surface-high/40">
-                <KeyRound className="w-4 h-4 text-on-surface-meta shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-on-surface">{pk.name}</p>
-                  <p className="text-xs text-on-surface-meta">
-                    {t('profile.last_used')} {pk.lastUsed.toLocaleDateString()}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setDeleteModal(pk.id)}
-                  className="text-error hover:text-error/70 transition-colors p-1 cursor-pointer"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+          {passkey ? (
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-surface-high/40">
+              <KeyRound className="w-4 h-4 text-on-surface-meta shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-on-surface">{t('profile.this_device')}</p>
+                <p className="text-xs text-on-surface-meta font-mono truncate">
+                  {passkey.id.slice(0, 16)}…
+                </p>
+                <p className="text-xs text-on-surface-meta mt-0.5">
+                  {t('profile.last_used')} {passkey.lastUsedAt.toLocaleDateString()}
+                </p>
               </div>
-            ))}
-          </div>
+              <button
+                type="button"
+                onClick={() => setDeleteModal(true)}
+                className="text-error hover:text-error/70 transition-colors p-1 cursor-pointer"
+                aria-label={t('profile.delete_passkey_title')}
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <p className="text-sm text-on-surface-meta">{t('profile.no_passkey')}</p>
+          )}
+        </Card>
+
+        {/* Linked wallet — used only to sign transactions */}
+        <Card className="p-5 mb-4">
+          <h2 className="text-sm font-semibold text-on-surface flex items-center gap-2 mb-3">
+            <Wallet className="w-4 h-4 text-primary" />
+            {t('profile.linked_wallet')}
+          </h2>
+          {wallet.address ? (
+            <>
+              <p className="text-xs text-on-surface font-mono break-all">{wallet.address}</p>
+              <p className="text-xs text-on-surface-meta mt-2">{t('profile.wallet_note')}</p>
+            </>
+          ) : (
+            <p className="text-sm text-on-surface-meta">{t('profile.no_wallet_linked')}</p>
+          )}
         </Card>
 
         {/* Language */}
@@ -175,17 +181,17 @@ export default function OrganizerProfile() {
 
         {/* Delete passkey modal */}
         <Modal
-          open={!!deleteModal}
-          onClose={() => setDeleteModal(null)}
+          open={deleteModal}
+          onClose={() => setDeleteModal(false)}
           title={t('profile.delete_passkey_title')}
           description={t('profile.delete_passkey_desc')}
         >
           <div className="flex gap-3 mt-2">
-            <Button variant="ghost" className="flex-1" onClick={() => setDeleteModal(null)}>{t('common.cancel')}</Button>
+            <Button variant="ghost" className="flex-1" onClick={() => setDeleteModal(false)}>{t('common.cancel')}</Button>
             <Button
               variant="default"
               className="flex-1 border-error/30 text-error hover:bg-error/10"
-              onClick={() => deleteModal && removePasskey(deleteModal)}
+              onClick={removePasskey}
             >
               {t('profile.delete_passkey_confirm')}
             </Button>

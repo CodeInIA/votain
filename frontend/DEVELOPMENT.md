@@ -14,8 +14,9 @@
 - **`@zerodev/sdk`** 5.5.10 (Account Abstraction + Passkeys)
 - **`@zerodev/passkey-validator`** 5.6.0
 - **`@zerodev/ecdsa-validator`** 5.4.9
-- **ethers** 6.17.0
-- **`@semaphore-protocol/{identity,group,proof}`** 4.14.3
+- **viem** 2.55 (required by ZeroDev v5 for the Kernel account client)
+- **ethers** 6.17.0 (reads/writes to contracts, organizer EOA)
+- **`@semaphore-protocol/{identity,group,proof}`** 4.14.3 + **poseidon-lite** (nullifier)
 - **paillier-bigint** 3.4.3
 - **`@worldcoin/idkit`** 4.2.0 + **`@worldcoin/idkit-core`** 4.2.1
 - **`@sd-jwt/core`** 0.20.0 + **`@sd-jwt/present`** 0.19.0 (no stable 0.20 of present yet)
@@ -54,16 +55,34 @@
 *                                NotFound
 ```
 
-## Auth model (Phase A)
+## Auth model
 
 `src/contexts/AuthContext.tsx` — persistent voter + organizer sessions:
 
-- localStorage keys: `votain_voter_logged_in`, `votain_organizer_logged_in`
-- On mount, probes `GET /api/me`: a valid httpOnly `voter_vc` cookie (issued by the
-  backend after World ID verification) restores the voter session
+- **Source of truth for the voter session is the httpOnly `voter_vc` cookie** (issued by
+  the backend after World ID verification). The localStorage flags
+  (`votain_voter_logged_in`, `votain_organizer_logged_in`) are only an optimistic UI cache:
+  on mount `GET /api/me` reconciles them — a 401 clears a spoofed/stale flag, an
+  authenticated response confirms it, a network error keeps the optimistic state.
+- The organizer flag is reconciled against `eth_accounts` (no wallet authorized → cleared).
+  Spoofing either flag only changes cosmetic nav; every real action is guarded by the
+  cookie (server) or by wallet signatures + `onlyOrganizer` checks (chain).
 - `voterSignOut()` clears localStorage AND calls `POST /api/logout` (clears the cookie)
-- The VC cookie is **voter-only**; organizers will authenticate with passkeys in Phase B
 - Navigation (`TopNav`, `BottomTabNav`) is driven ONLY by auth state, never by the page
+
+## Voter identity storage (Semaphore)
+
+`src/lib/semaphore.ts` + `src/lib/passkeyPrf.ts`:
+
+- **Preferred: WebAuthn PRF.** The Semaphore secret scalar is derived on demand from a
+  passkey PRF secret sealed in the authenticator (salt `votain:semaphore-identity:v1`).
+  Nothing sensitive is stored at rest — XSS cannot exfiltrate the voting key. The derived
+  identity is cached in memory for the session; after a reload, the next identity-requiring
+  action re-prompts the passkey.
+- **Fallback (no PRF support):** a random identity persisted in localStorage
+  (`votain_semaphore_identity`), explicitly marked less secure. An existing fallback
+  identity is never migrated to PRF (its commitment is already registered on-chain).
+- `votain_identity_mode` records which mode is active.
 
 ## src/ structure
 
@@ -151,13 +170,53 @@ VITE_PLATFORM_REGISTRY_ADDRESS=
 VITE_PAYMASTER_ADDRESS=
 ```
 
-## Technical debt (see `docs/dev/state.md`)
+## Chain integration layer (Phase B)
 
-- ZeroDev real integration (H5): `src/lib/zerodev.ts` + `src/hooks/usePasskeys.ts`.
-- `src/lib/contracts.ts` with typed ABIs (H5).
-- `src/lib/semaphore.ts` + `src/lib/paillier.ts` (H5).
+The UI stays presentation-only. A thin data layer maps chain state to the same `Election`
+type the Phase A screens already consume, and falls back to `data/seed.ts` when contracts are
+not configured (`isChainConfigured()` is false).
+
+```
+src/lib/
+├── deployments.ts     # resolve addresses (manifest glob or VITE_* env)
+├── contracts.ts       # ethers v6 clients + human-readable ABIs
+├── chainElections.ts  # ElectionV4 state → Election UI model; members from events
+├── paillier.ts        # homomorphic ballot encryption (base-1e6 packing)
+├── semaphore.ts       # identity, group-from-events, nullifier, vote proof
+├── zerodev.ts         # Kernel v3.1 passkey smart account + sponsored UserOps
+├── voting.ts          # enroll / castVote / history (voter actions)
+└── organizer.ts       # createElection (+ Paillier keygen), lifecycle, gas
+src/hooks/
+├── useElections.ts       # chain-aware list/detail (seed fallback)
+├── usePasskeys.ts        # ZeroDev passkey connect (voters)
+└── useOrganizerWallet.ts # injected EOA + Amoy enforcement (organizers)
+```
+
+Key rules:
+- Voters never hold an EOA — enroll/vote go out as **gas-sponsored ZeroDev UserOps**.
+- Organizers use an **injected EOA** (MetaMask) to deploy/manage and pay for it.
+- The election's **Paillier private key** is generated at creation and stored in localStorage
+  (`votain_paillier_sk_<address>`); the organizer exports it for the tally CLI. Known
+  limitation (documented for the thesis): production would seal it to the organizer's
+  passkey via WebAuthn PRF, as done for the voter's Semaphore identity.
+- History/receipts can prove *that* and *when* you voted, never *what* — the candidate is
+  unrecoverable on-chain by design.
+
+## Extra env (Phase B)
+
+```bash
+VITE_CHAIN_NETWORK=amoy          # deployment manifest to load
+VITE_ZERODEV_RPC=                # ZeroDev bundler+paymaster RPC (voters)
+VITE_ZERODEV_PASSKEY_URL=        # ZeroDev passkey server URL
+# Contract addresses are read from src/lib/deployments/<network>.json automatically
+# (written by the deploy script); VITE_*_ADDRESS only needed to override.
+```
+
+## Remaining
+
 - IP-based language auto-detect (H4 leftover).
-- `@sd-jwt/present` upgrade to 0.20 when published (H6/H7).
+- `@sd-jwt/present` upgrade to 0.20 when published.
+- Live wiring verified end-to-end once contracts are on Amoy (needs user's deploy).
 
 ## Target deployment
 
