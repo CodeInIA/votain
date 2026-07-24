@@ -21,12 +21,23 @@ import { solidityPackedKeccak256, keccak256, zeroPadValue, toBeHex, hexlify } fr
 import { getElection } from "./contracts";
 import { derivePrfSecret, hasPrfCredential, clearPrfCredential } from "./passkeyPrf";
 
-const IDENTITY_STORAGE_KEY = "votain_semaphore_identity"; // fallback only
+const IDENTITY_STORAGE_KEY = "votain_semaphore_identity"; // fallback only (secret)
 const IDENTITY_MODE_KEY = "votain_identity_mode"; // "prf" | "local"
+// The PUBLIC identity commitment — safe to persist (it is already on-chain in the
+// Semaphore group). Lets read-only UI (enrolled/voted status) work in PRF mode
+// after a reload without prompting the passkey. Never holds the secret scalar.
+const IDENTITY_COMMITMENT_KEY = "votain_identity_commitment";
 
 // The derived identity is kept in memory for the session so we don't prompt the
-// passkey on every read. Never persisted in PRF mode.
+// passkey on every read. The secret is never persisted in PRF mode.
 let cachedIdentity: Identity | null = null;
+
+/** Caches the identity and remembers its public commitment for read-only checks. */
+function remember(id: Identity): Identity {
+  cachedIdentity = id;
+  localStorage.setItem(IDENTITY_COMMITMENT_KEY, id.commitment.toString());
+  return id;
+}
 
 // ────────────────────────────────────────────────
 // Identity lifecycle
@@ -44,21 +55,17 @@ export async function getOrCreateIdentity(): Promise<Identity> {
   // already registered on-chain, switching to PRF would orphan it.
   if (localStorage.getItem(IDENTITY_MODE_KEY) === "local") {
     const stored = localStorage.getItem(IDENTITY_STORAGE_KEY);
-    if (stored) {
-      cachedIdentity = Identity.import(stored);
-      return cachedIdentity;
-    }
+    if (stored) return remember(Identity.import(stored));
   }
 
   // Preferred: derive deterministically from the passkey PRF secret.
   const prfSecret = await derivePrfSecret();
   if (prfSecret) {
     // Semaphore's Identity accepts a private-key seed; the PRF secret is stable.
-    cachedIdentity = new Identity(hexlify(prfSecret));
     localStorage.setItem(IDENTITY_MODE_KEY, "prf");
     // Ensure no stale plaintext secret lingers from a previous fallback run.
     localStorage.removeItem(IDENTITY_STORAGE_KEY);
-    return cachedIdentity;
+    return remember(new Identity(hexlify(prfSecret)));
   }
 
   // Fallback: persisted random identity (XSS-exposed — no PRF on this device).
@@ -66,10 +73,35 @@ export async function getOrCreateIdentity(): Promise<Identity> {
     "WebAuthn PRF unavailable — storing the Semaphore identity in localStorage (less secure).",
   );
   const stored = localStorage.getItem(IDENTITY_STORAGE_KEY);
-  cachedIdentity = stored ? Identity.import(stored) : new Identity();
-  if (!stored) localStorage.setItem(IDENTITY_STORAGE_KEY, cachedIdentity.export());
+  const id = stored ? Identity.import(stored) : new Identity();
+  if (!stored) localStorage.setItem(IDENTITY_STORAGE_KEY, id.export());
   localStorage.setItem(IDENTITY_MODE_KEY, "local");
-  return cachedIdentity;
+  return remember(id);
+}
+
+/**
+ * The voter's PUBLIC identity commitment for read-only checks (enrolled / voted),
+ * available without a passkey prompt once the identity has been derived at least
+ * once on this device. Null if it never has.
+ */
+export function getStoredCommitment(): bigint | null {
+  if (cachedIdentity) return cachedIdentity.commitment;
+  const c = localStorage.getItem(IDENTITY_COMMITMENT_KEY);
+  return c ? BigInt(c) : null;
+}
+
+// Per-election vote nullifier (PUBLIC — emitted in VoteCast). Remembered on this
+// device after voting so "already voted" shows without a passkey prompt; the
+// truth is still verified on-chain via nullifierNonces.
+const VOTE_NULLIFIER_PREFIX = "votain_vote_";
+
+export function rememberVote(electionAddress: string, nullifier: bigint): void {
+  localStorage.setItem(VOTE_NULLIFIER_PREFIX + electionAddress.toLowerCase(), nullifier.toString());
+}
+
+export function getStoredVoteNullifier(electionAddress: string): bigint | null {
+  const v = localStorage.getItem(VOTE_NULLIFIER_PREFIX + electionAddress.toLowerCase());
+  return v ? BigInt(v) : null;
 }
 
 /**
@@ -96,6 +128,11 @@ export function clearIdentity(): void {
   cachedIdentity = null;
   localStorage.removeItem(IDENTITY_STORAGE_KEY);
   localStorage.removeItem(IDENTITY_MODE_KEY);
+  localStorage.removeItem(IDENTITY_COMMITMENT_KEY);
+  // Drop this device's per-election vote records too.
+  for (const k of Object.keys(localStorage)) {
+    if (k.startsWith(VOTE_NULLIFIER_PREFIX)) localStorage.removeItem(k);
+  }
   if (hasPrfCredential()) clearPrfCredential();
 }
 

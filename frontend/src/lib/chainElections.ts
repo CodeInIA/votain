@@ -5,7 +5,7 @@
  * Phase A screens already consume, so components stay presentation-only.
  */
 import { getElection, getFactory } from "./contracts";
-import { getStoredIdentity } from "./semaphore";
+import { getStoredCommitment, getStoredVoteNullifier } from "./semaphore";
 import type { Candidate, Election, ElectionPhase, VotingType } from "../data/seed";
 
 // Index order MUST match ElectionV4's Phase enum exactly.
@@ -106,11 +106,20 @@ export async function fetchElection(address: string): Promise<Election> {
     }
   }
 
-  // Voter-specific view state (derived from the locally stored identity)
-  const identity = getStoredIdentity();
+  // Voter-specific view state. The PUBLIC commitment is enough for the enrolled
+  // check and, unlike the full identity, is readable in PRF mode without a
+  // passkey prompt (so it survives reloads / new sessions).
+  const commitment = getStoredCommitment();
   let isEnrolled: boolean | undefined;
-  if (identity) {
-    isEnrolled = await c.hasMember(identity.commitment);
+  if (commitment !== null) {
+    isEnrolled = await c.hasMember(commitment);
+  }
+
+  // "Already voted": verify the device's remembered vote nullifier on-chain.
+  let hasVoted: boolean | undefined;
+  const votedNullifier = getStoredVoteNullifier(address);
+  if (votedNullifier !== null) {
+    hasVoted = (await c.nullifierNonces(votedNullifier)) > 0n;
   }
 
   const basePhase = PHASE_MAP[Number(phase)] ?? "upcoming";
@@ -129,7 +138,7 @@ export async function fetchElection(address: string): Promise<Election> {
     voteEnd: toDate(voteEnd),
     candidates,
     eligibility: [
-      { id: "platform", label: "World ID verified", status: identity ? "met" : "unknown" },
+      { id: "platform", label: "World ID verified", status: commitment !== null ? "met" : "unknown" },
       { id: "enrolled", label: "Enrolled in this election", status: isEnrolled ? "met" : "not-met" },
     ],
     totalEnrolled: Number(memberCount),
@@ -139,6 +148,9 @@ export async function fetchElection(address: string): Promise<Election> {
     privacyQuorum: meta.privacyQuorum ?? (Number(thresholdValue) || 0),
     keyNonce: meta.keyNonce,
     isEnrolled,
+    hasVoted,
+    // The vote's anonymous on-chain identifier (nullifier), shown as the receipt.
+    referenceNumber: hasVoted && votedNullifier !== null ? "0x" + votedNullifier.toString(16) : undefined,
     tags: meta.tags,
   };
 }

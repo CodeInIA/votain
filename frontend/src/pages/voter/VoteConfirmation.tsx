@@ -27,6 +27,10 @@ export default function VoteConfirmation() {
   const title = seedElection?.title;
 
   const reference = state.referenceNumber ?? FALLBACK_REF;
+  // Copy the FULL reference; only shorten it for display (middle ellipsis).
+  const referenceDisplay = reference.length > 24
+    ? `${reference.slice(0, 12)}…${reference.slice(-8)}`
+    : reference;
   const txHash = state.txHash;
   const explorerUrl = txHash
     ? `https://amoy.polygonscan.com/tx/${txHash}`
@@ -70,7 +74,7 @@ export default function VoteConfirmation() {
           <div className="w-full mb-4 p-4 rounded-2xl bg-surface-lowest/40 border border-white/5">
             <p className="text-xs text-on-surface-meta mb-1">{t('confirmation.reference')}</p>
             <div className="flex items-center justify-between gap-2">
-              <span className="font-mono text-sm text-on-surface font-semibold truncate">{reference}</span>
+              <span className="font-mono text-sm text-on-surface font-semibold truncate" title={reference}>{referenceDisplay}</span>
               <button type="button" onClick={handleCopy}
                 className="text-on-surface-meta hover:text-on-surface transition-colors cursor-pointer shrink-0">
                 {copied ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}

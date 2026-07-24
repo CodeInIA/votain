@@ -9,7 +9,7 @@
  *   4. Send castVote as a gas-sponsored UserOperation via ZeroDev.
  */
 import { getElection, ELECTION_ABI } from "./contracts";
-import { chainInfo } from "./deployments";
+import { chainInfo, addresses } from "./deployments";
 import { encryptBallot } from "./paillier";
 import {
   computeNullifier,
@@ -17,14 +17,39 @@ import {
   generateVoteProof,
   getOrCreateIdentity,
   getStoredIdentity,
+  rememberVote,
 } from "./semaphore";
 import { sendSponsoredCall } from "./zerodev";
 
-// Hardhat's well-known account #1 (a PUBLIC test key, no value on any real
-// network). Used ONLY to relay voter txs on the local chain, which has no
-// ERC-4337 bundler/paymaster. Strictly gated on chainId 31337 below.
+// Hardhat's well-known accounts (PUBLIC test keys, no value on any real
+// network). Used ONLY on the local chain, which has no ERC-4337 bundler and
+// no backend registrar. Strictly gated on chainId 31337 below.
 const LOCAL_CHAIN_ID = 31337;
-const LOCAL_RELAY_KEY = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d";
+const LOCAL_RELAY_KEY = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"; // account #1
+const LOCAL_REGISTRAR_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"; // account #0 = registry owner
+
+/**
+ * Local dev only: register the voter's identity in PlatformRegistry so enroll()
+ * passes its `NotPlatformVerified` check. On Amoy this is the backend's job
+ * after a real World ID verification; on the local chain there is no backend
+ * registrar, so the registry owner (Hardhat #0) does it directly. Idempotent.
+ */
+async function ensureLocalRegistration(commitment: bigint): Promise<void> {
+  if (chainInfo.chainId !== LOCAL_CHAIN_ID || !addresses.platformRegistry) return;
+  const { Contract, JsonRpcProvider, Wallet } = await import("ethers");
+  const provider = new JsonRpcProvider(chainInfo.rpcUrl, chainInfo.chainId, { staticNetwork: true });
+  const registry = new Contract(
+    addresses.platformRegistry,
+    [
+      "function verifiedMembers(uint256 identityCommitment) view returns (bool)",
+      "function registerMember(uint256 nullifier, uint256 identityCommitment)",
+    ],
+    new Wallet(LOCAL_REGISTRAR_KEY, provider),
+  );
+  if (await registry.verifiedMembers(commitment)) return;
+  // No World ID here, so pair the commitment with itself as the nullifier.
+  await (await registry.registerMember(commitment, commitment)).wait();
+}
 
 /**
  * Sends a voter contract call. On the local dev chain it goes through a funded
@@ -60,6 +85,7 @@ export interface VoteResult {
 /** Enrolls the local Semaphore identity into an election (sponsored UserOp). */
 export async function enrollInElection(electionAddress: string): Promise<{ txHash: string }> {
   const identity = await getOrCreateIdentity();
+  await ensureLocalRegistration(identity.commitment); // no-op off the local chain
   const { txHash } = await sendVoterCall({
     to: electionAddress as `0x${string}`,
     humanReadableAbi: ELECTION_ABI,
@@ -104,12 +130,18 @@ export async function castVote(electionAddress: string, optionIndex: number): Pr
     ],
   });
 
+  // Remember this device voted here (public nullifier) so the UI can show
+  // "already voted" without a passkey prompt later.
+  rememberVote(electionAddress, proof.nullifier);
+
   return {
     txHash,
     userOpHash,
     nullifier: proof.nullifier,
     nonce,
-    referenceNumber: `${txHash.slice(0, 10)}…${proof.nullifier.toString(16).slice(0, 8)}`,
+    // Full, copyable receipt (the on-chain tx hash). The UI truncates it for
+    // display but copies the whole value.
+    referenceNumber: txHash,
   };
 }
 
@@ -166,7 +198,7 @@ export async function fetchVoteHistory(
       phase: el.phase,
       lastVoteAt: last.timestamp,
       voteCount: receipts.length,
-      referenceNumber: `${last.txHash.slice(0, 10)}…`,
+      referenceNumber: last.txHash,
       nullifier: nullifier.toString(16).slice(0, 16),
     });
   }

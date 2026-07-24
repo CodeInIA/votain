@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, ExternalLink, Users, Calendar } from 'lucide-react';
@@ -15,6 +15,7 @@ import { StatusNotice } from '../../components/ui/StatusNotice';
 import { TransactionPendingModal, type TxState } from '../../components/ui/TransactionPendingModal';
 import { useElection } from '../../hooks/useElections';
 import { enrollInElection } from '../../lib/voting';
+import { getOrCreateIdentity, getStoredCommitment } from '../../lib/semaphore';
 import { nextBoundary, PULSE_PHASES } from '../../lib/phase';
 
 export default function ElectionDetail() {
@@ -26,6 +27,19 @@ export default function ElectionDetail() {
   const [selectedCandidate, setSelectedCandidate] = useState('');
   const [showGasWarning] = useState(false);
   const [txState, setTxState] = useState<TxState>('idle');
+
+  // In PRF mode the identity isn't cached across sessions, so enrollment status
+  // can read as "unknown" (isEnrolled === undefined) with no commitment stored.
+  // Derive it once (a single passkey tap) to persist the public commitment, then
+  // refetch so the enrolled/vote UI is correct. Runs only when status is unknown.
+  const triedDerive = useRef(false);
+  useEffect(() => {
+    if (!live || !election || triedDerive.current) return;
+    if (election.isEnrolled === undefined && getStoredCommitment() === null) {
+      triedDerive.current = true;
+      getOrCreateIdentity().then(() => refresh()).catch(() => {});
+    }
+  }, [live, election, refresh]);
 
   if (loading) {
     return (
