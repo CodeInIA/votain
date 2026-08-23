@@ -6,16 +6,16 @@
 
 **Votain** is an end-to-end verifiable, anonymous, coercion-resistant voting dApp on Polygon Amoy. The architecture combines:
 
-- **Smart contracts** in Solidity (Semaphore V4, ERC-2771/ERC-4337) inside `contracts/`.
+- **Smart contracts** in Solidity (Semaphore V4, ERC-2771) inside `contracts/`.
 - **Backend issuer** in Node.js emitting Verifiable Credentials (SD-JWT) after validating World ID, inside `backend/`. Will be deployed on a **decentralized TEE** (Phala Network) at the end.
-- **Frontend** in React + Vite with **ZeroDev (Account Abstraction + Passkeys)**, homomorphic Paillier and `@semaphore-protocol/*` inside `frontend/`. Will be published on **IPFS with CI/CD (Fleek)**.
+- **Frontend** in React + Vite with **passkey-derived identities**, homomorphic Paillier and `@semaphore-protocol/*` inside `frontend/`. Will be published on **IPFS with CI/CD (Fleek)**.
 - **Tally script** off-chain to filter votes by nullifier and decrypt results.
 
 ### Confirmed stack decisions
 
 | Piece | Decision | Replaces | Reason |
 |-------|----------|----------|--------|
-| Account Abstraction | **ZeroDev SDK v5** (free tier) | Biconomy v4 | Biconomy v4 had very outdated deps. ZeroDev v5 is actively maintained, supports Passkeys, aligned with ethers v6 |
+| Gasless voting | **Own relay contract** (`ElectionPaymaster`) | ZeroDev / ERC-4337 (2026-08) | Hosted paymasters fund gas per project, billed to the project owner, with no way for an organizer to fund their own voters. Worse, one smart account per voter makes the sender address a public link between a voter's enrollment and their ballot, which defeats the Semaphore proof. A single relay contract fixes both: organizers pay for their own elections, and every voter looks identical on chain |
 | Frontend deploy | **Fleek (IPFS) free tier with GitHub CD** | Vercel | Keeps "Hosted on IPFS" badge from `stich.md`, immutable verifiable CID |
 | Backend issuer deploy | **Phala Network free tier (decentralized TEE) + MPC future work** | Centralized VPS | Issuer signs VCs. TEE with on-chain attestation upholds the TFG's trust principles |
 | IPFS tally pinning | **Pinata free tier (1 GB)** | n/a | Sufficient for JSON audit trail |
@@ -275,6 +275,6 @@ Slides Beamer/Slidev 15 to 20 slides, demo video, timed rehearsals.
 6. **After each milestone**. Update `docs/dev/state.md`.
 7. **Each new screen in Phase A**. Playwright at 3 viewports. Screenshots in `docs/progress/H<n>/screens/<name>/`.
 8. **All code comments and `.md` files must be in English**. No Spanish (or other language) in source code or developer docs.
-9. **No em dashes (`—`) or hyphens as clause separators in documentation**. Use periods, commas or colons. Hyphens are only allowed inside compound words (e.g. "end-to-end"), technical identifiers (e.g. "ERC-4337"), version numbers, file paths and command flags.
+9. **No em dashes (`, `) or hyphens as clause separators in documentation**. Use periods, commas or colons. Hyphens are only allowed inside compound words (e.g. "end-to-end"), technical identifiers (e.g. "ERC-4337"), version numbers, file paths and command flags.
 10. **Each milestone gets its own git branch**. Before committing any work for milestone N, create branch `hN/<slug>` from the current state (e.g. `h0/bootstrap`, `h1/design-system`, `h2/voter-screens`). The user creates the branch and commits. The agent only lists the changes.
 11. **Explicit TypeScript typing at all times**. Every function parameter must have an explicit type annotation. Async functions declare `: Promise<void>` (or the correct generic). Catch bindings use `(error: unknown)`. `res.json()` is cast at the source (`as Promise<MyType>`), not in a downstream `.then`. `useMemo<T[]>` and `useState<T>` generics are written out when the inferred type is ambiguous. No `any`, implicit or explicit. Full rules in `docs/dev/conventions.md`.

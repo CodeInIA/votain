@@ -2,8 +2,8 @@
  * ethers v6 read/write clients for the Votain contracts.
  *
  * Reads go through a shared JsonRpcProvider. Writes are performed either by an
- * injected EOA signer (organizer via MetaMask) or as sponsored UserOps through
- * the ZeroDev kernel client (voters) — see zerodev.ts.
+ * injected EOA signer (organizer via MetaMask) or relayed through
+ * ElectionPaymaster (voters): see relay.ts.
  */
 import { Contract, JsonRpcProvider, type Signer } from "ethers";
 import { addresses, chainInfo } from "./deployments";
@@ -88,7 +88,7 @@ export function getReadProvider(): JsonRpcProvider {
 }
 
 function requireAddress(value: string | undefined, label: string): string {
-  if (!value) throw new Error(`${label} address not configured — deploy contracts first`);
+  if (!value) throw new Error(`${label} address not configured, deploy contracts first`);
   return value;
 }
 

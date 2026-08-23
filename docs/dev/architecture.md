@@ -6,9 +6,9 @@
 ┌─────────────────────────────────────────────────────────────────┐
 │                            USER                                 │
 │  Browser (IPFS gateway / Fleek CDN)                            │
-│  React 19 + Vite + Tailwind 4 + ZeroDev v5 + Semaphore v4     │
+│  React 19 + Vite + Tailwind 4 + Semaphore v4 + Paillier        │
 └─────────────────┬───────────────────────────┬───────────────────┘
-                  │ World ID QR / deep link    │ RPC (ZeroDev Bundler)
+                  │ World ID QR + relayed tx   │ RPC (read only)
                   ▼                            ▼
 ┌─────────────────────────┐    ┌──────────────────────────────────┐
 │   BACKEND ISSUER (TEE)  │    │   BLOCKCHAIN (Polygon Amoy)      │
@@ -18,8 +18,9 @@
 │                         │    │  ElectionPaymaster.sol           │
 │  POST /verify-human     │    │  PlatformRegistry.sol            │
 │  ← World ID proof       │    │                                   │
-│  → SD-JWT cookie        │    │  ERC-4337 EntryPoint (Amoy)      │
-│                         │    │  ZeroDev Bundler + Paymaster     │
+│  → SD-JWT cookie        │    │                                   │
+│  POST /relay/vote       │───▶│  relayed through                  │
+│  (unauthenticated)      │    │  ElectionPaymaster                │
 │  /attestation           │    │                                   │
 │  → Intel TDX report     │    │  Semaphore V4 Verifier           │
 └─────────────────────────┘    └──────────────────────────────────┘
@@ -50,7 +51,7 @@
    → SD-JWT claims: nullifier_hash, verification_level, issued_at
 
 2. SMART ACCOUNT CREATION
-   Frontend → ZeroDev SDK
+   Frontend -> issuer relayer
    → WebAuthn (Passkey) → KernelAccount v3
    → Smart Account (AA, ERC-4337) on Amoy
 
@@ -68,7 +69,8 @@
      input: identity, group, scope (electionId), signal (encrypted_vote)
      output: proof, nullifier, merkleRoot
    → UserOp: ElectionV4.castVote(nullifier, nonce, proof, voteCiphertext)
-   → Paymaster sponsors gas (ZeroDev / ElectionPaymaster)
+   -> ElectionPaymaster relays the call and reimburses the relayer from the
+     organizer gas tank, in the same transaction
    → Tx on Amoy
 
 5. COERCION RESISTANCE (vote change)
@@ -76,7 +78,7 @@
    → Contract only counts the vote with the highest nonce per nullifier
    → Coerced user can vote again "under pressure" without revealing the previous vote
 
-6. TALLY (two interchangeable paths — same pipeline)
+6. TALLY (two interchangeable paths, same pipeline)
    a) In-app (default): organizer opens the election → Compute tally → Publish.
       Decryption runs in the browser; the Paillier key is DERIVED on demand from
       the organizer's passkey PRF (public per-election keyNonce in metadata),
@@ -162,11 +164,11 @@ Upcoming → Enrolling → PendingVote → Active → Tallying → Closed (Appro
                  Cancelled                       Voided (Privacy Quorum not reached)
 ```
 
-- **Upcoming** — deployed, enrollment not open yet (`now < enrollStart`).
-- **Enrolling** — enrollment open (`enrollStart ≤ now < enrollEnd`).
-- **PendingVote** — enrollment closed, voting not open (`enrollEnd ≤ now < voteStart`).
-- **Active / Tallying** — voting open / ended, awaiting results.
-- **Closed / Voided / Cancelled** — terminal (results published / quorum unmet / cancelled).
+- **Upcoming**: deployed, enrollment not open yet (`now < enrollStart`).
+- **Enrolling**: enrollment open (`enrollStart ≤ now < enrollEnd`).
+- **PendingVote**: enrollment closed, voting not open (`enrollEnd ≤ now < voteStart`).
+- **Active / Tallying**: voting open / ended, awaiting results.
+- **Closed / Voided / Cancelled**: terminal (results published / quorum unmet / cancelled).
 
 ## Voting types
 

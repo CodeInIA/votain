@@ -25,13 +25,13 @@
 
 9. **All code comments and `.md` files must be written in English**. No Spanish (or other language) in source files or developer docs. The `.env` file is named `.env`, not `.env.local`.
 
-10. **No em dashes (`—`) or hyphens as clause separators in documentation**. Use periods, commas or colons. Hyphens are only allowed inside compound words (e.g. "end-to-end"), technical identifiers (e.g. "ERC-4337"), version numbers, file paths and command flags. Em dashes look AI-generated; the substitution is conscious.
+10. **No em dashes (`, `) or hyphens as clause separators in documentation**. Use periods, commas or colons. Hyphens are only allowed inside compound words (e.g. "end-to-end"), technical identifiers (e.g. "ERC-4337"), version numbers, file paths and command flags. Em dashes look AI-generated; the substitution is conscious.
 
 11. **Each milestone gets its own git branch**. Before committing any work for milestone N, the user creates branch `hN/<slug>` from the current state (e.g. `h0/bootstrap`, `h1/design-system`, `h2/voter-screens`). The agent only lists changes. The user creates the branch and commits.
 
 ## TypeScript / JavaScript conventions
 
-### Explicit typing (rule 12 — binding for all agents)
+### Explicit typing (rule 12, binding for all agents)
 
 All TypeScript code must use explicit types. No implicit `any`. Specific rules:
 
@@ -114,7 +114,7 @@ t('election.status.active')  // NO, JSON files use a single level of nesting per
 
 ```
 components/ui/Button.tsx        PascalCase for components
-hooks/usePasskeys.ts            camelCase with "use" prefix
+hooks/useOrganizerWallet.ts     camelCase with "use" prefix
 lib/contracts.ts                camelCase
 data/seed.ts                    camelCase
 pages/voter/Onboarding.tsx      PascalCase
@@ -193,7 +193,7 @@ H1: design system and base components
 H2: public and voter screens (visual)
 H3: organizer screens (visual)
 H4: i18n, a11y polish, E2E smoke tests
-H5: production contracts + ZeroDev client
+H5: production contracts + chain client
 H6: backend issuer features
 H7: voter flow integration
 H8: organizer flow integration

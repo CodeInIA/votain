@@ -69,7 +69,9 @@
     "close": "閉じる",
     "confirm": "確認",
     "integration_pending": "この機能は統合フェーズで接続されます。",
-    "all": "すべて"
+    "all": "すべて",
+    "yes": "賛成",
+    "no": "反対"
   },
   "nav": {
     "discover": "探す",
@@ -232,15 +234,22 @@
     "empty": "まだ投票していません。"
   },
   "reverify": {
-    "title": "本人確認の再実施",
-    "desc": "World IDの認証情報が期限切れまたは無効です。投票を続けるには再確認してください。",
-    "why_title": "なぜ再確認が必要なのですか？",
-    "last_verified": "最終確認: {{date}}",
-    "verify_btn": "World IDで再確認",
-    "pending": "確認中…",
-    "reason1": "私のWorld ID認証が期限切れになりました",
-    "reason2": "新しいWorld IDデバイスを取得しました",
-    "reason3": "私の認証が取り消しまたはリセットされました"
+    "title": "投票用 ID を復旧する",
+    "desc": "ID を解除できる端末をすべて失いましたか。World ID で再度認証し、新しいパスキーを紐づけてください。",
+    "why_title": "こんなときに使います",
+    "verify_btn": "World ID で復旧する",
+    "reason1": "パスキーの入った端末をなくした",
+    "reason2": "パスキーを削除した、またはブラウザのデータを消した",
+    "reason3": "登録済みのどの端末でも ID を解除できなくなった",
+    "recovering": "復旧中…",
+    "cancelled": "復旧をキャンセルしました",
+    "recovered": "ID を復旧しました",
+    "recovered_desc": "この端末が投票用 ID を保持するようになりました。まだ参加していない選挙で投票できます。",
+    "failed": "ID を復旧できませんでした",
+    "cost_title": "この操作は取り消せません",
+    "cost_elections": "すでに参加登録した選挙には、投票していなくても再参加できません。",
+    "cost_receipts": "以前の投票控えは取得できなくなりますが、その投票自体は有効で集計済みのままです。",
+    "one_identity_note": "World ID 1 つにつき、投票用 ID は常に 1 つです。"
   },
   "org_auth": {
     "title": "主催者アクセス",
@@ -257,7 +266,9 @@
     "wrong_network_desc": "続けるにはPolygon Amoyに切り替えてください。",
     "switch_network": "Polygon Amoyに切り替え",
     "no_wallet_title": "ウォレットが検出されません",
-    "no_wallet_desc": "主催者として署名するには MetaMask（または他の EVM ウォレット）をインストールしてください。"
+    "no_wallet_desc": "主催者として署名するには MetaMask（または他の EVM ウォレット）をインストールしてください。",
+    "no_authenticator": "このデバイスにはパスキー認証器がありません",
+    "no_authenticator_help": "画面ロック（Windows Hello の PIN、Touch ID、Android の画面ロック）を設定するか、求められたときにスマートフォンやセキュリティキーを使用してください。"
   },
   "dashboard": {
     "title": "主催者ダッシュボード",
@@ -304,14 +315,16 @@
     "deploy_pending": "コントラクトをデプロイ中…",
     "witness_threshold_n": "必要な証人数 (N)",
     "witness_threshold_hint": "承認に必要な最小賛成票数",
-    "yes_no_note": "この投票タイプは固定の賛成/反対の投票用紙を使用します。",
+    "yes_no_note": "この投票方式では、常に「賛成 / 反対」の固定投票用紙を使用します。",
     "deposit_token": "ガスデポジット ({{currency}})",
     "leave_confirm_title": "変更を破棄しますか？",
     "leave_confirm_desc": "このページを離れると変更内容は失われます。",
     "discard_changes": "変更を破棄",
     "separate_enrollment": "カスタム登録期間",
     "separate_enrollment_desc": "登録の開始・締切日を自分で設定できます。締切は投票開始より前に設定できます。",
-    "enrollment_until_vote_start": "登録はデプロイ時から投票開始まで開いています。"
+    "enrollment_until_vote_start": "登録はデプロイ時から投票開始まで開いています。",
+    "yes_no_hint": "ここで設定する項目はありません。選択肢は選んだ投票ルールによって決まり、投票者はそのいずれかを選びます。",
+    "yes_no_preview": "投票者に表示される投票用紙"
   },
   "election_mgmt": {
     "actions": "アクション",
@@ -429,5 +442,17 @@
     "quorum_min": "1 以上である必要があります",
     "number_positive": "有効な0以上の数値を入力してください",
     "fix_previous_steps": "必須項目が未入力または無効です。前のステップを確認してください。"
+  },
+  "devices": {
+    "title": "マイデバイス",
+    "desc": "どのデバイスからでも投票できます。すべてのパスキーが同じ ID を解除するため、投票は常に 1 票のみです。",
+    "this_device": "このデバイス",
+    "add": "このデバイスを追加",
+    "adding": "追加中…",
+    "remove": "デバイスを削除",
+    "added": "デバイスを追加しました",
+    "error": "このデバイスを追加できませんでした",
+    "last_passkey": "このデバイスを削除する前に別のデバイスを追加してください",
+    "empty": "登録済みのデバイスはありません"
   }
 }

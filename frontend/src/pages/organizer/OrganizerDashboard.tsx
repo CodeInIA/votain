@@ -94,12 +94,10 @@ export default function OrganizerDashboard() {
           {/* Election table */}
           <div className="lg:col-span-2">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              {/* No "view all" link: this list is already every election this
+                  organizer has, and there is no fuller page to send them to. */}
+              <CardHeader>
                 <CardTitle>{t('dashboard.my_elections')}</CardTitle>
-                <button type="button" className="text-xs text-primary hover:underline cursor-pointer"
-                  onClick={() => navigate('/organizer/elections/new')}>
-                  {t('common.view_all')}
-                </button>
               </CardHeader>
               <CardContent className="p-0">
                 {loading ? (

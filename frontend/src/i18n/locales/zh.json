@@ -69,7 +69,9 @@
     "close": "关闭",
     "confirm": "确认",
     "integration_pending": "此功能将在集成阶段连接。",
-    "all": "全部"
+    "all": "全部",
+    "yes": "同意",
+    "no": "反对"
   },
   "nav": {
     "discover": "发现",
@@ -232,15 +234,22 @@
     "empty": "您尚未参与任何选举投票。"
   },
   "reverify": {
-    "title": "重新验证身份",
-    "desc": "您的 World ID 凭证已过期或不再有效。请重新验证以继续投票。",
-    "why_title": "为什么需要重新验证？",
-    "last_verified": "上次验证：{{date}}",
-    "verify_btn": "使用 World ID 重新验证",
-    "pending": "验证中…",
-    "reason1": "我的World ID凭证已过期",
-    "reason2": "我获得了新的World ID设备",
-    "reason3": "我的凭证被撤销或重置"
+    "title": "恢复您的投票身份",
+    "desc": "丢失了所有能解锁身份的设备？请重新使用 World ID 验证，以绑定新的通行密钥。",
+    "why_title": "何时使用",
+    "verify_btn": "使用 World ID 恢复",
+    "reason1": "我丢失了存有通行密钥的手机或设备",
+    "reason2": "我删除了通行密钥，或清除了浏览器数据",
+    "reason3": "我已注册的设备都无法再解锁我的身份",
+    "recovering": "正在恢复…",
+    "cancelled": "已取消恢复",
+    "recovered": "身份已恢复",
+    "recovered_desc": "此设备现已持有您的投票身份。您可以在尚未参加的选举中投票。",
+    "failed": "无法恢复您的身份",
+    "cost_title": "此操作无法撤销",
+    "cost_elections": "您将无法重新加入已报名的选举，即使您从未在其中投票。",
+    "cost_receipts": "您之前的投票凭据将无法再取回，但那些选票依然有效并已计入。",
+    "one_identity_note": "一个 World ID 始终对应一个投票身份。"
   },
   "org_auth": {
     "title": "组织者访问",
@@ -257,7 +266,9 @@
     "wrong_network_desc": "请切换到 Polygon Amoy 继续。",
     "switch_network": "切换到 Polygon Amoy",
     "no_wallet_title": "未检测到钱包",
-    "no_wallet_desc": "请安装 MetaMask（或其他 EVM 钱包）以组织者身份签名。"
+    "no_wallet_desc": "请安装 MetaMask（或其他 EVM 钱包）以组织者身份签名。",
+    "no_authenticator": "此设备没有通行密钥验证器",
+    "no_authenticator_help": "请设置屏幕锁定（Windows Hello PIN、触控 ID 或 Android 锁屏），或在出现提示时使用手机或安全密钥。"
   },
   "dashboard": {
     "title": "组织者仪表板",
@@ -304,14 +315,16 @@
     "deploy_pending": "正在部署合约…",
     "witness_threshold_n": "所需见证人 (N)",
     "witness_threshold_hint": "批准所需的最少赞成票",
-    "yes_no_note": "此投票类型使用固定的赞成/反对选票。",
+    "yes_no_note": "此投票类型始终使用固定的「同意 / 反对」选票。",
     "deposit_token": "Gas 押金（{{currency}}）",
     "leave_confirm_title": "放弃更改？",
     "leave_confirm_desc": "如果离开此页面，您的更改将丢失。",
     "discard_changes": "放弃更改",
     "separate_enrollment": "自定义报名时段",
     "separate_enrollment_desc": "自行设定报名的起止日期，截止时间可以早于投票开始。",
-    "enrollment_until_vote_start": "报名从部署开始一直开放，到投票开始时关闭。"
+    "enrollment_until_vote_start": "报名从部署开始一直开放，到投票开始时关闭。",
+    "yes_no_hint": "这里无需配置：选项由您选择的投票规则决定，选民将从中选择一项。",
+    "yes_no_preview": "选民将看到的选票"
   },
   "election_mgmt": {
     "actions": "操作",
@@ -429,5 +442,17 @@
     "quorum_min": "至少为 1",
     "number_positive": "请输入有效的非负数",
     "fix_previous_steps": "必填字段缺失或无效。请返回检查前面的步骤。"
+  },
+  "devices": {
+    "title": "我的设备",
+    "desc": "可从您的任意设备投票。每个通行密钥都解锁同一个身份，因此您始终只投一票。",
+    "this_device": "当前设备",
+    "add": "添加此设备",
+    "adding": "正在添加…",
+    "remove": "移除设备",
+    "added": "设备已添加",
+    "error": "无法添加此设备",
+    "last_passkey": "请先添加其他设备，再移除此设备",
+    "empty": "尚未注册任何设备"
   }
 }

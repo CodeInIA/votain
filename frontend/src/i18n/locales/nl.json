@@ -69,7 +69,9 @@
     "close": "Sluiten",
     "confirm": "Bevestigen",
     "integration_pending": "Deze functie wordt verbonden in de integratiefase.",
-    "all": "Alles"
+    "all": "Alles",
+    "yes": "Ja",
+    "no": "Nee"
   },
   "nav": {
     "discover": "Ontdekken",
@@ -232,15 +234,22 @@
     "empty": "Je hebt nog niet gestemd in een verkiezing."
   },
   "reverify": {
-    "title": "Identiteit opnieuw verifiëren",
-    "desc": "Je World ID-credential is verlopen of niet meer geldig. Verifieer opnieuw om te blijven stemmen.",
-    "why_title": "Waarom moet ik opnieuw verifiëren?",
-    "last_verified": "Laatst geverifieerd: {{date}}",
-    "verify_btn": "Opnieuw verifiëren met World ID",
-    "pending": "Verifiëren…",
-    "reason1": "Mijn World ID-credential is verlopen",
-    "reason2": "Ik heb een nieuw World ID-apparaat",
-    "reason3": "Mijn credential is ingetrokken of gereset"
+    "title": "Herstel je stemidentiteit",
+    "desc": "Alle apparaten kwijt die je identiteit konden ontgrendelen? Verifieer opnieuw met World ID om een nieuwe passkey te koppelen.",
+    "why_title": "Wanneer je dit gebruikt",
+    "verify_btn": "Herstellen met World ID",
+    "reason1": "Ik ben de telefoon of het apparaat met mijn passkey kwijt",
+    "reason2": "Ik heb mijn passkey verwijderd, of mijn browsergegevens gewist",
+    "reason3": "Geen van mijn geregistreerde apparaten kan mijn identiteit nog ontgrendelen",
+    "recovering": "Bezig met herstellen…",
+    "cancelled": "Herstel geannuleerd",
+    "recovered": "Identiteit hersteld",
+    "recovered_desc": "Dit apparaat heeft nu je stemidentiteit. Je kunt stemmen in verkiezingen waaraan je nog niet deelnam.",
+    "failed": "Kon je identiteit niet herstellen",
+    "cost_title": "Dit kan niet ongedaan worden gemaakt",
+    "cost_elections": "Je kunt niet opnieuw deelnemen aan verkiezingen waarvoor je al was ingeschreven, ook als je er nooit hebt gestemd.",
+    "cost_receipts": "Je eerdere stembewijzen zijn niet meer op te vragen; die stemmen blijven geldig en meegeteld.",
+    "one_identity_note": "Eén World ID betekent altijd één stemidentiteit."
   },
   "org_auth": {
     "title": "Organisatortoegang",
@@ -257,7 +266,9 @@
     "wrong_network_desc": "Schakel over naar Polygon Amoy om door te gaan.",
     "switch_network": "Overschakelen naar Polygon Amoy",
     "no_wallet_title": "Geen wallet gedetecteerd",
-    "no_wallet_desc": "Installeer MetaMask (of een andere EVM-wallet) om als organisator te ondertekenen."
+    "no_wallet_desc": "Installeer MetaMask (of een andere EVM-wallet) om als organisator te ondertekenen.",
+    "no_authenticator": "Geen passkey-authenticator op dit apparaat",
+    "no_authenticator_help": "Stel een schermvergrendeling in (Windows Hello-pincode, Touch ID of Android-vergrendeling), of gebruik een telefoon of beveiligingssleutel wanneer daarom wordt gevraagd."
   },
   "dashboard": {
     "title": "Organisatordashboard",
@@ -304,14 +315,16 @@
     "deploy_pending": "Contract implementeren…",
     "witness_threshold_n": "Vereiste getuigen (N)",
     "witness_threshold_hint": "Minimum Ja-stemmen om goed te keuren",
-    "yes_no_note": "Dit stemtype gebruikt een vast Ja / Nee-stembiljet.",
+    "yes_no_note": "Dit stemtype gebruikt altijd een vast Ja/Nee-stembiljet.",
     "deposit_token": "Gasstorting ({{currency}})",
     "leave_confirm_title": "Wijzigingen negeren?",
     "leave_confirm_desc": "Uw wijzigingen gaan verloren als u deze pagina verlaat.",
     "discard_changes": "Wijzigingen negeren",
     "separate_enrollment": "Aangepast inschrijvingsvenster",
     "separate_enrollment_desc": "Stel je eigen registratiedatums in, met een deadline die vóór de start van het stemmen kan liggen.",
-    "enrollment_until_vote_start": "Inschrijving is open vanaf de uitrol tot het stemmen begint."
+    "enrollment_until_vote_start": "Inschrijving is open vanaf de uitrol tot het stemmen begint.",
+    "yes_no_hint": "Hier valt niets in te stellen: de opties liggen vast door de gekozen stemregel. Kiezers kiezen er één van.",
+    "yes_no_preview": "Het stembiljet dat kiezers te zien krijgen"
   },
   "election_mgmt": {
     "actions": "Acties",
@@ -429,5 +442,17 @@
     "quorum_min": "Moet minstens 1 zijn",
     "number_positive": "Voer een geldig, niet-negatief getal in",
     "fix_previous_steps": "Verplichte velden ontbreken of zijn ongeldig. Ga terug en controleer de vorige stappen."
+  },
+  "devices": {
+    "title": "Mijn apparaten",
+    "desc": "Stem vanaf al je apparaten. Elke passkey ontgrendelt dezelfde identiteit, dus je brengt altijd één stem uit.",
+    "this_device": "Dit apparaat",
+    "add": "Dit apparaat toevoegen",
+    "adding": "Toevoegen…",
+    "remove": "Apparaat verwijderen",
+    "added": "Apparaat toegevoegd",
+    "error": "Kon dit apparaat niet toevoegen",
+    "last_passkey": "Voeg een ander apparaat toe voordat je dit verwijdert",
+    "empty": "Nog geen apparaten geregistreerd"
   }
 }

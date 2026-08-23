@@ -69,7 +69,9 @@
     "close": "Schließen",
     "confirm": "Bestätigen",
     "integration_pending": "Diese Funktion wird in der Integrationsphase verbunden.",
-    "all": "Alle"
+    "all": "Alle",
+    "yes": "Ja",
+    "no": "Nein"
   },
   "nav": {
     "discover": "Entdecken",
@@ -232,15 +234,22 @@
     "empty": "Sie haben noch bei keiner Wahl abgestimmt."
   },
   "reverify": {
-    "title": "Identität erneut verifizieren",
-    "desc": "Ihre World ID-Berechtigung ist abgelaufen oder nicht mehr gültig. Bitte erneut verifizieren, um weiter abzustimmen.",
-    "why_title": "Warum muss ich mich erneut verifizieren?",
-    "last_verified": "Zuletzt verifiziert: {{date}}",
-    "verify_btn": "Mit World ID erneut verifizieren",
-    "pending": "Verifizierung…",
-    "reason1": "Mein World ID-Ausweis ist abgelaufen",
-    "reason2": "Ich habe ein neues World ID-Gerät",
-    "reason3": "Mein Ausweis wurde widerrufen oder zurückgesetzt"
+    "title": "Wahlidentität wiederherstellen",
+    "desc": "Alle Geräte verloren, die Ihre Identität entsperren konnten? Verifizieren Sie sich erneut mit World ID, um einen neuen Passkey zu verknüpfen.",
+    "why_title": "Wann Sie das brauchen",
+    "verify_btn": "Mit World ID wiederherstellen",
+    "reason1": "Ich habe das Telefon oder Gerät mit meinem Passkey verloren",
+    "reason2": "Ich habe meinen Passkey gelöscht oder die Browserdaten geleert",
+    "reason3": "Keines meiner registrierten Geräte kann meine Identität noch entsperren",
+    "recovering": "Wird wiederhergestellt…",
+    "cancelled": "Wiederherstellung abgebrochen",
+    "recovered": "Identität wiederhergestellt",
+    "recovered_desc": "Dieses Gerät trägt jetzt Ihre Wahlidentität. Sie können in Wahlen abstimmen, denen Sie noch nicht beigetreten waren.",
+    "failed": "Identität konnte nicht wiederhergestellt werden",
+    "cost_title": "Das lässt sich nicht rückgängig machen",
+    "cost_elections": "Sie können Wahlen, für die Sie bereits registriert waren, nicht erneut beitreten, auch wenn Sie dort nie abgestimmt haben.",
+    "cost_receipts": "Ihre bisherigen Stimmbelege sind nicht mehr abrufbar; die Stimmen bleiben gültig und gezählt.",
+    "one_identity_note": "Eine World ID bedeutet immer genau eine Wahlidentität."
   },
   "org_auth": {
     "title": "Organisator-Zugang",
@@ -257,7 +266,9 @@
     "wrong_network_desc": "Bitte zu Polygon Amoy wechseln, um fortzufahren.",
     "switch_network": "Zu Polygon Amoy wechseln",
     "no_wallet_title": "Keine Wallet erkannt",
-    "no_wallet_desc": "Installieren Sie MetaMask (oder eine andere EVM-Wallet), um als Organisator zu signieren."
+    "no_wallet_desc": "Installieren Sie MetaMask (oder eine andere EVM-Wallet), um als Organisator zu signieren.",
+    "no_authenticator": "Kein Passkey-Authentifikator auf diesem Gerät",
+    "no_authenticator_help": "Richten Sie eine Bildschirmsperre ein (Windows Hello PIN, Touch ID oder Android-Sperre), oder verwenden Sie auf Aufforderung ein Telefon oder einen Sicherheitsschlüssel."
   },
   "dashboard": {
     "title": "Organisator-Dashboard",
@@ -304,14 +315,16 @@
     "deploy_pending": "Vertrag wird bereitgestellt…",
     "witness_threshold_n": "Erforderliche Zeugen (N)",
     "witness_threshold_hint": "Mindestanzahl Ja-Stimmen zur Annahme",
-    "yes_no_note": "Dieser Abstimmungstyp verwendet einen festen Ja/Nein-Stimmzettel.",
+    "yes_no_note": "Diese Abstimmungsart verwendet immer einen festen Ja/Nein-Stimmzettel.",
     "deposit_token": "Gas-Einzahlung ({{currency}})",
     "leave_confirm_title": "Änderungen verwerfen?",
     "leave_confirm_desc": "Ihre Änderungen gehen verloren, wenn Sie diese Seite verlassen.",
     "discard_changes": "Änderungen verwerfen",
     "separate_enrollment": "Eigenes Anmeldefenster",
     "separate_enrollment_desc": "Legen Sie eigene Anmeldedaten fest, mit einer Frist, die vor Beginn der Abstimmung liegen kann.",
-    "enrollment_until_vote_start": "Die Anmeldung ist von der Bereitstellung bis zum Beginn der Abstimmung geöffnet."
+    "enrollment_until_vote_start": "Die Anmeldung ist von der Bereitstellung bis zum Beginn der Abstimmung geöffnet.",
+    "yes_no_hint": "Hier gibt es nichts einzurichten: Die Optionen ergeben sich aus der gewählten Abstimmungsregel. Die Wählenden entscheiden sich für eine davon.",
+    "yes_no_preview": "Der Stimmzettel, den die Wählenden sehen"
   },
   "election_mgmt": {
     "actions": "Aktionen",
@@ -429,5 +442,17 @@
     "quorum_min": "Muss mindestens 1 sein",
     "number_positive": "Gültige, nicht negative Zahl eingeben",
     "fix_previous_steps": "Pflichtfelder fehlen oder sind ungültig. Gehen Sie zurück und prüfen Sie die vorherigen Schritte."
+  },
+  "devices": {
+    "title": "Meine Geräte",
+    "desc": "Stimmen Sie von jedem Ihrer Geräte ab. Jeder Passkey entsperrt dieselbe Identität, sodass Sie immer nur eine Stimme abgeben.",
+    "this_device": "Dieses Gerät",
+    "add": "Dieses Gerät hinzufügen",
+    "adding": "Wird hinzugefügt…",
+    "remove": "Gerät entfernen",
+    "added": "Gerät hinzugefügt",
+    "error": "Gerät konnte nicht hinzugefügt werden",
+    "last_passkey": "Fügen Sie ein weiteres Gerät hinzu, bevor Sie dieses entfernen",
+    "empty": "Noch keine Geräte registriert"
   }
 }

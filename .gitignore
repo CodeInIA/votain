@@ -34,7 +34,11 @@ backend/dist/
 backend/build/
 backend/logs/
 backend/data/status-list.json
+backend/data/identity-vault.json
 
 # ------------- Tally script -------------
 scripts-tally/paillier-key.json
 scripts-tally/tally-*.json
+
+# Seeded Paillier private keys (local demo only, never commit)
+contracts/deployments/tally-keys/

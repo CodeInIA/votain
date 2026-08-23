@@ -9,8 +9,9 @@
   "scripts": {
     "test": "hardhat test",
     "build": "hardhat compile",
-    "deploy:amoy": "hardhat run scripts/deploy.ts --network amoy",
-    "deploy:local": "hardhat run scripts/deploy.ts"
+    "deploy:amoy": "hardhat run scripts/deploy.ts --network amoy --build-profile production",
+    "deploy:local": "hardhat run scripts/deploy.ts",
+    "estimate:amoy": "hardhat run scripts/estimate-deploy-cost.ts --build-profile production"
   },
   "keywords": [
     "voting",
@@ -22,9 +23,13 @@
   "type": "module",
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox-mocha-ethers": "^3.0.7",
+    "@semaphore-protocol/group": "^4.14.3",
+    "@semaphore-protocol/identity": "^4.14.3",
+    "@semaphore-protocol/proof": "^4.14.3",
     "@types/mocha": "^10.0.10",
     "@types/node": "^26.1.1",
     "hardhat": "^3.9.1",
+    "paillier-bigint": "^3.4.3",
     "typescript": "^7.0.2"
   },
   "dependencies": {

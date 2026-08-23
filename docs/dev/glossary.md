@@ -20,13 +20,13 @@
 
 ## Blockchain and Smart Contracts
 
-**ERC-4337 (Account Abstraction)**: Ethereum standard for programmable wallets. Enables gas payment with tokens, passkeys as signing keys, and gas sponsorship (Paymaster). In Votain: ZeroDev SDK v5 + KernelAccount v3.
+**ERC-4337 (Account Abstraction)**: Ethereum standard for programmable wallets, giving each user a smart-account address. **Not used in Votain** (dropped 2026-08): one account per voter makes the public `sender` a link between that voter's enrollment and their ballot, which defeats the Semaphore proof. See `ElectionPaymaster.sol`.
 
-**UserOp (UserOperation)**: transaction in the ERC-4337 model. The user signs a UserOp, the Bundler includes it in the EntryPoint, the Paymaster sponsors the gas.
+**Relaying**: voters do not send their own transactions. They post the call to the issuer's relayer, which submits it through `ElectionPaymaster`. Every voter therefore reaches the chain from the same address, so the sender reveals nothing.
 
-**Paymaster**: ERC-4337 contract that sponsors gas for selected UserOps. `ElectionPaymaster.sol` sponsors votes from verified users.
+**Paymaster (gas tank)**: `ElectionPaymaster.sol`. Organizers deposit POL; `relayEnroll` / `relayVote` call the election and reimburse whoever relayed, out of that election's organizer's balance, in the same transaction.
 
-**ERC-2771 (Meta-transactions / Trusted Forwarder)**: allows a relay to sign transactions on behalf of the user while preserving the real `msg.sender`. Used so the ZeroDev Forwarder acts as the relay.
+**ERC-2771 (Meta-transactions / Trusted Forwarder)**: allows a relay to submit on behalf of a user while preserving the real `msg.sender`. In Votain the forwarder is set to a burn address: voter calls go through `ElectionPaymaster` and neither `enroll` nor `castVote` reads `msg.sender`, so `_msgSender()` only affects organizer-only functions.
 
 **Semaphore V4**: ZK-based anonymity protocol (PSE/Ethereum Foundation). Allows a group of users to make anonymous signals (votes) without revealing who voted. V4 introduces circuit efficiency improvements.
 
@@ -64,13 +64,11 @@
 
 ## Frontend
 
-**Passkey (WebAuthn)**: passwordless authentication standard using device biometrics/PIN. In Votain: ZeroDev `@zerodev/passkey-validator` converts a passkey into the signing key for the smart account.
+**Passkey (WebAuthn)**: passwordless authentication standard using device biometrics or PIN. In Votain it holds the voter Semaphore identity secret through the PRF extension, and gates the organizer login. It is not a wallet: transactions are relayed, never signed by it.
 
-**KernelAccount**: ZeroDev smart account (v3). Implements ERC-4337, supports interchangeable validators (passkey, ECDSA), compatible with EntryPoint v0.7.
+**Identity vault**: the voter's single Semaphore secret, stored once per passkey, each copy sealed under HKDF-SHA256(WebAuthn PRF) with AES-256-GCM. Lets any of a voter's devices unlock the same identity, so multi-device never means multiple votable identities. The issuer holds only ciphertext.
 
-**ZeroDev SDK v5**: Account Abstraction SDK for EVM. Free tier. Includes bundler, paymaster, and validators. Replaces Biconomy v4 in Votain.
-
-**Bundler**: ERC-4337 service that collects UserOps from the mempool, simulates them, and includes them in the EntryPoint. ZeroDev offers a free bundler on Amoy.
+**WebAuthn PRF**: passkey extension that returns a stable 32-byte secret for a given (credential, salt), never leaving the authenticator. Used to derive the voter's Semaphore identity and the organizer's Paillier tally key.
 
 **Privacy Quorum**: minimum vote threshold for an election to be valid. If not reached, election enters `Voided` state and results are not revealed (individual privacy protection). Independent from the `VotingType` winner rule.
 

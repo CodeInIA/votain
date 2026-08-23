@@ -69,7 +69,9 @@
     "close": "Cerrar",
     "confirm": "Confirmar",
     "integration_pending": "Esta función se conectará en la fase de integración.",
-    "all": "Todo"
+    "all": "Todo",
+    "yes": "Sí",
+    "no": "No"
   },
   "nav": {
     "discover": "Descubrir",
@@ -232,15 +234,22 @@
     "empty": "Aún no has votado en ninguna elección."
   },
   "reverify": {
-    "title": "Verificar identidad de nuevo",
-    "desc": "Tu credencial de World ID ha caducado o ya no es válida. Vuelve a verificar para seguir votando.",
-    "why_title": "¿Por qué necesito verificarme de nuevo?",
-    "last_verified": "Última verificación: {{date}}",
-    "verify_btn": "Verificar de nuevo con World ID",
-    "pending": "Verificando…",
-    "reason1": "Mi credencial de World ID ha expirado",
-    "reason2": "Obtuve un nuevo dispositivo World ID",
-    "reason3": "Mi credencial fue revocada o restablecida"
+    "title": "Recupera tu identidad de voto",
+    "desc": "¿Has perdido todos los dispositivos que podían desbloquear tu identidad? Verifícate con World ID de nuevo para vincular una passkey nueva.",
+    "why_title": "Cuándo usar esto",
+    "verify_btn": "Recuperar con World ID",
+    "reason1": "He perdido el móvil o el dispositivo con mi passkey",
+    "reason2": "He borrado mi passkey, o los datos del navegador",
+    "reason3": "Ninguno de mis dispositivos registrados puede ya desbloquear mi identidad",
+    "recovering": "Recuperando…",
+    "cancelled": "Recuperación cancelada",
+    "recovered": "Identidad recuperada",
+    "recovered_desc": "Este dispositivo ya tiene tu identidad de voto. Puedes votar en las elecciones a las que aún no te habías inscrito.",
+    "failed": "No se pudo recuperar tu identidad",
+    "cost_title": "Esto no se puede deshacer",
+    "cost_elections": "No podrás volver a entrar en las elecciones en las que ya te habías inscrito, aunque no llegaras a votar.",
+    "cost_receipts": "Tus recibos de voto anteriores dejan de ser recuperables, aunque esas papeletas siguen siendo válidas y contadas.",
+    "one_identity_note": "Un World ID equivale siempre a una única identidad de voto."
   },
   "org_auth": {
     "title": "Acceso de Organizador",
@@ -257,7 +266,9 @@
     "wrong_network_desc": "Cambia a Polygon Amoy para continuar.",
     "switch_network": "Cambiar a Polygon Amoy",
     "no_wallet_title": "No se detectó ninguna wallet",
-    "no_wallet_desc": "Instala MetaMask (u otra wallet EVM) para firmar como organizador."
+    "no_wallet_desc": "Instala MetaMask (u otra wallet EVM) para firmar como organizador.",
+    "no_authenticator": "Este dispositivo no tiene autenticador de passkeys",
+    "no_authenticator_help": "Configura un bloqueo de pantalla (PIN de Windows Hello, Touch ID o bloqueo de Android), o usa un móvil o llave de seguridad cuando se te pida."
   },
   "dashboard": {
     "title": "Panel de Organizador",
@@ -304,14 +315,16 @@
     "deploy_pending": "Desplegando contrato…",
     "witness_threshold_n": "Testigos requeridos (N)",
     "witness_threshold_hint": "Votos afirmativos mínimos para aprobar",
-    "yes_no_note": "Este tipo de votación usa una papeleta fija Sí / No.",
+    "yes_no_note": "Este tipo de votación usa siempre una papeleta fija de Sí / No.",
     "deposit_token": "Depósito de gas ({{currency}})",
     "leave_confirm_title": "¿Descartar los cambios?",
     "leave_confirm_desc": "Se perderán los cambios si sales de esta página.",
     "discard_changes": "Descartar cambios",
     "separate_enrollment": "Ventana de inscripción propia",
     "separate_enrollment_desc": "Define tus propias fechas de registro, con una fecha límite que puede ser anterior al inicio de la votación.",
-    "enrollment_until_vote_start": "La inscripción está abierta desde el despliegue hasta que empieza la votación."
+    "enrollment_until_vote_start": "La inscripción está abierta desde el despliegue hasta que empieza la votación.",
+    "yes_no_hint": "Aquí no hay nada que configurar: las opciones las fija la regla de votación que elegiste. Los votantes elegirán una de ellas.",
+    "yes_no_preview": "La papeleta que verán los votantes"
   },
   "election_mgmt": {
     "actions": "Acciones",
@@ -429,5 +442,17 @@
     "quorum_min": "Debe ser al menos 1",
     "number_positive": "Introduce un número válido y no negativo",
     "fix_previous_steps": "Faltan campos obligatorios o son inválidos. Vuelve atrás y revisa los pasos anteriores."
+  },
+  "devices": {
+    "title": "Mis dispositivos",
+    "desc": "Vota desde cualquiera de tus dispositivos. Cada passkey desbloquea la misma identidad, así que siempre emites un único voto.",
+    "this_device": "Este dispositivo",
+    "add": "Añadir este dispositivo",
+    "adding": "Añadiendo…",
+    "remove": "Eliminar dispositivo",
+    "added": "Dispositivo añadido",
+    "error": "No se pudo añadir este dispositivo",
+    "last_passkey": "Añade otro dispositivo antes de eliminar este",
+    "empty": "Aún no hay dispositivos registrados"
   }
 }

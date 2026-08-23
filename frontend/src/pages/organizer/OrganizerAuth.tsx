@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
@@ -9,7 +9,7 @@ import { Stepper } from '../../components/ui/Stepper';
 import { useToast } from '../../components/ui/useToast';
 import { useAuth } from '../../contexts/AuthContext';
 import { useOrganizerWallet, getRememberedOrganizerAddress } from '../../hooks/useOrganizerWallet';
-import { authenticatePasskey } from '../../lib/passkeyPrf';
+import { authenticatePasskey, hasPlatformAuthenticator } from '../../lib/passkeyPrf';
 
 export default function OrganizerAuth() {
   const navigate = useNavigate();
@@ -20,6 +20,22 @@ export default function OrganizerAuth() {
   const [step, setStep] = useState(0);
   const [wrongNetwork, setWrongNetwork] = useState(false);
   const [busy, setBusy] = useState(false);
+  // null while we ask the browser; the check is async and must not block render.
+  const [platformAuth, setPlatformAuth] = useState<boolean | null>(null);
+
+  // The passkey IS the organizer's authentication, with no fallback path, so a
+  // device without a screen lock configured simply cannot get in. Detecting that
+  // up front turns a dead end into an instruction.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const available = await hasPlatformAuthenticator();
+      if (!cancelled) setPlatformAuth(available);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const STEPS = [
     { label: t('org_auth.step_passkey') },
@@ -34,7 +50,7 @@ export default function OrganizerAuth() {
     });
 
   /**
-   * Step 1 — real WebAuthn passkey. Registers one on first use, asserts it
+   * Step 1: real WebAuthn passkey. Registers one on first use, asserts it
    * afterwards. Authentication NEVER falls back to a simulated pass: if the
    * authenticator is unavailable or the user cancels, the step does not advance.
    *
@@ -47,10 +63,10 @@ export default function OrganizerAuth() {
     try {
       await authenticatePasskey();
       if (getRememberedOrganizerAddress()) {
-        finishLogin();       // returning organizer — no wallet prompt needed
+        finishLogin();       // returning organizer: no wallet prompt needed
         return;
       }
-      setStep(1);            // first time on this device — link a wallet
+      setStep(1);            // first time on this device: link a wallet
     } catch (e) {
       fail(e);
     } finally {
@@ -64,7 +80,7 @@ export default function OrganizerAuth() {
   };
 
   /**
-   * Step 2 — real wallet connection. Independent of whether contracts are
+   * Step 2: real wallet connection. Independent of whether contracts are
    * deployed: an EOA is required to sign anything as an organizer.
    */
   const handleWallet = async () => {
@@ -79,7 +95,7 @@ export default function OrganizerAuth() {
     setBusy(true);
     try {
       const address = await wallet.connect();
-      if (!address) return; // user rejected — stay on this step
+      if (!address) return; // user rejected: stay on this step
       if (await wallet.isWrongNetwork()) {
         setWrongNetwork(true);
         return;
@@ -139,6 +155,19 @@ export default function OrganizerAuth() {
           {step === 0 && (
             <div className="flex flex-col gap-4">
               <p className="text-sm text-on-surface-variant text-center">{t('org_auth.passkey_desc')}</p>
+
+              {platformAuth === false && (
+                <div className="flex items-start gap-3 p-3 rounded-2xl bg-warning/10 border border-warning/20">
+                  <AlertTriangle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-semibold text-warning">{t('org_auth.no_authenticator')}</p>
+                    <p className="text-xs text-on-surface-variant mt-0.5">
+                      {t('org_auth.no_authenticator_help')}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <Button variant="gradient" size="lg" className="w-full rounded-full h-14 gap-2" disabled={busy} onClick={handlePasskey}>
                 <KeyRound className="w-5 h-5" />
                 {t('org_auth.create_passkey')}

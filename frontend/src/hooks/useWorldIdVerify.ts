@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { IDKit, orbLegacy, type IDKitResult } from '@worldcoin/idkit-core';
+import { type IDKitResult } from '@worldcoin/idkit-core';
 import { useAuth } from '../contexts/AuthContext';
 import { getOrCreateIdentity } from '../lib/semaphore';
+import { requestWorldIdProof } from '../lib/worldId';
 
 export function useWorldIdVerify() {
   const [isLoadingQr, setIsLoadingQr] = useState(false);
@@ -17,16 +18,16 @@ export function useWorldIdVerify() {
 
   const handleVerify = async (proof: IDKitResult): Promise<void> => {
     try {
-      // Derive (or reuse) the voter's Semaphore identity from their passkey so
-      // the issuer can register its commitment on-chain alongside the World ID
-      // verification. May prompt the passkey — we're already in a user gesture.
-      const identity = await getOrCreateIdentity();
-
+      // World ID first: the session cookie it sets is what authorises reading
+      // the identity vault. Only then can we tell whether this voter already
+      // has an identity (unlock it) or is brand new (mint one). Minting first
+      // would hand a returning voter a second identity on every new device,
+      // and a human with two identities can vote twice.
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/verify-human`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ ...proof, identityCommitment: identity.commitment.toString() }),
+        body: JSON.stringify(proof),
       });
 
       if (!res.ok) {
@@ -37,6 +38,11 @@ export function useWorldIdVerify() {
 
       const data = await res.json() as { nullifier?: string };
       if (data.nullifier) localStorage.setItem('voter_nullifier', data.nullifier);
+
+      // Unlocks the existing identity with any of the voter's passkeys, or
+      // creates it on first use. Prompts the authenticator; we are still inside
+      // the user gesture that started the verification.
+      await getOrCreateIdentity();
 
       setVoterLoggedIn(true);
       setConnectorURI(null);
@@ -55,48 +61,21 @@ export function useWorldIdVerify() {
     setQrError(null);
     setIsLoadingQr(true);
     try {
-      const worldIdAction = import.meta.env.VITE_WORLD_ID_ACTION ?? 'vote-registration';
-      const worldIdAppId = import.meta.env.VITE_WORLD_ID_APP_ID;
-      const worldIdRpId = import.meta.env.VITE_WORLD_ID_RP_ID;
-
-      const rpSigRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/rp-signature`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ action: worldIdAction }),
+      const result = await requestWorldIdProof({
+        onConnectorUri: uri => {
+          setIsLoadingQr(false);
+          setConnectorURI(uri);
+          setIsVerifying(true);
+        },
       });
 
-      if (!rpSigRes.ok) throw new Error('Failed to fetch rp-signature');
-      const rpSig = await rpSigRes.json() as {
-        sig: string; nonce: string; created_at: number; expires_at: number;
-      };
-
-      const request = await IDKit.request({
-        app_id: worldIdAppId,
-        action: worldIdAction,
-        rp_context: {
-          rp_id: worldIdRpId,
-          nonce: rpSig.nonce,
-          created_at: rpSig.created_at,
-          expires_at: rpSig.expires_at,
-          signature: rpSig.sig,
-        },
-        allow_legacy_proofs: true,
-        environment: 'production',
-      }).preset(orbLegacy({}));
-
-      setIsLoadingQr(false);
-      setConnectorURI(request.connectorURI);
-      setIsVerifying(true);
-
-      const completion = await request.pollUntilCompletion();
-      if (!completion.success) {
+      if (!result) {
         setQrError(t('verify.error_generic'));
         setIsVerifying(false);
         setConnectorURI(null);
         return;
       }
-      await handleVerify(completion.result);
+      await handleVerify(result);
     } catch (e: unknown) {
       console.error('World ID flow failed:', e);
       setQrError(t('verify.error_generic'));

@@ -5,10 +5,11 @@
  * generates a fresh Paillier keypair: the public key is stored on-chain (voters
  * encrypt with it), the private key is kept in localStorage so the organizer can
  * run the tally later. In production the private key would be sealed to a
- * passkey — see docs/dev/architecture.md.
+ * passkey: see docs/dev/architecture.md.
  */
 import { type Signer } from "ethers";
 import { getFactory, getElection, getPaymaster } from "./contracts";
+import { queryLogsFrom } from "./logs";
 import { generateElectionKeys, type SerializedKeyPair } from "./paillier";
 import { deriveElectionKeys, newKeyNonce } from "./tallyKey";
 
@@ -109,7 +110,7 @@ export async function createElection(
     tags: input.tags ?? [],
   };
 
-  // 3. Random scope (external nullifier) — unique per election
+  // 3. Random scope (external nullifier): unique per election
   const scope = BigInt(ethers.hexlify(ethers.randomBytes(31)));
 
   const cfg = {
@@ -145,7 +146,7 @@ export async function createElection(
   const address = parsed?.args?.electionAddress as string;
   if (!address) throw new Error("ElectionCreated event not found in receipt");
 
-  // Only persist when the key cannot be re-derived — otherwise store nothing.
+  // Only persist when the key cannot be re-derived: otherwise store nothing.
   if (!keyDerivable) storeElectionPrivateKey(address, paillierKeys);
   return { address, txHash: receipt.hash, paillierKeys, keyDerivable };
 }
@@ -177,7 +178,7 @@ export async function markVoided(signer: Signer, address: string): Promise<strin
 /**
  * Publishes the decrypted tally. The contract derives the outcome from these
  * counts, so it must carry one entry per option plus the blank vote, in order.
- * `ipfsCid` is the audit-trail CID — empty when the tally was run in-app, which
+ * `ipfsCid` is the audit-trail CID: empty when the tally was run in-app, which
  * does not pin (the CLI path does).
  */
 export async function publishResults(
@@ -227,9 +228,9 @@ export async function fetchGasHistory(organizer: string): Promise<GasMovement[]>
   const paymaster = getPaymaster();
 
   const [deposits, withdrawals, sponsored] = await Promise.all([
-    paymaster.queryFilter(paymaster.filters.Deposited(organizer)),
-    paymaster.queryFilter(paymaster.filters.Withdrawn(organizer)),
-    paymaster.queryFilter(paymaster.filters.VoteSponsored(organizer)),
+    queryLogsFrom(paymaster, paymaster.filters.Deposited(organizer)),
+    queryLogsFrom(paymaster, paymaster.filters.Withdrawn(organizer)),
+    queryLogsFrom(paymaster, paymaster.filters.VoteSponsored(organizer)),
   ]);
 
   const toMovement = (

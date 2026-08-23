@@ -5,6 +5,8 @@ import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import verifyRouter from './routes/verify.js';
 import credentialsRouter from './routes/credentials.js';
+import identityRouter from './routes/identity.js';
+import relayRouter from './routes/relay.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -30,6 +32,8 @@ app.use(
 
 app.use('/api', verifyRouter);
 app.use('/api', credentialsRouter);
+app.use('/api', identityRouter);
+app.use('/api', relayRouter);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'Votain VC Issuer Backend is running' });

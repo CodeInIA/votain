@@ -3,7 +3,7 @@
  *
  * Mirrors the pipeline in `scripts-tally/tally-votes.ts`, minus the IPFS
  * pinning: read every VoteCast event, keep only the highest nonce per nullifier
- * (coercion resistance — a coerced ballot is always superseded by a later one),
+ * (coercion resistance, a coerced ballot is always superseded by a later one),
  * sum the surviving Paillier ciphertexts homomorphically, and decrypt the single
  * aggregate. Individual ballots are never decrypted.
  *
@@ -12,6 +12,7 @@
  * recomputes the same result independently and pins the audit trail to IPFS.
  */
 import { getElection } from "./contracts";
+import { queryLogsFrom } from "./logs";
 import { loadElectionPrivateKey, storeElectionPrivateKey } from "./organizer";
 import { addCiphertexts, decryptTally, restoreKeyPair, type SerializedKeyPair } from "./paillier";
 import { deriveElectionKeys } from "./tallyKey";
@@ -30,8 +31,8 @@ export interface TallyResult {
 }
 
 /**
- * Resolves the decryption keypair. A key stored locally — either the fallback
- * random key or one IMPORTED from an exported file — always wins, so a device
+ * Resolves the decryption keypair. A key stored locally: either the fallback
+ * random key or one IMPORTED from an exported file: always wins, so a device
  * without the organizer's passkey can still tally after importing. Otherwise a
  * `keyNonce` election re-derives it from the passkey PRF. Null when unavailable.
  */
@@ -47,7 +48,7 @@ export async function resolveTallyKey(
 /**
  * Best-effort check of whether this device can obtain the decryption key without
  * a passkey prompt-and-fail: an imported/stored key, or (for `keyNonce`
- * elections) a PRF passkey. Not a guarantee — enough to warn up front instead
+ * elections) a PRF passkey. Not a guarantee: enough to warn up front instead
  * of failing on the button press.
  */
 export function hasTallyKey(address: string, keyNonce?: string): boolean {
@@ -103,7 +104,7 @@ export async function computeTally(address: string): Promise<TallyResult> {
     const meta = JSON.parse(metadataJson) as { privacyQuorum?: number; keyNonce?: string };
     privacyQuorum = meta.privacyQuorum ?? 0;
     keyNonce = meta.keyNonce;
-  } catch { /* no metadata — treat as no quorum, no derivable key */ }
+  } catch { /* no metadata: treat as no quorum, no derivable key */ }
 
   // Imported/stored key first, else re-derive from the passkey (prompts).
   const keys = await resolveTallyKey(address, keyNonce);
@@ -115,7 +116,7 @@ export async function computeTally(address: string): Promise<TallyResult> {
     throw new Error("The stored key does not match this election's public key");
   }
 
-  const events = await election.queryFilter(election.filters.VoteCast());
+  const events = await queryLogsFrom(election, election.filters.VoteCast());
 
   // Coercion resistance: only the highest nonce per nullifier survives.
   const latest = new Map<string, { ciphertext: string; nonce: bigint }>();
@@ -133,7 +134,7 @@ export async function computeTally(address: string): Promise<TallyResult> {
   const finalVotes = [...latest.values()];
   const quorumMet = finalVotes.length >= privacyQuorum;
 
-  // With no votes there is nothing to add — report an all-zero tally rather than
+  // With no votes there is nothing to add: report an all-zero tally rather than
   // letting addCiphertexts throw on an empty list.
   const counts = finalVotes.length === 0
     ? Array.from({ length: totalSlots }, () => 0)

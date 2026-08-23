@@ -25,7 +25,7 @@ interface FormState {
   votingType: keyof typeof VOTING_TYPE_ENUM;
   threshold: string;
   /** When false there is no separate enrollment window: it opens on deploy and
-   *  closes when voting starts. Enrollment itself is never optional — voting
+   *  closes when voting starts. Enrollment itself is never optional: voting
    *  proves membership of the election's Semaphore group. */
   separateEnrollment: boolean;
   enrollStart: string;
@@ -48,7 +48,7 @@ const INITIAL: FormState = {
 
 const isYesNo = (vt: string) => vt === 'two_thirds' || vt === 'witness_threshold';
 
-// Local-time 'yyyy-mm-dd' lower bound for each picker — these mirror
+// Local-time 'yyyy-mm-dd' lower bound for each picker: these mirror
 // validateStep's ordering rules so the calendar cannot even offer a day it
 // would reject. Days are the granularity here; validateStep still enforces the
 // strict ordering of the times within a shared day.
@@ -67,7 +67,7 @@ type FieldErrors = Partial<Record<
  *
  * These rules mirror `ElectionV4`'s constructor requirements (which revert with
  * `InvalidConfig`). Catching them here avoids sending a transaction that is
- * guaranteed to fail — the organizer would pay gas for nothing and get an
+ * guaranteed to fail: the organizer would pay gas for nothing and get an
  * opaque revert instead of a readable message.
  */
 function validateStep(step: number, form: FormState, t: (k: string) => string): FieldErrors {
@@ -168,7 +168,7 @@ export default function CreateElection() {
   }, [isDirty]);
 
   // In-app navigation (top/bottom nav tabs, logo, profile) is a same-document
-  // history change, so beforeunload never fires for it — the click has to be
+  // history change, so beforeunload never fires for it: the click has to be
   // caught before React Router acts on it. Nav links carry a real href;
   // TopNav's logo/profile buttons carry a data-nav-href for the same purpose.
   useEffect(() => {
@@ -199,7 +199,7 @@ export default function CreateElection() {
   const stepValid = Object.keys(stepErrors).length === 0;
   const err = (field: keyof FieldErrors) => (showErrors ? stepErrors[field] : undefined);
 
-  // Every step must be valid before deploying — the user could otherwise skip
+  // Every step must be valid before deploying: the user could otherwise skip
   // back and blank a field after passing its step.
   const allStepsValid = [0, 1, 2, 3].every(
     s => Object.keys(validateStep(s, form, t)).length === 0,
@@ -358,13 +358,23 @@ export default function CreateElection() {
           </Card>
         )}
 
-        {/* Step 2: Candidates */}
+        {/* Step 2: Candidates.
+            For Yes/No types the block below is a PREVIEW of the ballot, not a
+            choice. Both chips carry identical, muted styling on purpose:
+            highlighting one read as a selected toggle and had organizers trying
+            to click it. Voters pick between the two later, at vote time. */}
         {step === 2 && isYesNo(form.votingType) && (
           <Card className="p-5 text-center">
             <p className="text-sm text-on-surface">{t('create.yes_no_note')}</p>
-            <div className="flex justify-center gap-3 mt-4">
-              <span className="px-4 py-2 rounded-xl bg-tertiary/10 text-tertiary text-sm font-semibold">Yes</span>
-              <span className="px-4 py-2 rounded-xl bg-surface-high/60 text-on-surface-variant text-sm font-semibold">No</span>
+            <p className="text-xs text-on-surface-meta mt-1">{t('create.yes_no_hint')}</p>
+            <p className="text-xs text-on-surface-meta mt-4 mb-2">{t('create.yes_no_preview')}</p>
+            <div className="flex justify-center gap-3" aria-hidden="true">
+              <span className="px-4 py-2 rounded-xl bg-surface-high/40 text-on-surface-variant text-sm font-semibold">
+                {t('common.yes')}
+              </span>
+              <span className="px-4 py-2 rounded-xl bg-surface-high/40 text-on-surface-variant text-sm font-semibold">
+                {t('common.no')}
+              </span>
             </div>
           </Card>
         )}

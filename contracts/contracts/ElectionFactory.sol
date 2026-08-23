@@ -48,6 +48,10 @@ contract ElectionFactory {
         ElectionV4 newElection = new ElectionV4(forwarder, verifier, registry, msg.sender, cfg);
         elections.push(address(newElection));
 
+        // Binds the election to the tank that pays for its voters' gas. Without
+        // this the paymaster cannot relay for it (see ElectionPaymaster).
+        paymaster.registerElection(address(newElection), msg.sender);
+
         emit ElectionCreated(address(newElection), msg.sender, cfg.name, cfg.votingType, cfg.scope);
         return address(newElection);
     }

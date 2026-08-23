@@ -48,6 +48,9 @@ export async function deployStack(ethers: any, forwarder: string): Promise<Stack
   );
   await factory.waitForDeployment();
 
+  // Only the factory may bind an election to the tank that funds its gas.
+  await (await paymaster.setFactory(await factory.getAddress())).wait();
+
   return { registry, paymaster, verifier, factory, poseidonAddress };
 }
 

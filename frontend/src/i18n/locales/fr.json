@@ -69,7 +69,9 @@
     "close": "Fermer",
     "confirm": "Confirmer",
     "integration_pending": "Cette fonctionnalité sera connectée lors de la phase d'intégration.",
-    "all": "Tout"
+    "all": "Tout",
+    "yes": "Oui",
+    "no": "Non"
   },
   "nav": {
     "discover": "Découvrir",
@@ -232,15 +234,22 @@
     "empty": "Vous n'avez encore voté dans aucune élection."
   },
   "reverify": {
-    "title": "Re-vérifier votre identité",
-    "desc": "Votre accréditation World ID a expiré ou n'est plus valide. Veuillez re-vérifier pour continuer à voter.",
-    "why_title": "Pourquoi dois-je re-vérifier ?",
-    "last_verified": "Dernière vérification : {{date}}",
-    "verify_btn": "Re-vérifier avec World ID",
-    "pending": "Vérification…",
-    "reason1": "Mon accréditation World ID a expiré",
-    "reason2": "J'ai obtenu un nouvel appareil World ID",
-    "reason3": "Mon accréditation a été révoquée ou réinitialisée"
+    "title": "Récupérez votre identité de vote",
+    "desc": "Vous avez perdu tous les appareils pouvant déverrouiller votre identité ? Vérifiez-vous à nouveau avec World ID pour associer une nouvelle clé d’accès.",
+    "why_title": "Quand utiliser ceci",
+    "verify_btn": "Récupérer avec World ID",
+    "reason1": "J’ai perdu le téléphone ou l’appareil contenant ma clé d’accès",
+    "reason2": "J’ai supprimé ma clé d’accès, ou effacé les données du navigateur",
+    "reason3": "Aucun de mes appareils enregistrés ne peut plus déverrouiller mon identité",
+    "recovering": "Récupération…",
+    "cancelled": "Récupération annulée",
+    "recovered": "Identité récupérée",
+    "recovered_desc": "Cet appareil détient désormais votre identité de vote. Vous pouvez voter dans les élections que vous n’aviez pas encore rejointes.",
+    "failed": "Impossible de récupérer votre identité",
+    "cost_title": "Ceci est irréversible",
+    "cost_elections": "Vous ne pourrez pas réintégrer les élections auxquelles vous étiez déjà inscrit, même sans y avoir voté.",
+    "cost_receipts": "Vos reçus de vote précédents ne seront plus récupérables, bien que ces bulletins restent valides et comptés.",
+    "one_identity_note": "Un World ID correspond toujours à une seule identité de vote."
   },
   "org_auth": {
     "title": "Accès Organisateur",
@@ -257,7 +266,9 @@
     "wrong_network_desc": "Veuillez passer sur Polygon Amoy pour continuer.",
     "switch_network": "Passer sur Polygon Amoy",
     "no_wallet_title": "Aucun portefeuille détecté",
-    "no_wallet_desc": "Installez MetaMask (ou un autre portefeuille EVM) pour signer en tant qu'organisateur."
+    "no_wallet_desc": "Installez MetaMask (ou un autre portefeuille EVM) pour signer en tant qu'organisateur.",
+    "no_authenticator": "Aucun authentificateur de clé d’accès sur cet appareil",
+    "no_authenticator_help": "Configurez un verrouillage d’écran (code Windows Hello, Touch ID ou verrouillage Android), ou utilisez un téléphone ou une clé de sécurité lorsque cela vous est demandé."
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -304,14 +315,16 @@
     "deploy_pending": "Déploiement du contrat…",
     "witness_threshold_n": "Témoins requis (N)",
     "witness_threshold_hint": "Votes Oui minimum pour approuver",
-    "yes_no_note": "Ce type de vote utilise un bulletin Oui / Non fixe.",
+    "yes_no_note": "Ce type de vote utilise toujours un bulletin fixe Oui / Non.",
     "deposit_token": "Dépôt de gaz ({{currency}})",
     "leave_confirm_title": "Abandonner les modifications ?",
     "leave_confirm_desc": "Vos modifications seront perdues si vous quittez cette page.",
     "discard_changes": "Abandonner les modifications",
     "separate_enrollment": "Fenêtre d'inscription personnalisée",
     "separate_enrollment_desc": "Définissez vos propres dates d'inscription, avec une échéance pouvant précéder l'ouverture du vote.",
-    "enrollment_until_vote_start": "L'inscription est ouverte du déploiement jusqu'au début du vote."
+    "enrollment_until_vote_start": "L'inscription est ouverte du déploiement jusqu'au début du vote.",
+    "yes_no_hint": "Rien à configurer ici : les options sont fixées par la règle de vote choisie. Les électeurs en choisiront une.",
+    "yes_no_preview": "Le bulletin que verront les électeurs"
   },
   "election_mgmt": {
     "actions": "Actions",
@@ -429,5 +442,17 @@
     "quorum_min": "Doit être au moins 1",
     "number_positive": "Saisissez un nombre valide et non négatif",
     "fix_previous_steps": "Des champs obligatoires sont manquants ou invalides. Revenez en arrière et vérifiez les étapes précédentes."
+  },
+  "devices": {
+    "title": "Mes appareils",
+    "desc": "Votez depuis n’importe lequel de vos appareils. Chaque clé d’accès déverrouille la même identité, vous ne votez donc qu’une seule fois.",
+    "this_device": "Cet appareil",
+    "add": "Ajouter cet appareil",
+    "adding": "Ajout…",
+    "remove": "Supprimer l’appareil",
+    "added": "Appareil ajouté",
+    "error": "Impossible d’ajouter cet appareil",
+    "last_passkey": "Ajoutez un autre appareil avant de supprimer celui-ci",
+    "empty": "Aucun appareil enregistré"
   }
 }

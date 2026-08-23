@@ -24,15 +24,24 @@ export default defineConfig({
   networks: {
     amoy: {
       type: "http",
-      url: process.env.AMOY_RPC_URL ?? "https://rpc-amoy.polygon.technology",
+      // rpc-amoy.polygon.technology was the old default and no longer resolves.
+      url: process.env.AMOY_RPC_URL ?? "https://polygon-amoy.drpc.org",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
-    // Local node (`npx hardhat node`) — lets the whole dApp run against a real
+    // Local node (`npx hardhat node`): lets the whole dApp run against a real
     // chain without any funded key, using Hardhat's well-known dev accounts.
     localhost: {
       type: "http",
       url: "http://127.0.0.1:8545",
       chainId: 31337,
+    },
+  },
+  // hardhat-verify ships with the toolbox. It talks to the Etherscan V2 unified
+  // API, so a single etherscan.io key covers Polygon Amoy (chainid 80002) and
+  // there is no separate PolygonScan key any more.
+  verify: {
+    etherscan: {
+      apiKey: process.env.ETHERSCAN_API_KEY ?? "",
     },
   },
   paths: {

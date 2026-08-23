@@ -7,6 +7,9 @@ import {InternalLeanIMT, LeanIMTData} from "@zk-kit/lean-imt.sol/InternalLeanIMT
 
 interface IPlatformRegistry {
     function verifiedMembers(uint256 identityCommitment) external view returns (bool);
+    /// @dev The human (World ID nullifier) a commitment belongs to. Survives
+    /// rotation, so a revoked commitment still resolves to its owner.
+    function nullifierOf(uint256 identityCommitment) external view returns (uint256);
 }
 
 /// @title ElectionV4
@@ -30,7 +33,7 @@ contract ElectionV4 is ERC2771Context {
     }
 
     // Lifecycle order. UPCOMING (before enrollment opens) and PENDING_VOTE
-    // (enrollment closed, voting not yet open — only reachable when enrollEnd <
+    // (enrollment closed, voting not yet open, only reachable when enrollEnd <
     // voteStart) are distinct from ENROLLING so the UI never invites an action
     // the timing checks in enroll()/castVote() would revert.
     enum Phase { UPCOMING, ENROLLING, PENDING_VOTE, ACTIVE, TALLYING, CLOSED, VOIDED, CANCELLED }
@@ -97,6 +100,11 @@ contract ElectionV4 is ERC2771Context {
 
     /// @dev nullifier => next expected nonce (number of votes cast by that member)
     mapping(uint256 => uint256) public nullifierNonces;
+
+    /// @dev World ID nullifier => already enrolled in THIS election.
+    /// Keyed by human rather than by commitment so that rotating to a new
+    /// identity cannot buy a second leaf, and therefore a second ballot.
+    mapping(uint256 => bool) public enrolledHumans;
 
     /// @dev Total VoteCast events emitted (re-votes included).
     uint256 public voteCount;
@@ -214,7 +222,7 @@ contract ElectionV4 is ERC2771Context {
         if (block.timestamp < voteStart) return Phase.PENDING_VOTE;
         // Strict boundaries throughout: closeVotingEarly() sets
         // voteEnd = block.timestamp, so this must flip to TALLYING within the
-        // same block/read — an inclusive `<=` here would leave the election
+        // same block/read: an inclusive `<=` here would leave the election
         // stuck showing ACTIVE until an unrelated later block happened to be
         // mined (invisible on a chain with continuous blocks, but permanent
         // on an idle local node).
@@ -247,6 +255,11 @@ contract ElectionV4 is ERC2771Context {
     // ────────────────────────────────────────────────
 
     /// @notice Enroll a platform-verified Semaphore identity commitment.
+    /// @dev Deduplication is per HUMAN, not per commitment. A voter who rotates
+    /// to a new commitment after enrolling here would otherwise land a second
+    /// leaf in the tree, and since each identity yields its own Semaphore
+    /// nullifier the election would count both ballots without any way to link
+    /// them. Resolving the commitment back to its World ID nullifier closes that.
     function enroll(uint256 identityCommitment) external notDecided {
         if (block.timestamp < enrollStart || block.timestamp >= enrollEnd) {
             revert EnrollmentNotOpen();
@@ -254,9 +267,14 @@ contract ElectionV4 is ERC2771Context {
         if (!registry.verifiedMembers(identityCommitment)) revert NotPlatformVerified();
         if (membersTree._has(identityCommitment)) revert AlreadyEnrolled();
 
+        uint256 human = registry.nullifierOf(identityCommitment);
+        if (human == 0) revert NotPlatformVerified();
+        if (enrolledHumans[human]) revert AlreadyEnrolled();
+
         uint256 index = membersTree.size;
         uint256 newRoot = membersTree._insert(identityCommitment);
         rootTimestamps[newRoot] = block.timestamp;
+        enrolledHumans[human] = true;
 
         emit MemberEnrolled(identityCommitment, index, newRoot);
     }

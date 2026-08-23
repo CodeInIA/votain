@@ -5,6 +5,7 @@
  * Phase A screens already consume, so components stay presentation-only.
  */
 import { getElection, getFactory } from "./contracts";
+import { queryLogsFrom } from "./logs";
 import { getStoredCommitment, getStoredVoteNullifier } from "./semaphore";
 import type { Candidate, Election, ElectionPhase, VotingType } from "../data/seed";
 
@@ -177,7 +178,7 @@ export async function fetchElectionMembers(
   electionTitle: string,
 ): Promise<ChainMember[]> {
   const election = getElection(electionAddress);
-  const events = await election.queryFilter(election.filters.MemberEnrolled());
+  const events = await queryLogsFrom(election, election.filters.MemberEnrolled());
   return Promise.all(
     events.map(async e => {
       const args = (e as unknown as { args: { identityCommitment: bigint; index: bigint } }).args;

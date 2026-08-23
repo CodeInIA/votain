@@ -1,0 +1,557 @@
+/**
+ * Rich local seed: every phase, every voting type, every outcome.
+ *
+ * `seed-local.ts` creates three empty elections, which is enough to see the
+ * Discover grid but not enough to exercise the app. This one drives real
+ * elections through their whole life: registers voters in PlatformRegistry,
+ * enrols them through ElectionPaymaster, casts genuine Groth16-proved Paillier
+ * ballots, re-votes to show coercion resistance, and publishes decrypted results
+ * so every results layout has something to render.
+ *
+ * Time is moved with `evm_increaseTime`, so the historical elections are created
+ * and completed FIRST and the live ones last: the chain clock only goes forward,
+ * and an election created earlier would otherwise have its window dragged past.
+ *
+ * The Paillier private key of each tallyable election is written to
+ * `deployments/tally-keys/`, because the UI normally derives it from the
+ * organizer passkey and a seeded election has no passkey behind it. Import the
+ * file with the "Import decryption key" button in the organizer view.
+ *
+ * Usage: npx hardhat run scripts/seed-demo.ts --network localhost
+ */
+import { network } from "hardhat";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { Identity } from "@semaphore-protocol/identity";
+import { Group } from "@semaphore-protocol/group";
+import { generateProof } from "@semaphore-protocol/proof";
+import { poseidon2 } from "poseidon-lite/poseidon2";
+import { generateRandomKeys, PublicKey } from "paillier-bigint";
+
+const { ethers } = await network.connect();
+
+const HOUR = 3600;
+const DAY = 24 * HOUR;
+const COUNTER_BASE = 1_000_000n;
+/// 1024-bit keeps seeding quick; the app generates 2048-bit for real elections.
+const PAILLIER_BITS = 1024;
+
+const VotingType = {
+  SIMPLE_PLURALITY: 0,
+  ABSOLUTE_MAJORITY: 1,
+  SUPERMAJORITY_TWO_THIRDS: 2,
+  WITNESS_THRESHOLD: 3,
+} as const;
+
+const toHex = (x: bigint): string => "0x" + x.toString(16);
+
+/// Coarse timing, so a slow seed run says WHERE it is slow instead of just hanging.
+const t0 = Date.now();
+const elapsed = (): string => `${((Date.now() - t0) / 1000).toFixed(1)}s`;
+function step(label: string): void {
+  console.log(`  [${elapsed()}] ${label}`);
+}
+
+/** Ballot ciphertext goes to Solidity as `bytes`, so it must have even length. */
+function encryptBallot(pk: PublicKey, optionIndex: number): string {
+  const digits = pk.encrypt(COUNTER_BASE ** BigInt(optionIndex)).toString(16);
+  return "0x" + (digits.length % 2 === 0 ? digits : "0" + digits);
+}
+
+function hashToField(v: bigint): bigint {
+  return BigInt(ethers.keccak256(ethers.zeroPadValue(ethers.toBeHex(v), 32))) >> 8n;
+}
+
+function voteNullifier(identity: Identity, scope: bigint): bigint {
+  return poseidon2([hashToField(scope), identity.secretScalar]);
+}
+
+function voteMessage(ciphertext: string, nonce: bigint): bigint {
+  return BigInt(ethers.solidityPackedKeccak256(["bytes", "uint256"], [ciphertext, nonce]));
+}
+
+async function chainNow(): Promise<number> {
+  return (await ethers.provider.getBlock("latest"))!.timestamp;
+}
+
+async function advanceTo(target: number): Promise<void> {
+  const now = await chainNow();
+  if (target > now) {
+    await ethers.provider.send("evm_increaseTime", [target - now]);
+    await ethers.provider.send("evm_mine", []);
+  }
+}
+
+interface Spec {
+  name: string;
+  organizerName: string;
+  description: string;
+  votingType: number;
+  thresholdValue: bigint;
+  candidates: { name: string; description?: string }[];
+  /// Window offsets in seconds, relative to the moment of creation.
+  enrollFrom: number;
+  enrollTo: number;
+  voteFrom: number;
+  voteTo: number;
+  /// Which option each seeded voter picks. Length = number of voters.
+  ballots?: number[];
+  /// One voter changes their mind: [voterIndex, replacementOption].
+  revote?: [number, number];
+  /// What to do once voting closes.
+  finish?: "publish" | "leave-tallying" | "void";
+  cancelImmediately?: boolean;
+  organizerAccount?: number;
+  tags?: string[];
+}
+
+async function main(): Promise<void> {
+  const chainId = (await ethers.provider.getNetwork()).chainId;
+  if (chainId !== 31337n) throw new Error(`seed-demo is local-only (got chainId ${chainId})`);
+
+  const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+  const manifest = JSON.parse(readFileSync(join(root, "deployments", "local.json"), "utf-8")) as {
+    contracts: Record<string, string>;
+  };
+
+  const signers = await ethers.getSigners();
+  const deployer = signers[0];
+  const relayer = signers[9];
+
+  const factory = await ethers.getContractAt(
+    "ElectionFactory",
+    manifest.contracts.ElectionFactory,
+    deployer,
+  );
+  const registry = await ethers.getContractAt(
+    "PlatformRegistry",
+    manifest.contracts.PlatformRegistry,
+    deployer,
+  );
+  const paymaster = await ethers.getContractAt(
+    "ElectionPaymaster",
+    manifest.contracts.ElectionPaymaster,
+    relayer,
+  );
+
+  const keyDir = join(root, "deployments", "tally-keys");
+  mkdirSync(keyDir, { recursive: true });
+
+  // A pool of voters registered on the platform once, reused across elections.
+  console.log("Registering demo voters on PlatformRegistry...");
+  const voters: Identity[] = [];
+  for (let i = 0; i < 8; i++) {
+    const identity = new Identity(`votain-demo-voter-${i}`);
+    const worldId = BigInt(ethers.keccak256(ethers.toUtf8Bytes(`demo-worldid-${i}`)));
+    if (!(await registry.verifiedMembers(identity.commitment))) {
+      await (await registry.registerMember(worldId, identity.commitment)).wait();
+    }
+    voters.push(identity);
+  }
+  console.log(`  ${voters.length} voters registered\n`);
+
+  async function build(spec: Spec): Promise<void> {
+    const organizer = signers[spec.organizerAccount ?? 0];
+    step(`${spec.name}: generating Paillier key`);
+    const keys = await generateRandomKeys(PAILLIER_BITS);
+    const created = await chainNow();
+
+    const cfg = {
+      name: spec.name,
+      votingType: spec.votingType,
+      thresholdValue: spec.thresholdValue,
+      numOptions: BigInt(spec.candidates.length),
+      enrollStart: created + spec.enrollFrom,
+      enrollEnd: created + spec.enrollTo,
+      voteStart: created + spec.voteFrom,
+      voteEnd: created + spec.voteTo,
+      scope: BigInt(ethers.hexlify(ethers.randomBytes(31))),
+      paillierPublicKey: JSON.stringify({
+        n: toHex(keys.publicKey.n),
+        g: toHex(keys.publicKey.g),
+      }),
+      // No keyNonce: the key was not derived from a passkey, so the UI will ask
+      // the organizer to import it rather than trying to re-derive it.
+      metadataJson: JSON.stringify({
+        description: spec.description,
+        organizerName: spec.organizerName,
+        candidates: spec.candidates,
+        privacyQuorum: 3,
+        tags: spec.tags ?? ["demo"],
+      }),
+    };
+
+    const receipt = await (
+      await factory.connect(organizer).createElection(cfg, { value: ethers.parseEther("2") })
+    ).wait();
+    const address = receipt!.logs
+      .map(l => {
+        try {
+          return factory.interface.parseLog(l);
+        } catch {
+          return null;
+        }
+      })
+      .find(p => p?.name === "ElectionCreated")?.args?.electionAddress as string;
+
+    const election = await ethers.getContractAt("ElectionV4", address, organizer);
+
+    if (spec.cancelImmediately) {
+      await (await election.cancelElection()).wait();
+      console.log(`OK  ${spec.name}\n    -> ${address}  [CANCELLED]`);
+      return;
+    }
+
+    if (!spec.ballots || spec.ballots.length === 0) {
+      console.log(`OK  ${spec.name}\n    -> ${address}`);
+      return;
+    }
+
+    // Enrolment, relayed exactly as the app does it.
+    step(`  enrolling ${spec.ballots.length} voters and casting ballots`);
+    await advanceTo(created + spec.enrollFrom + 60);
+    const participants = voters.slice(0, spec.ballots.length);
+    for (const v of participants) {
+      await (await paymaster.relayEnroll(address, v.commitment)).wait();
+    }
+
+    // Voting.
+    await advanceTo(created + spec.voteFrom + 60);
+    const group = new Group(participants.map(v => v.commitment));
+    const scope: bigint = await election.scope();
+
+    const castFor = async (voterIndex: number, option: number): Promise<void> => {
+      const identity = participants[voterIndex];
+      const ciphertext = encryptBallot(keys.publicKey, option);
+      const nonce: bigint = await election.nullifierNonces(voteNullifier(identity, scope));
+      const proof = await generateProof(identity, group, voteMessage(ciphertext, nonce), scope);
+      const p = proof.points.map(BigInt);
+      await (
+        await paymaster.relayVote(
+          address,
+          ciphertext,
+          BigInt(proof.nullifier),
+          BigInt(proof.merkleTreeRoot),
+          BigInt(proof.merkleTreeDepth),
+          [p[0], p[1]],
+          [
+            [p[2], p[3]],
+            [p[4], p[5]],
+          ],
+          [p[6], p[7]],
+        )
+      ).wait();
+    };
+
+    for (let i = 0; i < spec.ballots.length; i++) await castFor(i, spec.ballots[i]);
+
+    const finalChoices = [...spec.ballots];
+    if (spec.revote) {
+      const [voterIndex, replacement] = spec.revote;
+      await castFor(voterIndex, replacement);
+      finalChoices[voterIndex] = replacement;
+    }
+
+    if (spec.finish === "void") {
+      await advanceTo(created + spec.voteTo + 60);
+      await (await election.markVoided()).wait();
+      console.log(`OK  ${spec.name}\n    -> ${address}  [VOIDED]`);
+      return;
+    }
+
+    if (spec.finish === "publish") {
+      await advanceTo(created + spec.voteTo + 60);
+      const counts = new Array<bigint>(spec.candidates.length + 1).fill(0n);
+      for (const choice of finalChoices) counts[choice] += 1n;
+      await (
+        await election.publishResults(`Qm${spec.name.slice(0, 8).replace(/\W/g, "")}Demo`, counts)
+      ).wait();
+
+      const outcomeNames = ["NONE", "WINNER", "TIE", "APPROVED", "REJECTED", "THRESHOLD_NOT_MET"];
+      const outcome = outcomeNames[Number(await election.outcome())];
+      console.log(`OK  ${spec.name}\n    -> ${address}  [CLOSED - ${outcome}]`);
+      return;
+    }
+
+    if (spec.finish === "leave-tallying") {
+      await advanceTo(created + spec.voteTo + 60);
+      writeFileSync(
+        join(keyDir, `${address}.json`),
+        JSON.stringify(
+          {
+            publicKey: { n: toHex(keys.publicKey.n), g: toHex(keys.publicKey.g) },
+            privateKey: {
+              lambda: toHex(keys.privateKey.lambda),
+              mu: toHex(keys.privateKey.mu),
+            },
+          },
+          null,
+          2,
+        ) + "\n",
+      );
+      console.log(`OK  ${spec.name}\n    -> ${address}  [TALLYING - key in deployments/tally-keys/]`);
+      return;
+    }
+
+    console.log(`OK  ${spec.name}\n    -> ${address}  [${spec.ballots.length} votes cast]`);
+  }
+
+  // ────────────────────────────────────────────────
+  // 1. Finished elections, oldest first (time only moves forward)
+  // ────────────────────────────────────────────────
+  console.log("Building finished elections...\n");
+
+  await build({
+    name: "Bilbao Neighbourhood Association - Annual Board",
+    organizerName: "Bilbao City Council",
+    description:
+      "Election of the Ategorrieta-Uribarri neighbourhood association board for the 2026 term.",
+    votingType: VotingType.SIMPLE_PLURALITY,
+    thresholdValue: 0n,
+    candidates: [
+      { name: "Itziar Zubicaray", description: "Incumbent, community programmes" },
+      { name: "Eneko Larranaga", description: "Local business association" },
+      { name: "Ainhoa Etxeberria", description: "Youth representative" },
+    ],
+    enrollFrom: -1,
+    enrollTo: HOUR,
+    voteFrom: HOUR,
+    voteTo: 3 * HOUR,
+    ballots: [0, 0, 1, 2, 0],
+    revote: [3, 0],
+    finish: "publish",
+    tags: ["closed", "plurality"],
+  });
+
+  await build({
+    name: "Tenants Union - Rent Freeze Referendum",
+    organizerName: "Tenants Union of Valencia",
+    description:
+      "Should the union campaign for a city-wide rent freeze? Requires an absolute majority.",
+    votingType: VotingType.ABSOLUTE_MAJORITY,
+    thresholdValue: 0n,
+    candidates: [{ name: "Yes" }, { name: "No" }],
+    enrollFrom: -1,
+    enrollTo: HOUR,
+    voteFrom: HOUR,
+    voteTo: 3 * HOUR,
+    ballots: [0, 0, 0, 1, 1],
+    finish: "publish",
+    tags: ["closed", "referendum"],
+  });
+
+  await build({
+    name: "Founders Agreement - Equal Split Vote",
+    organizerName: "Seville Tech Hub Collective",
+    description: "Deliberately tied result, to exercise the tie-breaking layout.",
+    votingType: VotingType.SIMPLE_PLURALITY,
+    thresholdValue: 0n,
+    candidates: [{ name: "Option A" }, { name: "Option B" }],
+    enrollFrom: -1,
+    enrollTo: HOUR,
+    voteFrom: HOUR,
+    voteTo: 3 * HOUR,
+    ballots: [0, 1, 0, 1],
+    finish: "publish",
+    tags: ["closed", "tie"],
+  });
+
+  await build({
+    name: "Wedding of Marta and Julen - Witness Confirmation",
+    organizerName: "Marta and Julen",
+    description: "Four witnesses must confirm. Only three did, so the threshold is not met.",
+    votingType: VotingType.WITNESS_THRESHOLD,
+    thresholdValue: 4n,
+    candidates: [{ name: "I confirm" }, { name: "I decline" }],
+    enrollFrom: -1,
+    enrollTo: HOUR,
+    voteFrom: HOUR,
+    voteTo: 3 * HOUR,
+    ballots: [0, 0, 0, 1, 1],
+    finish: "publish",
+    tags: ["closed", "witness"],
+  });
+
+  await build({
+    name: "Cooperative Statutes - Two Thirds Amendment",
+    organizerName: "Cooperativa La Espiga",
+    description: "Amendment to the statutes. Needs at least two thirds of the ballots cast.",
+    votingType: VotingType.SUPERMAJORITY_TWO_THIRDS,
+    thresholdValue: 0n,
+    candidates: [{ name: "Yes" }, { name: "No" }],
+    enrollFrom: -1,
+    enrollTo: HOUR,
+    voteFrom: HOUR,
+    voteTo: 3 * HOUR,
+    ballots: [0, 0, 0, 0, 1],
+    finish: "publish",
+    tags: ["closed", "supermajority"],
+  });
+
+  await build({
+    name: "District Poll - Insufficient Turnout",
+    organizerName: "Madrid Municipal Authority",
+    description: "Voided after the voting window closed without reaching the privacy quorum.",
+    votingType: VotingType.SIMPLE_PLURALITY,
+    thresholdValue: 0n,
+    candidates: [{ name: "Proposal A" }, { name: "Proposal B" }],
+    enrollFrom: -1,
+    enrollTo: HOUR,
+    voteFrom: HOUR,
+    voteTo: 3 * HOUR,
+    ballots: [0, 1],
+    finish: "void",
+    tags: ["voided"],
+  });
+
+  await build({
+    name: "Regional Assembly - Delegate Election",
+    organizerName: "Madrid Municipal Authority",
+    description: "Voting has closed. The organizer still has to decrypt and publish the tally.",
+    votingType: VotingType.SIMPLE_PLURALITY,
+    thresholdValue: 0n,
+    candidates: [{ name: "Lucia Ferrer" }, { name: "Marcos Idigoras" }, { name: "Nadia Ben Salah" }],
+    enrollFrom: -1,
+    enrollTo: HOUR,
+    voteFrom: HOUR,
+    voteTo: 3 * HOUR,
+    ballots: [0, 1, 1, 2, 1],
+    finish: "leave-tallying",
+    tags: ["tallying"],
+  });
+
+  await build({
+    name: "Chess Club - Cancelled Committee Vote",
+    organizerName: "Ateneo Chess Club",
+    description: "Called off by the organizer before enrollment closed.",
+    votingType: VotingType.SIMPLE_PLURALITY,
+    thresholdValue: 0n,
+    candidates: [{ name: "Candidate A" }, { name: "Candidate B" }],
+    enrollFrom: -1,
+    enrollTo: DAY,
+    voteFrom: DAY,
+    voteTo: 2 * DAY,
+    cancelImmediately: true,
+    tags: ["cancelled"],
+  });
+
+  // ────────────────────────────────────────────────
+  // 2. Live elections, created last so their windows sit in the future
+  // ────────────────────────────────────────────────
+  console.log("\nBuilding live elections...\n");
+
+  // ACTIVE with ballots already in. Built before the other live ones because it
+  // has to walk its own clock forward past voteStart; the rest are created after
+  // and get their windows from the new "now".
+  //
+  // The contract requires enrollEnd <= voteStart, so an election that is already
+  // voting can no longer be joined. That is the design, not a limitation of the
+  // seed: you enrol first, then vote. To vote yourself, use the election below
+  // whose enrollment is still open.
+  await build({
+    name: "Madrid City Council - District 5 Representative",
+    organizerName: "Madrid Municipal Authority",
+    description: "Voting is OPEN and ballots are already in. Enrollment for this one has closed.",
+    votingType: VotingType.SIMPLE_PLURALITY,
+    thresholdValue: 0n,
+    candidates: [
+      { name: "Ana Garcia Lopez", description: "Progressive Alliance, urban mobility" },
+      { name: "Carlos Martinez Ruiz", description: "People's Party, former district manager" },
+      { name: "Sofia Herrera Vega", description: "Green Coalition, environmental engineer" },
+    ],
+    enrollFrom: -1,
+    enrollTo: HOUR,
+    voteFrom: HOUR,
+    voteTo: 7 * DAY,
+    ballots: [0, 1, 0, 2, 0],
+    tags: ["active"],
+  });
+
+  // The one to actually test the voter flow on: enrollment is open, and voting
+  // starts in 10 minutes. Enrol, then either wait, or open it immediately from
+  // the organizer view with "close enrollment early".
+  await build({
+    name: "Neighbourhood Budget - Participatory Vote",
+    organizerName: "Madrid Municipal Authority",
+    description:
+      "ENROL HERE to test voting. Voting opens 10 minutes after seeding, or immediately if the organizer closes enrollment early.",
+    votingType: VotingType.SIMPLE_PLURALITY,
+    thresholdValue: 0n,
+    candidates: [
+      { name: "Repave the plaza" },
+      { name: "New library wing" },
+      { name: "Bike lane network" },
+    ],
+    enrollFrom: -60,
+    enrollTo: 10 * 60,
+    voteFrom: 10 * 60,
+    voteTo: 7 * DAY,
+    tags: ["enrolling", "test-me"],
+  });
+
+  await build({
+    name: "UB Student Union - Board Election",
+    organizerName: "Universidad de Barcelona",
+    description: "Enrollment is OPEN. Join now; voting starts in two days.",
+    votingType: VotingType.SIMPLE_PLURALITY,
+    thresholdValue: 0n,
+    candidates: [{ name: "List A" }, { name: "List B" }, { name: "List C" }],
+    enrollFrom: -HOUR,
+    enrollTo: 2 * DAY,
+    voteFrom: 2 * DAY,
+    voteTo: 5 * DAY,
+    tags: ["enrolling"],
+  });
+
+  await build({
+    name: "Cooperative Board - Witness Confirmation",
+    organizerName: "Cooperativa La Espiga",
+    description: "Enrollment has closed and voting has not started yet.",
+    votingType: VotingType.WITNESS_THRESHOLD,
+    thresholdValue: 2n,
+    candidates: [{ name: "I confirm" }, { name: "I decline" }],
+    enrollFrom: -2 * HOUR,
+    enrollTo: -60,
+    voteFrom: DAY,
+    voteTo: 3 * DAY,
+    tags: ["pending-vote"],
+  });
+
+  await build({
+    name: "Andalusian Green Party - Internal Primary",
+    organizerName: "Andalusian Green Party",
+    description: "Scheduled. Enrollment opens in three days.",
+    votingType: VotingType.ABSOLUTE_MAJORITY,
+    thresholdValue: 0n,
+    candidates: [{ name: "Yes" }, { name: "No" }],
+    enrollFrom: 3 * DAY,
+    enrollTo: 6 * DAY,
+    voteFrom: 6 * DAY,
+    voteTo: 9 * DAY,
+    tags: ["upcoming"],
+  });
+
+  // A second organizer, so the dashboard per-organizer filtering is testable.
+  await build({
+    name: "Girona Rowing Club - Captain Election",
+    organizerName: "Girona Rowing Club",
+    description: "Created by a DIFFERENT organizer account (Hardhat #2).",
+    votingType: VotingType.SIMPLE_PLURALITY,
+    thresholdValue: 0n,
+    candidates: [{ name: "Pau Riera" }, { name: "Nuria Camps" }],
+    enrollFrom: -HOUR,
+    enrollTo: 3 * DAY,
+    voteFrom: 3 * DAY,
+    voteTo: 6 * DAY,
+    organizerAccount: 2,
+    tags: ["other-organizer"],
+  });
+
+  console.log(`\nTotal elections on chain: ${await factory.electionsCount()}`);
+  console.log(`Main organizer  (Hardhat #0): ${signers[0].address}`);
+  console.log(`Other organizer (Hardhat #2): ${signers[2].address}`);
+  console.log(`Tally keys written to: ${keyDir}`);
+}
+
+await main();

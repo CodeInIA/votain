@@ -2,36 +2,27 @@ import { Router, Request, Response } from 'express';
 import { signRequest } from '@worldcoin/idkit-core/signing';
 import { sdJwt, SELECTIVE_DISCLOSURE_FRAME, type VotainCredentialPayload } from '../sd/issuer.js';
 import { allocateIndex, DEFAULT_LIST_ID } from '../status/statusList.js';
-import { registerOnChain, isRegistrarConfigured } from '../chain/registrar.js';
+import { verifySession } from '../auth/session.js';
 
 const router = Router();
 
 // ────────────────────────────────────────────────
-// GET /me — check for an active session
+// GET /me: check for an active session
 // ────────────────────────────────────────────────
-router.get('/me', (req: Request, res: Response) => {
-  const vc = req.cookies?.voter_vc;
-  if (!vc) return res.status(401).json({ authenticated: false });
-
-  try {
-    const payloadB64 = vc.split('.')[1];
-    const payload = JSON.parse(
-      Buffer.from(payloadB64, 'base64url').toString('utf-8')
-    ) as VotainCredentialPayload;
-
-    const now = Math.floor(Date.now() / 1000);
-    if (payload.exp < now) {
-      res.clearCookie('voter_vc');
-      return res.status(401).json({ authenticated: false, reason: 'expired' });
-    }
-
-    return res.status(200).json({
-      authenticated: true,
-      nullifier: payload.sub,
-    });
-  } catch {
-    return res.status(401).json({ authenticated: false, reason: 'invalid_token' });
+router.get('/me', async (req: Request, res: Response) => {
+  // The signature is checked, not just the payload decoded. Without that, a
+  // handcrafted `header.{"sub":"…","exp":<future>}.garbage` cookie would be
+  // accepted as any voter's session.
+  const session = await verifySession(req.cookies?.voter_vc);
+  if (!session) {
+    res.clearCookie('voter_vc');
+    return res.status(401).json({ authenticated: false });
   }
+
+  return res.status(200).json({
+    authenticated: true,
+    nullifier: session.nullifier,
+  });
 });
 
 // ────────────────────────────────────────────────
@@ -83,18 +74,13 @@ router.post('/rp-signature', async (req: Request, res: Response) => {
 // ────────────────────────────────────────────────
 router.post('/verify-human', async (req: Request, res: Response) => {
   try {
-    const idkitResponse = req.body as {
+    const worldIdPayload = req.body as {
       responses?: Array<{ nullifier?: string }>;
       nullifier_hash?: string;
-      identityCommitment?: string;
     };
 
     const rpId = process.env.WORLD_ID_RP_ID;
     if (!rpId) throw new Error('WORLD_ID_RP_ID not configured');
-
-    // The Semaphore identity commitment travels alongside the World ID payload
-    // but must NOT be forwarded to World ID.
-    const { identityCommitment, ...worldIdPayload } = idkitResponse;
 
     const verifyRes = await fetch(`https://developer.world.org/api/v4/verify/${rpId}`, {
       method: 'POST',
@@ -109,8 +95,8 @@ router.post('/verify-human', async (req: Request, res: Response) => {
     }
 
     const nullifier_hash: string =
-      idkitResponse.responses?.[0]?.nullifier ??
-      idkitResponse.nullifier_hash ??
+      worldIdPayload.responses?.[0]?.nullifier ??
+      worldIdPayload.nullifier_hash ??
       '';
 
     // Revocation entry for this credential
@@ -140,19 +126,13 @@ router.post('/verify-human', async (req: Request, res: Response) => {
 
     const issuedCredential = await sdJwt.issue(credentialPayload, SELECTIVE_DISCLOSURE_FRAME);
 
-    // Register the voter on-chain so elections accept their enrollment
-    let onchain = { registered: false as boolean, txHash: undefined as string | undefined };
-    if (identityCommitment && isRegistrarConfigured()) {
-      const result = await registerOnChain(nullifier_hash, identityCommitment);
-      onchain = { registered: result.registered, txHash: result.txHash };
-      if (!result.registered) {
-        console.warn('On-chain registration failed:', result.error);
-      }
-    } else if (identityCommitment) {
-      console.warn('Registrar not configured — skipping on-chain registration');
-    }
+    // On-chain registration does NOT happen here. The voter resolves their
+    // Semaphore identity from the encrypted vault first (which may require
+    // unlocking with a passkey from another device), and POST /identity/vault
+    // registers the resulting commitment. Doing it here would force a brand new
+    // identity on every device, and a human with two identities can vote twice.
 
-    // Store SD-JWT as an httpOnly cookie — never exposed to JS
+    // Store SD-JWT as an httpOnly cookie: never exposed to JS
     res.cookie('voter_vc', issuedCredential, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -164,8 +144,6 @@ router.post('/verify-human', async (req: Request, res: Response) => {
       success: true,
       message: 'Human verified successfully',
       nullifier: nullifier_hash,
-      onchainRegistered: onchain.registered,
-      registrationTx: onchain.txHash,
     });
 
   } catch (error: unknown) {

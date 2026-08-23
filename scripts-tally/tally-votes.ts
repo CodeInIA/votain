@@ -3,7 +3,7 @@
  *
  * Pipeline:
  *   1. Read every VoteCast event from an election.
- *   2. Coercion resistance — keep only the HIGHEST nonce per nullifier.
+ *   2. Coercion resistance: keep only the HIGHEST nonce per nullifier.
  *   3. Homomorphically sum the surviving Paillier ciphertexts.
  *   4. Decrypt the aggregate with the organizer's private key and unpack the
  *      per-option counters (base-B packing, blank vote = last option).
@@ -62,7 +62,7 @@ function determineOutcome(
   const totalCast = counts.reduce((a, b) => a + b, 0n);
 
   if (votingType === 3) {
-    // WITNESS_THRESHOLD — option 0 is "Yes"
+    // WITNESS_THRESHOLD: option 0 is "Yes"
     return { outcome: counts[0] >= threshold ? "APPROVED" : "REJECTED" };
   }
   if (votingType === 2) {
@@ -103,6 +103,47 @@ async function pinToIpfs(json: object): Promise<string> {
   return data.IpfsHash;
 }
 
+/// Range accepted by the strictest free Amoy endpoints (drpc, publicnode).
+const MAX_LOG_RANGE = 10_000;
+
+/**
+ * Reads every VoteCast event for an election.
+ *
+ * Starts from FROM_BLOCK when set (the deployment block, printed by
+ * contracts/scripts/deploy.ts into deployments/amoy.json), otherwise from
+ * genesis. Retries in fixed windows when the endpoint rejects the range, so the
+ * audit works on any provider rather than only on the unlimited ones.
+ */
+async function queryAllVoteCast(
+  election: Contract,
+  provider: JsonRpcProvider,
+): Promise<Awaited<ReturnType<Contract["queryFilter"]>>> {
+  const from = Number(process.env.FROM_BLOCK ?? 0);
+  const filter = election.filters.VoteCast();
+
+  try {
+    return await election.queryFilter(filter, from);
+  } catch (error: unknown) {
+    const message = (error instanceof Error ? error.message : String(error)).toLowerCase();
+    const isRangeError =
+      message.includes("block range") ||
+      message.includes("ranges over") ||
+      message.includes("range over") ||
+      message.includes("more than 10000") ||
+      message.includes("log response size");
+    if (!isRangeError) throw error;
+
+    console.warn("RPC rejected the full log range, falling back to windowed queries");
+    const head = await provider.getBlockNumber();
+    const out: Awaited<ReturnType<Contract["queryFilter"]>> = [];
+    for (let start = from; start <= head; start += MAX_LOG_RANGE) {
+      const end = Math.min(start + MAX_LOG_RANGE - 1, head);
+      out.push(...(await election.queryFilter(filter, start, end)));
+    }
+    return out;
+  }
+}
+
 async function main() {
   const address = process.argv[2];
   if (!address) {
@@ -112,7 +153,12 @@ async function main() {
   const doPublish = process.argv.includes("--publish");
   const doPin = process.argv.includes("--pin");
 
-  const provider = new JsonRpcProvider(process.env.RPC_URL ?? "https://rpc-amoy.polygon.technology");
+  // Tenderly serves eth_getLogs over the full block range. drpc and publicnode
+  // cap it at 10000 blocks; queryAllVoteCast() below falls back to windowed
+  // queries so the audit still completes on those endpoints.
+  const provider = new JsonRpcProvider(
+    process.env.RPC_URL ?? "https://polygon-amoy.gateway.tenderly.co",
+  );
   const election = new Contract(address, ELECTION_ABI, provider);
 
   const [numOptionsBn, votingTypeBn, thresholdBn, pkJson, name] = await Promise.all([
@@ -126,8 +172,9 @@ async function main() {
   const votingType = Number(votingTypeBn);
   const totalSlots = numOptions + 1; // + blank vote
 
-  // 1. All votes
-  const events = await election.queryFilter(election.filters.VoteCast());
+  // 1. All votes. An auditor must see every ballot or the tally is wrong, so a
+  //    truncated log range is never acceptable here.
+  const events = await queryAllVoteCast(election, provider);
   console.log(`Found ${events.length} VoteCast events`);
 
   // 2. Coercion resistance: highest nonce per nullifier wins
@@ -143,7 +190,7 @@ async function main() {
   const finalVotes = [...latest.values()];
   console.log(`${finalVotes.length} unique voters after coercion-resistance dedup`);
 
-  // Privacy quorum (metadata) — never reveal a tally computed from too few voters
+  // Privacy quorum (metadata): never reveal a tally computed from too few voters
   let privacyQuorum = 0;
   try {
     const meta = JSON.parse(await election.metadataJson()) as { privacyQuorum?: number };

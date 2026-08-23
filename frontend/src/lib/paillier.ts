@@ -26,8 +26,26 @@ export interface SerializedKeyPair {
   };
 }
 
+/**
+ * Hex for values consumed as numbers (key material). Odd length is fine here:
+ * BigInt() parses it either way.
+ */
 const toHex = (x: bigint): string => "0x" + x.toString(16);
 const fromHex = (s: string): bigint => BigInt(s);
+
+/**
+ * Hex for values consumed as Solidity `bytes` (the ballot ciphertext).
+ *
+ * MUST be zero-padded to an even number of digits. `toString(16)` drops the
+ * leading zero nibble, so roughly half of all ciphertexts come out an odd number
+ * of characters, which ethers rejects as BytesLike: the vote would fail client
+ * side before it ever reached the chain, and only for some voters, which is a
+ * miserable bug to chase.
+ */
+const toBytesHex = (x: bigint): string => {
+  const digits = x.toString(16);
+  return "0x" + (digits.length % 2 === 0 ? digits : "0" + digits);
+};
 
 // ────────────────────────────────────────────────
 // Key management
@@ -64,7 +82,7 @@ export function restoreKeyPair(serialized: SerializedKeyPair): { publicKey: Publ
 export function encryptBallot(publicKeyJson: string, optionIndex: number): string {
   const pk = parsePublicKey(publicKeyJson);
   const plaintext = COUNTER_BASE ** BigInt(optionIndex);
-  return toHex(pk.encrypt(plaintext));
+  return toBytesHex(pk.encrypt(plaintext));
 }
 
 /** Homomorphically adds a list of 0x-hex ciphertexts. */

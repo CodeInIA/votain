@@ -40,7 +40,7 @@ function nextCommitment(): { nullifier: bigint; commitment: bigint } {
   return { nullifier: commitmentSeq * 7n, commitment: commitmentSeq };
 }
 
-describe("ElectionV4 — config validation", () => {
+describe("ElectionV4, config validation", () => {
   it("rejects invalid time windows and option counts", async () => {
     const now = await networkHelpers.time.latest();
     const Election = await ethers.getContractFactory("ElectionV4", {
@@ -78,7 +78,7 @@ describe("ElectionV4 — config validation", () => {
   });
 });
 
-describe("ElectionV4 — phase timeline", () => {
+describe("ElectionV4, phase timeline", () => {
   it("reports UPCOMING before enrollment opens, then ENROLLING", async () => {
     const now = await networkHelpers.time.latest();
     // Enrollment opens 500s from now → currently UPCOMING.
@@ -122,7 +122,7 @@ describe("ElectionV4 — phase timeline", () => {
   });
 });
 
-describe("ElectionV4 — enrollment", () => {
+describe("ElectionV4, enrollment", () => {
   it("only platform-verified commitments can enroll, once", async () => {
     const election = await freshElection();
     const { nullifier, commitment } = nextCommitment();
@@ -162,9 +162,48 @@ describe("ElectionV4 — enrollment", () => {
       "EnrollmentNotOpen",
     );
   });
+
+  // Rotation is the account-recovery path. It must never become a way to get a
+  // second leaf in a tree, because each identity produces its own Semaphore
+  // nullifier and the election would count both ballots as different voters.
+  it("a rotated identity cannot enroll again in an election the human already joined", async () => {
+    const election = await freshElection();
+    const { nullifier, commitment } = nextCommitment();
+    const { commitment: rotated } = nextCommitment();
+
+    await platformRegister(nullifier, commitment);
+    await (await election.connect(voter).enroll(commitment)).wait();
+
+    await (await stack.registry.rotateMember(nullifier, rotated)).wait();
+    expect(await stack.registry.verifiedMembers(rotated)).to.equal(true);
+
+    await expect(election.connect(voter).enroll(rotated)).to.be.revertedWithCustomError(
+      election,
+      "AlreadyEnrolled",
+    );
+    expect(await election.memberCount()).to.equal(1n);
+  });
+
+  it("a rotated identity can still enroll in elections the human had not joined", async () => {
+    const { nullifier, commitment } = nextCommitment();
+    const { commitment: rotated } = nextCommitment();
+
+    await platformRegister(nullifier, commitment);
+    await (await stack.registry.rotateMember(nullifier, rotated)).wait();
+
+    // A brand new election: recovery must restore the ability to participate.
+    const election = await freshElection();
+    await expect(election.connect(voter).enroll(rotated)).to.emit(election, "MemberEnrolled");
+
+    // The revoked commitment is no longer usable anywhere.
+    await expect(election.connect(voter).enroll(commitment)).to.be.revertedWithCustomError(
+      election,
+      "NotPlatformVerified",
+    );
+  });
 });
 
-describe("ElectionV4 — voting", () => {
+describe("ElectionV4, voting", () => {
   it("full happy path: enroll, vote, re-vote (coercion resistance), close", async () => {
     const election = await freshElection();
     const { nullifier, commitment } = nextCommitment();
@@ -187,7 +226,7 @@ describe("ElectionV4 — voting", () => {
     ).to.emit(election, "VoteCast");
     expect(await election.nullifierNonces(nullifier)).to.equal(1n);
 
-    // Re-vote (nonce 1) — coercion resistance: no revert on duplicate nullifier
+    // Re-vote (nonce 1): coercion resistance: no revert on duplicate nullifier
     await expect(
       election.connect(voter).castVote("0x0222", nullifier, root, 1n, DUMMY_PROOF.pA, DUMMY_PROOF.pB, DUMMY_PROOF.pC),
     ).to.emit(election, "VoteCast");
@@ -260,7 +299,7 @@ describe("ElectionV4 — voting", () => {
   });
 });
 
-describe("ElectionV4 — organizer lifecycle", () => {
+describe("ElectionV4, organizer lifecycle", () => {
   it("only the organizer can run lifecycle actions", async () => {
     const election = await freshElection();
     await expect(election.connect(voter).cancelElection()).to.be.revertedWithCustomError(
@@ -305,7 +344,7 @@ describe("ElectionV4 — organizer lifecycle", () => {
     await networkHelpers.time.increaseTo(await election.voteStart());
     await expect(election.connect(organizer).closeVotingEarly()).to.emit(election, "VotingClosedEarly");
     // voteEnd == now: phase() must flip to TALLYING immediately, in the same
-    // block — an organizer refreshing the page right after the tx must not
+    // block: an organizer refreshing the page right after the tx must not
     // see the election as still ACTIVE.
     expect(await election.phase()).to.equal(Phase.TALLYING);
   });
@@ -328,7 +367,7 @@ describe("ElectionV4 — organizer lifecycle", () => {
   });
 });
 
-describe("ElectionV4 — publishResults & outcomes", () => {
+describe("ElectionV4, publishResults & outcomes", () => {
   async function publish(election: any, tallyArr: bigint[]): Promise<void> {
     await networkHelpers.time.increaseTo((await election.voteEnd()) + 1n);
     await (await election.connect(organizer).publishResults("QmTestCid", tallyArr)).wait();

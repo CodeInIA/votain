@@ -4,9 +4,6 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import poseidon from "poseidon-solidity";
 
-/// ERC-4337 EntryPoint v0.7 — same canonical address on every EVM chain.
-const ENTRYPOINT_V07 = "0x0000000071727De22E5E9d8BAf0edAc6f37da032";
-
 const conn = await network.getOrCreate();
 const { ethers } = conn;
 
@@ -72,10 +69,12 @@ async function main() {
   await verifier.waitForDeployment();
   console.log(`${verifierName}:`, await verifier.getAddress());
 
-  // ZeroDev's ERC-2771 trusted forwarder on the target chain (env-provided).
+  // ERC-2771 forwarder. Voter calls arrive via ElectionPaymaster and neither
+  // enroll nor castVote reads msg.sender, so a burn address is the right value;
+  // see contracts/DEVELOPMENT.md.
   const forwarder = process.env.TRUSTED_FORWARDER ?? deployer.address;
   if (!process.env.TRUSTED_FORWARDER) {
-    console.warn("WARN: TRUSTED_FORWARDER not set — falling back to deployer address");
+    console.warn("WARN: TRUSTED_FORWARDER not set, falling back to deployer address");
   }
 
   const Factory = await ethers.getContractFactory("ElectionFactory", {
@@ -90,15 +89,21 @@ async function main() {
   await factory.waitForDeployment();
   console.log("ElectionFactory:", await factory.getAddress());
 
-  const entryPoint = process.env.ENTRYPOINT_ADDRESS ?? ENTRYPOINT_V07;
-  await (await paymaster.setSponsors(entryPoint, forwarder)).wait();
-  console.log("Paymaster sponsors configured:", { entryPoint, forwarder });
+  // Only the factory may bind an election to the tank that funds it.
+  await (await paymaster.setFactory(await factory.getAddress())).wait();
+  console.log("Paymaster factory configured:", await factory.getAddress());
+
+  // Block the platform went live at. Every log query starts here instead of
+  // block 0, which keeps eth_getLogs inside the range caps that most free RPC
+  // endpoints enforce (10000 blocks on drpc and publicnode).
+  const deployedAtBlock = await ethers.provider.getBlockNumber();
 
   // Persist addresses for the frontend client (src/lib/contracts.ts reads this).
   const deployment = {
     chainId: Number(chainId),
     network: networkName,
     deployedAt: new Date().toISOString(),
+    deployedAtBlock,
     deployer: deployer.address,
     contracts: {
       PlatformRegistry: await registry.getAddress(),
@@ -107,7 +112,7 @@ async function main() {
       ElectionFactory: await factory.getAddress(),
       PoseidonT3: poseidonAddress,
     },
-    config: { entryPoint, trustedForwarder: forwarder },
+    config: { trustedForwarder: forwarder },
   };
 
   const manifest = JSON.stringify(deployment, null, 2) + "\n";

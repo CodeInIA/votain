@@ -69,7 +69,9 @@
     "close": "닫기",
     "confirm": "확인",
     "integration_pending": "이 기능은 통합 단계에서 연결됩니다.",
-    "all": "전체"
+    "all": "전체",
+    "yes": "찬성",
+    "no": "반대"
   },
   "nav": {
     "discover": "탐색",
@@ -232,15 +234,22 @@
     "empty": "아직 어떤 선거에도 투표하지 않았습니다."
   },
   "reverify": {
-    "title": "신원 재확인",
-    "desc": "World ID 자격 증명이 만료되었거나 더 이상 유효하지 않습니다. 계속 투표하려면 재확인하세요.",
-    "why_title": "왜 재확인이 필요한가요?",
-    "last_verified": "마지막 확인: {{date}}",
-    "verify_btn": "World ID로 재확인",
-    "pending": "확인 중…",
-    "reason1": "내 World ID 자격증명이 만료되었습니다",
-    "reason2": "새 World ID 기기를 받았습니다",
-    "reason3": "내 자격증명이 취소 또는 재설정되었습니다"
+    "title": "투표 신원 복구",
+    "desc": "신원을 잠금 해제할 수 있는 기기를 모두 잃으셨나요? World ID로 다시 인증하여 새 패스키를 연결하세요.",
+    "why_title": "이럴 때 사용하세요",
+    "verify_btn": "World ID로 복구",
+    "reason1": "패스키가 있는 휴대폰이나 기기를 분실했습니다",
+    "reason2": "패스키를 삭제했거나 브라우저 데이터를 지웠습니다",
+    "reason3": "등록된 어떤 기기로도 더 이상 신원을 잠금 해제할 수 없습니다",
+    "recovering": "복구 중…",
+    "cancelled": "복구가 취소되었습니다",
+    "recovered": "신원이 복구되었습니다",
+    "recovered_desc": "이제 이 기기가 투표 신원을 보유합니다. 아직 참여하지 않은 선거에서 투표할 수 있습니다.",
+    "failed": "신원을 복구하지 못했습니다",
+    "cost_title": "이 작업은 되돌릴 수 없습니다",
+    "cost_elections": "이미 등록한 선거에는 투표하지 않았더라도 다시 참여할 수 없습니다.",
+    "cost_receipts": "이전 투표 영수증은 더 이상 조회할 수 없지만, 해당 표는 유효하며 집계된 상태로 남습니다.",
+    "one_identity_note": "하나의 World ID는 항상 하나의 투표 신원을 의미합니다."
   },
   "org_auth": {
     "title": "주최자 접속",
@@ -257,7 +266,9 @@
     "wrong_network_desc": "계속하려면 Polygon Amoy로 전환하세요.",
     "switch_network": "Polygon Amoy로 전환",
     "no_wallet_title": "지갑이 감지되지 않음",
-    "no_wallet_desc": "주최자로 서명하려면 MetaMask(또는 다른 EVM 지갑)를 설치하세요."
+    "no_wallet_desc": "주최자로 서명하려면 MetaMask(또는 다른 EVM 지갑)를 설치하세요.",
+    "no_authenticator": "이 기기에 패스키 인증기가 없습니다",
+    "no_authenticator_help": "화면 잠금(Windows Hello PIN, Touch ID 또는 Android 화면 잠금)을 설정하거나, 요청 시 휴대폰 또는 보안 키를 사용하세요."
   },
   "dashboard": {
     "title": "주최자 대시보드",
@@ -304,14 +315,16 @@
     "deploy_pending": "계약 배포 중…",
     "witness_threshold_n": "필요한 증인 수 (N)",
     "witness_threshold_hint": "승인에 필요한 최소 찬성표",
-    "yes_no_note": "이 투표 유형은 고정된 찬성/반대 투표용지를 사용합니다.",
+    "yes_no_note": "이 투표 유형은 항상 찬성 / 반대 고정 투표용지를 사용합니다.",
     "deposit_token": "가스 보증금 ({{currency}})",
     "leave_confirm_title": "변경 사항을 취소하시겠습니까?",
     "leave_confirm_desc": "이 페이지를 나가면 변경 사항이 저장되지 않습니다.",
     "discard_changes": "변경 사항 취소",
     "separate_enrollment": "맞춤 등록 기간",
     "separate_enrollment_desc": "등록 시작·마감일을 직접 설정하세요. 마감은 투표 시작 전으로 지정할 수 있습니다.",
-    "enrollment_until_vote_start": "등록은 배포 시점부터 투표 시작 전까지 열려 있습니다."
+    "enrollment_until_vote_start": "등록은 배포 시점부터 투표 시작 전까지 열려 있습니다.",
+    "yes_no_hint": "여기서 설정할 항목은 없습니다. 선택지는 선택한 투표 규칙에 따라 정해지며, 유권자가 그중 하나를 고릅니다.",
+    "yes_no_preview": "유권자에게 표시될 투표용지"
   },
   "election_mgmt": {
     "actions": "작업",
@@ -429,5 +442,17 @@
     "quorum_min": "최소 1 이상이어야 합니다",
     "number_positive": "유효한 0 이상의 숫자를 입력하세요",
     "fix_previous_steps": "필수 항목이 없거나 잘못되었습니다. 이전 단계를 확인하세요."
+  },
+  "devices": {
+    "title": "내 기기",
+    "desc": "어떤 기기에서든 투표할 수 있습니다. 모든 패스키가 동일한 신원을 잠금 해제하므로 항상 한 표만 행사합니다.",
+    "this_device": "현재 기기",
+    "add": "이 기기 추가",
+    "adding": "추가 중…",
+    "remove": "기기 제거",
+    "added": "기기가 추가되었습니다",
+    "error": "이 기기를 추가할 수 없습니다",
+    "last_passkey": "이 기기를 제거하기 전에 다른 기기를 추가하세요",
+    "empty": "등록된 기기가 없습니다"
   }
 }

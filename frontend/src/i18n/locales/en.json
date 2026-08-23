@@ -108,7 +108,9 @@
     "close": "Close",
     "confirm": "Confirm",
     "integration_pending": "This feature will be connected in the integration phase.",
-    "all": "All"
+    "all": "All",
+    "yes": "Yes",
+    "no": "No"
   },
   "discover": {
     "title": "Elections",
@@ -232,15 +234,22 @@
     "empty": "You haven't voted in any elections yet."
   },
   "reverify": {
-    "title": "Re-verify your identity",
-    "desc": "Your World ID credential has expired or is no longer valid. Please re-verify to continue voting.",
-    "why_title": "Why do I need to re-verify?",
-    "last_verified": "Last verified: {{date}}",
-    "verify_btn": "Re-verify with World ID",
-    "pending": "Verifying…",
-    "reason1": "My World ID credential has expired",
-    "reason2": "I got a new World ID device",
-    "reason3": "My credential was revoked or reset"
+    "title": "Recover your voting identity",
+    "desc": "Lost every device that could unlock your identity? Verify with World ID again to link a new passkey.",
+    "why_title": "When to use this",
+    "verify_btn": "Recover with World ID",
+    "reason1": "I lost the phone or device holding my passkey",
+    "reason2": "I deleted my passkey, or cleared my browser data",
+    "reason3": "None of my registered devices can unlock my identity any more",
+    "recovering": "Recovering…",
+    "cancelled": "Recovery cancelled",
+    "recovered": "Identity recovered",
+    "recovered_desc": "This device now holds your voting identity. You can vote in elections you had not joined yet.",
+    "failed": "Could not recover your identity",
+    "cost_title": "This cannot be undone",
+    "cost_elections": "You will not be able to rejoin elections you had already enrolled in, even if you never voted in them.",
+    "cost_receipts": "Your previous vote receipts stop being retrievable, though those ballots stay valid and counted.",
+    "one_identity_note": "One World ID always means one voting identity."
   },
   "org_auth": {
     "title": "Organizer Access",
@@ -257,7 +266,9 @@
     "wrong_network_desc": "Please switch to Polygon Amoy to continue.",
     "switch_network": "Switch to Polygon Amoy",
     "no_wallet_title": "No wallet detected",
-    "no_wallet_desc": "Install MetaMask (or another EVM wallet) to sign as an organizer."
+    "no_wallet_desc": "Install MetaMask (or another EVM wallet) to sign as an organizer.",
+    "no_authenticator": "No passkey authenticator on this device",
+    "no_authenticator_help": "Set up a screen lock (Windows Hello PIN, Touch ID, or Android screen lock), or use a phone or security key when prompted."
   },
   "dashboard": {
     "title": "Organizer Dashboard",
@@ -304,14 +315,16 @@
     "deploy_pending": "Deploying contract…",
     "witness_threshold_n": "Required witnesses (N)",
     "witness_threshold_hint": "Minimum Yes votes needed to approve",
-    "yes_no_note": "This voting type uses a fixed Yes / No ballot.",
+    "yes_no_note": "This voting type always uses a fixed Yes / No ballot.",
     "deposit_token": "Gas deposit ({{currency}})",
     "leave_confirm_title": "Discard changes?",
     "leave_confirm_desc": "Your changes will be lost if you leave this page.",
     "discard_changes": "Discard changes",
     "separate_enrollment": "Custom enrollment window",
     "separate_enrollment_desc": "Set your own registration dates, with a deadline that can fall before voting opens.",
-    "enrollment_until_vote_start": "Registration is open from deployment until voting starts."
+    "enrollment_until_vote_start": "Registration is open from deployment until voting starts.",
+    "yes_no_hint": "There is nothing to configure here: the options are set by the voting rule you chose. Voters will pick one of them.",
+    "yes_no_preview": "The ballot voters will see"
   },
   "election_mgmt": {
     "actions": "Actions",
@@ -429,5 +442,17 @@
     "quorum_min": "Must be at least 1",
     "number_positive": "Enter a valid, non-negative number",
     "fix_previous_steps": "Some required fields are missing or invalid. Go back and review the previous steps."
+  },
+  "devices": {
+    "title": "My devices",
+    "desc": "Vote from any of your devices. Every passkey unlocks the same identity, so you always cast one ballot.",
+    "this_device": "This device",
+    "add": "Add this device",
+    "adding": "Adding…",
+    "remove": "Remove device",
+    "added": "Device added",
+    "error": "Could not add this device",
+    "last_passkey": "Add another device before removing this one",
+    "empty": "No devices registered yet"
   }
 }

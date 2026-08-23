@@ -113,7 +113,7 @@ export default function ElectionDetail() {
         );
     }
 
-    // active — already-voted voters get the change-vote card above instead.
+    // active: already-voted voters get the change-vote card above instead.
     if (election.hasVoted) return null;
     if (!election.isEnrolled) return infoPanel(t('election.cta_not_enrolled'));
     return (
@@ -130,7 +130,7 @@ export default function ElectionDetail() {
   };
 
   const handleEnroll = async () => {
-    // Phase A / no chain: simulate. Live: real sponsored enroll UserOp.
+    // Phase A / no chain: simulate. Live: real relayed enrollment.
     if (!live) {
       setTxState('pending');
       setTimeout(() => setTxState('success'), 2500);
@@ -203,7 +203,7 @@ export default function ElectionDetail() {
           </div>
         )}
 
-        {/* Description — shown in every phase, so a finished election is never
+        {/* Description: shown in every phase, so a finished election is never
             just a bare title. */}
         <Card className="p-5 mb-4">
           <h2 className="text-sm font-semibold text-on-surface mb-2">{t('election.about')}</h2>
@@ -224,7 +224,7 @@ export default function ElectionDetail() {
           </Card>
         )}
 
-        {/* Ballot — interactive only when this voter can actually cast it. */}
+        {/* Ballot: interactive only when this voter can actually cast it. */}
         <Card className="p-5 mb-4">
           <h2 className="text-sm font-semibold text-on-surface mb-3">
             {canPickCandidate ? t('election.select_candidate') : t('election.candidates')}
@@ -268,7 +268,7 @@ export default function ElectionDetail() {
         )}
 
         {/* No gas widget for voters: their votes are sponsored by the organizer's
-            gas tank via ERC-4337, so a voter never holds or spends a balance. */}
+            gas tank through the relay contract, so a voter never holds or spends a balance. */}
 
         {renderFooter()}
       </div>

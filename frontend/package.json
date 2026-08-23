@@ -24,9 +24,6 @@
     "@semaphore-protocol/proof": "^4.14.3",
     "@worldcoin/idkit": "^4.2.0",
     "@worldcoin/idkit-core": "^4.2.1",
-    "@zerodev/ecdsa-validator": "^5.4.9",
-    "@zerodev/passkey-validator": "^5.6.0",
-    "@zerodev/sdk": "^5.5.10",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "country-flag-emoji-polyfill": "^0.1.8",
@@ -42,8 +39,7 @@
     "react-i18next": "^17.0.10",
     "react-router-dom": "^7.18.1",
     "recharts": "^3.9.2",
-    "tailwind-merge": "^3.6.0",
-    "viem": "^2.55.2"
+    "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

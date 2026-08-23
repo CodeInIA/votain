@@ -5,6 +5,7 @@ import { PageLayout } from '../../components/layout/PageLayout';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { LanguageSelector } from '../../components/ui/LanguageSelector';
+import { MyDevices } from '../../components/voter/MyDevices';
 import { Modal } from '../../components/ui/Modal';
 import { useAuth } from '../../contexts/AuthContext';
 import { useState } from 'react';
@@ -66,6 +67,9 @@ export default function VoterProfile() {
           </div>
         </Card>
 
+        {/* Passkeys that can unlock this voter's identity */}
+        <MyDevices />
+
         {/* Language */}
         <Card className="p-5 mb-4">
           <div className="flex items-center justify-between">
@@ -74,7 +78,7 @@ export default function VoterProfile() {
           </div>
         </Card>
 
-        {/* Legal links — mobile only (desktop sees them in the footer) */}
+        {/* Legal links: mobile only (desktop sees them in the footer) */}
         <Card className="p-2 mb-4 md:hidden">
           <Link to="/how-it-works" className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 transition-colors text-sm text-on-surface-variant hover:text-on-surface">
             <Info className="w-4 h-4 shrink-0" />
