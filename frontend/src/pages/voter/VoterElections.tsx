@@ -47,7 +47,7 @@ export default function VoterElections() {
           {urgentCount > 0 && (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-error/10 border border-error/20 text-error text-xs font-semibold">
               <Bell className="w-3.5 h-3.5" />
-              {urgentCount} {t('voter_elections.urgent')}
+              {t('voter_elections.urgent', { count: urgentCount })}
             </div>
           )}
         </div>

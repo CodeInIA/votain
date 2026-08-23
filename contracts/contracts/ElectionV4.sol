@@ -178,12 +178,12 @@ contract ElectionV4 is ERC2771Context {
             cfg.voteStart >= cfg.voteEnd
         ) revert InvalidConfig();
 
-        if (
-            cfg.votingType == VotingType.SUPERMAJORITY_TWO_THIRDS ||
-            cfg.votingType == VotingType.WITNESS_THRESHOLD
-        ) {
-            // Yes/No ballots only
-            if (cfg.numOptions != 2) revert InvalidConfig();
+        // A witness threshold counts confirmations of ONE proposition, so a
+        // ballot with more than two options would have nothing to confirm.
+        // A two-thirds supermajority is different: it is a threshold rule that
+        // applies just as well to a field of candidates, so it is not capped.
+        if (cfg.votingType == VotingType.WITNESS_THRESHOLD && cfg.numOptions != 2) {
+            revert InvalidConfig();
         }
         if (cfg.votingType == VotingType.WITNESS_THRESHOLD && cfg.thresholdValue == 0) {
             revert InvalidConfig();
@@ -408,10 +408,36 @@ contract ElectionV4 is ERC2771Context {
         }
 
         if (votingType == VotingType.SUPERMAJORITY_TWO_THIRDS) {
-            if (totalCast == 0) return (Outcome.REJECTED, 0);
-            return tallyResults[0] * 3 >= totalCast * 2
-                ? (Outcome.APPROVED, 0)
-                : (Outcome.REJECTED, 0);
+            if (totalCast == 0) {
+                return numOptions == 2
+                    ? (Outcome.REJECTED, 0)
+                    : (Outcome.THRESHOLD_NOT_MET, 0);
+            }
+
+            // Two options is a proposition: index 0 IS the motion, so anything
+            // short of two thirds for it is a rejection, whichever way the rest
+            // of the ballots fell.
+            if (numOptions == 2) {
+                return tallyResults[0] * 3 >= totalCast * 2
+                    ? (Outcome.APPROVED, 0)
+                    : (Outcome.REJECTED, 0);
+            }
+
+            // More options is a qualified-majority election: whoever leads must
+            // still clear two thirds, otherwise nobody is elected. No tie check
+            // is needed above the threshold: two candidates each holding two
+            // thirds would need four thirds of the ballots between them.
+            uint256 leadVotes = 0;
+            uint256 leadIdx = 0;
+            for (uint256 i = 0; i < numOptions; i++) {
+                if (tallyResults[i] > leadVotes) {
+                    leadVotes = tallyResults[i];
+                    leadIdx = i;
+                }
+            }
+            return leadVotes * 3 >= totalCast * 2
+                ? (Outcome.APPROVED, leadIdx)
+                : (Outcome.THRESHOLD_NOT_MET, 0);
         }
 
         // Plurality-style types: find the leading candidate (blank excluded).

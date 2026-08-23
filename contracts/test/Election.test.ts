@@ -65,10 +65,15 @@ describe("ElectionV4, config validation", () => {
     // zero options
     await expect(deployWith(baseConfig(now, { numOptions: 0n })))
       .to.be.revertedWithCustomError(Election, "InvalidConfig");
-    // two-thirds must be yes/no
+    // A witness threshold confirms ONE proposition, so it stays yes/no.
+    await expect(
+      deployWith(baseConfig(now, { votingType: VotingType.WITNESS_THRESHOLD, numOptions: 3n, thresholdValue: 2n })),
+    ).to.be.revertedWithCustomError(Election, "InvalidConfig");
+    // A two-thirds supermajority is a threshold rule, not a proposition, so a
+    // field of candidates is valid: it just means nobody wins below two thirds.
     await expect(
       deployWith(baseConfig(now, { votingType: VotingType.SUPERMAJORITY_TWO_THIRDS, numOptions: 3n })),
-    ).to.be.revertedWithCustomError(Election, "InvalidConfig");
+    ).to.not.be.revert(ethers);
     // witness threshold needs thresholdValue >= 1
     await expect(
       deployWith(
@@ -424,6 +429,36 @@ describe("ElectionV4, publishResults & outcomes", () => {
     });
     await publish(rejected, [60n, 35n, 5n]); // 60/100 < 2/3
     expect(await rejected.outcome()).to.equal(Outcome.REJECTED);
+  });
+
+  // With a candidate field the rule stops being "did the motion pass" and
+  // becomes "did anyone clear two thirds", which is how qualified-majority
+  // elections actually work (conclaves, many boards).
+  it("SUPERMAJORITY_TWO_THIRDS: with candidates, the leader must clear 2/3", async () => {
+    const elected = await freshElection({
+      votingType: VotingType.SUPERMAJORITY_TWO_THIRDS,
+      numOptions: 3n,
+    });
+    await publish(elected, [70n, 15n, 10n, 5n]); // leader 70/100 >= 2/3
+    expect(await elected.outcome()).to.equal(Outcome.APPROVED);
+    expect(await elected.winnerIndex()).to.equal(0n);
+
+    // A non-zero index must be able to win: the old code hardcoded option 0.
+    const secondWins = await freshElection({
+      votingType: VotingType.SUPERMAJORITY_TWO_THIRDS,
+      numOptions: 3n,
+    });
+    await publish(secondWins, [10n, 80n, 5n, 5n]);
+    expect(await secondWins.outcome()).to.equal(Outcome.APPROVED);
+    expect(await secondWins.winnerIndex()).to.equal(1n);
+
+    // Nobody clears the bar: no winner, rather than electing the plurality.
+    const nobody = await freshElection({
+      votingType: VotingType.SUPERMAJORITY_TWO_THIRDS,
+      numOptions: 3n,
+    });
+    await publish(nobody, [50n, 30n, 15n, 5n]); // leader 50/100 < 2/3
+    expect(await nobody.outcome()).to.equal(Outcome.THRESHOLD_NOT_MET);
   });
 
   it("WITNESS_THRESHOLD: yes votes must reach the configured threshold", async () => {

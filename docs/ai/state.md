@@ -346,6 +346,49 @@ accessibility, accepts a weaker key store) or drop it and require a passkey with
 message. See the organizer-side precedent in `OrganizerAuth`, which now detects a missing
 authenticator up front.
 
+## Two-thirds supermajority generalised to a candidate field (2026-08-23)
+
+`SUPERMAJORITY_TWO_THIRDS` used to require exactly two options, because
+`_computeOutcome` hardcoded `tallyResults[0]`: the rule was "option 0 must reach two
+thirds", not "the winner must". That is a real voting system (conclaves, many boards)
+that the implementation simply could not express, and it left `THRESHOLD_NOT_MET`
+unreachable for this type.
+
+Now the behaviour splits on the option count:
+
+- **Two options**: unchanged proposition semantics. Index 0 IS the motion, so falling
+  short is `REJECTED` whichever way the rest of the ballots fell.
+- **Three or more**: qualified-majority election. The leader must still clear two
+  thirds or nobody is elected (`THRESHOLD_NOT_MET`). No tie check is needed above the
+  bar, since two candidates each holding two thirds would need four thirds between them.
+
+`WITNESS_THRESHOLD` keeps the two-option cap: it counts confirmations of one
+proposition, so a wider ballot would have nothing to confirm. The wizard follows suit,
+`isYesNo` now covers only that type.
+
+The `PLAN.md` voting-type table also said thresholds were measured against "total
+eligible voters". They never were: `_computeOutcome` uses the ballots cast, and the
+blank vote counts towards that total, so a blank makes a threshold harder to reach
+rather than being ignored. Table corrected and the denominator documented.
+
+## Two i18n placeholders were rendering literally (2026-08-23)
+
+`election.reference` was `"Reference: {{ref}}"` but the caller passed no variables and
+appended the hash itself, so the UI showed `Reference: {{ref}}: 0xac27…`. Fixed by
+making the key a bare label: the hash needs `font-mono`, so it belongs in the JSX.
+
+An audit of every placeholder against its call site found the same shape in
+`voter_elections.urgent`. Fixed the other way, by passing `count` instead of
+prepending it, which also makes real i18next pluralisation possible later.
+
+## Members filter ignored the election it was given (2026-08-23)
+
+`ElectionManagement` links to `/organizer/members?election=<id>`, but `MemberList`
+initialised its filter with `useState('all')` and never read the URL. The filter is now
+derived from the query string and written back to it, so the view is shareable and
+survives a reload. Note the organizer route guard drops the query string when it
+redirects to login, so a filtered link followed while logged out still loses it.
+
 ## Pending user actions (block a live Amoy run, not code)
 - Fund the deployer key with ~1.5 to 2 POL (`npm run estimate:amoy` reports the gap), set
   `PRIVATE_KEY` in `contracts/.env` → `npm run deploy:amoy` → verify on PolygonScan.

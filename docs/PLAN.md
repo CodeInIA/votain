@@ -74,11 +74,17 @@ The organizer who creates an election picks the **winner determination rule**. F
 | Type | Approval rule | Example use case |
 |------|---------------|------------------|
 | `SIMPLE_PLURALITY` | Candidate with the most votes wins, even by a 1-vote margin. No minimum threshold | Local elections, most parliamentary seats, club president |
-| `ABSOLUTE_MAJORITY` | yes-votes > 50% of total eligible voters. Can result in no winner if no one crosses the threshold | Public elections with majority requirement, referendums |
-| `SUPERMAJORITY_TWO_THIRDS` | yes-votes ≥ ⌈2/3⌉ of total eligible voters | Bylaw changes, board decisions, constitutional amendments |
+| `ABSOLUTE_MAJORITY` | Leading option needs more than 50% of the BALLOTS CAST. No winner if nobody crosses it | Public elections with majority requirement, referendums |
+| `SUPERMAJORITY_TWO_THIRDS` | Leading option needs at least 2/3 of the BALLOTS CAST. Works either as a yes/no motion (option 0 is the motion, so falling short is a rejection) or as a qualified-majority election over a field of candidates (nobody is elected below the bar) | Bylaw changes, board decisions, conclave-style elections |
 | `WITNESS_THRESHOLD` | yes-votes ≥ N (absolute number, not percentage) | Wedding (4 witnesses), notarial multi-sig, cooperative quorum |
 
 Default in the Create Election wizard: `SIMPLE_PLURALITY` (most common globally).
+
+> **Denominator**: every threshold is measured against the ballots actually cast, not
+> against the eligible roll, and the blank vote counts towards that total. So a blank
+> ballot makes a threshold harder to reach rather than being ignored. This is what
+> `ElectionV4._computeOutcome` implements; an earlier version of this table said
+> "eligible voters", which never matched the contract.
 
 **Cryptographic impact**: minimal. All three rules operate on the same Paillier homomorphic sum of ciphertexts. Only the post-decryption threshold check differs.
 

@@ -37,7 +37,7 @@ under several passkeys (see `frontend/src/lib/identityVault.ts`).
 ## Commands
 
 ```bash
-npx hardhat test                    # 66 tests, including the E2E suite
+npx hardhat test                    # 67 tests, including the E2E suite
 npx hardhat test --coverage         # line coverage report -> coverage/
 npx hardhat test test/E2E.test.ts   # full election with REAL Groth16 proofs
 npx hardhat compile

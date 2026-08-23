@@ -109,8 +109,8 @@
     "witness_threshold": "증인 임계값",
     "simple_plurality_desc": "최다 득표자가 승리",
     "absolute_majority_desc": "승자는 과반(50% 초과) 득표 필요",
-    "two_thirds_desc": "찬성/반대 — 2/3 이상 찬성으로 승인",
-    "witness_threshold_desc": "찬성/반대 — N명 이상 확인으로 승인"
+    "two_thirds_desc": "행사된 표의 3분의 2 이상으로 가결됩니다. 찬반 안건과 여러 후보 모두에 사용할 수 있습니다",
+    "witness_threshold_desc": "찬성/반대: N명 이상 확인으로 승인"
   },
   "discover": {
     "title": "선거",
@@ -142,7 +142,7 @@
     "view_results": "결과 보기",
     "auth_cta": "이 선거에 참여하려면 신원을 확인하세요.",
     "change_vote": "투표 변경",
-    "reference": "참조: {{ref}}",
+    "reference": "참조",
     "gas_low_banner": "가스 잔액이 부족합니다. 투표하려면 충전하세요.",
     "top_up": "충전",
     "ends_in": "종료까지",
@@ -160,7 +160,7 @@
   },
   "how": {
     "title": "Votain 작동 방식",
-    "subtitle": "엔드투엔드 검증 가능, 익명 및 강압 저항적 투표 — 개방형 표준으로 구축.",
+    "subtitle": "엔드투엔드 검증 가능, 익명 및 강압 저항적 투표: 개방형 표준으로 구축.",
     "step1_title": "인간성 확인",
     "step1_desc": "World ID를 사용하여 고유한 인간임을 증명하세요. 개인 데이터는 저장되거나 공유되지 않습니다.",
     "step2_title": "비공개로 투표",
@@ -428,7 +428,7 @@
     "generic_title": "문제가 발생했습니다"
   },
   "demo": {
-    "banner": "데모 데이터 — 배포된 컨트랙트 없음. 여기 있는 것은 온체인이 아닙니다."
+    "banner": "데모 데이터: 배포된 컨트랙트 없음. 여기 있는 것은 온체인이 아닙니다."
   },
   "validation": {
     "required": "필수 항목입니다",

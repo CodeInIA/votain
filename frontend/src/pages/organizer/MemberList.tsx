@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Download, Users, Filter } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
@@ -40,7 +41,25 @@ export default function MemberList() {
   const { elections: liveElections, live } = useElections();
   const wallet = useOrganizerWallet();
   const [query, setQuery] = useState('');
-  const [electionFilter, setElectionFilter] = useState('all');
+  // "View members" from an election arrives as ?election=<id>. Seeding the
+  // filter from the URL is what makes that link mean anything; defaulting to
+  // 'all' silently dropped the caller's intent and showed every election.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const electionFilter = searchParams.get('election') ?? 'all';
+
+  // Kept in the URL rather than in local state so the filtered view is
+  // shareable and survives a reload or a back navigation.
+  const setElectionFilter = (value: string): void => {
+    setSearchParams(
+      prev => {
+        const next = new URLSearchParams(prev);
+        if (value === 'all') next.delete('election');
+        else next.set('election', value);
+        return next;
+      },
+      { replace: true },
+    );
+  };
   const [members, setMembers] = useState<Member[]>(live ? [] : SEED_MEMBERS);
   const [loading, setLoading] = useState(live);
 

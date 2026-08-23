@@ -109,8 +109,8 @@
     "witness_threshold": "Zeugenschwelle",
     "simple_plurality_desc": "Die meisten Stimmen gewinnen",
     "absolute_majority_desc": "Sieger braucht über 50% der Stimmen",
-    "two_thirds_desc": "Ja/Nein — angenommen mit mindestens 2/3 der Stimmen",
-    "witness_threshold_desc": "Ja/Nein — angenommen mit mindestens N Bestätigungen"
+    "two_thirds_desc": "Angenommen mit mindestens 2/3 der abgegebenen Stimmen. Gilt für einen Ja/Nein-Antrag oder mehrere Kandidaten",
+    "witness_threshold_desc": "Ja/Nein: angenommen mit mindestens N Bestätigungen"
   },
   "discover": {
     "title": "Wahlen",
@@ -142,7 +142,7 @@
     "view_results": "Ergebnisse anzeigen",
     "auth_cta": "Verifizieren Sie Ihre Identität, um an dieser Wahl teilzunehmen.",
     "change_vote": "Meine Stimme ändern",
-    "reference": "Referenz: {{ref}}",
+    "reference": "Referenz",
     "gas_low_banner": "Ihr Gasguthaben ist niedrig. Aufladen zum Abstimmen.",
     "top_up": "Aufladen",
     "ends_in": "Endet in",
@@ -160,7 +160,7 @@
   },
   "how": {
     "title": "Wie Votain funktioniert",
-    "subtitle": "End-to-End verifizierbares Wählen, anonym und zwangsresistent — auf offenen Standards aufgebaut.",
+    "subtitle": "End-to-End verifizierbares Wählen, anonym und zwangsresistent: auf offenen Standards aufgebaut.",
     "step1_title": "Ihre Menschlichkeit verifizieren",
     "step1_desc": "Nutzen Sie World ID, um zu beweisen, dass Sie ein einzigartiger Mensch sind. Keine persönlichen Daten werden gespeichert.",
     "step2_title": "Privat abstimmen",
@@ -428,7 +428,7 @@
     "generic_title": "Etwas ist schiefgelaufen"
   },
   "demo": {
-    "banner": "Demo-Daten — keine Verträge bereitgestellt. Nichts hiervon ist on-chain."
+    "banner": "Demo-Daten: keine Verträge bereitgestellt. Nichts hiervon ist on-chain."
   },
   "validation": {
     "required": "Dieses Feld ist erforderlich",

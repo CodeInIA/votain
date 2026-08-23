@@ -109,8 +109,8 @@
     "witness_threshold": "见证人阈值",
     "simple_plurality_desc": "得票最多者获胜",
     "absolute_majority_desc": "获胜者需超过 50% 的选票",
-    "two_thirds_desc": "赞成/反对 — 需至少 2/3 赞成票通过",
-    "witness_threshold_desc": "赞成/反对 — 需至少 N 个确认通过"
+    "two_thirds_desc": "需获得至少 2/3 的有效票才能通过。适用于同意／反对的动议，也适用于多位候选人",
+    "witness_threshold_desc": "赞成/反对：需至少 N 个确认通过"
   },
   "discover": {
     "title": "选举",
@@ -142,7 +142,7 @@
     "view_results": "查看结果",
     "auth_cta": "验证您的身份以参与此次选举。",
     "change_vote": "更改我的投票",
-    "reference": "参考编号：{{ref}}",
+    "reference": "参考编号：",
     "gas_low_banner": "您的 Gas 余额不足，请充值后投票。",
     "top_up": "充值",
     "ends_in": "结束于",
@@ -160,7 +160,7 @@
   },
   "how": {
     "title": "Votain 工作原理",
-    "subtitle": "端到端可验证投票，匿名且抗强制 — 基于开放标准构建。",
+    "subtitle": "端到端可验证投票，匿名且抗强制：基于开放标准构建。",
     "step1_title": "验证您的人类身份",
     "step1_desc": "使用 World ID 证明您是唯一的真实人类。不存储或共享任何个人数据。",
     "step2_title": "私密投票",
@@ -428,7 +428,7 @@
     "generic_title": "出了点问题"
   },
   "demo": {
-    "banner": "演示数据 — 未部署合约。此处内容均不在链上。"
+    "banner": "演示数据：未部署合约。此处内容均不在链上。"
   },
   "validation": {
     "required": "此字段为必填项",

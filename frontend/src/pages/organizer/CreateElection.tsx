@@ -46,7 +46,14 @@ const INITIAL: FormState = {
   requireOrb: false, privacyQuorum: '10', depositAmount: '0.05',
 };
 
-const isYesNo = (vt: string) => vt === 'two_thirds' || vt === 'witness_threshold';
+/**
+ * Only a witness threshold is inherently a single proposition: it counts
+ * confirmations, so there is nothing to confirm on a multi-option ballot. A
+ * two-thirds supermajority is a threshold RULE, and applies just as well to a
+ * field of candidates (nobody wins below two thirds), so it gets the normal
+ * candidate step.
+ */
+const isYesNo = (vt: string) => vt === 'witness_threshold';
 
 // Local-time 'yyyy-mm-dd' lower bound for each picker: these mirror
 // validateStep's ordering rules so the calendar cannot even offer a day it

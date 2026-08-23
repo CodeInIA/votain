@@ -88,8 +88,8 @@
     "witness_threshold": "Witness Threshold",
     "simple_plurality_desc": "Most votes wins",
     "absolute_majority_desc": "Winner needs more than 50% of votes cast",
-    "two_thirds_desc": "Yes/No — approved with at least 2/3 of votes",
-    "witness_threshold_desc": "Yes/No — approved with at least N confirmations"
+    "two_thirds_desc": "Approved with at least 2/3 of the votes cast. Works for a yes/no motion or a field of candidates",
+    "witness_threshold_desc": "Yes/No: approved with at least N confirmations"
   },
   "common": {
     "back": "Back",
@@ -142,7 +142,7 @@
     "view_results": "View results",
     "auth_cta": "Verify your identity to participate in this election.",
     "change_vote": "Change my vote",
-    "reference": "Reference: {{ref}}",
+    "reference": "Reference",
     "gas_low_banner": "Your gas balance is low. Top up to vote.",
     "top_up": "Top up",
     "ends_in": "Ends in",
@@ -160,7 +160,7 @@
   },
   "how": {
     "title": "How Votain works",
-    "subtitle": "End-to-end verifiable voting, anonymous and coercion-resistant — built on open standards.",
+    "subtitle": "End-to-end verifiable voting, anonymous and coercion-resistant: built on open standards.",
     "step1_title": "Verify your humanity",
     "step1_desc": "Use World ID to prove you're a unique human. No personal data is stored or shared.",
     "step2_title": "Cast your vote privately",
@@ -428,7 +428,7 @@
     "generic_title": "Something went wrong"
   },
   "demo": {
-    "banner": "Demo data — no contracts deployed. Nothing here is on-chain."
+    "banner": "Demo data: no contracts deployed. Nothing here is on-chain."
   },
   "validation": {
     "required": "This field is required",

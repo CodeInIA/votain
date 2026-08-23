@@ -109,8 +109,8 @@
     "witness_threshold": "Getuigendrempel",
     "simple_plurality_desc": "De meeste stemmen wint",
     "absolute_majority_desc": "Winnaar heeft meer dan 50% van de stemmen nodig",
-    "two_thirds_desc": "Ja/Nee — goedgekeurd met minstens 2/3 van de stemmen",
-    "witness_threshold_desc": "Ja/Nee — goedgekeurd met minstens N bevestigingen"
+    "two_thirds_desc": "Aangenomen met minstens 2/3 van de uitgebrachte stemmen. Werkt voor een ja/nee-motie of meerdere kandidaten",
+    "witness_threshold_desc": "Ja/Nee: goedgekeurd met minstens N bevestigingen"
   },
   "discover": {
     "title": "Verkiezingen",
@@ -142,7 +142,7 @@
     "view_results": "Resultaten bekijken",
     "auth_cta": "Verifieer je identiteit om deel te nemen aan deze verkiezing.",
     "change_vote": "Mijn stem wijzigen",
-    "reference": "Referentie: {{ref}}",
+    "reference": "Referentie",
     "gas_low_banner": "Je gassaldo is laag. Aanvullen om te stemmen.",
     "top_up": "Aanvullen",
     "ends_in": "Eindigt over",
@@ -160,7 +160,7 @@
   },
   "how": {
     "title": "Hoe Votain werkt",
-    "subtitle": "End-to-end verifieerbaar stemmen, anoniem en coerciebestendig — gebouwd op open standaarden.",
+    "subtitle": "End-to-end verifieerbaar stemmen, anoniem en coerciebestendig: gebouwd op open standaarden.",
     "step1_title": "Verifieer je menselijkheid",
     "step1_desc": "Gebruik World ID om te bewijzen dat je een uniek mens bent. Er worden geen persoonlijke gegevens opgeslagen of gedeeld.",
     "step2_title": "Stem in het privé",
@@ -428,7 +428,7 @@
     "generic_title": "Er ging iets mis"
   },
   "demo": {
-    "banner": "Demogegevens — geen contracten uitgerold. Niets hiervan staat on-chain."
+    "banner": "Demogegevens: geen contracten uitgerold. Niets hiervan staat on-chain."
   },
   "validation": {
     "required": "Dit veld is verplicht",

@@ -7,7 +7,7 @@ issuer, voter + organizer flows and tally all wired and green.
 `phase()`), **in-app tally** with a Paillier key **derived from the organizer's passkey PRF**
 (nothing stored at rest; CLI kept as the auditor path), organizer display-name persistence,
 custom dark `DatePicker`, phase-aware voter/organizer/public screens, and shared phase helpers.
-Tests: contracts 66/66, backend 21/21, frontend 17/17; eslint clean, prod build OK.
+Tests: contracts 67/67, backend 21/21, frontend 17/17; eslint clean, prod build OK.
 **Next milestone**: Live Amoy deployment (pending funding the deployer key),
 then Phase C (H10 IPFS/Fleek, H11 Phala TEE).
 
@@ -32,7 +32,7 @@ then Phase C (H10 IPFS/Fleek, H11 Phala TEE).
 | Solidity | 0.8.36 | Latest stable |
 | TypeScript target | ESNext | |
 
-**Tests**: 66/66 passing, including an E2E suite that checks real Groth16 proofs against the official Semaphore verifier.
+**Tests**: 67/67 passing, including an E2E suite that checks real Groth16 proofs against the official Semaphore verifier.
 
 **Technical debt pending (H5)**:
 

@@ -109,8 +109,8 @@
     "witness_threshold": "Seuil de témoins",
     "simple_plurality_desc": "Le plus de voix l’emporte",
     "absolute_majority_desc": "Le gagnant doit dépasser 50% des voix",
-    "two_thirds_desc": "Oui/Non — approuvé avec au moins 2/3 des voix",
-    "witness_threshold_desc": "Oui/Non — approuvé avec au moins N confirmations"
+    "two_thirds_desc": "Approuvé avec au moins 2/3 des votes exprimés. Valable pour une motion oui/non ou pour plusieurs candidats",
+    "witness_threshold_desc": "Oui/Non: approuvé avec au moins N confirmations"
   },
   "discover": {
     "title": "Élections",
@@ -142,7 +142,7 @@
     "view_results": "Voir les résultats",
     "auth_cta": "Vérifiez votre identité pour participer à cette élection.",
     "change_vote": "Changer mon vote",
-    "reference": "Référence : {{ref}}",
+    "reference": "Référence",
     "gas_low_banner": "Votre solde de gaz est faible. Rechargez pour voter.",
     "top_up": "Recharger",
     "ends_in": "Se termine dans",
@@ -160,7 +160,7 @@
   },
   "how": {
     "title": "Comment fonctionne Votain",
-    "subtitle": "Vote vérifiable de bout en bout, anonyme et résistant à la coercition — fondé sur des standards ouverts.",
+    "subtitle": "Vote vérifiable de bout en bout, anonyme et résistant à la coercition: fondé sur des standards ouverts.",
     "step1_title": "Vérifiez votre humanité",
     "step1_desc": "Utilisez World ID pour prouver que vous êtes un humain unique. Aucune donnée personnelle n'est stockée ou partagée.",
     "step2_title": "Votez en privé",
@@ -428,7 +428,7 @@
     "generic_title": "Une erreur est survenue"
   },
   "demo": {
-    "banner": "Données de démonstration — aucun contrat déployé. Rien ici n'est sur la blockchain."
+    "banner": "Données de démonstration: aucun contrat déployé. Rien ici n'est sur la blockchain."
   },
   "validation": {
     "required": "Ce champ est obligatoire",
