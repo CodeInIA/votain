@@ -49,4 +49,21 @@ i18n
     },
   });
 
+/**
+ * Arabic is the only right-to-left locale here. Without this the whole app renders
+ * Arabic text left-aligned with the punctuation on the wrong side, which is worst on
+ * the long prose of the Terms and Privacy pages. `lang` goes with it so the browser
+ * picks the right font and hyphenation.
+ */
+const RTL_LANGUAGES = ['ar'];
+
+function applyDocumentDirection(language: string) {
+  const base = language.split('-')[0];
+  document.documentElement.lang = base;
+  document.documentElement.dir = RTL_LANGUAGES.includes(base) ? 'rtl' : 'ltr';
+}
+
+applyDocumentDirection(i18n.language);
+i18n.on('languageChanged', applyDocumentDirection);
+
 export default i18n;

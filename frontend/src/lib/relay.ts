@@ -55,6 +55,7 @@ async function post(
 
   if (!res.ok) {
     const detail = (await res.json().catch(() => ({}))) as { error?: string };
+    if (isTankEmpty(detail.error ?? "")) throw new GasTankEmptyError();
     throw new Error(detail.error ?? `Relay failed: ${res.status}`);
   }
   return (await res.json()) as Promise<{ txHash: string }>;
@@ -81,9 +82,37 @@ async function localRelay(functionName: string, args: unknown[]): Promise<{ txHa
     ],
     new Wallet(LOCAL_RELAY_KEY, provider),
   );
-  const tx = await paymaster[functionName](...args);
-  const receipt = await tx.wait();
-  return { txHash: receipt.hash };
+  try {
+    const tx = await paymaster[functionName](...args);
+    const receipt = await tx.wait();
+    return { txHash: receipt.hash };
+  } catch (error: unknown) {
+    if (isTankEmpty(error)) throw new GasTankEmptyError();
+    throw error;
+  }
+}
+
+/**
+ * Turns a drained gas tank into a sentence the voter can act on.
+ *
+ * The tank is per ORGANIZER and shared by all their elections, so it can empty
+ * mid-vote and every voter across every one of their elections is blocked at
+ * once. Left raw, that surfaces as an opaque `InsufficientBalance()` revert or
+ * an ethers estimation failure, which reads like the voter did something wrong.
+ */
+export class GasTankEmptyError extends Error {
+  constructor() {
+    super(
+      "The organizer's gas tank is empty, so votes cannot be submitted right now. " +
+        "This is not a problem with your ballot: ask the organizer to top it up and try again.",
+    );
+    this.name = "GasTankEmptyError";
+  }
+}
+
+function isTankEmpty(error: unknown): boolean {
+  const message = (error instanceof Error ? error.message : String(error)).toLowerCase();
+  return message.includes("insufficientbalance") || message.includes("insufficient balance");
 }
 
 function requirePaymaster(): string {

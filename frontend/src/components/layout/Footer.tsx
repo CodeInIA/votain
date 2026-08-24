@@ -19,8 +19,8 @@ export function Footer({ className }: { className?: string }) {
         </span>
 
         <div className="flex items-center gap-5 text-xs text-on-surface-meta">
-          <a href="#" className="hover:text-on-surface transition-colors">{t('landing.footer.terms')}</a>
-          <a href="#" className="hover:text-on-surface transition-colors">{t('landing.footer.privacy')}</a>
+          <Link to="/terms" className="hover:text-on-surface transition-colors">{t('landing.footer.terms')}</Link>
+          <Link to="/privacy" className="hover:text-on-surface transition-colors">{t('landing.footer.privacy')}</Link>
           <Link to="/how-it-works" className="hover:text-on-surface transition-colors">{t('nav.how_it_works')}</Link>
         </div>
 

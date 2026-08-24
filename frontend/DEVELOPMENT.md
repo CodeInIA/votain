@@ -26,6 +26,8 @@
 /election/:id                    Public election preview
 /election/:id/results            Public results
 /how-it-works                    How It Works
+/terms                           Terms of use (legal text: en + es only)
+/privacy                         Privacy notice (legal text: en + es only)
 /verify-receipt                  Verify vote receipt
 
 /voter/onboarding                Onboarding (5 steps + World ID QR, REAL integration)

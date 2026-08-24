@@ -6,6 +6,7 @@ import { PageLayout } from '../../components/layout/PageLayout';
 import { Button } from '../../components/ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
+import { Input } from '../../components/ui/Input';
 import { GasWidget } from '../../components/ui/GasWidget';
 import { Spinner } from '../../components/ui/Spinner';
 import { useElections } from '../../hooks/useElections';
@@ -44,6 +45,14 @@ export default function OrganizerDashboard() {
   const myElections = live
     ? elections.filter(e => e.organizerAddress.toLowerCase() === wallet.address?.toLowerCase())
     : elections.slice(0, 4);
+  const [query, setQuery] = useState('');
+
+  // The stat tiles above count EVERY election, not the filtered view: a search
+  // box should narrow what you are looking at, not silently restate the totals.
+  const visibleElections = query.trim()
+    ? myElections.filter(e => e.title.toLowerCase().includes(query.trim().toLowerCase()))
+    : myElections;
+
   const totalEnrolled = myElections.reduce((s, e) => s + e.totalEnrolled, 0);
   const totalVotes    = myElections.reduce((s, e) => s + e.castVotes, 0);
   const activeCount   = myElections.filter(e => e.phase === 'active').length;
@@ -91,22 +100,32 @@ export default function OrganizerDashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Election table */}
-          <div className="lg:col-span-2">
+          {/* Election table. order-2 on mobile so the gas balance and quick
+              actions sit above it; the list is long and would bury them. */}
+          <div className="lg:col-span-2 order-2 lg:order-1">
             <Card>
               {/* No "view all" link: this list is already every election this
                   organizer has, and there is no fuller page to send them to. */}
-              <CardHeader>
+              <CardHeader className="flex flex-col gap-3">
                 <CardTitle>{t('dashboard.my_elections')}</CardTitle>
+                {myElections.length > 0 && (
+                  <Input
+                    value={query}
+                    onChange={e => setQuery(e.target.value)}
+                    placeholder={t('dashboard.search_placeholder')}
+                  />
+                )}
               </CardHeader>
               <CardContent className="p-0">
                 {loading ? (
                   <div className="flex justify-center py-10"><Spinner /></div>
                 ) : myElections.length === 0 ? (
                   <p className="px-5 py-8 text-center text-sm text-on-surface-meta">{t('dashboard.no_elections')}</p>
+                ) : visibleElections.length === 0 ? (
+                  <p className="px-5 py-8 text-center text-sm text-on-surface-meta">{t('dashboard.no_matches')}</p>
                 ) : (
                   <div className="divide-y divide-white/5">
-                    {myElections.map(e => (
+                    {visibleElections.map(e => (
                       <button
                         key={e.id}
                         type="button"
@@ -129,7 +148,7 @@ export default function OrganizerDashboard() {
           </div>
 
           {/* Sidebar */}
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 order-1 lg:order-2">
             <GasWidget
               balance={gasBalance}
               estimatedVotesLeft={Math.floor(gasBalance / VOTE_COST)}

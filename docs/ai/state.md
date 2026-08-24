@@ -389,6 +389,39 @@ derived from the query string and written back to it, so the view is shareable a
 survives a reload. Note the organizer route guard drops the query string when it
 redirects to login, so a filtered link followed while logged out still loses it.
 
+## Terms and Privacy pages, organizer dashboard polish (2026-08-24)
+
+The footer and both profile pages linked Terms and Privacy to `href="#"`. Both pages
+now exist at `/terms` and `/privacy`, sharing a `LegalPage` shell.
+
+The content describes what the software actually does rather than boilerplate: what
+World ID hands over (a per-app nullifier, no biometrics), why the vault ciphertext
+cannot be read by the issuer, why re-voting is indistinguishable, exactly what is
+public on chain, and two things the design does NOT protect against (the relayer sees
+the network origin of a ballot, and a dishonest issuer could register voters who do
+not exist). Stating the limits is the part that makes the rest credible.
+
+Both pages are translated into all thirteen locales, like the rest of the interface:
+a reader who picked their own language should not be handed the one part of the site
+that decides what they are agreeing to in a language they did not choose.
+
+Translating them surfaced a bug older than the pages: `i18n/config.ts` never set `dir`
+on `<html>`, so Arabic rendered left to right across the whole app. A page of Arabic
+prose made it obvious where a nav bar did not. It now sets `lang` and `dir` on init and
+on every `languageChanged`.
+
+Dashboard, from user testing:
+- On mobile the gas balance and quick actions now sit above the elections list
+  (`order-1`/`order-2`), since the list is long and buried them.
+- Search box over "my elections". The stat tiles keep counting every election, not the
+  filtered view: a search should narrow what you look at, not restate the totals.
+- The gas tank is per ORGANIZER and shared by all their elections, which the wizard
+  never said. The deposit is now labelled optional, shows the balance already held, and
+  the confirmation dialog no longer claims the deposit is "deducted from your gas
+  balance" when it is added to it and deducted from the wallet.
+- An empty tank surfaced as a raw revert, which reads like the voter did something
+  wrong. `GasTankEmptyError` now says whose problem it is and what unblocks it.
+
 ## Pending user actions (block a live Amoy run, not code)
 - Fund the deployer key with ~1.5 to 2 POL (`npm run estimate:amoy` reports the gap), set
   `PRIVATE_KEY` in `contracts/.env` → `npm run deploy:amoy` → verify on PolygonScan.

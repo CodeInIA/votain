@@ -84,14 +84,14 @@ export default function VoterProfile() {
             <Info className="w-4 h-4 shrink-0" />
             {t('nav.how_it_works')}
           </Link>
-          <a href="#" className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 transition-colors text-sm text-on-surface-variant hover:text-on-surface">
+          <Link to="/terms" className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 transition-colors text-sm text-on-surface-variant hover:text-on-surface">
             <FileText className="w-4 h-4 shrink-0" />
             {t('landing.footer.terms')}
-          </a>
-          <a href="#" className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 transition-colors text-sm text-on-surface-variant hover:text-on-surface">
+          </Link>
+          <Link to="/privacy" className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 transition-colors text-sm text-on-surface-variant hover:text-on-surface">
             <Shield className="w-4 h-4 shrink-0" />
             {t('landing.footer.privacy')}
-          </a>
+          </Link>
         </Card>
 
         {/* Sign out */}

@@ -282,7 +282,9 @@
     "quick_actions": "Snelle acties",
     "members": "Leden",
     "gas": "Gasbeheer",
-    "no_elections": "Nog geen verkiezingen. Maak de eerste."
+    "no_elections": "Nog geen verkiezingen. Maak de eerste.",
+    "search_placeholder": "Zoek in mijn verkiezingen...",
+    "no_matches": "Geen verkiezing komt overeen met je zoekopdracht"
   },
   "create": {
     "title": "Verkiezing aanmaken",
@@ -307,11 +309,11 @@
     "require_orb_desc": "Kiezers moeten verifiëren met de World ID Orb.",
     "privacy_quorum": "Privacyquorum",
     "quorum_hint": "Minimum stemmen vereist voordat resultaten worden onthuld.",
-    "deposit_hint": "Initieel gas om transactiekosten van kiezers te dekken.",
+    "deposit_hint": "Optioneel. Vult je gedeelde gasvoorraad aan, die de transactiekosten van de kiezers van AL je verkiezingen betaalt.",
     "immutability_warning": "Eenmaal geïmplementeerd kunnen de parameters niet worden gewijzigd. Controleer alles zorgvuldig.",
     "deploy": "Verkiezing implementeren",
     "deploy_confirm_title": "Implementeren op de blockchain?",
-    "deploy_confirm_desc": "Dit implementeert een slim contract en trekt {{amount}} {{currency}} af van je saldo.",
+    "deploy_confirm_desc": "Dit zet een smart contract uit en voegt {{amount}} {{currency}} vanuit je wallet toe aan je gedeelde gasvoorraad.",
     "deploy_pending": "Contract implementeren…",
     "witness_threshold_n": "Vereiste getuigen (N)",
     "witness_threshold_hint": "Minimum Ja-stemmen om goed te keuren",
@@ -324,7 +326,8 @@
     "separate_enrollment_desc": "Stel je eigen registratiedatums in, met een deadline die vóór de start van het stemmen kan liggen.",
     "enrollment_until_vote_start": "Inschrijving is open vanaf de uitrol tot het stemmen begint.",
     "yes_no_hint": "Hier valt niets in te stellen: de opties liggen vast door de gekozen stemregel. Kiezers kiezen er één van.",
-    "yes_no_preview": "Het stembiljet dat kiezers te zien krijgen"
+    "yes_no_preview": "Het stembiljet dat kiezers te zien krijgen",
+    "current_tank": "Je gasvoorraad bevat al {{amount}} {{currency}}."
   },
   "election_mgmt": {
     "actions": "Acties",
@@ -454,5 +457,51 @@
     "error": "Kon dit apparaat niet toevoegen",
     "last_passkey": "Voeg een ander apparaat toe voordat je dit verwijdert",
     "empty": "Nog geen apparaten geregistreerd"
+  },
+  "terms": {
+    "title": "Gebruiksvoorwaarden",
+    "updated": "Laatst bijgewerkt: 24 augustus 2026",
+    "what_title": "Wat Votain is",
+    "what_1": "Votain is een bachelorscriptieproject: een end-to-end verifieerbare, anonieme stemtoepassing, gebouwd op het Polygon Amoy-testnetwerk. Het is een onderzoeksprototype, geen commerciële dienst.",
+    "what_2": "Het draait op een TESTNETWERK. De tokens die het gebruikt hebben geen geldwaarde en het netwerk garandeert geen voortbestaan: testnetwerken worden af en toe gereset of uitgezet, en elke verkiezing die hier is gehouden kan daarmee verdwijnen.",
+    "binding_title": "Verkiezingen hier zijn juridisch niet bindend",
+    "binding_1": "Niets van wat u via Votain organiseert of stemt heeft rechtsgevolg. Het is geen officiële verkiezing, referendum, aandeelhoudersbesluit, notariële akte of enige andere juridisch erkende procedure.",
+    "binding_2": "Gebruik Votain niet voor een stemming waarvan de uitslag juridisch stand moet houden, of waar een verkeerde of verloren uitslag echte schade zou veroorzaken.",
+    "identity_title": "Uw identiteit en uw apparaat",
+    "identity_1": "Om te stemmen moet u met World ID aantonen dat u een uniek mens bent, en hebt u een passkey op uw apparaat nodig die uw stemgeheim bewaart. Dat geheim wordt nooit naar ons verzonden en kan door ons niet worden hersteld.",
+    "identity_2": "Raakt u alle passkeys kwijt die het kunnen openen, dan laat het herstelproces u er een nieuwe aan koppelen nadat u zich opnieuw met World ID verifieert. Het is bewust beperkt: u kunt meedoen aan verkiezingen waarvoor u nog niet was ingeschreven, maar nooit terugkeren in een verkiezing waarvoor dat wel zo was, want het systeem kan niet weten of u daar al had gestemd zonder de anonimiteit van de stem te doorbreken.",
+    "organizer_title": "Als u een verkiezing organiseert",
+    "organizer_1": "U bent verantwoordelijk voor wat u op de keten publiceert. Namen, beschrijvingen en kandidatenlijsten worden openbaar en permanent opgeslagen en kunnen na publicatie niet meer worden gewijzigd of verwijderd. Neem daarin geen persoonsgegevens van anderen op.",
+    "organizer_2": "U vult één enkele gasvoorraad die de transactiekosten betaalt van de kiezers van AL uw verkiezingen. Raakt die leeg, dan ligt het stemmen in elk daarvan stil totdat u hem aanvult.",
+    "warranty_title": "Geen garantie",
+    "warranty_1": "Votain wordt geleverd zoals het is, zonder enige garantie. Het is niet onafhankelijk geaudit. Het kan gebreken bevatten die de juistheid, de beschikbaarheid of de vertrouwelijkheid van een stemming raken.",
+    "warranty_2": "Voor zover de wet dat toestaat aanvaardt de auteur geen aansprakelijkheid voor verlies of schade die uit het gebruik voortvloeit.",
+    "licence_title": "Licentie en broncode",
+    "licence_1": "Votain wordt uitgebracht onder de GNU Affero General Public License v3.0. De volledige broncode is openbaar, en juist dat stelt iedereen in staat te controleren of de software doet wat deze pagina beweert."
+  },
+  "privacy": {
+    "title": "Privacy",
+    "updated": "Laatst bijgewerkt: 24 augustus 2026",
+    "summary_title": "Kort gezegd",
+    "summary_1": "Wij kennen nooit uw naam, uw gezicht of uw biometrische gegevens. Wij weten niet wat u hebt gestemd, en de organisator evenmin, want stemmen worden versleuteld voordat ze uw apparaat verlaten en alleen het eindtotaal wordt ontsleuteld.",
+    "summary_2": "Deze pagina beschrijft wat de software werkelijk doet, niet wat zij zou mogen doen, inclusief de plekken waar het ontwerp u niet beschermt.",
+    "worldid_title": "Wat World ID aan ons doorgeeft",
+    "worldid_1": "Bij verificatie stuurt World ID ons een bewijs en een nullifier: een getal dat is afgeleid van u en van deze toepassing. Het is elke keer dat u terugkeert hetzelfde, en zo wordt voorkomen dat iemand twee keer stemt, maar het kan niet worden herleid tot uw identiteit en het verschilt per toepassing waarin u World ID gebruikt.",
+    "worldid_2": "Andere persoonsgegevens ontvangen wij niet van World ID. Uw biometrische gegevens verlaten nooit uw apparaat en worden nooit aan ons doorgegeven.",
+    "identity_title": "Uw stemidentiteit",
+    "identity_1": "Uw stemgeheim ontstaat op uw apparaat en wordt verzegeld met een sleutel die is afgeleid van uw passkey. Wij bewaren alleen het versleutelde resultaat, één kopie per passkey die u registreert, zodat u vanaf meerdere apparaten kunt stemmen. De sleutel die het opent verlaat uw authenticator nooit, dus wij kunnen het niet ontsleutelen.",
+    "identity_2": "Dat is geen formaliteit. Konden wij het wel ontsleutelen, dan konden wij de identificator berekenen die uw stem meedraagt en elke stem koppelen aan wie hem uitbracht. De versleuteling maakt ons dat onmogelijk, zij verbiedt het ons niet alleen.",
+    "ballot_title": "Uw stem",
+    "ballot_1": "Uw keuze wordt in uw browser versleuteld voordat zij wordt verzonden, met een sleutel die de organisator beheert. Stemmen worden versleuteld bij elkaar opgeteld en alleen de som wordt ontsleuteld, zodat geen enkele afzonderlijke stem ooit aan iemand wordt onthuld, ook niet aan de organisator.",
+    "ballot_2": "U mag zo vaak opnieuw stemmen als u wilt; alleen de laatste stem telt. Eerdere stemmen blijven opgeslagen maar zijn niet van die laatste te onderscheiden, en juist daardoor kunt u een onder druk uitgebrachte stem ongemerkt vervangen.",
+    "onchain_title": "Wat openbaar is op de blockchain",
+    "onchain_1": "Openbaar en permanent: welke verkiezingen bestaan, dat een bepaalde identiteit op het platform is geregistreerd, welke identiteiten zich voor welke verkiezing hebben ingeschreven, en de versleutelde stemmen met de gepubliceerde totalen. Iedereen kan dit alles lezen en niets ervan kan worden gewist.",
+    "onchain_2": "Niet openbaar: het verband tussen een ingeschreven identiteit en een specifieke stem. Dat verband verbreken is precies waar het zero-knowledge-bewijs voor dient, en daarom wordt elke stem ingediend via één gedeeld contract in plaats van vanaf een eigen adres.",
+    "limits_title": "Waartegen dit u niet beschermt",
+    "limits_1": "Wanneer u een stem indient, bereikt het verzoek onze server via uw netwerkverbinding, dus de herkomst ervan is voor ons zichtbaar zoals bij elke website die u gebruikt. Wij gebruiken die niet om kiezers te identificeren, maar het ontwerp belet ons dat niet, en dat moet u weten voordat u op de anonimiteit van uw stem vertrouwt.",
+    "limits_2": "Ook de uitgever is een vertrouwenspunt: hij controleert World ID-bewijzen en registreert kiezers. Een oneerlijke uitgever zou kiezers kunnen inschrijven die niet bestaan. Uw stem lezen of de telling wijzigen kan hij niet, maar u vertrouwt erop dat hij eerlijk is over wie mag stemmen.",
+    "retention_title": "Bewaren en verwijderen",
+    "retention_1": "De uitgever bewaart uw nullifier en uw versleutelde identiteit zolang uw account bestaat. Een passkey verwijderen wist de bijbehorende versleutelde kopie; de laatste verwijderen wordt geweigerd, omdat uw identiteit daarmee blijvend onbruikbaar zou worden.",
+    "retention_2": "Wat al op de blockchain staat, kan noch door ons noch door iemand anders worden gewist. Dat hoort bij een openbaar register, en het is dezelfde eigenschap die u in staat stelt te controleren dat uw stem is meegeteld."
   }
 }

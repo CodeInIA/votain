@@ -12,6 +12,8 @@ import Discover from './pages/public/Discover';
 import ElectionPreview from './pages/public/ElectionPreview';
 import ElectionResults from './pages/public/ElectionResults';
 import HowItWorks from './pages/public/HowItWorks';
+import Terms from './pages/public/Terms';
+import Privacy from './pages/public/Privacy';
 import VerifyReceipt from './pages/public/VerifyReceipt';
 
 // Voter
@@ -60,6 +62,8 @@ export default function App() {
           <Route path="/election/:id"          element={<ElectionPreview />} />
           <Route path="/election/:id/results"  element={<ElectionResults />} />
           <Route path="/how-it-works"          element={<HowItWorks />} />
+          <Route path="/terms"                 element={<Terms />} />
+          <Route path="/privacy"               element={<Privacy />} />
           <Route path="/verify-receipt"        element={<VerifyReceipt />} />
 
           {/* Voter auth */}

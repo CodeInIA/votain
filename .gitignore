@@ -42,3 +42,6 @@ scripts-tally/tally-*.json
 
 # Seeded Paillier private keys (local demo only, never commit)
 contracts/deployments/tally-keys/
+
+# Playwright MCP scratch output (snapshots, console logs)
+.playwright-mcp/

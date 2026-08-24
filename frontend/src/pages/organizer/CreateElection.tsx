@@ -14,6 +14,7 @@ import { Switch } from '../../components/ui/Switch';
 import { Modal } from '../../components/ui/Modal';
 import { TransactionPendingModal, type TxState } from '../../components/ui/TransactionPendingModal';
 import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
+import { getGasBalance } from '../../lib/organizer';
 import { isChainConfigured, chainInfo } from '../../lib/deployments';
 import { createElection, getOrganizerName, type VOTING_TYPE_ENUM } from '../../lib/organizer';
 
@@ -136,6 +137,24 @@ export default function CreateElection() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const wallet = useOrganizerWallet();
+
+  // The gas tank is per ORGANIZER, shared by all their elections, so a deposit
+  // here is topping up one pool rather than funding this election. Showing the
+  // current balance is what makes "you may not need to add anything" visible.
+  const [tankBalance, setTankBalance] = useState<number | null>(null);
+  useEffect(() => {
+    if (!isChainConfigured() || !wallet.address) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const wei = await getGasBalance(wallet.address!);
+        if (!cancelled) setTankBalance(Number(wei) / 1e18);
+      } catch {
+        if (!cancelled) setTankBalance(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [wallet.address]);
   const live = isChainConfigured();
   const [step, setStep]       = useState(0);
   const [form, setForm]       = useState<FormState>(INITIAL);
@@ -417,7 +436,17 @@ export default function CreateElection() {
             <Card className="p-5 flex flex-col gap-4">
               <Switch label={t('create.require_orb')} description={t('create.require_orb_desc')} checked={form.requireOrb} onChange={v => set('requireOrb', v)} />
               <Input label={t('create.privacy_quorum')} type="number" min="1" max="100" value={form.privacyQuorum} onChange={e => set('privacyQuorum', e.target.value)} hint={t('create.quorum_hint')} error={err('privacyQuorum')} />
-              <Input label={t('create.deposit_token', { currency: chainInfo.currency })} type="number" step="0.01" min="0" value={form.depositAmount} onChange={e => set('depositAmount', e.target.value)} hint={t('create.deposit_hint')} error={err('depositAmount')} />
+              <div className="flex flex-col gap-1.5">
+                <Input label={t('create.deposit_token', { currency: chainInfo.currency })} type="number" step="0.01" min="0" value={form.depositAmount} onChange={e => set('depositAmount', e.target.value)} hint={t('create.deposit_hint')} error={err('depositAmount')} />
+                {tankBalance !== null && (
+                  <p className="text-xs text-on-surface-meta">
+                    {t('create.current_tank', {
+                      amount: tankBalance.toFixed(4),
+                      currency: chainInfo.currency,
+                    })}
+                  </p>
+                )}
+              </div>
             </Card>
 
             {/* Errors from earlier steps are invisible here, so surface them. */}

@@ -282,7 +282,9 @@
     "quick_actions": "Quick actions",
     "members": "Members",
     "gas": "Gas management",
-    "no_elections": "No elections yet. Create your first one."
+    "no_elections": "No elections yet. Create your first one.",
+    "search_placeholder": "Search my elections...",
+    "no_matches": "No elections match your search"
   },
   "create": {
     "title": "Create Election",
@@ -307,11 +309,11 @@
     "require_orb_desc": "Voters must verify with the World ID Orb (highest assurance).",
     "privacy_quorum": "Privacy quorum",
     "quorum_hint": "Minimum votes required before results are revealed.",
-    "deposit_hint": "Initial gas to cover voter transaction fees.",
+    "deposit_hint": "Optional. Tops up your shared gas tank, which pays transaction fees for the voters of ALL your elections.",
     "immutability_warning": "Once deployed, the election parameters cannot be changed. Review everything carefully.",
     "deploy": "Deploy election",
     "deploy_confirm_title": "Deploy to blockchain?",
-    "deploy_confirm_desc": "This will deploy a smart contract and deduct {{amount}} {{currency}} from your gas balance.",
+    "deploy_confirm_desc": "This deploys a smart contract and adds {{amount}} {{currency}} from your wallet to your shared gas tank.",
     "deploy_pending": "Deploying contract…",
     "witness_threshold_n": "Required witnesses (N)",
     "witness_threshold_hint": "Minimum Yes votes needed to approve",
@@ -324,7 +326,8 @@
     "separate_enrollment_desc": "Set your own registration dates, with a deadline that can fall before voting opens.",
     "enrollment_until_vote_start": "Registration is open from deployment until voting starts.",
     "yes_no_hint": "There is nothing to configure here: the options are set by the voting rule you chose. Voters will pick one of them.",
-    "yes_no_preview": "The ballot voters will see"
+    "yes_no_preview": "The ballot voters will see",
+    "current_tank": "Your gas tank already holds {{amount}} {{currency}}."
   },
   "election_mgmt": {
     "actions": "Actions",
@@ -454,5 +457,51 @@
     "error": "Could not add this device",
     "last_passkey": "Add another device before removing this one",
     "empty": "No devices registered yet"
+  },
+  "terms": {
+    "title": "Terms of use",
+    "updated": "Last updated: 24 August 2026",
+    "what_title": "What Votain is",
+    "what_1": "Votain is a Bachelor's thesis project: an end-to-end verifiable, anonymous voting application built on the Polygon Amoy test network. It is a research prototype, not a commercial service.",
+    "what_2": "It runs on a TEST network. The tokens it uses have no monetary value and the network offers no guarantee of persistence: test networks are reset or discontinued from time to time, and any election held here can disappear with them.",
+    "binding_title": "Elections held here are not legally binding",
+    "binding_1": "Nothing you organise or vote in through Votain has legal effect. It does not constitute an official election, referendum, corporate resolution, notarial act or any other legally recognised process.",
+    "binding_2": "Do not use Votain for any vote whose outcome must stand up legally, or where a wrong or lost result would cause real harm.",
+    "identity_title": "Your identity and your device",
+    "identity_1": "Voting requires proving you are a unique human with World ID, and a passkey on your device that holds your voting secret. That secret is never sent to us and cannot be recovered by us.",
+    "identity_2": "If you lose every passkey that can unlock it, the recovery flow lets you bind a new one after verifying with World ID again. Recovery is deliberately limited: you can join elections you had not yet enrolled in, but never re-enter one you had, because the system cannot tell whether you already voted there without breaking the anonymity of the ballot.",
+    "organizer_title": "If you organise an election",
+    "organizer_1": "You are responsible for what you put on chain. Election names, descriptions and candidate lists are stored publicly and permanently, and cannot be edited or deleted once published. Do not put personal data of third parties in them.",
+    "organizer_2": "You fund a single gas tank that pays transaction fees for the voters of ALL your elections. If it empties, voting stops across every one of them until you top it up.",
+    "warranty_title": "No warranty",
+    "warranty_1": "Votain is provided as is, without warranty of any kind. It has not been independently audited. It may contain defects that affect the correctness, availability or privacy of a vote.",
+    "warranty_2": "To the maximum extent permitted by law, the author accepts no liability for any loss or damage arising from its use.",
+    "licence_title": "Licence and source code",
+    "licence_1": "Votain is released under the GNU Affero General Public License v3.0. The full source code is public, which is what allows anyone to check that the software does what this page says it does."
+  },
+  "privacy": {
+    "title": "Privacy",
+    "updated": "Last updated: 24 August 2026",
+    "summary_title": "In short",
+    "summary_1": "We never learn your name, your face or your biometrics. We do not know how you voted, and neither does the organizer, because ballots are encrypted before they leave your device and only the final total is ever decrypted.",
+    "summary_2": "This page describes what actually happens in the software rather than what is merely permitted, including the places where the design does not protect you.",
+    "worldid_title": "What World ID gives us",
+    "worldid_1": "When you verify, World ID sends us a proof and a nullifier: a number derived from you and from this application. It is the same every time you return, which is how one person is prevented from voting twice, but it cannot be reversed into your identity and it is different for every application you use World ID with.",
+    "worldid_2": "We receive no other personal data from World ID. Your biometrics never leave your own device and are never transmitted to us.",
+    "identity_title": "Your voting identity",
+    "identity_1": "Your voting secret is generated on your device and sealed with a key derived from your passkey. We store only the encrypted result, once per passkey you register, so you can vote from several devices. The key that opens it never leaves your authenticator, so we cannot decrypt it.",
+    "identity_2": "This is not a formality. If we could decrypt it, we could compute the identifier your ballot carries and match every vote to the person who cast it. The encryption is what makes that impossible for us, not just forbidden.",
+    "ballot_title": "Your ballot",
+    "ballot_1": "Your choice is encrypted in your browser before it is submitted, using a key held by the organizer. Ballots are added together while still encrypted, and only the sum is decrypted, so no individual vote is ever revealed to anyone, including the organizer.",
+    "ballot_2": "You may vote again as many times as you like; only your last ballot counts. Earlier ones remain stored but are indistinguishable from it, which is what allows you to quietly replace a vote you were pressured into casting.",
+    "onchain_title": "What is public on the blockchain",
+    "onchain_1": "Public and permanent: which elections exist, that a given identity is registered on the platform, which identities enrolled in each election, and the encrypted ballots with their published totals. Anyone can read all of it, and none of it can be deleted.",
+    "onchain_2": "Not public: the link between an enrolled identity and any particular ballot. That link is what the zero-knowledge proof exists to break, and it is why every vote is submitted through one shared contract rather than from an address of your own.",
+    "limits_title": "What this does not protect you from",
+    "limits_1": "When you submit a vote, the request reaches our server from your network connection, so its origin is visible to us in the same way it is to any website you use. We do not use it to identify voters, but the design does not prevent us from doing so, and you should know that before relying on the anonymity of your ballot.",
+    "limits_2": "The issuer is also a point of trust: it verifies World ID proofs and registers voters. A dishonest issuer could add voters who do not exist. It could not read your ballot or alter the count, but you are relying on it being honest about who is allowed to vote.",
+    "retention_title": "Retention and deletion",
+    "retention_1": "The issuer keeps your nullifier and your encrypted identity for as long as your account exists. Removing a passkey deletes its encrypted copy; removing the last one is refused, because it would leave your identity permanently unusable.",
+    "retention_2": "Anything already written to the blockchain cannot be deleted by us or by anyone else. That is inherent to a public ledger and is the same property that lets you verify your vote was counted."
   }
 }
