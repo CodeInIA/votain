@@ -422,6 +422,59 @@ Dashboard, from user testing:
 - An empty tank surfaced as a raw revert, which reads like the voter did something
   wrong. `GasTankEmptyError` now says whose problem it is and what unblocks it.
 
+## Windows Hello passkeys were rejected as PRF-incapable (2026-08-24)
+
+Reported from real use: World ID verification asked for the Windows Hello PIN, the
+passkey was created, and then it did not appear under "my account". No vault file
+existed on the backend at all, so `putVaultEntry` had never run.
+
+`enrollPrfPasskey` decided whether the authenticator supported PRF by reading
+`prf.enabled` from the CREATION, and bailed out when it was false. Measured on
+Chrome 151 and Firefox 154 over Windows Hello (Windows 11 25H2):
+
+| creation request | `prf.enabled` at create | PRF value |
+|---|---|---|
+| `prf: {}` | false | returned by the next `get()` |
+| `prf: { eval: { first } }` | true | returned AT CREATION |
+
+So the flag was never evidence of anything. Windows Hello does not evaluate the PRF
+unless asked to, and reports `enabled: false` while being perfectly capable. Every
+Windows Hello voter was rejected and dropped silently into the localStorage fallback,
+which is the path that never registers on chain. `derivePrfSecret` carried the same
+gate, so the organizer's tally key fell back the same way.
+
+The fix is to let the PRF value decide, never the flag. Creation now asks for `eval`,
+and when the authenticator answers with the secret the voter is spared a second
+ceremony, which is what happens on both browsers above. The failure ladder is
+`prf.eval` then `prf` then no extensions, in that order: dropping straight to no
+extensions mints a credential with no hmac-secret that can never do PRF, which is far
+worse than one extra prompt.
+
+The silent degradation itself is untouched and still open, see the no-PRF fallback
+decision above. It was masked by this bug; it is not fixed by it.
+
+## Signing out left the voting identity behind (2026-08-24)
+
+`clearIdentity`, `forgetOrganizerAddress` and the display-name reset were all written
+and wired to nothing. Sign-out cleared only the session flags.
+
+This was not untidiness. `getOrCreateIdentity` returns the stored identity whenever the
+mode is "local", without regard to who is signed in, so the next person to sign in on
+that browser voted as the previous one. In PRF mode the leftover commitment and
+`votain_vote_*` records showed one voter another voter's history.
+
+Voter sign-out now calls `clearIdentity`. In the no-PRF fallback that deletes the only
+copy of the secret scalar, which is the intended meaning of signing out of a device and
+costs nothing real: such an identity is local-chain only anyway.
+
+Organizer sign-out now forgets the wallet address and display name. It deliberately
+keeps `votain_paillier_sk_*`: those are tally private keys for elections already on
+chain, and signing out must not be able to make a result undecryptable forever.
+
+Known coupling: voter and organizer share `votain_prf_credential_id`, and the organizer
+session is invalidated when no credential is cached, so a voter sign-out logs the
+organizer out too on the next reload.
+
 ## Pending user actions (block a live Amoy run, not code)
 - Fund the deployer key with ~1.5 to 2 POL (`npm run estimate:amoy` reports the gap), set
   `PRIVATE_KEY` in `contracts/.env` → `npm run deploy:amoy` → verify on PolygonScan.

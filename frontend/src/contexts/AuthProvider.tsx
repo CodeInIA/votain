@@ -1,5 +1,8 @@
 import { useState, useEffect, type ReactNode } from 'react';
 import { hasPrfCredential } from '../lib/passkeyPrf';
+import { clearIdentity } from '../lib/semaphore';
+import { forgetOrganizerAddress } from '../hooks/useOrganizerWallet';
+import { setOrganizerName } from '../lib/organizer';
 import { AuthContext } from './AuthContext';
 
 const VOTER_KEY = 'votain_voter_logged_in';
@@ -74,9 +77,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // Signing out has to take the voting identity with it, not just the session
+  // flags. What stayed behind before was not a harmless cache: `getOrCreateIdentity`
+  // returns the stored identity whenever the mode is "local", so the next person
+  // to sign in on this browser voted as the previous one. Even in PRF mode the
+  // leftover commitment and per-election vote records showed one voter another
+  // voter's history. `clearIdentity` covers the identity, its mode, the cached
+  // commitment, this device's passkey handle and the votain_vote_* records.
+  //
+  // In the no-PRF fallback this deletes the only copy of the secret scalar. That
+  // is the intended meaning of signing out of a device, and such an identity is
+  // local-chain only anyway: the on-chain registration hangs off the vault write,
+  // which the fallback never performs.
   const voterSignOut = () => {
     localStorage.removeItem(VOTER_KEY);
     localStorage.removeItem('voter_nullifier');
+    clearIdentity();
     setVoterLoggedInState(false);
     // Clear the httpOnly VC cookie so /api/me does not restore the session.
     fetch(`${BACKEND_URL}/api/logout`, { method: 'POST', credentials: 'include' }).catch(() => {});
@@ -88,8 +104,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setOrganizerLoggedInState(v);
   };
 
+  // The remembered wallet address and display name identify the organizer, so
+  // they go too. The votain_paillier_sk_* entries deliberately do NOT: they are
+  // the tally private keys for elections already on chain, and deleting them
+  // would leave those results permanently undecryptable. Signing out must not be
+  // able to destroy an election's outcome.
   const organizerSignOut = () => {
     localStorage.removeItem(ORGANIZER_KEY);
+    forgetOrganizerAddress();
+    setOrganizerName('');
     setOrganizerLoggedInState(false);
   };
 

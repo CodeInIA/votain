@@ -110,13 +110,20 @@ function describe(e: unknown): string {
  *  - `residentKey: "preferred"`, we store the credential id ourselves, so a
  *    discoverable credential is not required. Demanding it is a common cause of
  *    "unknown transient reason" failures on Windows Hello / Firefox.
- *  - PRF is *requested*; if the ceremony fails for any non-cancellation reason
- *    we retry without extensions. PRF only powers identity derivation, never auth.
+ *  - The PRF value is requested during creation. Authenticators that answer
+ *    (Firefox 154 over Windows Hello, measured) hand back the secret right here
+ *    and the caller needs no second ceremony. Ones that ignore it cost nothing.
+ *  - On failure we walk down a ladder: eval, then a bare PRF request, then no
+ *    extensions at all. The order matters. Dropping straight to no extensions
+ *    would mint a credential with no hmac-secret, permanently PRF-incapable,
+ *    which is far worse than one extra prompt.
  */
-async function registerCredential(): Promise<{
+async function registerCredential(salt: Uint8Array = IDENTITY_SALT): Promise<{
   registered: boolean;
   prfEnabled: boolean;
   credentialId?: string;
+  /** Set only when the authenticator evaluated the PRF during creation. */
+  prfSecret?: Uint8Array;
 }> {
   assertSecureContext();
 
@@ -139,37 +146,45 @@ async function registerCredential(): Promise<{
     timeout: 60_000,
   };
 
-  let cred: PublicKeyCredential | null;
-  try {
-    cred = (await navigator.credentials.create({
-      publicKey: { ...base, extensions: { prf: {} } as AuthenticationExtensionsClientInputs },
-    })) as PublicKeyCredential | null;
-  } catch (e) {
-    if (isUserCancellation(e)) {
-      throw new Error("Passkey creation was cancelled", { cause: e });
-    }
-    // The authenticator likely rejected the PRF extension: retry plain.
-    console.warn("Passkey creation with PRF failed, retrying without it:", describe(e));
+  const attempts: Array<{ label: string; prf?: AuthenticationExtensionsClientInputs }> = [
+    { label: "prf.eval", prf: { prf: { eval: { first: salt } } } as AuthenticationExtensionsClientInputs },
+    { label: "prf", prf: { prf: {} } as AuthenticationExtensionsClientInputs },
+    { label: "no extensions" },
+  ];
+
+  let cred: PublicKeyCredential | null = null;
+  for (let i = 0; i < attempts.length; i++) {
+    const attempt = attempts[i];
     try {
-      cred = (await navigator.credentials.create({ publicKey: base })) as PublicKeyCredential | null;
-    } catch (e2) {
-      if (isUserCancellation(e2)) {
-        throw new Error("Passkey creation was cancelled", { cause: e2 });
+      cred = (await navigator.credentials.create({
+        publicKey: attempt.prf ? { ...base, extensions: attempt.prf } : base,
+      })) as PublicKeyCredential | null;
+      break;
+    } catch (e) {
+      if (isUserCancellation(e)) {
+        throw new Error("Passkey creation was cancelled", { cause: e });
       }
-      throw new Error(`Could not create a passkey, ${describe(e2)}`, { cause: e2 });
+      if (i === attempts.length - 1) {
+        throw new Error(`Could not create a passkey, ${describe(e)}`, { cause: e });
+      }
+      console.warn(`Passkey creation with ${attempt.label} failed, retrying:`, describe(e));
     }
   }
 
   if (!cred) return { registered: false, prfEnabled: false };
 
-  const ext = cred.getClientExtensionResults() as { prf?: { enabled?: boolean } };
+  const ext = cred.getClientExtensionResults() as {
+    prf?: { enabled?: boolean; results?: { first?: ArrayBuffer } };
+  };
   localStorage.setItem(CRED_ID_KEY, bufToB64url(cred.rawId));
   localStorage.setItem(CRED_CREATED_KEY, new Date().toISOString());
   localStorage.setItem(CRED_LAST_USED_KEY, new Date().toISOString());
+  const evaluated = ext.prf?.results?.first;
   return {
     registered: true,
     prfEnabled: Boolean(ext.prf?.enabled),
     credentialId: bufToB64url(cred.rawId),
+    prfSecret: evaluated ? new Uint8Array(evaluated) : undefined,
   };
 }
 
@@ -241,13 +256,26 @@ export async function assertPrf(
  * Creates a passkey on THIS device and returns its PRF output, so the caller can
  * wrap the voter's existing identity secret under it. Null when the
  * authenticator cannot do PRF, in which case this device cannot join the vault.
+ *
+ * The assertion is what decides, never `prf.enabled` from the creation. Windows
+ * Hello does not evaluate PRF while creating a credential, so it reports
+ * `enabled: false` and then answers the very next `get()` with a valid 32-byte
+ * secret (w3c/webauthn#1857). Gating on that flag rejected every Windows Hello
+ * passkey as PRF-incapable and silently dropped the voter into the single-device
+ * localStorage fallback.
  */
 export async function enrollPrfPasskey(
   salt: Uint8Array = IDENTITY_SALT,
 ): Promise<PrfAssertion | null> {
-  const { registered, prfEnabled, credentialId } = await registerCredential();
-  if (!registered || !prfEnabled || !credentialId) return null;
-  // Creation reports only that PRF is enabled; a get() is needed to read it.
+  const { registered, prfEnabled, credentialId, prfSecret } = await registerCredential(salt);
+  if (!registered || !credentialId) return null;
+  // The authenticator already evaluated the PRF while creating the credential,
+  // so the voter is spared a second prompt. Same (credential, salt) pair, so
+  // this is the same secret a later assertion would return.
+  if (prfSecret) return { credentialId, secret: prfSecret };
+  if (!prfEnabled) {
+    console.info("Authenticator reported prf.enabled=false at creation, trying the assertion anyway");
+  }
   return assertPrf([credentialId], salt);
 }
 
@@ -291,8 +319,11 @@ export async function derivePrfSecret(salt: Uint8Array = IDENTITY_SALT): Promise
   try {
     let credId = localStorage.getItem(CRED_ID_KEY);
     if (!credId) {
-      const { registered, prfEnabled } = await registerCredential();
-      if (!registered || !prfEnabled) return null; // fall back to stored identity
+      // Only `registered` is load-bearing: see enrollPrfPasskey on why
+      // `prf.enabled` from a creation cannot be trusted to mean anything.
+      const { registered, prfSecret } = await registerCredential(salt);
+      if (!registered) return null; // fall back to stored identity
+      if (prfSecret) return prfSecret; // evaluated at creation, no second prompt
       credId = localStorage.getItem(CRED_ID_KEY);
       if (!credId) return null;
     }

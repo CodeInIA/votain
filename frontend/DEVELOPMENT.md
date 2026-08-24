@@ -93,7 +93,18 @@ identity per device.
 - **Fallback (no PRF support):** a random identity in localStorage
   (`votain_semaphore_identity`), never published to the vault. Note it is NOT registered on
   chain, so on Amoy it cannot enroll. See docs/ai/state.md for the open decision.
+- **Never trust `prf.enabled` from a creation.** Windows Hello does not evaluate the PRF
+  while creating a credential and reports `enabled: false` while being fully capable, so
+  gating on it rejects every Windows Hello voter. Only the PRF value itself is evidence.
+  Creation asks for `prf: { eval: ... }`, and when the authenticator answers there the
+  voter is spared a second ceremony. If a creation fails, retry `prf.eval` then `prf` then
+  no extensions IN THAT ORDER: a credential minted without the extension has no
+  hmac-secret and can never do PRF.
 - `votain_identity_mode` records which mode is active.
+- **Signing out clears the identity** (`clearIdentity` from `voterSignOut`). Leaving it
+  behind let the next person on the browser inherit the previous voter's identity, since
+  `getOrCreateIdentity` returns the stored one whenever the mode is "local". Organizer
+  sign-out keeps `votain_paillier_sk_*`: those decrypt results of live elections.
 
 ## src/ structure
 
