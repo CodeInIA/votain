@@ -516,6 +516,37 @@ passkeys over one shared identity, so removing one is meaningful and the last is
 protected. The organizer has no vault, only a local credential id, so forgetting it is
 the only operation that exists.
 
+## The organizer display name survives a new browser (2026-08-24)
+
+`votain_organizer_name` is per browser and is now cleared on sign out, so an organizer
+who signed out or moved browser silently fell back to the "VotainOrg" placeholder, and
+the next election they created carried it.
+
+The first idea was to store the name, either on chain at first sign in or in the backend.
+Both were wrong. On chain it duplicates data that is already there and pays gas for a
+field that is self-asserted, so being on chain buys durability, not truth. The backend has
+no database, only JSON files, and a second store for a cosmetic string has to be kept in
+sync with the one that already exists.
+
+Because the name IS already on chain: it is snapshotted into each election's metadata at
+creation and read back for display. So the dashboard recovers it from the organizer's most
+recent election and only prompts when there is nothing to recover. The dashboard already
+holds that list, newest first and filtered by the connected address, so this costs no
+extra chain call.
+
+`recoverOrganizerName` skips two non-answers. An election created while the name was lost
+carries the placeholder, and one whose metadata had no name at all reports the raw address,
+since that is the display fallback. Adopting either would bury the real name under
+something the organizer never chose, permanently and silently.
+
+Renaming still does not rewrite past elections, which is the audit trail and is now stated
+in the onboarding prompt rather than left to be discovered.
+
+Implementation note: the first version set state inside an effect and eslint rejected it
+(`react-hooks/set-state-in-effect`). The effect now only writes to localStorage and the
+decision to prompt is derived during render, which is also more correct: elections arriving
+late can no longer open the prompt before recovery has had a chance to answer.
+
 ## Pending user actions (block a live Amoy run, not code)
 - Fund the deployer key with ~1.5 to 2 POL (`npm run estimate:amoy` reports the gap), set
   `PRIVATE_KEY` in `contracts/.env` → `npm run deploy:amoy` → verify on PolygonScan.

@@ -32,7 +32,10 @@
     "free_desc": "Sie müssen nichts bezahlen oder Krypto verstehen. Der Organisator kümmert sich um alles.",
     "btn_next": "Weiter",
     "btn_start": "Identität verifizieren",
-    "go_to_step": "Zu Schritt {{step}}"
+    "go_to_step": "Zu Schritt {{step}}",
+    "name_title": "Wie möchten Sie als Organisator erscheinen?",
+    "name_desc": "Dieser Name erscheint bei jeder Wahl, die Sie anlegen. Er wird beim Anlegen mit der Wahl gespeichert, eine spätere Umbenennung ändert also nichts an den bereits veröffentlichten.",
+    "name_placeholder": "Name oder Organisation"
   },
   "verify": {
     "title": "Identität verifizieren",

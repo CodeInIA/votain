@@ -32,7 +32,10 @@
     "free_desc": "Vous n'avez rien à payer ni à comprendre à la crypto. L'organisateur s'occupe de tout.",
     "btn_next": "Suivant",
     "btn_start": "Vérifier l'identité",
-    "go_to_step": "Aller à l'étape {{step}}"
+    "go_to_step": "Aller à l'étape {{step}}",
+    "name_title": "Comment souhaitez-vous apparaître en tant qu'organisateur ?",
+    "name_desc": "Ce nom apparaît sur chaque élection que vous créez. Il est enregistré avec l'élection au moment de sa création : le changer plus tard ne modifie pas celles déjà publiées.",
+    "name_placeholder": "Nom ou organisation"
   },
   "verify": {
     "title": "Vérifiez votre identité",

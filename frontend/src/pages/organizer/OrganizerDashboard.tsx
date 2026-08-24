@@ -9,9 +9,15 @@ import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
 import { GasWidget } from '../../components/ui/GasWidget';
 import { Spinner } from '../../components/ui/Spinner';
+import { Modal } from '../../components/ui/Modal';
 import { useElections } from '../../hooks/useElections';
 import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
-import { getGasBalance } from '../../lib/organizer';
+import {
+  getGasBalance,
+  hasStoredOrganizerName,
+  recoverOrganizerName,
+  setOrganizerName,
+} from '../../lib/organizer';
 import { PULSE_PHASES } from '../../lib/phase';
 
 /** Approximate native-token cost of one sponsored vote. */
@@ -23,6 +29,10 @@ export default function OrganizerDashboard() {
   const { elections, loading, live } = useElections();
   const wallet = useOrganizerWallet();
   const [gasBalance, setGasBalance] = useState(live ? 0 : 2.5);
+  // Set once the organizer has answered or dismissed the name prompt, so it
+  // does not reopen on the next render.
+  const [nameHandled, setNameHandled] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
 
   // Real sponsored-gas balance for the connected organizer.
   useEffect(() => {
@@ -45,6 +55,31 @@ export default function OrganizerDashboard() {
   const myElections = live
     ? elections.filter(e => e.organizerAddress.toLowerCase() === wallet.address?.toLowerCase())
     : elections.slice(0, 4);
+
+  // The display name lives in localStorage, so a new browser or a sign out
+  // leaves it unset and the next election created would be labelled with the
+  // placeholder. The chain already has the answer: it is snapshotted into every
+  // election at creation, so read it back from the most recent one and only ask
+  // when there is genuinely nothing to recover.
+  //
+  // The effect only writes to localStorage. Whether to ask is derived during
+  // render instead, so nothing sets state from inside an effect.
+  const recoverable = live && !loading && wallet.address ? recoverOrganizerName(myElections) : null;
+
+  useEffect(() => {
+    if (!live || loading || !wallet.address || hasStoredOrganizerName()) return;
+    if (recoverable) setOrganizerName(recoverable);
+  }, [live, loading, wallet.address, recoverable]);
+
+  const askName =
+    live && !loading && !!wallet.address && !nameHandled && !recoverable && !hasStoredOrganizerName();
+
+  const saveName = (): void => {
+    const trimmed = nameDraft.trim();
+    if (!trimmed) return;
+    setOrganizerName(trimmed);
+    setNameHandled(true);
+  };
   const [query, setQuery] = useState('');
 
   // The stat tiles above count EVERY election, not the filtered view: a search
@@ -181,6 +216,26 @@ export default function OrganizerDashboard() {
           </div>
         </div>
       </div>
+
+      {/* First run on this browser with nothing to recover from the chain. */}
+      <Modal
+        open={askName}
+        onClose={() => setNameHandled(true)}
+        title={t('onboarding.name_title')}
+        description={t('onboarding.name_desc')}
+      >
+        <Input
+          value={nameDraft}
+          onChange={e => setNameDraft(e.target.value)}
+          placeholder={t('onboarding.name_placeholder')}
+          maxLength={60}
+          onKeyDown={e => { if (e.key === 'Enter') saveName(); }}
+          className="mb-3"
+        />
+        <Button className="w-full" disabled={!nameDraft.trim()} onClick={saveName}>
+          {t('common.save')}
+        </Button>
+      </Modal>
     </PageLayout>
   );
 }

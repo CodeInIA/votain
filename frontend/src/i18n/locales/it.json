@@ -32,7 +32,10 @@
     "free_desc": "Non hai bisogno di pagare nulla né di capire la crypto. L'organizzatore si occupa di tutto.",
     "btn_next": "Avanti",
     "btn_start": "Verifica Identità",
-    "go_to_step": "Vai al passo {{step}}"
+    "go_to_step": "Vai al passo {{step}}",
+    "name_title": "Come vuoi apparire come organizzatore?",
+    "name_desc": "Questo nome compare su ogni elezione che crei. Viene salvato insieme all'elezione al momento della creazione, quindi cambiarlo in seguito non modifica quelle già pubblicate.",
+    "name_placeholder": "Nome o organizzazione"
   },
   "verify": {
     "title": "Verifica la tua Identità",

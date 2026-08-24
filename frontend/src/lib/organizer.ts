@@ -30,6 +30,37 @@ export function setOrganizerName(name: string): void {
   else localStorage.removeItem(ORGANIZER_NAME_KEY);
 }
 
+/** Whether this browser knows the organizer's name, as opposed to defaulting. */
+export function hasStoredOrganizerName(): boolean {
+  return localStorage.getItem(ORGANIZER_NAME_KEY) !== null;
+}
+
+/**
+ * Recovers the display name from the organizer's own elections.
+ *
+ * The name is snapshotted into each election's metadata at creation, so the
+ * chain already holds it and there is no second store to keep in sync. A new
+ * browser can read it back instead of asking again, and instead of silently
+ * labelling the next election with the default.
+ *
+ * Skips two non-answers: the placeholder, and elections whose metadata carried
+ * no name at all (where `organizer` falls back to the raw address). Adopting
+ * either would bury the real name under something the organizer never chose.
+ *
+ * @param elections The organizer's elections, newest first.
+ */
+export function recoverOrganizerName(
+  elections: Array<{ organizer: string; organizerAddress: string }>,
+): string | null {
+  const named = elections.find(
+    e =>
+      e.organizer &&
+      e.organizer !== DEFAULT_ORGANIZER_NAME &&
+      e.organizer.toLowerCase() !== e.organizerAddress.toLowerCase(),
+  );
+  return named?.organizer ?? null;
+}
+
 export const VOTING_TYPE_ENUM: Record<string, number> = {
   simple_plurality: 0,
   absolute_majority: 1,

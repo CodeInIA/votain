@@ -32,7 +32,10 @@
     "free_desc": "Je hoeft niets te betalen of crypto te begrijpen. De organisator regelt alles.",
     "btn_next": "Volgende",
     "btn_start": "Identiteit verifiëren",
-    "go_to_step": "Ga naar stap {{step}}"
+    "go_to_step": "Ga naar stap {{step}}",
+    "name_title": "Hoe wilt u als organisator verschijnen?",
+    "name_desc": "Deze naam staat bij elke verkiezing die u aanmaakt. Hij wordt bij het aanmaken met de verkiezing opgeslagen, dus later hernoemen verandert niets aan de al gepubliceerde.",
+    "name_placeholder": "Naam of organisatie"
   },
   "verify": {
     "title": "Verifieer je Identiteit",

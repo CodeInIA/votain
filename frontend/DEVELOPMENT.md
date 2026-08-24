@@ -66,6 +66,16 @@
   Spoofing either flag only changes cosmetic nav; every real action is guarded by the
   cookie (server) or by wallet signatures + `onlyOrganizer` checks (chain).
 - `voterSignOut()` clears localStorage AND calls `POST /api/logout` (clears the cookie)
+- **The organizer display name is recovered from the chain, not stored twice.** It lives in
+  `votain_organizer_name`, so a new browser or a sign out loses it, and the next election
+  created would carry the placeholder. It is also snapshotted into every election's metadata
+  at creation (`organizer.ts`, read back in `chainElections.ts`), so the dashboard reads it
+  back from the organizer's most recent election and only prompts when there is nothing to
+  recover. `recoverOrganizerName` skips the placeholder and elections whose metadata carried
+  no name (where `organizer` falls back to the raw address): adopting either would bury the
+  real name under something the organizer never chose.
+- Renaming does NOT rewrite past elections, since each one holds the name it was created
+  with. That is the audit trail, and the onboarding prompt says so.
 - Navigation (`TopNav`, `BottomTabNav`) is driven ONLY by auth state, never by the page
 
 ## Voter identity (Semaphore)
