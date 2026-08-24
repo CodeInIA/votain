@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, ExternalLink, Users, Calendar } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
+import { DomainBadge } from '../../components/ui/DomainBadge';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { BackButton } from '../../components/ui/BackButton';
@@ -172,7 +173,14 @@ export default function ElectionDetail() {
           <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white leading-tight">
             {election.title}
           </h1>
-          <p className="text-xs text-on-surface-meta mt-1">{t('election.by')} {election.organizer}</p>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
+            <p className="text-xs text-on-surface-meta">{t('election.by')} {election.organizer}</p>
+            <DomainBadge
+              domain={election.organizerDomain}
+              organizerAddress={election.organizerAddress}
+              showCheckLink
+            />
+          </div>
         </div>
 
         {/* Countdown to the phase's next boundary (null in terminal phases). */}

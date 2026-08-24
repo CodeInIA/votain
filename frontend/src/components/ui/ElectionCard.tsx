@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Users, Calendar, ChevronRight } from 'lucide-react';
 import { Badge } from './Badge';
+import { DomainBadge } from './DomainBadge';
 import { Countdown } from './Countdown';
 import { Button } from './Button';
 import { cn } from '../../lib/utils';
@@ -47,7 +48,10 @@ export function ElectionCard({ election, voterView = false, className }: Electio
       {/* Header row */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <p className="text-xs text-on-surface-meta mb-1.5 truncate">{election.organizer}</p>
+          <div className="flex items-center gap-2 mb-1.5 min-w-0">
+            <p className="text-xs text-on-surface-meta truncate">{election.organizer}</p>
+            <DomainBadge domain={election.organizerDomain} organizerAddress={election.organizerAddress} />
+          </div>
           <h3 className="text-sm sm:text-base font-semibold text-on-surface leading-tight line-clamp-2">
             {election.title}
           </h3>

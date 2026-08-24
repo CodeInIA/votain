@@ -23,6 +23,7 @@ const VOTING_TYPE_MAP: VotingType[] = [
 interface ElectionMetadata {
   description?: string;
   organizerName?: string;
+  organizerDomain?: string;
   candidates?: Array<{ name: string; description?: string }>;
   privacyQuorum?: number;
   keyNonce?: string;
@@ -133,6 +134,9 @@ export async function fetchElection(address: string): Promise<Election> {
     phase: basePhase,
     organizer: meta.organizerName ?? organizerAddress,
     organizerAddress,
+    // The domain the election was created under. Kept as a snapshot: a
+    // verification that lapses later must not rewrite the past.
+    organizerDomain: meta.organizerDomain,
     enrollStart: toDate(enrollStart),
     enrollEnd: toDate(enrollEnd),
     voteStart: toDate(voteStart),

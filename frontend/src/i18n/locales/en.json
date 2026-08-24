@@ -507,5 +507,32 @@
     "retention_title": "Retention and deletion",
     "retention_1": "The issuer keeps your nullifier and your encrypted identity for as long as your account exists. Removing a passkey deletes its encrypted copy; removing the last one is refused, because it would leave your identity permanently unusable.",
     "retention_2": "Anything already written to the blockchain cannot be deleted by us or by anyone else. That is inherent to a public ledger and is the same property that lets you verify your vote was counted."
+  },
+  "domain": {
+    "title": "Verified domains",
+    "desc": "Prove you control a domain by publishing a DNS record. Voters see the domain on your elections and can check it themselves.",
+    "empty": "No verified domains",
+    "placeholder": "elections.example.org",
+    "add": "Add",
+    "remove": "Remove domain",
+    "copy": "Copy",
+    "check_now": "Check now",
+    "verified": "Domain verified",
+    "invalid": "That does not look like a domain name",
+    "remove_failed": "Could not remove the domain",
+    "publish_instructions": "Add this TXT record to your domain's DNS, then check.",
+    "record_name": "Name",
+    "record_value": "Value",
+    "record_type": "Record type: TXT",
+    "error_no_record": "No record found yet. DNS changes can take minutes or hours to propagate, so try again shortly.",
+    "error_mismatch": "A record exists but names a different wallet ({{found}}). Update it to the value above.",
+    "error_lookup": "The DNS lookup failed. This says nothing about your domain, try again.",
+    "verified_hint": "The DNS of this domain names the organizer's wallet",
+    "lapsed_hint": "This domain no longer names the organizer's wallet",
+    "lapsed": "no longer verified",
+    "check_yourself": "Check it yourself",
+    "select_label": "Domain to show on this election",
+    "select_none": "Do not show a domain",
+    "select_hint": "Saved with the election. Changing your domains later does not alter elections already created."
   }
 }

@@ -507,5 +507,32 @@
     "retention_title": "Bewaren en verwijderen",
     "retention_1": "De uitgever bewaart uw nullifier en uw versleutelde identiteit zolang uw account bestaat. Een passkey verwijderen wist de bijbehorende versleutelde kopie; de laatste verwijderen wordt geweigerd, omdat uw identiteit daarmee blijvend onbruikbaar zou worden.",
     "retention_2": "Wat al op de blockchain staat, kan noch door ons noch door iemand anders worden gewist. Dat hoort bij een openbaar register, en het is dezelfde eigenschap die u in staat stelt te controleren dat uw stem is meegeteld."
+  },
+  "domain": {
+    "title": "Geverifieerde domeinen",
+    "desc": "Bewijs dat u een domein beheert door een DNS-record te publiceren. Kiezers zien het domein bij uw verkiezingen en kunnen het zelf controleren.",
+    "empty": "Geen geverifieerde domeinen",
+    "placeholder": "verkiezingen.voorbeeld.org",
+    "add": "Toevoegen",
+    "remove": "Domein verwijderen",
+    "copy": "Kopiëren",
+    "check_now": "Nu controleren",
+    "verified": "Domein geverifieerd",
+    "invalid": "Dat lijkt geen domeinnaam",
+    "remove_failed": "Het domein kon niet worden verwijderd",
+    "publish_instructions": "Voeg dit TXT-record toe aan de DNS van uw domein en controleer daarna.",
+    "record_name": "Naam",
+    "record_value": "Waarde",
+    "record_type": "Recordtype: TXT",
+    "error_no_record": "Nog geen record gevonden. DNS-wijzigingen doen er minuten tot uren over, probeer het zo nog eens.",
+    "error_mismatch": "Er bestaat een record, maar het noemt een andere wallet ({{found}}). Vervang het door de waarde hierboven.",
+    "error_lookup": "De DNS-opvraging mislukte. Dat zegt niets over uw domein, probeer het opnieuw.",
+    "verified_hint": "De DNS van dit domein noemt de wallet van de organisator",
+    "lapsed_hint": "Dit domein noemt de wallet van de organisator niet meer",
+    "lapsed": "niet langer geverifieerd",
+    "check_yourself": "Controleer het zelf",
+    "select_label": "Domein voor deze verkiezing",
+    "select_none": "Geen domein tonen",
+    "select_hint": "Opgeslagen bij de verkiezing. Uw domeinen later wijzigen verandert niets aan al aangemaakte verkiezingen."
   }
 }

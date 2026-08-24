@@ -507,5 +507,32 @@
     "retention_title": "保存与删除",
     "retention_1": "只要您的账户存在，签发方就会保存您的 nullifier 和加密身份。移除一把通行密钥会删除对应的加密副本；移除最后一把会被拒绝，因为那会让您的身份永久无法使用。",
     "retention_2": "已经写入区块链的内容，我们和任何人都无法抹除。这是公共账本固有的特性，也正是让您能够核实自己的票被计入的同一个特性。"
+  },
+  "domain": {
+    "title": "已验证的域名",
+    "desc": "通过发布一条 DNS 记录来证明您控制某个域名。投票者会在您的选举上看到该域名，并可自行核验。",
+    "empty": "暂无已验证的域名",
+    "placeholder": "elections.example.org",
+    "add": "添加",
+    "remove": "移除域名",
+    "copy": "复制",
+    "check_now": "立即检查",
+    "verified": "域名已验证",
+    "invalid": "这看起来不像域名",
+    "remove_failed": "无法移除该域名",
+    "publish_instructions": "将这条 TXT 记录添加到您域名的 DNS，然后进行检查。",
+    "record_name": "名称",
+    "record_value": "值",
+    "record_type": "记录类型：TXT",
+    "error_no_record": "尚未找到记录。DNS 变更需要数分钟至数小时才能生效，请稍后重试。",
+    "error_mismatch": "存在记录但指向了另一个钱包（{{found}}）。请将其更新为上面的值。",
+    "error_lookup": "DNS 查询失败。这并不能说明您的域名有问题，请重试。",
+    "verified_hint": "该域名的 DNS 指向组织者的钱包",
+    "lapsed_hint": "该域名不再指向组织者的钱包",
+    "lapsed": "已失效",
+    "check_yourself": "自行核验",
+    "select_label": "本次选举显示的域名",
+    "select_none": "不显示域名",
+    "select_hint": "随选举一同保存。之后更改域名不会影响已创建的选举。"
   }
 }

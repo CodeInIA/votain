@@ -507,5 +507,32 @@
     "retention_title": "Conservación y borrado",
     "retention_1": "El emisor conserva tu nullifier y tu identidad cifrada mientras exista tu cuenta. Eliminar una passkey borra su copia cifrada; eliminar la última se rechaza, porque dejaría tu identidad inservible para siempre.",
     "retention_2": "Lo ya escrito en la cadena de bloques no podemos borrarlo nosotros ni nadie. Es inherente a un registro público, y es la misma propiedad que te permite verificar que tu voto fue contado."
+  },
+  "domain": {
+    "title": "Dominios verificados",
+    "desc": "Demuestra que controlas un dominio publicando un registro DNS. Los votantes verán el dominio en tus elecciones y podrán comprobarlo por su cuenta.",
+    "empty": "No hay dominios verificados",
+    "placeholder": "elecciones.ejemplo.org",
+    "add": "Añadir",
+    "remove": "Eliminar dominio",
+    "copy": "Copiar",
+    "check_now": "Comprobar ahora",
+    "verified": "Dominio verificado",
+    "invalid": "Eso no parece un nombre de dominio",
+    "remove_failed": "No se pudo eliminar el dominio",
+    "publish_instructions": "Añade este registro TXT al DNS de tu dominio y después comprueba.",
+    "record_name": "Nombre",
+    "record_value": "Valor",
+    "record_type": "Tipo de registro: TXT",
+    "error_no_record": "Todavía no se encuentra el registro. Los cambios de DNS tardan de minutos a horas en propagarse, inténtalo de nuevo en un rato.",
+    "error_mismatch": "Existe un registro pero nombra otra wallet ({{found}}). Actualízalo con el valor de arriba.",
+    "error_lookup": "Falló la consulta DNS. Esto no dice nada sobre tu dominio, vuelve a intentarlo.",
+    "verified_hint": "El DNS de este dominio nombra la wallet del organizador",
+    "lapsed_hint": "Este dominio ya no nombra la wallet del organizador",
+    "lapsed": "ya no verificado",
+    "check_yourself": "Compruébalo tú mismo",
+    "select_label": "Dominio que mostrar en esta elección",
+    "select_none": "No mostrar dominio",
+    "select_hint": "Se guarda con la elección. Cambiar tus dominios más adelante no altera las elecciones ya creadas."
   }
 }

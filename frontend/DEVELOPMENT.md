@@ -76,6 +76,29 @@
   real name under something the organizer never chose.
 - Renaming does NOT rewrite past elections, since each one holds the name it was created
   with. That is the audit trail, and the onboarding prompt says so.
+
+## Organizer domain verification
+
+`src/lib/organizerDomains.ts`, `src/components/organizer/MyDomains.tsx`,
+`src/components/ui/DomainBadge.tsx`. Backend: `src/organizer/domains.ts`.
+
+The badge shows the DOMAIN, never a checkmark. A checkmark only means something if you
+trust whoever granted it, and we cannot verify that someone is a country; a domain
+explains itself and anyone can re-check it. Do not "simplify" it into a tick.
+
+- **DNS is the source of truth.** The backend stores only which domains to look up for an
+  address, because domains cannot be enumerated from an address, and re-checks live on
+  every read. Removing the TXT record is the revocation, and it is immediate.
+- **`lookup_failed` must never strike a badge** or be shown as "not published". It says
+  nothing about the domain, which is also why it is not cached.
+- **The three failure outcomes stay separate** (`no_record`, `address_mismatch`,
+  `lookup_failed`): each is fixed differently, and DNS propagation makes a first failed
+  check the normal first answer rather than a bug.
+- **The domain is snapshotted into the election metadata** at creation, like the name, and
+  re-checked at display. A lapsed one shows struck through instead of vanishing.
+- **No badge is normal, not suspicious.** Most organizers will never own a domain, and
+  making them look deficient would only push them to fake it.
+- A contract cannot do the lookup: DNS is non-deterministic and would break consensus.
 - Navigation (`TopNav`, `BottomTabNav`) is driven ONLY by auth state, never by the page
 
 ## Voter identity (Semaphore)

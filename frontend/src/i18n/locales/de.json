@@ -507,5 +507,32 @@
     "retention_title": "Aufbewahrung und Löschung",
     "retention_1": "Der Aussteller bewahrt Ihren Nullifier und Ihre verschlüsselte Identität auf, solange Ihr Konto besteht. Das Entfernen eines Passkeys löscht dessen verschlüsselte Kopie; das Entfernen des letzten wird abgelehnt, weil Ihre Identität sonst dauerhaft unbrauchbar wäre.",
     "retention_2": "Was bereits auf der Blockchain steht, können weder wir noch sonst jemand löschen. Das gehört zu einem öffentlichen Register und ist dieselbe Eigenschaft, die Ihnen erlaubt zu prüfen, dass Ihre Stimme gezählt wurde."
+  },
+  "domain": {
+    "title": "Verifizierte Domains",
+    "desc": "Weisen Sie die Kontrolle über eine Domain durch einen DNS-Eintrag nach. Wählende sehen die Domain bei Ihren Wahlen und können sie selbst prüfen.",
+    "empty": "Keine verifizierten Domains",
+    "placeholder": "wahlen.beispiel.org",
+    "add": "Hinzufügen",
+    "remove": "Domain entfernen",
+    "copy": "Kopieren",
+    "check_now": "Jetzt prüfen",
+    "verified": "Domain verifiziert",
+    "invalid": "Das sieht nicht nach einem Domainnamen aus",
+    "remove_failed": "Die Domain konnte nicht entfernt werden",
+    "publish_instructions": "Fügen Sie diesen TXT-Eintrag im DNS Ihrer Domain hinzu und prüfen Sie dann.",
+    "record_name": "Name",
+    "record_value": "Wert",
+    "record_type": "Eintragstyp: TXT",
+    "error_no_record": "Noch kein Eintrag gefunden. DNS-Änderungen brauchen Minuten bis Stunden, versuchen Sie es gleich noch einmal.",
+    "error_mismatch": "Ein Eintrag existiert, nennt aber eine andere Wallet ({{found}}). Ersetzen Sie ihn durch den Wert oben.",
+    "error_lookup": "Die DNS-Abfrage schlug fehl. Das sagt nichts über Ihre Domain aus, bitte erneut versuchen.",
+    "verified_hint": "Das DNS dieser Domain nennt die Wallet des Organisators",
+    "lapsed_hint": "Diese Domain nennt die Wallet des Organisators nicht mehr",
+    "lapsed": "nicht mehr verifiziert",
+    "check_yourself": "Selbst prüfen",
+    "select_label": "Domain für diese Wahl",
+    "select_none": "Keine Domain anzeigen",
+    "select_hint": "Wird mit der Wahl gespeichert. Spätere Änderungen an Ihren Domains ändern bereits erstellte Wahlen nicht."
   }
 }

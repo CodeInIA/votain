@@ -547,6 +547,60 @@ Implementation note: the first version set state inside an effect and eslint rej
 decision to prompt is derived during render, which is also more correct: elections arriving
 late can no longer open the prompt before recovery has had a chance to answer.
 
+## Organizer domain verification (2026-08-24)
+
+Organizers can now prove they control a domain, so a voter can tell an institution
+from an individual. The badge shows the DOMAIN, never a generic checkmark, and that
+choice carries the whole design.
+
+A checkmark is an opaque claim: it only means something if you trust whoever granted
+it, and Votain cannot verify that someone is a country. Granting one by fiat would put
+an unverifiable trust signal at the centre of a system whose entire thesis is that you
+do not have to take anyone's word for anything, and it would be worse than nothing,
+because a badge changes how a voter reads an election. A domain explains itself and
+anyone can re-check it. `elecciones.gob.es` means what it says, and
+`votacion-oficial-gob.com` looks exactly as suspicious as it deserves, where a
+checkmark beside that same name would launder it.
+
+Mechanism: a TXT record under an underscore subdomain (RFC 8552, since the apex is
+crowded with SPF, DMARC and vendor tokens):
+
+    _votain.elecciones.gob.es.  IN TXT  "v=votain1; address=0xa5216ed9..."
+
+A contract cannot do this itself. Contracts are deterministic state machines and every
+node has to reach the same result replaying the transaction, so a DNS lookup would break
+consensus. The check therefore happens off chain, which costs nothing here: DNS is
+public, so the voter can repeat it rather than trust our result.
+
+DNS is the source of truth and nothing else is stored. The backend keeps only the list
+of domains worth looking up for an address, because domains cannot be enumerated from an
+address, and every read re-checks live. So REMOVING THE TXT RECORD IS THE REVOCATION and
+it is immediate. That removed the whole SD-JWT credential and Status List machinery this
+feature was first sketched with.
+
+Decisions worth keeping:
+
+- Adding a domain needs no signature: the DNS record authorises it, since you can only
+  register a domain whose record already names your address. Removal does need one, or
+  anyone could drop a competitor's domain from the lookup list.
+- `lookup_failed` must never strike a badge or read as "not published". A resolver blip
+  would otherwise punish an election whose DNS is fine, and it is also why failures are
+  not cached.
+- The three failure outcomes are reported separately because each is fixed differently:
+  nothing published yet, a record naming a different wallet, or a lookup that failed.
+  A single "could not verify" tells the organizer none of that, and DNS propagation
+  means the first check failing is the NORMAL first answer, not a broken feature.
+- The domain is snapshotted into the election metadata at creation, like the name. A
+  verification that lapses later shows struck through, so the voter sees what it was and
+  what it is now, rather than the past being quietly rewritten.
+- Elections without a domain are normal, not suspicious. Most organizers are individuals
+  and small associations that will never own one, and making them look deficient would
+  only pressure them into faking it.
+- The live check runs on our backend so the organization never learns who is reading
+  their election. The independent check offered to the voter goes through a public
+  DNS-over-HTTPS resolver for the same reason, which is a privacy property the
+  `.well-known` alternative could not have offered.
+
 ## Pending user actions (block a live Amoy run, not code)
 - Fund the deployer key with ~1.5 to 2 POL (`npm run estimate:amoy` reports the gap), set
   `PRIVATE_KEY` in `contracts/.env` → `npm run deploy:amoy` → verify on PolygonScan.
@@ -559,3 +613,20 @@ late can no longer open the prompt before recovery has had a chance to answer.
 ## Next: Phase C, Decentralized deployments
 ### H10: Frontend on IPFS via Fleek CD
 ### H11: Backend on Phala TEE
+
+## Future work: institutional identity beyond domain control
+
+Domain control proves control of a domain, which is what people actually use to judge
+authenticity, and it is honest about proving nothing more. It does not establish that an
+organizer IS a given public body.
+
+The real answer for European public institutions is eIDAS 2.0 and the EU Digital Identity
+Wallet, where a member state issues the organization a verifiable credential and the
+attestation chain ends at a government rather than at us or at a DNS registrar. That
+would let an organizer present a legal-entity credential (EUDI/LEAR style) instead of a
+hostname, and the badge could name the institution rather than its domain.
+
+Out of scope here: it needs a qualified trust service provider, conformance to the ARF,
+and access to a member state's issuing infrastructure, none of which are reachable in a
+bachelor's thesis. Recorded so the limitation is a deliberate boundary rather than an
+oversight.

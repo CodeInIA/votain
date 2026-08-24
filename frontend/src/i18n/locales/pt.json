@@ -507,5 +507,32 @@
     "retention_title": "Conservação e eliminação",
     "retention_1": "O emissor guarda o seu nullifier e a sua identidade cifrada enquanto a sua conta existir. Remover uma passkey apaga a respetiva cópia cifrada; remover a última é recusado, porque deixaria a sua identidade permanentemente inutilizável.",
     "retention_2": "O que já foi escrito na cadeia de blocos não pode ser apagado por nós nem por ninguém. É inerente a um registo público, e é a mesma propriedade que lhe permite verificar que o seu voto foi contado."
+  },
+  "domain": {
+    "title": "Domínios verificados",
+    "desc": "Prove que controla um domínio publicando um registo DNS. Os votantes veem o domínio nas suas eleições e podem verificá-lo por si.",
+    "empty": "Sem domínios verificados",
+    "placeholder": "eleicoes.exemplo.org",
+    "add": "Adicionar",
+    "remove": "Remover domínio",
+    "copy": "Copiar",
+    "check_now": "Verificar agora",
+    "verified": "Domínio verificado",
+    "invalid": "Isso não parece um nome de domínio",
+    "remove_failed": "Não foi possível remover o domínio",
+    "publish_instructions": "Adicione este registo TXT ao DNS do seu domínio e depois verifique.",
+    "record_name": "Nome",
+    "record_value": "Valor",
+    "record_type": "Tipo de registo: TXT",
+    "error_no_record": "Ainda não se encontra o registo. As alterações de DNS demoram de minutos a horas a propagar, tente de novo daqui a pouco.",
+    "error_mismatch": "Existe um registo mas indica outra carteira ({{found}}). Atualize-o com o valor acima.",
+    "error_lookup": "A consulta DNS falhou. Isto nada diz sobre o seu domínio, tente de novo.",
+    "verified_hint": "O DNS deste domínio indica a carteira do organizador",
+    "lapsed_hint": "Este domínio já não indica a carteira do organizador",
+    "lapsed": "já não verificado",
+    "check_yourself": "Verifique você mesmo",
+    "select_label": "Domínio a mostrar nesta eleição",
+    "select_none": "Não mostrar domínio",
+    "select_hint": "Guardado com a eleição. Alterar os seus domínios mais tarde não muda as eleições já criadas."
   }
 }

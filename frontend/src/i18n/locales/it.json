@@ -507,5 +507,32 @@
     "retention_title": "Conservazione ed eliminazione",
     "retention_1": "L'emittente conserva il tuo nullifier e la tua identità cifrata finché il tuo account esiste. Rimuovere una passkey cancella la sua copia cifrata; rimuovere l'ultima viene rifiutato, perché renderebbe la tua identità inutilizzabile per sempre.",
     "retention_2": "Ciò che è già scritto sulla blockchain non può essere cancellato né da noi né da nessun altro. È intrinseco a un registro pubblico, ed è la stessa proprietà che ti consente di verificare che il tuo voto sia stato conteggiato."
+  },
+  "domain": {
+    "title": "Domini verificati",
+    "desc": "Dimostra di controllare un dominio pubblicando un record DNS. I votanti vedono il dominio sulle tue elezioni e possono verificarlo da soli.",
+    "empty": "Nessun dominio verificato",
+    "placeholder": "elezioni.esempio.org",
+    "add": "Aggiungi",
+    "remove": "Rimuovi dominio",
+    "copy": "Copia",
+    "check_now": "Verifica ora",
+    "verified": "Dominio verificato",
+    "invalid": "Non sembra un nome di dominio",
+    "remove_failed": "Impossibile rimuovere il dominio",
+    "publish_instructions": "Aggiungi questo record TXT al DNS del tuo dominio, poi verifica.",
+    "record_name": "Nome",
+    "record_value": "Valore",
+    "record_type": "Tipo di record: TXT",
+    "error_no_record": "Record non ancora trovato. Le modifiche DNS impiegano da minuti a ore a propagarsi, riprova tra poco.",
+    "error_mismatch": "Esiste un record ma indica un altro portafoglio ({{found}}). Sostituiscilo con il valore qui sopra.",
+    "error_lookup": "La query DNS è fallita. Questo non dice nulla sul tuo dominio, riprova.",
+    "verified_hint": "Il DNS di questo dominio indica il portafoglio dell'organizzatore",
+    "lapsed_hint": "Questo dominio non indica più il portafoglio dell'organizzatore",
+    "lapsed": "non più verificato",
+    "check_yourself": "Verificalo tu stesso",
+    "select_label": "Dominio da mostrare su questa elezione",
+    "select_none": "Non mostrare alcun dominio",
+    "select_hint": "Salvato con l'elezione. Cambiare i tuoi domini in seguito non modifica quelle già create."
   }
 }

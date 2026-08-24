@@ -49,6 +49,9 @@ export interface Election {
   phase: ElectionPhase;
   organizer: string;
   organizerAddress: string;
+  /** Domain the organizer had verified when this election was created. The
+   *  badge re-checks it live, so a lapsed one shows struck through. */
+  organizerDomain?: string;
   enrollStart: Date;
   enrollEnd: Date;
   voteStart: Date;

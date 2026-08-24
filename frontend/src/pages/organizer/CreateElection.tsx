@@ -15,6 +15,7 @@ import { Modal } from '../../components/ui/Modal';
 import { TransactionPendingModal, type TxState } from '../../components/ui/TransactionPendingModal';
 import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
 import { getGasBalance } from '../../lib/organizer';
+import { fetchOrganizerDomains } from '../../lib/organizerDomains';
 import { isChainConfigured, chainInfo } from '../../lib/deployments';
 import { createElection, getOrganizerName, type VOTING_TYPE_ENUM } from '../../lib/organizer';
 
@@ -164,6 +165,34 @@ export default function CreateElection() {
   // not shout at them while it is still empty.
   const [showErrors, setShowErrors] = useState(false);
 
+  // Verified domains for the connected organizer. The selector below only shows
+  // when there is more than one: with a single domain there is nothing to
+  // choose, and with none the field does not exist at all.
+  const [domains, setDomains] = useState<string[]>([]);
+  const [chosenDomain, setChosenDomain] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (!live || !wallet.address) return;
+    const organizer = wallet.address;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const verified = (await fetchOrganizerDomains(organizer))
+          .filter(d => d.status === 'verified')
+          .map(d => d.domain);
+        if (!cancelled) setDomains(verified);
+      } catch {
+        // A domain is optional decoration on the election: failing to load the
+        // list must never block creating one.
+        if (!cancelled) setDomains([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [live, wallet.address]);
+
+  // Default to the only domain, or to the first, without asking.
+  const activeDomain = chosenDomain ?? domains[0];
+
   const isDirty = JSON.stringify(form) !== JSON.stringify(INITIAL);
   const [leaveModal, setLeaveModal] = useState(false);
   const pendingNav = useRef<(() => void) | null>(null);
@@ -294,6 +323,9 @@ export default function CreateElection() {
         votingType: form.votingType,
         thresholdValue: form.votingType === 'witness_threshold' ? Number(form.threshold) : 0,
         organizerName: getOrganizerName(), // from the organizer's profile, not the election title
+        // Snapshotted here on purpose: the election keeps the domain it was
+        // created under even if the verification lapses later.
+        organizerDomain: activeDomain,
         candidates,
         privacyQuorum: Number(form.privacyQuorum),
         // No separate window: enrollment opens now and closes when voting does.
@@ -447,6 +479,25 @@ export default function CreateElection() {
                   </p>
                 )}
               </div>
+
+              {/* Only worth asking when there is an actual choice to make. */}
+              {domains.length > 1 && (
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="organizer-domain" className="text-sm text-on-surface-variant">
+                    {t('domain.select_label')}
+                  </label>
+                  <select
+                    id="organizer-domain"
+                    value={activeDomain ?? ''}
+                    onChange={e => setChosenDomain(e.target.value || undefined)}
+                    className="w-full rounded-2xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-on-surface"
+                  >
+                    {domains.map(d => <option key={d} value={d}>{d}</option>)}
+                    <option value="">{t('domain.select_none')}</option>
+                  </select>
+                  <p className="text-xs text-on-surface-meta">{t('domain.select_hint')}</p>
+                </div>
+              )}
             </Card>
 
             {/* Errors from earlier steps are invisible here, so surface them. */}

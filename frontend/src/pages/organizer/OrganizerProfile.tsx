@@ -12,6 +12,7 @@ import { LanguageSelector } from '../../components/ui/LanguageSelector';
 import { useToast } from '../../components/ui/useToast';
 import { useAuth } from '../../contexts/AuthContext';
 import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
+import { MyDomains } from '../../components/organizer/MyDomains';
 import { getPasskeyInfo, clearPrfCredential } from '../../lib/passkeyPrf';
 import { getOrganizerName, setOrganizerName } from '../../lib/organizer';
 
@@ -101,6 +102,15 @@ export default function OrganizerProfile() {
             </div>
           )}
         </Card>
+
+        {/* Verified domains: the organizer's public identity, checkable by anyone */}
+        <MyDomains
+          address={wallet.address}
+          signMessage={async message => {
+            const signer = await wallet.getSigner();
+            return signer.signMessage(message);
+          }}
+        />
 
         {/* Passkey — the real credential registered on this device */}
         <Card className="p-5 mb-4">

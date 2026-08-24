@@ -507,5 +507,32 @@
     "retention_title": "Conservation et suppression",
     "retention_1": "L'émetteur conserve votre nullifier et votre identité chiffrée tant que votre compte existe. Supprimer une clé d'accès efface sa copie chiffrée ; supprimer la dernière est refusé, car cela rendrait votre identité définitivement inutilisable.",
     "retention_2": "Ce qui est déjà inscrit sur la blockchain ne peut être effacé ni par nous ni par personne. C'est inhérent à un registre public, et c'est la propriété même qui vous permet de vérifier que votre vote a été compté."
+  },
+  "domain": {
+    "title": "Domaines vérifiés",
+    "desc": "Prouvez que vous contrôlez un domaine en publiant un enregistrement DNS. Les votants voient le domaine sur vos élections et peuvent le vérifier eux-mêmes.",
+    "empty": "Aucun domaine vérifié",
+    "placeholder": "elections.exemple.org",
+    "add": "Ajouter",
+    "remove": "Supprimer le domaine",
+    "copy": "Copier",
+    "check_now": "Vérifier maintenant",
+    "verified": "Domaine vérifié",
+    "invalid": "Cela ne ressemble pas à un nom de domaine",
+    "remove_failed": "Impossible de supprimer le domaine",
+    "publish_instructions": "Ajoutez cet enregistrement TXT au DNS de votre domaine, puis vérifiez.",
+    "record_name": "Nom",
+    "record_value": "Valeur",
+    "record_type": "Type d'enregistrement : TXT",
+    "error_no_record": "Aucun enregistrement trouvé pour l'instant. La propagation DNS peut prendre de quelques minutes à plusieurs heures, réessayez sous peu.",
+    "error_mismatch": "Un enregistrement existe mais désigne un autre portefeuille ({{found}}). Remplacez-le par la valeur ci-dessus.",
+    "error_lookup": "La requête DNS a échoué. Cela ne dit rien de votre domaine, réessayez.",
+    "verified_hint": "Le DNS de ce domaine désigne le portefeuille de l'organisateur",
+    "lapsed_hint": "Ce domaine ne désigne plus le portefeuille de l'organisateur",
+    "lapsed": "non vérifié désormais",
+    "check_yourself": "Vérifiez par vous-même",
+    "select_label": "Domaine à afficher sur cette élection",
+    "select_none": "Ne pas afficher de domaine",
+    "select_hint": "Enregistré avec l'élection. Modifier vos domaines plus tard ne change pas les élections déjà créées."
   }
 }

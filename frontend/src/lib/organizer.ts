@@ -74,6 +74,8 @@ export interface CreateElectionInput {
   votingType: keyof typeof VOTING_TYPE_ENUM;
   thresholdValue: number; // witness_threshold only
   organizerName: string;
+  /** Verified domain to show on this election, chosen at creation. Optional. */
+  organizerDomain?: string;
   candidates: { name: string; description?: string }[]; // blank vote excluded
   privacyQuorum: number;
   enrollStart: Date;
@@ -135,6 +137,7 @@ export async function createElection(
   const metadata = {
     description: input.description,
     organizerName: input.organizerName,
+    ...(input.organizerDomain ? { organizerDomain: input.organizerDomain } : {}),
     candidates: input.candidates,
     privacyQuorum: input.privacyQuorum,
     ...(keyDerivable ? { keyNonce } : {}),
