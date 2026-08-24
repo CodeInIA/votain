@@ -6,6 +6,12 @@
  */
 import { getElection, getFactory } from "./contracts";
 import { queryLogsFrom } from "./logs";
+// The i18n singleton rather than the hook: this is a data layer, not a
+// component. The labels below were hardcoded English and rendered that way in
+// all thirteen locales. The tradeoff is that a language change does not
+// retranslate an already-fetched election until it is refetched, which every
+// navigation does.
+import i18n from "../i18n/config";
 import { getStoredCommitment, getStoredVoteNullifier } from "./semaphore";
 import type { Candidate, Election, ElectionPhase, VotingType } from "../data/seed";
 
@@ -83,7 +89,7 @@ export async function fetchElection(address: string): Promise<Election> {
     name: cand.name,
     description: cand.description,
   }));
-  candidates.push({ id: `option-${Number(numOptions)}`, name: "Blank Vote / Abstain" });
+  candidates.push({ id: `option-${Number(numOptions)}`, name: i18n.t("election.blank_vote") });
 
   let ipfsCid: string | undefined;
   if (resultsPublished) {
@@ -143,8 +149,8 @@ export async function fetchElection(address: string): Promise<Election> {
     voteEnd: toDate(voteEnd),
     candidates,
     eligibility: [
-      { id: "platform", label: "World ID verified", status: commitment !== null ? "met" : "unknown" },
-      { id: "enrolled", label: "Enrolled in this election", status: isEnrolled ? "met" : "not-met" },
+      { id: "platform", label: i18n.t("eligibility.world_id"), status: commitment !== null ? "met" : "unknown" },
+      { id: "enrolled", label: i18n.t("eligibility.enrolled"), status: isEnrolled ? "met" : "not-met" },
     ],
     totalEnrolled: Number(memberCount),
     castVotes: Number(voteCount),

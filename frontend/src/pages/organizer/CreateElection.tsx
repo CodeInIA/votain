@@ -17,6 +17,7 @@ import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
 import { getGasBalance } from '../../lib/organizer';
 import { fetchOrganizerDomains } from '../../lib/organizerDomains';
 import { isChainConfigured, chainInfo } from '../../lib/deployments';
+import { getReadProvider } from '../../lib/contracts';
 import { createElection, getOrganizerName, type VOTING_TYPE_ENUM } from '../../lib/organizer';
 
 interface Candidate { name: string; description: string }
@@ -55,16 +56,51 @@ const INITIAL: FormState = {
  * field of candidates (nobody wins below two thirds), so it gets the normal
  * candidate step.
  */
+/**
+ * Length bounds, counted in CODE POINTS rather than `.length`, which counts
+ * UTF-16 units and so scores one emoji as two.
+ *
+ * The floors differ on purpose. A title is descriptive, so three is safe in
+ * every language. A candidate is usually a person, and CJK personal names are
+ * commonly two characters (李明), so two is the floor there: a stricter rule
+ * would reject perfectly ordinary names.
+ *
+ * A minimum is a weak filter against junk, since "aa" clears it as easily as
+ * "a" does. Its real job is catching a slip before it becomes permanent, which
+ * on chain it is. The ceilings matter more: description and candidates travel
+ * on chain inside metadataJson, and ElectionV4 rejects the absurd in bytes.
+ */
+const LIMITS = {
+  title: { min: 3, max: 100 },
+  description: { min: 10, max: 2000 },
+  candidateName: { min: 2, max: 80 },
+} as const;
+
+const chars = (value: string) => [...value.trim()].length;
+
 const isYesNo = (vt: string) => vt === 'witness_threshold';
 
-// Local-time 'yyyy-mm-dd' lower bound for each picker: these mirror
-// validateStep's ordering rules so the calendar cannot even offer a day it
-// would reject. Days are the granularity here; validateStep still enforces the
-// strict ordering of the times within a shared day.
-const today = () => {
-  const d = new Date();
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+/**
+ * Lower bound WITH the time, so a picker cannot offer an hour that has already
+ * passed. Day granularity alone let an organizer choose today at 09:00 at six
+ * in the evening, which the chain then reads as a deadline in the past.
+ */
+/**
+ * How far ahead of the clock the earliest selectable vote start sits, when
+ * enrolment has no window of its own.
+ *
+ * In that mode `enrollStart` is stamped at submission and `enrollEnd` IS the
+ * vote start, so offering the current instant hands the organizer a deployment
+ * the contract refuses: by the time the transaction mines, enrollStart is no
+ * longer before enrollEnd and it reverts with InvalidConfig. A picker should
+ * never offer a value its own validation rejects.
+ */
+const MIN_VOTE_LEAD_MS = 5 * 60 * 1000;
+
+const nowValue = (nowMs: number) => {
+  const d = new Date(nowMs);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 };
 
 type FieldErrors = Partial<Record<
@@ -79,13 +115,45 @@ type FieldErrors = Partial<Record<
  * guaranteed to fail: the organizer would pay gas for nothing and get an
  * opaque revert instead of a readable message.
  */
-function validateStep(step: number, form: FormState, t: (k: string) => string): FieldErrors {
+/**
+ * @param nowMs The CHAIN's clock, not the browser's. `phase()` compares against
+ *   `block.timestamp`, so a deadline judged future here and past on chain
+ *   produces an election born ACTIVE with an enrolment window nobody can use.
+ *   They diverge by days on a local node whose time was advanced by seeding.
+ */
+function validateStep(
+  step: number,
+  form: FormState,
+  t: (k: string, vars?: Record<string, unknown>) => string,
+  nowMs: number,
+  /**
+   * Set when `nowMs` came from a chain whose clock runs ahead of this browser's.
+   * "Must be in the future" then reads as plainly wrong to an organizer looking
+   * at their own calendar, so the message names the clock that actually decides.
+   */
+  chainNowLabel?: string,
+): FieldErrors {
+  const notFuture = () =>
+    chainNowLabel
+      ? t('validation.must_be_future_chain', { time: chainNowLabel })
+      : t('validation.must_be_future');
   const e: FieldErrors = {};
   const day = (s: string) => (s ? new Date(s).getTime() : NaN);
 
   if (step === 0) {
     if (!form.title.trim()) e.title = t('validation.required');
+    else if (chars(form.title) < LIMITS.title.min) {
+      e.title = t('validation.too_short', { min: LIMITS.title.min });
+    } else if (chars(form.title) > LIMITS.title.max) {
+      e.title = t('validation.too_long', { max: LIMITS.title.max });
+    }
+
     if (!form.description.trim()) e.description = t('validation.required');
+    else if (chars(form.description) < LIMITS.description.min) {
+      e.description = t('validation.too_short', { min: LIMITS.description.min });
+    } else if (chars(form.description) > LIMITS.description.max) {
+      e.description = t('validation.too_long', { max: LIMITS.description.max });
+    }
     if (form.votingType === 'witness_threshold') {
       const n = Number(form.threshold);
       if (!Number.isInteger(n) || n < 1) e.threshold = t('validation.threshold_min');
@@ -106,10 +174,19 @@ function validateStep(step: number, form: FormState, t: (k: string) => string): 
       // Contract: enrollStart < enrollEnd <= voteStart < voteEnd
       if (!e.enrollEnd && !Number.isNaN(es) && ee <= es) e.enrollEnd = t('validation.after_enroll_start');
       if (!e.voteStart && !Number.isNaN(ee) && vs < ee) e.voteStart = t('validation.after_enroll_end');
-    } else if (!e.voteStart && !Number.isNaN(vs) && vs <= Date.now()) {
+      // Relative ordering is not enough: a window that has ALREADY closed
+      // satisfies all of it. The contract's phase() reads the clock, so an
+      // election whose enrollEnd is past is born ACTIVE, skipping enrolment
+      // entirely, and nobody can ever join it. An enrollStart in the past is
+      // fine and means enrolment opens on deploy; only the END has to be ahead.
+      // Measured against the chain clock: see the nowMs parameter.
+      if (!e.enrollEnd && !Number.isNaN(ee) && ee <= nowMs) {
+        e.enrollEnd = notFuture();
+      }
+    } else if (!e.voteStart && !Number.isNaN(vs) && vs <= nowMs) {
       // Enrollment will run from deploy until voting opens, so that window has
       // to be in the future or the contract's enrollStart < enrollEnd fails.
-      e.voteStart = t('validation.must_be_future');
+      e.voteStart = notFuture();
     }
 
     if (!e.voteEnd && !Number.isNaN(vs) && ve <= vs) e.voteEnd = t('validation.after_vote_start');
@@ -119,7 +196,11 @@ function validateStep(step: number, form: FormState, t: (k: string) => string): 
   if (step === 2 && !isYesNo(form.votingType)) {
     const names = form.candidates.map(c => c.name.trim()).filter(Boolean);
     if (names.length < 2) e.candidates = t('validation.candidates_min');
-    else if (new Set(names.map(n => n.toLowerCase())).size !== names.length) {
+    else if (names.some(n => chars(n) < LIMITS.candidateName.min)) {
+      e.candidates = t('validation.candidate_too_short', { min: LIMITS.candidateName.min });
+    } else if (names.some(n => chars(n) > LIMITS.candidateName.max)) {
+      e.candidates = t('validation.candidate_too_long', { max: LIMITS.candidateName.max });
+    } else if (new Set(names.map(n => n.toLowerCase())).size !== names.length) {
       e.candidates = t('validation.candidates_unique');
     }
   }
@@ -136,7 +217,7 @@ function validateStep(step: number, form: FormState, t: (k: string) => string): 
 
 export default function CreateElection() {
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const wallet = useOrganizerWallet();
 
   // The gas tank is per ORGANIZER, shared by all their elections, so a deposit
@@ -170,6 +251,44 @@ export default function CreateElection() {
   // choose, and with none the field does not exist at all.
   const [domains, setDomains] = useState<string[]>([]);
   const [chosenDomain, setChosenDomain] = useState<string | undefined>(undefined);
+
+  // The chain's own clock. Deadlines are judged by `block.timestamp`, so the
+  // browser's clock is the wrong reference: a local node whose time was advanced
+  // by seeding can sit days ahead, and dates that look comfortably future here
+  // are already past there. Falls back to the browser clock when there is no
+  // chain to ask, which is the seed-data mode where nothing is deployed anyway.
+  const [chainNowMs, setChainNowMs] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!live) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const block = await getReadProvider().getBlock('latest');
+        if (!cancelled && block) setChainNowMs(Number(block.timestamp) * 1000);
+      } catch {
+        // Leave it null: the browser clock is a better guess than blocking the
+        // wizard on a chain read.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [live]);
+
+  // Read once at mount through a lazy initializer: calling Date.now() during
+  // render is impure, and a clock that ticks between renders would make the
+  // same form validate differently from one keystroke to the next.
+  const [browserNowMs] = useState(() => Date.now());
+  const nowMs = chainNowMs ?? browserNowMs;
+
+  // A local node seeded with time jumps can sit days ahead of the wall clock.
+  // Only worth naming when the gap is real: a few seconds of block drift would
+  // make the message noise on a live network.
+  const CLOCK_GAP_MS = 5 * 60 * 1000;
+  const chainNowLabel =
+    chainNowMs !== null && chainNowMs - browserNowMs > CLOCK_GAP_MS
+      ? new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeStyle: 'short' })
+          .format(new Date(chainNowMs))
+      : undefined;
 
   useEffect(() => {
     if (!live || !wallet.address) return;
@@ -250,14 +369,34 @@ export default function CreateElection() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDirty, navigate]);
 
-  const stepErrors = validateStep(step, form, t);
+  const stepErrors = validateStep(step, form, t, nowMs, chainNowLabel);
+
+  /**
+   * Without a separate window, enrolment runs from creation until voting opens,
+   * so voteStart IS the enrolment deadline. Choosing a start a few hours out
+   * leaves voters almost no time to join, and a voter who misses enrolment
+   * cannot vote at all. Deliberately a warning and not an error: a short notice
+   * is legitimate for a small group that is already waiting, and only the
+   * organizer knows which case they are in.
+   */
+  const SHORT_ENROLMENT_MS = 24 * 60 * 60 * 1000;
+  const enrolmentMs = form.voteStart ? new Date(form.voteStart).getTime() - nowMs : NaN;
+  // No lower guard on the window itself: a near-zero enrolment time is the worst
+  // case this warning exists for, and the previous `> 0` hid it exactly there.
+  // A genuinely past start is a different problem with its own error, so that
+  // one case defers rather than stacking two messages on one field.
+  const shortEnrolment =
+    !form.separateEnrollment &&
+    !Number.isNaN(enrolmentMs) &&
+    enrolmentMs < SHORT_ENROLMENT_MS &&
+    !stepErrors.voteStart;
   const stepValid = Object.keys(stepErrors).length === 0;
   const err = (field: keyof FieldErrors) => (showErrors ? stepErrors[field] : undefined);
 
   // Every step must be valid before deploying: the user could otherwise skip
   // back and blank a field after passing its step.
   const allStepsValid = [0, 1, 2, 3].every(
-    s => Object.keys(validateStep(s, form, t)).length === 0,
+    s => Object.keys(validateStep(s, form, t, nowMs, chainNowLabel)).length === 0,
   );
 
   const goNext = () => {
@@ -338,7 +477,9 @@ export default function CreateElection() {
       });
 
       setTxState('success');
-      setTimeout(() => navigate(`/organizer/election/${address}`), 1800);
+      // `replace`, not push: the election exists now, and leaving a filled-in
+      // wizard one step back invites deploying it a second time.
+      setTimeout(() => navigate(`/organizer/election/${address}`, { replace: true }), 1800);
     } catch (e) {
       console.error('Deploy failed:', e);
       setTxState('failed');
@@ -359,8 +500,8 @@ export default function CreateElection() {
         {/* Step 0: Info */}
         {step === 0 && (
           <Card className="p-5 flex flex-col gap-4">
-            <Input label={t('create.election_name')} value={form.title} onChange={e => set('title', e.target.value)} placeholder={t('create.election_name_placeholder')} error={err('title')} />
-            <Textarea label={t('create.description')} value={form.description} onChange={e => set('description', e.target.value)} rows={3} placeholder={t('create.description_placeholder')} error={err('description')} />
+            <Input label={t('create.election_name')} value={form.title} onChange={e => set('title', e.target.value)} placeholder={t('create.election_name_placeholder')} maxLength={LIMITS.title.max} error={err('title')} />
+            <Textarea label={t('create.description')} value={form.description} onChange={e => set('description', e.target.value)} rows={3} placeholder={t('create.description_placeholder')} maxLength={LIMITS.description.max} error={err('description')} />
             <SelectMenu
               label={t('create.voting_type')}
               value={form.votingType}
@@ -399,19 +540,31 @@ export default function CreateElection() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {form.separateEnrollment && (
                 <>
-                  <DatePicker withTime label={t('create.enroll_start')} value={form.enrollStart} min={today()} onChange={v => set('enrollStart', v)} error={err('enrollStart')} />
-                  <DatePicker withTime label={t('create.enroll_end')}   value={form.enrollEnd}   min={form.enrollStart || today()} onChange={v => set('enrollEnd', v)} error={err('enrollEnd')} />
+                  <DatePicker withTime label={t('create.enroll_start')} value={form.enrollStart} min={nowValue(nowMs)} onChange={v => set('enrollStart', v)} error={err('enrollStart')} />
+                  <DatePicker withTime label={t('create.enroll_end')}   value={form.enrollEnd}   min={form.enrollStart || nowValue(nowMs)} onChange={v => set('enrollEnd', v)} error={err('enrollEnd')} />
                 </>
               )}
               <DatePicker withTime label={t('create.vote_start')} value={form.voteStart}
-                min={(form.separateEnrollment ? form.enrollEnd : '') || today()}
+                min={
+                  form.separateEnrollment
+                    ? form.enrollEnd || nowValue(nowMs)
+                    : nowValue(nowMs + MIN_VOTE_LEAD_MS)
+                }
                 onChange={v => set('voteStart', v)} error={err('voteStart')} />
               <DatePicker withTime label={t('create.vote_end')} value={form.voteEnd}
-                min={form.voteStart || today()}
+                min={form.voteStart || nowValue(nowMs)}
                 onChange={v => set('voteEnd', v)} error={err('voteEnd')} />
             </div>
             {!form.separateEnrollment && (
               <p className="text-xs text-on-surface-meta">{t('create.enrollment_until_vote_start')}</p>
+            )}
+
+            {/* Informational, never blocking: the wizard advances regardless. */}
+            {shortEnrolment && (
+              <div className="flex items-start gap-3 px-4 py-3 rounded-2xl bg-warning/10 border border-warning/25">
+                <AlertTriangle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
+                <p className="text-xs text-warning">{t('create.short_enrollment_warning')}</p>
+              </div>
             )}
           </Card>
         )}
@@ -441,8 +594,8 @@ export default function CreateElection() {
             {form.candidates.map((c, i) => (
               <Card key={i} className="p-4 flex gap-3 items-start">
                 <div className="flex-1 flex flex-col gap-2">
-                  <Input placeholder={t('create.candidate_name')} value={c.name} onChange={e => updateCandidate(i, 'name', e.target.value)} />
-                  <Input placeholder={t('create.candidate_desc')} value={c.description} onChange={e => updateCandidate(i, 'description', e.target.value)} />
+                  <Input placeholder={t('create.candidate_name')} value={c.name} onChange={e => updateCandidate(i, 'name', e.target.value)} maxLength={LIMITS.candidateName.max} />
+                  <Input placeholder={t('create.candidate_desc')} value={c.description} onChange={e => updateCandidate(i, 'description', e.target.value)} maxLength={300} />
                 </div>
                 {form.candidates.length > 2 && (
                   <button type="button" onClick={() => removeCandidate(i)} className="mt-2 text-error hover:text-error/70 transition-colors cursor-pointer">

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { ExternalLink, ShieldCheck, Globe } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -7,10 +8,11 @@ interface BlockchainBadgeProps {
 }
 
 export function BlockchainBadge({ href, className }: BlockchainBadgeProps) {
+  const { t } = useTranslation();
   const content = (
     <>
       <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
-      <span>Verified on blockchain</span>
+      <span>{t('election.verified_on_chain')}</span>
       {href && <ExternalLink className="w-3 h-3 shrink-0 opacity-60" />}
     </>
   );

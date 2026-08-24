@@ -19,7 +19,12 @@ interface DatePickerProps {
   /** 'yyyy-mm-dd', or 'yyyy-mm-ddThh:mm' when `withTime`. Empty when unset. */
   value: string;
   onChange: (value: string) => void;
-  min?: string; // 'yyyy-mm-dd' — day granularity; finer ordering is validated by the caller
+  /**
+   * 'yyyy-mm-dd', or 'yyyy-mm-ddThh:mm' to bound the time too. With a time, the
+   * day itself stays selectable and the clock is clamped on that day only, so
+   * "today" does not disappear from the calendar just because noon has passed.
+   */
+  min?: string;
   max?: string; // 'yyyy-mm-dd'
   /** Also pick an hour/minute. Election deadlines are timestamps, not whole days. */
   withTime?: boolean;
@@ -125,14 +130,25 @@ export function DatePicker({
     cells.push({ date: new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1), outside: true });
   }
 
+  /**
+   * Raises an instant to the lower bound. The calendar can only refuse whole
+   * days, so on the bound's own day every earlier hour is still reachable:
+   * picking that day would otherwise land on 00:00, below a bound of 20:25.
+   */
+  const atLeastMin = (d: Date) => (minDate && d < minDate ? new Date(minDate) : d);
+
   const selectDay = (d: Date) => {
     if (isDisabled(d)) return;
     const next = new Date(d);
     if (withTime && selected) next.setHours(selected.getHours(), selected.getMinutes());
-    onChange(toValue(next, withTime));
+    onChange(toValue(withTime ? atLeastMin(next) : next, withTime));
     // With a time to set, keep the popover open so the user can finish there.
     if (!withTime) setOpen(false);
   };
+
+  /** True when `d` falls on the same calendar day as the lower bound. */
+  const onMinDay = (d: Date) =>
+    !!minDate && startOfDay(d).getTime() === startOfDay(minDate).getTime();
 
   const setTimePart = (part: 'h' | 'm', raw: string) => {
     if (!selected) return;
@@ -141,8 +157,17 @@ export function DatePicker({
     const next = new Date(selected);
     if (part === 'h') next.setHours(clamp(n, 0, 23));
     else next.setMinutes(clamp(n, 0, 59));
-    onChange(toValue(next, true));
+    // The calendar can only refuse whole days, so an hour earlier than the
+    // bound would otherwise slip through on the bound's own day.
+    onChange(toValue(atLeastMin(next), true));
   };
+
+  /** Lower bounds for the spinners, active only on the minimum day. */
+  const minHour = selected && onMinDay(selected) && minDate ? minDate.getHours() : 0;
+  const minMinute =
+    selected && onMinDay(selected) && minDate && selected.getHours() === minDate.getHours()
+      ? minDate.getMinutes()
+      : 0;
 
   const timeFieldClass =
     'w-12 h-9 rounded-lg bg-surface-lowest/60 border border-outline-variant/20 text-on-surface ' +
@@ -282,7 +307,7 @@ export function DatePicker({
                 <Clock className="w-4 h-4 text-on-surface-meta shrink-0" />
                 <input
                   type="number"
-                  min={0}
+                  min={minHour}
                   max={23}
                   aria-label="Hour"
                   disabled={!selected}
@@ -293,7 +318,7 @@ export function DatePicker({
                 <span className="text-on-surface-meta">:</span>
                 <input
                   type="number"
-                  min={0}
+                  min={minMinute}
                   max={59}
                   aria-label="Minute"
                   disabled={!selected}

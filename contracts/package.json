@@ -11,7 +11,9 @@
     "build": "hardhat compile",
     "deploy:amoy": "hardhat run scripts/deploy.ts --network amoy --build-profile production",
     "deploy:local": "hardhat run scripts/deploy.ts",
-    "estimate:amoy": "hardhat run scripts/estimate-deploy-cost.ts --build-profile production"
+    "estimate:amoy": "hardhat run scripts/estimate-deploy-cost.ts --build-profile production",
+    "node:local": "hardhat node",
+    "seed:local": "hardhat run scripts/seed-demo.ts --network localhost"
   },
   "keywords": [
     "voting",

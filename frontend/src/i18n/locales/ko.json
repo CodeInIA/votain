@@ -74,7 +74,8 @@
     "integration_pending": "이 기능은 통합 단계에서 연결됩니다.",
     "all": "전체",
     "yes": "찬성",
-    "no": "반대"
+    "no": "반대",
+    "clear": "지우기"
   },
   "nav": {
     "discover": "탐색",
@@ -122,7 +123,8 @@
     "results_count": "선거 {{count}}개",
     "results_count_plural": "선거 {{count}}개",
     "empty_title": "선거를 찾을 수 없음",
-    "empty_desc": "다른 검색을 시도하거나 필터를 지우세요."
+    "empty_desc": "다른 검색을 시도하거나 필터를 지우세요.",
+    "verified_domain": "확인된 도메인"
   },
   "election": {
     "by": "주최:",
@@ -135,7 +137,7 @@
     "enrollment_closes": "등록 마감",
     "voting_closes": "투표 마감",
     "select_candidate": "후보자 선택",
-    "blank_vote": "백지 투표",
+    "blank_vote": "백지 투표 / 기권",
     "cast_vote": "투표하기",
     "enroll": "지금 등록",
     "enroll_pending": "등록 중…",
@@ -159,7 +161,8 @@
     "voting_opens": "투표 시작",
     "cta_upcoming": "등록이 아직 열리지 않았습니다.",
     "cta_pending_vote": "등록이 마감되었습니다. 투표가 아직 시작되지 않았습니다.",
-    "starts_in": "시작까지"
+    "starts_in": "시작까지",
+    "verified_on_chain": "블록체인에서 검증됨"
   },
   "how": {
     "title": "Votain 작동 방식",
@@ -330,7 +333,8 @@
     "enrollment_until_vote_start": "등록은 배포 시점부터 투표 시작 전까지 열려 있습니다.",
     "yes_no_hint": "여기서 설정할 항목은 없습니다. 선택지는 선택한 투표 규칙에 따라 정해지며, 유권자가 그중 하나를 고릅니다.",
     "yes_no_preview": "유권자에게 표시될 투표용지",
-    "current_tank": "공용 가스 잔액에 이미 {{amount}} {{currency}}가 있습니다."
+    "current_tank": "공용 가스 잔액에 이미 {{amount}} {{currency}}가 있습니다.",
+    "short_enrollment_warning": "투표가 하루도 남지 않아 시작되며, 등록은 투표가 열리는 순간 마감됩니다. 제때 등록하지 못한 사람은 아예 투표할 수 없습니다. 시작을 늦추거나 별도의 등록 기간을 두는 것을 고려하세요."
   },
   "election_mgmt": {
     "actions": "작업",
@@ -447,7 +451,12 @@
     "candidates_unique": "후보 이름은 중복될 수 없습니다",
     "quorum_min": "최소 1 이상이어야 합니다",
     "number_positive": "유효한 0 이상의 숫자를 입력하세요",
-    "fix_previous_steps": "필수 항목이 없거나 잘못되었습니다. 이전 단계를 확인하세요."
+    "fix_previous_steps": "필수 항목이 없거나 잘못되었습니다. 이전 단계를 확인하세요.",
+    "too_short": "{{min}}자 이상",
+    "too_long": "{{max}}자 이하",
+    "candidate_too_short": "각 후보자는 {{min}}자 이상이어야 합니다",
+    "candidate_too_long": "후보자 이름은 {{max}}자까지 가능합니다",
+    "must_be_future_chain": "체인 시계보다 뒤여야 합니다. 현재 {{time}}입니다"
   },
   "devices": {
     "title": "내 기기",
@@ -527,12 +536,16 @@
     "error_no_record": "아직 레코드를 찾지 못했습니다. DNS 변경은 몇 분에서 몇 시간이 걸리니 잠시 후 다시 시도하세요.",
     "error_mismatch": "레코드가 있지만 다른 지갑({{found}})을 가리킵니다. 위의 값으로 바꿔 주세요.",
     "error_lookup": "DNS 조회에 실패했습니다. 도메인 상태와는 무관하니 다시 시도하세요.",
-    "verified_hint": "이 도메인의 DNS가 주최자의 지갑을 가리킵니다",
-    "lapsed_hint": "이 도메인은 더 이상 주최자의 지갑을 가리키지 않습니다",
+    "verified_hint": "이 선거의 주최자는 {{domain}}을(를) 관리합니다. 지갑을 가리키는 DNS 레코드로 확인되었습니다.",
+    "lapsed_hint": "이 선거는 {{domain}} 아래에서 만들어졌지만, 해당 DNS는 더 이상 주최자의 지갑을 가리키지 않습니다.",
     "lapsed": "확인 만료",
     "check_yourself": "직접 확인하기",
     "select_label": "이 선거에 표시할 도메인",
     "select_none": "도메인 표시 안 함",
     "select_hint": "선거와 함께 저장됩니다. 나중에 도메인을 바꿔도 이미 만든 선거는 바뀌지 않습니다."
+  },
+  "eligibility": {
+    "world_id": "World ID 확인됨",
+    "enrolled": "이 선거에 등록됨"
   }
 }

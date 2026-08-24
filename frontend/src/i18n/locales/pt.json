@@ -74,7 +74,8 @@
     "integration_pending": "Esta funcionalidade será conectada na fase de integração.",
     "all": "Tudo",
     "yes": "Sim",
-    "no": "Não"
+    "no": "Não",
+    "clear": "Limpar"
   },
   "nav": {
     "discover": "Descobrir",
@@ -122,7 +123,8 @@
     "results_count": "{{count}} eleição",
     "results_count_plural": "{{count}} eleições",
     "empty_title": "Nenhuma eleição encontrada",
-    "empty_desc": "Tente uma pesquisa diferente ou limpe seus filtros."
+    "empty_desc": "Tente uma pesquisa diferente ou limpe seus filtros.",
+    "verified_domain": "Domínio verificado"
   },
   "election": {
     "by": "por",
@@ -135,7 +137,7 @@
     "enrollment_closes": "Inscrições encerram",
     "voting_closes": "Votação encerra",
     "select_candidate": "Selecionar candidato",
-    "blank_vote": "Voto em branco",
+    "blank_vote": "Voto em branco / Abstenção",
     "cast_vote": "Votar",
     "enroll": "Inscrever-se",
     "enroll_pending": "Inscrevendo…",
@@ -159,7 +161,8 @@
     "voting_opens": "A votação abre",
     "cta_upcoming": "As inscrições ainda não abriram.",
     "cta_pending_vote": "As inscrições estão encerradas. A votação ainda não começou.",
-    "starts_in": "Começa em"
+    "starts_in": "Começa em",
+    "verified_on_chain": "Verificado na blockchain"
   },
   "how": {
     "title": "Como o Votain funciona",
@@ -330,7 +333,8 @@
     "enrollment_until_vote_start": "As inscrições estão abertas desde a implantação até ao início da votação.",
     "yes_no_hint": "Não há nada para configurar aqui: as opções são definidas pela regra de votação que escolheu. Os eleitores escolherão uma delas.",
     "yes_no_preview": "O boletim que os eleitores vão ver",
-    "current_tank": "O seu depósito de gas já tem {{amount}} {{currency}}."
+    "current_tank": "O seu depósito de gas já tem {{amount}} {{currency}}.",
+    "short_enrollment_warning": "A votação começa em menos de um dia, e a inscrição fecha quando ela abre. Quem não se inscrever a tempo não poderá votar. Pondere um início mais tarde, ou uma janela de inscrição própria."
   },
   "election_mgmt": {
     "actions": "Ações",
@@ -447,7 +451,12 @@
     "candidates_unique": "Os nomes dos candidatos devem ser únicos",
     "quorum_min": "Deve ser pelo menos 1",
     "number_positive": "Introduza um número válido e não negativo",
-    "fix_previous_steps": "Faltam campos obrigatórios ou são inválidos. Volte e reveja os passos anteriores."
+    "fix_previous_steps": "Faltam campos obrigatórios ou são inválidos. Volte e reveja os passos anteriores.",
+    "too_short": "Pelo menos {{min}} caracteres",
+    "too_long": "No máximo {{max}} caracteres",
+    "candidate_too_short": "Cada candidato precisa de pelo menos {{min}} caracteres",
+    "candidate_too_long": "Os nomes de candidato admitem no máximo {{max}} caracteres",
+    "must_be_future_chain": "Deve ser posterior ao relógio da cadeia, que marca {{time}}"
   },
   "devices": {
     "title": "Os meus dispositivos",
@@ -527,12 +536,16 @@
     "error_no_record": "Ainda não se encontra o registo. As alterações de DNS demoram de minutos a horas a propagar, tente de novo daqui a pouco.",
     "error_mismatch": "Existe um registo mas indica outra carteira ({{found}}). Atualize-o com o valor acima.",
     "error_lookup": "A consulta DNS falhou. Isto nada diz sobre o seu domínio, tente de novo.",
-    "verified_hint": "O DNS deste domínio indica a carteira do organizador",
-    "lapsed_hint": "Este domínio já não indica a carteira do organizador",
+    "verified_hint": "O organizador desta eleição controla {{domain}}, comprovado por um registo DNS que indica a sua carteira.",
+    "lapsed_hint": "Esta eleição foi criada sob {{domain}}, mas o seu DNS já não indica a carteira do organizador.",
     "lapsed": "já não verificado",
     "check_yourself": "Verifique você mesmo",
     "select_label": "Domínio a mostrar nesta eleição",
     "select_none": "Não mostrar domínio",
     "select_hint": "Guardado com a eleição. Alterar os seus domínios mais tarde não muda as eleições já criadas."
+  },
+  "eligibility": {
+    "world_id": "World ID verificado",
+    "enrolled": "Inscrito nesta eleição"
   }
 }

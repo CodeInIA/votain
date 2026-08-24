@@ -113,7 +113,8 @@
     "integration_pending": "This feature will be connected in the integration phase.",
     "all": "All",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "clear": "Clear"
   },
   "discover": {
     "title": "Elections",
@@ -122,7 +123,8 @@
     "results_count": "{{count}} election",
     "results_count_plural": "{{count}} elections",
     "empty_title": "No elections found",
-    "empty_desc": "Try a different search or clear your filters."
+    "empty_desc": "Try a different search or clear your filters.",
+    "verified_domain": "Verified domain"
   },
   "election": {
     "by": "by",
@@ -135,7 +137,7 @@
     "enrollment_closes": "Enrollment closes",
     "voting_closes": "Voting closes",
     "select_candidate": "Select a candidate",
-    "blank_vote": "Blank vote",
+    "blank_vote": "Blank Vote / Abstain",
     "cast_vote": "Cast vote",
     "enroll": "Enroll now",
     "enroll_pending": "Enrolling…",
@@ -159,7 +161,8 @@
     "voting_opens": "Voting opens",
     "cta_upcoming": "Enrollment hasn't opened yet.",
     "cta_pending_vote": "Enrollment is closed. Voting hasn't started yet.",
-    "starts_in": "Starts in"
+    "starts_in": "Starts in",
+    "verified_on_chain": "Verified on blockchain"
   },
   "how": {
     "title": "How Votain works",
@@ -330,7 +333,8 @@
     "enrollment_until_vote_start": "Registration is open from deployment until voting starts.",
     "yes_no_hint": "There is nothing to configure here: the options are set by the voting rule you chose. Voters will pick one of them.",
     "yes_no_preview": "The ballot voters will see",
-    "current_tank": "Your gas tank already holds {{amount}} {{currency}}."
+    "current_tank": "Your gas tank already holds {{amount}} {{currency}}.",
+    "short_enrollment_warning": "Voting starts in under a day, and enrolment closes when it opens. Voters who do not join in time cannot vote at all. Consider a later start, or a separate enrolment window."
   },
   "election_mgmt": {
     "actions": "Actions",
@@ -447,7 +451,12 @@
     "candidates_unique": "Candidate names must be unique",
     "quorum_min": "Must be at least 1",
     "number_positive": "Enter a valid, non-negative number",
-    "fix_previous_steps": "Some required fields are missing or invalid. Go back and review the previous steps."
+    "fix_previous_steps": "Some required fields are missing or invalid. Go back and review the previous steps.",
+    "too_short": "At least {{min}} characters",
+    "too_long": "At most {{max}} characters",
+    "candidate_too_short": "Each candidate needs at least {{min}} characters",
+    "candidate_too_long": "Candidate names are limited to {{max}} characters",
+    "must_be_future_chain": "Must be after the chain's clock, which currently reads {{time}}"
   },
   "devices": {
     "title": "My devices",
@@ -527,12 +536,16 @@
     "error_no_record": "No record found yet. DNS changes can take minutes or hours to propagate, so try again shortly.",
     "error_mismatch": "A record exists but names a different wallet ({{found}}). Update it to the value above.",
     "error_lookup": "The DNS lookup failed. This says nothing about your domain, try again.",
-    "verified_hint": "The DNS of this domain names the organizer's wallet",
-    "lapsed_hint": "This domain no longer names the organizer's wallet",
+    "verified_hint": "The organizer of this election controls {{domain}}, proven by a DNS record naming their wallet.",
+    "lapsed_hint": "This election was created under {{domain}}, but its DNS no longer names the organizer's wallet.",
     "lapsed": "no longer verified",
     "check_yourself": "Check it yourself",
     "select_label": "Domain to show on this election",
     "select_none": "Do not show a domain",
     "select_hint": "Saved with the election. Changing your domains later does not alter elections already created."
+  },
+  "eligibility": {
+    "world_id": "World ID verified",
+    "enrolled": "Enrolled in this election"
   }
 }

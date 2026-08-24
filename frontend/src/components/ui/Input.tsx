@@ -20,8 +20,13 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           </label>
         )}
         <div className="relative flex items-center">
+          {/* `inset-y-0` plus centring: an absolutely positioned child is out of
+              flow, so the parent's items-center does not reach it and the icon
+              sat off-centre against the field. */}
           {leftIcon && (
-            <span className="absolute left-3.5 text-on-surface-meta pointer-events-none">{leftIcon}</span>
+            <span className="absolute inset-y-0 left-3.5 flex items-center text-on-surface-meta pointer-events-none">
+              {leftIcon}
+            </span>
           )}
           <input
             id={inputId}
@@ -39,8 +44,13 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             )}
             {...props}
           />
+          {/* No pointer-events-none here, unlike the left slot: the right slot
+              holds actions (a clear button), and swallowing the click made it
+              look enabled while doing nothing. */}
           {rightIcon && (
-            <span className="absolute right-3.5 text-on-surface-meta pointer-events-none">{rightIcon}</span>
+            <span className="absolute inset-y-0 right-3.5 flex items-center text-on-surface-meta">
+              {rightIcon}
+            </span>
           )}
         </div>
         {error && <p className="text-xs text-error">{error}</p>}

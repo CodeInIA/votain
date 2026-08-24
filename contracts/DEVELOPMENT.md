@@ -43,10 +43,40 @@ npx hardhat test test/E2E.test.ts   # full election with REAL Groth16 proofs
 npx hardhat compile
 npm run deploy:local                # in-process network
 npm run deploy:amoy                 # Polygon Amoy (needs .env PRIVATE_KEY)
+npm run node:local                  # standalone node on 127.0.0.1:8545
+npm run seed:local                  # demo data against that node
+```
+
+**Seeding moves the chain clock, permanently.** Finished elections have to be created
+live, voted on, and only then advanced past their voteEnd so a tally can be published,
+and those jumps add up to roughly two days. A chain clock only goes forward, so the node
+stays ahead of the wall clock and the create wizard, which validates against
+`block.timestamp`, refuses every date an organizer would naturally pick.
+
+Set `SEED_LIVE_ONLY=1` to seed only the elections still running, which leaves the clock
+about three minutes ahead. The cost is having no closed, tallying or cancelled elections
+to look at. Resyncing afterwards is impossible: restart the node and redeploy.
+
+```bash
+SEED_LIVE_ONLY=1 npm run seed:local          # bash
+$env:SEED_LIVE_ONLY=1; npm run seed:local    # PowerShell
 ```
 
 The deploy script writes `deployments/<network>.json` AND mirrors it into
 `frontend/src/lib/deployments/` so the frontend client picks up the addresses automatically.
+
+## Input bounds
+
+`ElectionV4` rejects a name under 3 or over 200 BYTES, and a `metadataJson` over 16 KB.
+Bytes, not characters: Solidity cannot count code points affordably, so this is a coarse
+backstop against the absurd (an empty election, a pasted document that would blow past
+the block gas limit) and NOT the meaningful rule. A three-byte floor is one CJK
+ideograph and passes here by design; the create wizard applies the character-aware
+minimum, where a candidate floor of two exists because CJK personal names commonly have
+exactly two characters.
+
+The description and candidates travel inside `metadataJson` and live on chain in full,
+which is why the ceiling matters more than the floor.
 
 ## Config
 

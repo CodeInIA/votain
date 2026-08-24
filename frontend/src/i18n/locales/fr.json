@@ -74,7 +74,8 @@
     "integration_pending": "Cette fonctionnalité sera connectée lors de la phase d'intégration.",
     "all": "Tout",
     "yes": "Oui",
-    "no": "Non"
+    "no": "Non",
+    "clear": "Effacer"
   },
   "nav": {
     "discover": "Découvrir",
@@ -122,7 +123,8 @@
     "results_count": "{{count}} élection",
     "results_count_plural": "{{count}} élections",
     "empty_title": "Aucune élection trouvée",
-    "empty_desc": "Essayez une autre recherche ou effacez vos filtres."
+    "empty_desc": "Essayez une autre recherche ou effacez vos filtres.",
+    "verified_domain": "Domaine vérifié"
   },
   "election": {
     "by": "par",
@@ -135,7 +137,7 @@
     "enrollment_closes": "Clôture des inscriptions",
     "voting_closes": "Clôture du vote",
     "select_candidate": "Sélectionnez un candidat",
-    "blank_vote": "Vote blanc",
+    "blank_vote": "Vote blanc / Abstention",
     "cast_vote": "Voter",
     "enroll": "S'inscrire",
     "enroll_pending": "Inscription…",
@@ -159,7 +161,8 @@
     "voting_opens": "Le vote ouvre",
     "cta_upcoming": "L'inscription n'a pas encore ouvert.",
     "cta_pending_vote": "L'inscription est close. Le vote n'a pas encore commencé.",
-    "starts_in": "Commence dans"
+    "starts_in": "Commence dans",
+    "verified_on_chain": "Vérifié sur la blockchain"
   },
   "how": {
     "title": "Comment fonctionne Votain",
@@ -330,7 +333,8 @@
     "enrollment_until_vote_start": "L'inscription est ouverte du déploiement jusqu'au début du vote.",
     "yes_no_hint": "Rien à configurer ici : les options sont fixées par la règle de vote choisie. Les électeurs en choisiront une.",
     "yes_no_preview": "Le bulletin que verront les électeurs",
-    "current_tank": "Votre réserve de gas contient déjà {{amount}} {{currency}}."
+    "current_tank": "Votre réserve de gas contient déjà {{amount}} {{currency}}.",
+    "short_enrollment_warning": "Le vote commence dans moins d'un jour, et les inscriptions ferment à son ouverture. Qui ne s'inscrit pas à temps ne pourra pas voter du tout. Envisagez un début plus tardif, ou une fenêtre d'inscription distincte."
   },
   "election_mgmt": {
     "actions": "Actions",
@@ -447,7 +451,12 @@
     "candidates_unique": "Les noms des candidats doivent être uniques",
     "quorum_min": "Doit être au moins 1",
     "number_positive": "Saisissez un nombre valide et non négatif",
-    "fix_previous_steps": "Des champs obligatoires sont manquants ou invalides. Revenez en arrière et vérifiez les étapes précédentes."
+    "fix_previous_steps": "Des champs obligatoires sont manquants ou invalides. Revenez en arrière et vérifiez les étapes précédentes.",
+    "too_short": "Au moins {{min}} caractères",
+    "too_long": "Au plus {{max}} caractères",
+    "candidate_too_short": "Chaque candidat doit compter au moins {{min}} caractères",
+    "candidate_too_long": "Les noms de candidat sont limités à {{max}} caractères",
+    "must_be_future_chain": "Doit être postérieur à l'horloge de la chaîne, qui indique {{time}}"
   },
   "devices": {
     "title": "Mes appareils",
@@ -527,12 +536,16 @@
     "error_no_record": "Aucun enregistrement trouvé pour l'instant. La propagation DNS peut prendre de quelques minutes à plusieurs heures, réessayez sous peu.",
     "error_mismatch": "Un enregistrement existe mais désigne un autre portefeuille ({{found}}). Remplacez-le par la valeur ci-dessus.",
     "error_lookup": "La requête DNS a échoué. Cela ne dit rien de votre domaine, réessayez.",
-    "verified_hint": "Le DNS de ce domaine désigne le portefeuille de l'organisateur",
-    "lapsed_hint": "Ce domaine ne désigne plus le portefeuille de l'organisateur",
+    "verified_hint": "L'organisateur de cette élection contrôle {{domain}}, prouvé par un enregistrement DNS désignant son portefeuille.",
+    "lapsed_hint": "Cette élection a été créée sous {{domain}}, mais son DNS ne désigne plus le portefeuille de l'organisateur.",
     "lapsed": "non vérifié désormais",
     "check_yourself": "Vérifiez par vous-même",
     "select_label": "Domaine à afficher sur cette élection",
     "select_none": "Ne pas afficher de domaine",
     "select_hint": "Enregistré avec l'élection. Modifier vos domaines plus tard ne change pas les élections déjà créées."
+  },
+  "eligibility": {
+    "world_id": "World ID vérifié",
+    "enrolled": "Inscrit à cette élection"
   }
 }

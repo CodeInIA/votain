@@ -17,14 +17,24 @@ export function DomainBadge({
   domain,
   organizerAddress,
   showCheckLink = false,
+  interactive = false,
 }: {
   domain?: string;
   organizerAddress: string;
   /** Offers the voter an independent lookup. Detail pages only. */
   showCheckLink?: boolean;
+  /**
+   * Lets a tap reveal the explanation, since a `title` tooltip needs a hover
+   * that touch devices do not have. Off by default because inside a clickable
+   * card this would be a button nested in a button: invalid markup, and the tap
+   * would be stolen from the card. Cards lead to a detail page where the badge
+   * IS interactive, so nothing is out of reach.
+   */
+  interactive?: boolean;
 }) {
   const { t } = useTranslation();
   const [status, setStatus] = useState<DomainStatus | 'checking'>('checking');
+  const [hintOpen, setHintOpen] = useState(false);
 
   useEffect(() => {
     if (!domain) return;
@@ -45,21 +55,44 @@ export function DomainBadge({
   // badge: that would punish an election whose DNS is perfectly fine.
   const lapsed = status === 'no_record' || status === 'address_mismatch';
 
+  const hint = lapsed
+    ? t('domain.lapsed_hint', { domain })
+    : t('domain.verified_hint', { domain });
+
+  const face = (
+    <>
+      <Globe className="w-3 h-3 shrink-0" />
+      {domain}
+    </>
+  );
+  const faceClass = lapsed
+    ? 'inline-flex items-center gap-1 text-on-surface-meta line-through decoration-error/60'
+    : 'inline-flex items-center gap-1 text-primary-dim';
+
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs">
-      <span
-        className={
-          lapsed
-            ? 'inline-flex items-center gap-1 text-on-surface-meta line-through decoration-error/60'
-            : 'inline-flex items-center gap-1 text-primary-dim'
-        }
-        title={lapsed ? t('domain.lapsed_hint') : t('domain.verified_hint')}
-      >
-        <Globe className="w-3 h-3 shrink-0" />
-        {domain}
-      </span>
+    <span className="inline-flex flex-wrap items-center gap-1.5 text-xs">
+      {interactive ? (
+        <button
+          type="button"
+          onClick={() => setHintOpen(open => !open)}
+          aria-expanded={hintOpen}
+          className={`${faceClass} cursor-pointer`}
+          title={hint}
+        >
+          {face}
+        </button>
+      ) : (
+        <span className={faceClass} title={hint}>
+          {face}
+        </span>
+      )}
 
       {lapsed && <span className="text-on-surface-meta">{t('domain.lapsed')}</span>}
+
+      {/* Revealed by tap; on a pointer device the title tooltip covers it too. */}
+      {interactive && hintOpen && (
+        <span className="basis-full text-on-surface-meta leading-relaxed">{hint}</span>
+      )}
 
       {showCheckLink && (
         // Checking through a public DoH resolver rather than the organization's

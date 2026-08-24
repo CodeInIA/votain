@@ -39,7 +39,9 @@ export function MyDomains({
   const [draft, setDraft] = useState('');
   const [record, setRecord] = useState<DomainRecord | null>(null);
   const [outcome, setOutcome] = useState<DomainCheck | null>(null);
-  const [copied, setCopied] = useState(false);
+  // Which field was copied, not merely that something was. One shared boolean
+  // flipped both rows to the tick at once, which reads as "copied both".
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
@@ -120,10 +122,12 @@ export function MyDomains({
     }
   };
 
-  const copy = (value: string): void => {
+  const copy = (key: string, value: string): void => {
     void navigator.clipboard.writeText(value);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    setCopiedKey(key);
+    // Only clear if this field is still the one showing the tick: copying the
+    // other one in the meantime must not have its feedback cut short.
+    setTimeout(() => setCopiedKey(current => (current === key ? null : current)), 1500);
   };
 
   /** Each outcome is fixed differently, so each one says something different. */
@@ -204,11 +208,11 @@ export function MyDomains({
                     <code className="text-xs text-on-surface font-mono break-all flex-1">{value}</code>
                     <button
                       type="button"
-                      onClick={() => copy(value)}
+                      onClick={() => copy(labelKey, value)}
                       aria-label={t('domain.copy')}
                       className="p-1.5 rounded-lg text-on-surface-meta hover:text-on-surface hover:bg-white/5 cursor-pointer shrink-0"
                     >
-                      {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copiedKey === labelKey ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                     </button>
                   </div>
                 ),

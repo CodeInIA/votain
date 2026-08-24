@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Search, SlidersHorizontal, X } from 'lucide-react';
+import { Search, SlidersHorizontal, X, Globe } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Button } from '../../components/ui/Button';
 import { ElectionCard } from '../../components/ui/ElectionCard';
@@ -10,6 +10,7 @@ import { Skeleton } from '../../components/ui/Skeleton';
 import { useElections } from '../../hooks/useElections';
 import { useAuth } from '../../contexts/AuthContext';
 import { type ElectionPhase } from '../../data/seed';
+import { checkElectionDomain } from '../../lib/organizerDomains';
 
 const PHASE_FILTERS: ElectionPhase[] = ['enrolling', 'active', 'tallying', 'closed'];
 
@@ -18,19 +19,59 @@ export default function Discover() {
   const { voterLoggedIn } = useAuth();
   const [query, setQuery]           = useState('');
   const [phase, setPhase]           = useState<ElectionPhase | null>(null);
+  const [domainOnly, setDomainOnly] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const { elections, loading }      = useElections();
 
+  const pairKey = (address: string, domain: string) => `${address.toLowerCase()}|${domain}`;
+
+  // Verification is a live DNS answer, so it cannot be read off the election.
+  // Resolved once per DISTINCT organizer/domain pair rather than per card: a
+  // list is usually a handful of organizers, and the backend caches on top.
+  const domainPairs = useMemo(() => {
+    const seen = new Map<string, { address: string; domain: string }>();
+    for (const e of elections) {
+      if (!e.organizerDomain) continue;
+      const key = pairKey(e.organizerAddress, e.organizerDomain);
+      if (!seen.has(key)) seen.set(key, { address: e.organizerAddress, domain: e.organizerDomain });
+    }
+    return [...seen.entries()];
+  }, [elections]);
+
+  const [verifiedPairs, setVerifiedPairs] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const checked = await Promise.all(
+        domainPairs.map(async ([key, p]) => {
+          const result = await checkElectionDomain(p.address, p.domain);
+          return [key, result.status === 'verified'] as const;
+        }),
+      );
+      if (!cancelled) {
+        setVerifiedPairs(new Set(checked.filter(([, ok]) => ok).map(([key]) => key)));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [domainPairs]);
+
   const filtered = useMemo(() => {
+    const needle = query.trim().toLowerCase();
     return elections.filter(e => {
       const matchPhase = phase ? e.phase === phase : true;
-      const matchQuery = query.trim()
-        ? e.title.toLowerCase().includes(query.toLowerCase()) ||
-          e.organizer.toLowerCase().includes(query.toLowerCase())
+      const matchQuery = needle
+        ? e.title.toLowerCase().includes(needle) ||
+          e.organizer.toLowerCase().includes(needle) ||
+          // Searching "gob.es" should find the elections published under it.
+          (e.organizerDomain?.toLowerCase().includes(needle) ?? false)
         : true;
-      return matchPhase && matchQuery;
+      const matchDomain = domainOnly
+        ? !!e.organizerDomain && verifiedPairs.has(pairKey(e.organizerAddress, e.organizerDomain))
+        : true;
+      return matchPhase && matchQuery && matchDomain;
     });
-  }, [elections, query, phase]);
+  }, [elections, query, phase, domainOnly, verifiedPairs]);
 
   return (
     <PageLayout role="public" showNav>
@@ -52,7 +93,14 @@ export default function Discover() {
               onChange={e => setQuery(e.target.value)}
               leftIcon={<Search className="w-4 h-4" />}
               rightIcon={query ? (
-                <button onClick={() => setQuery('')} className="cursor-pointer"><X className="w-4 h-4" /></button>
+                <button
+                  type="button"
+                  onClick={() => setQuery('')}
+                  aria-label={t('common.clear')}
+                  className="cursor-pointer hover:text-on-surface transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               ) : undefined}
             />
           </div>
@@ -62,7 +110,9 @@ export default function Discover() {
           >
             <SlidersHorizontal className="w-4 h-4" />
             <span className="hidden sm:inline">{t('common.filter')}</span>
-            {phase && <span className="w-2 h-2 rounded-full bg-primary" />}
+            {/* Any active filter, not just the phase: with only the domain chip
+                on, the collapsed bar gave no sign the list was being filtered. */}
+            {(phase || domainOnly) && <span className="w-2 h-2 rounded-full bg-primary" />}
           </Button>
         </div>
 
@@ -85,6 +135,23 @@ export default function Discover() {
                 </Badge>
               </button>
             ))}
+
+            {/* Only verified is offered, not its negative: "no verified domain"
+                is the normal state for most organizers, so a chip for it would
+                read as a category of suspicion rather than a filter. */}
+            <button
+              type="button"
+              onClick={() => setDomainOnly(v => !v)}
+              className="transition-all cursor-pointer"
+            >
+              <Badge
+                variant="blockchain"
+                className={domainOnly ? 'ring-2 ring-primary/40' : 'opacity-60 hover:opacity-100'}
+              >
+                <Globe className="w-3 h-3 shrink-0" />
+                {t('discover.verified_domain')}
+              </Badge>
+            </button>
           </div>
         )}
 
@@ -102,7 +169,7 @@ export default function Discover() {
               <button
                 type="button"
                 className="mt-4 text-sm text-primary hover:underline cursor-pointer"
-                onClick={() => { setQuery(''); setPhase(null); }}
+                onClick={() => { setQuery(''); setPhase(null); setDomainOnly(false); }}
               >
                 {t('common.clear_filters')}
               </button>

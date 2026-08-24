@@ -74,7 +74,8 @@
     "integration_pending": "この機能は統合フェーズで接続されます。",
     "all": "すべて",
     "yes": "賛成",
-    "no": "反対"
+    "no": "反対",
+    "clear": "消去"
   },
   "nav": {
     "discover": "探す",
@@ -122,7 +123,8 @@
     "results_count": "{{count}}件の選挙",
     "results_count_plural": "{{count}}件の選挙",
     "empty_title": "選挙が見つかりません",
-    "empty_desc": "別の検索を試すかフィルターをクリアしてください。"
+    "empty_desc": "別の検索を試すかフィルターをクリアしてください。",
+    "verified_domain": "確認済みドメイン"
   },
   "election": {
     "by": "主催:",
@@ -135,7 +137,7 @@
     "enrollment_closes": "登録締切",
     "voting_closes": "投票締切",
     "select_candidate": "候補者を選択",
-    "blank_vote": "白票",
+    "blank_vote": "白票 / 棄権",
     "cast_vote": "投票する",
     "enroll": "今すぐ登録",
     "enroll_pending": "登録中…",
@@ -159,7 +161,8 @@
     "voting_opens": "投票開始",
     "cta_upcoming": "登録はまだ開始していません。",
     "cta_pending_vote": "登録は締め切られました。投票はまだ始まっていません。",
-    "starts_in": "開始まで"
+    "starts_in": "開始まで",
+    "verified_on_chain": "ブロックチェーンで検証済み"
   },
   "how": {
     "title": "Votainの仕組み",
@@ -330,7 +333,8 @@
     "enrollment_until_vote_start": "登録はデプロイ時から投票開始まで開いています。",
     "yes_no_hint": "ここで設定する項目はありません。選択肢は選んだ投票ルールによって決まり、投票者はそのいずれかを選びます。",
     "yes_no_preview": "投票者に表示される投票用紙",
-    "current_tank": "共有ガス残高には現在 {{amount}} {{currency}} があります。"
+    "current_tank": "共有ガス残高には現在 {{amount}} {{currency}} があります。",
+    "short_enrollment_warning": "投票開始まで一日を切っており、登録は投票開始と同時に締め切られます。間に合わなかった人はまったく投票できません。開始を遅らせるか、登録期間を別に設けることを検討してください。"
   },
   "election_mgmt": {
     "actions": "アクション",
@@ -447,7 +451,12 @@
     "candidates_unique": "候補者名は重複できません",
     "quorum_min": "1 以上である必要があります",
     "number_positive": "有効な0以上の数値を入力してください",
-    "fix_previous_steps": "必須項目が未入力または無効です。前のステップを確認してください。"
+    "fix_previous_steps": "必須項目が未入力または無効です。前のステップを確認してください。",
+    "too_short": "{{min}} 文字以上",
+    "too_long": "{{max}} 文字以内",
+    "candidate_too_short": "各候補者には {{min}} 文字以上が必要です",
+    "candidate_too_long": "候補者名は {{max}} 文字までです",
+    "must_be_future_chain": "チェーンの時計より後にしてください。現在は {{time}} です"
   },
   "devices": {
     "title": "マイデバイス",
@@ -527,12 +536,16 @@
     "error_no_record": "まだレコードが見つかりません。DNS の変更は反映まで数分から数時間かかります。しばらくして再試行してください。",
     "error_mismatch": "レコードはありますが別のウォレット（{{found}}）を指しています。上の値に更新してください。",
     "error_lookup": "DNS 参照に失敗しました。ドメインの状態を示すものではありません。再試行してください。",
-    "verified_hint": "このドメインの DNS が主催者のウォレットを指しています",
-    "lapsed_hint": "このドメインは主催者のウォレットを指さなくなりました",
+    "verified_hint": "この選挙の主催者は {{domain}} を管理しています。ウォレットを示す DNS レコードで確認済みです。",
+    "lapsed_hint": "この選挙は {{domain}} のもとで作成されましたが、その DNS はもう主催者のウォレットを示していません。",
     "lapsed": "確認切れ",
     "check_yourself": "自分で確認する",
     "select_label": "この選挙に表示するドメイン",
     "select_none": "ドメインを表示しない",
     "select_hint": "選挙とともに保存されます。後からドメインを変更しても作成済みの選挙は変わりません。"
+  },
+  "eligibility": {
+    "world_id": "World ID 確認済み",
+    "enrolled": "この選挙に登録済み"
   }
 }

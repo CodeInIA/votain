@@ -6,6 +6,7 @@ import { PageLayout } from '../../components/layout/PageLayout';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { BackButton } from '../../components/ui/BackButton';
+import { DomainBadge } from '../../components/ui/DomainBadge';
 import { Card } from '../../components/ui/Card';
 import { Modal } from '../../components/ui/Modal';
 import { Countdown } from '../../components/ui/Countdown';
@@ -46,7 +47,7 @@ export default function ElectionManagement() {
     return (
       <PageLayout role="organizer" showNav>
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-          <Button variant="ghost" onClick={() => navigate(-1)}>{t('common.back')}</Button>
+          <Button variant="ghost" onClick={() => navigate('/organizer/dashboard')}>{t('common.back')}</Button>
         </div>
       </PageLayout>
     );
@@ -180,7 +181,10 @@ export default function ElectionManagement() {
   return (
     <PageLayout role="organizer" showNav>
       <div className="max-w-3xl mx-auto pt-4 pb-24">
-        <BackButton className="mb-5" />
+        {/* Explicit target rather than history back: this page is reached from
+            the dashboard, from the members list and from a direct link, and
+            after a reload there is no history to step into at all. */}
+        <BackButton className="mb-5" onClick={() => navigate('/organizer/dashboard')} />
 
         {/* Header */}
         <div className="mb-5">
@@ -191,6 +195,19 @@ export default function ElectionManagement() {
             <BlockchainBadge href={`https://amoy.polygonscan.com/address/${election.contractAddress}`} />
           </div>
           <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white leading-tight">{election.title}</h1>
+          {/* The organizer sees exactly what a voter sees, lapsed state included.
+              They are the only one who can republish the TXT record if it has
+              stopped verifying, so hiding it here would hide it from the one
+              person able to act on it. */}
+          {election.organizerDomain && (
+            <div className="mt-2">
+              <DomainBadge
+                domain={election.organizerDomain}
+                organizerAddress={election.organizerAddress}
+                interactive
+              />
+            </div>
+          )}
         </div>
 
         {/* Stats cards */}

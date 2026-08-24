@@ -59,7 +59,7 @@ describe("ElectionFactory", () => {
 
     for (let i = 0; i < 3; i++) {
       await (
-        await stack.factory.connect(organizer).createElection(baseConfig(now, { name: `E${i}` }))
+        await stack.factory.connect(organizer).createElection(baseConfig(now, { name: `Paginated ${i}` }))
       ).wait();
     }
 

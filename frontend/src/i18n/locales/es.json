@@ -74,7 +74,8 @@
     "integration_pending": "Esta función se conectará en la fase de integración.",
     "all": "Todo",
     "yes": "Sí",
-    "no": "No"
+    "no": "No",
+    "clear": "Borrar"
   },
   "nav": {
     "discover": "Descubrir",
@@ -122,7 +123,8 @@
     "results_count": "{{count}} elección",
     "results_count_plural": "{{count}} elecciones",
     "empty_title": "No se encontraron elecciones",
-    "empty_desc": "Prueba otra búsqueda o limpia los filtros."
+    "empty_desc": "Prueba otra búsqueda o limpia los filtros.",
+    "verified_domain": "Dominio verificado"
   },
   "election": {
     "by": "por",
@@ -135,7 +137,7 @@
     "enrollment_closes": "Inscripción cierra",
     "voting_closes": "Votación cierra",
     "select_candidate": "Selecciona un candidato",
-    "blank_vote": "Voto en blanco",
+    "blank_vote": "Voto en blanco / Abstención",
     "cast_vote": "Emitir voto",
     "enroll": "Inscribirse",
     "enroll_pending": "Inscribiéndose…",
@@ -159,7 +161,8 @@
     "voting_opens": "La votación abre",
     "cta_upcoming": "La inscripción aún no ha abierto.",
     "cta_pending_vote": "La inscripción está cerrada. La votación aún no ha empezado.",
-    "starts_in": "Empieza en"
+    "starts_in": "Empieza en",
+    "verified_on_chain": "Verificado en la cadena"
   },
   "how": {
     "title": "Cómo funciona Votain",
@@ -330,7 +333,8 @@
     "enrollment_until_vote_start": "La inscripción está abierta desde el despliegue hasta que empieza la votación.",
     "yes_no_hint": "Aquí no hay nada que configurar: las opciones las fija la regla de votación que elegiste. Los votantes elegirán una de ellas.",
     "yes_no_preview": "La papeleta que verán los votantes",
-    "current_tank": "Tu bote de gas ya tiene {{amount}} {{currency}}."
+    "current_tank": "Tu bote de gas ya tiene {{amount}} {{currency}}.",
+    "short_enrollment_warning": "La votación empieza en menos de un día, y la inscripción se cierra cuando esta abre. Quien no se inscriba a tiempo no podrá votar. Considera un inicio más tardío, o una ventana de inscripción propia."
   },
   "election_mgmt": {
     "actions": "Acciones",
@@ -447,7 +451,12 @@
     "candidates_unique": "Los nombres de los candidatos deben ser únicos",
     "quorum_min": "Debe ser al menos 1",
     "number_positive": "Introduce un número válido y no negativo",
-    "fix_previous_steps": "Faltan campos obligatorios o son inválidos. Vuelve atrás y revisa los pasos anteriores."
+    "fix_previous_steps": "Faltan campos obligatorios o son inválidos. Vuelve atrás y revisa los pasos anteriores.",
+    "too_short": "Al menos {{min}} caracteres",
+    "too_long": "Como máximo {{max}} caracteres",
+    "candidate_too_short": "Cada candidato necesita al menos {{min}} caracteres",
+    "candidate_too_long": "Los nombres de candidato admiten {{max}} caracteres como máximo",
+    "must_be_future_chain": "Debe ser posterior al reloj de la cadena, que marca {{time}}"
   },
   "devices": {
     "title": "Mis dispositivos",
@@ -527,12 +536,16 @@
     "error_no_record": "Todavía no se encuentra el registro. Los cambios de DNS tardan de minutos a horas en propagarse, inténtalo de nuevo en un rato.",
     "error_mismatch": "Existe un registro pero nombra otra wallet ({{found}}). Actualízalo con el valor de arriba.",
     "error_lookup": "Falló la consulta DNS. Esto no dice nada sobre tu dominio, vuelve a intentarlo.",
-    "verified_hint": "El DNS de este dominio nombra la wallet del organizador",
-    "lapsed_hint": "Este dominio ya no nombra la wallet del organizador",
+    "verified_hint": "El organizador de esta elección controla {{domain}}, demostrado por un registro DNS que nombra su wallet.",
+    "lapsed_hint": "Esta elección se creó bajo {{domain}}, pero su DNS ya no nombra la wallet del organizador.",
     "lapsed": "ya no verificado",
     "check_yourself": "Compruébalo tú mismo",
     "select_label": "Dominio que mostrar en esta elección",
     "select_none": "No mostrar dominio",
     "select_hint": "Se guarda con la elección. Cambiar tus dominios más adelante no altera las elecciones ya creadas."
+  },
+  "eligibility": {
+    "world_id": "World ID verificado",
+    "enrolled": "Inscrito en esta elección"
   }
 }

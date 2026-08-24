@@ -9,6 +9,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
 import { GasWidget } from '../../components/ui/GasWidget';
 import { Spinner } from '../../components/ui/Spinner';
+import { DomainBadge } from '../../components/ui/DomainBadge';
 import { Modal } from '../../components/ui/Modal';
 import { useElections } from '../../hooks/useElections';
 import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
@@ -85,7 +86,13 @@ export default function OrganizerDashboard() {
   // The stat tiles above count EVERY election, not the filtered view: a search
   // box should narrow what you are looking at, not silently restate the totals.
   const visibleElections = query.trim()
-    ? myElections.filter(e => e.title.toLowerCase().includes(query.trim().toLowerCase()))
+    ? myElections.filter(e => {
+        const needle = query.trim().toLowerCase();
+        return (
+          e.title.toLowerCase().includes(needle) ||
+          (e.organizerDomain?.toLowerCase().includes(needle) ?? false)
+        );
+      })
     : myElections;
 
   const totalEnrolled = myElections.reduce((s, e) => s + e.totalEnrolled, 0);
@@ -169,7 +176,21 @@ export default function OrganizerDashboard() {
                       >
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-on-surface truncate">{e.title}</p>
-                          <p className="text-xs text-on-surface-meta">{e.totalEnrolled.toLocaleString()} enrolled · {e.castVotes.toLocaleString()} votes</p>
+                          {/* Was hardcoded English ("0 enrolled - 0 votes"), which
+                              showed untranslated in every other locale. */}
+                          <p className="text-xs text-on-surface-meta">
+                            {e.totalEnrolled.toLocaleString()} {t('election.enrolled').toLowerCase()}
+                            {' · '}
+                            {e.castVotes.toLocaleString()} {t('election.votes_cast').toLowerCase()}
+                          </p>
+                          {e.organizerDomain && (
+                            <div className="mt-1">
+                              <DomainBadge
+                                domain={e.organizerDomain}
+                                organizerAddress={e.organizerAddress}
+                              />
+                            </div>
+                          )}
                         </div>
                         <Badge variant={e.phase as Parameters<typeof Badge>[0]['variant']} dot={PULSE_PHASES.has(e.phase)}>
                           {t(`phase.${e.phase}`)}

@@ -31,6 +31,14 @@ import { generateRandomKeys, PublicKey } from "paillier-bigint";
 
 const { ethers } = await network.connect();
 
+/**
+ * Seed only the elections that are still running. Set SEED_LIVE_ONLY=1 to keep
+ * the local chain's clock close to the wall clock: without it the finished
+ * elections advance it by about two days, which makes the create wizard refuse
+ * every date the organizer would naturally pick.
+ */
+const LIVE_ONLY = process.env.SEED_LIVE_ONLY === "1";
+
 const HOUR = 3600;
 const DAY = 24 * HOUR;
 const COUNTER_BASE = 1_000_000n;
@@ -151,7 +159,24 @@ async function main(): Promise<void> {
   }
   console.log(`  ${voters.length} voters registered\n`);
 
-  async function build(spec: Spec): Promise<void> {
+  async function build(raw: Spec): Promise<void> {
+    // Finished elections are what drags the chain clock forward: they have to be
+    // created live, voted on, and only then advanced past their voteEnd so the
+    // tally can be published. Those jumps accumulate to roughly two days and
+    // never come back, since a chain clock only moves forward.
+    if (LIVE_ONLY && (raw.finish || raw.cancelImmediately)) {
+      console.log(`SKIP ${raw.name}  (live-only seed)`);
+      return;
+    }
+
+    // Casting a ballot needs the vote window open, so the clock is advanced to
+    // reach it. With the finished elections gone that is the only thing left
+    // moving it, and an hour of it puts every date the organizer picks an hour
+    // out of reach for no benefit. Compressing the window keeps the election
+    // ACTIVE with real ballots in it at a couple of minutes of drift.
+    const spec: Spec =
+      LIVE_ONLY && raw.ballots ? { ...raw, enrollTo: 120, voteFrom: 120 } : raw;
+
     const organizer = signers[spec.organizerAccount ?? 0];
     step(`${spec.name}: generating Paillier key`);
     const keys = await generateRandomKeys(PAILLIER_BITS);

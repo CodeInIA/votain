@@ -74,7 +74,8 @@
     "integration_pending": "Deze functie wordt verbonden in de integratiefase.",
     "all": "Alles",
     "yes": "Ja",
-    "no": "Nee"
+    "no": "Nee",
+    "clear": "Wissen"
   },
   "nav": {
     "discover": "Ontdekken",
@@ -122,7 +123,8 @@
     "results_count": "{{count}} verkiezing",
     "results_count_plural": "{{count}} verkiezingen",
     "empty_title": "Geen verkiezingen gevonden",
-    "empty_desc": "Probeer een andere zoekopdracht of wis je filters."
+    "empty_desc": "Probeer een andere zoekopdracht of wis je filters.",
+    "verified_domain": "Geverifieerd domein"
   },
   "election": {
     "by": "door",
@@ -135,7 +137,7 @@
     "enrollment_closes": "Inschrijving sluit",
     "voting_closes": "Stemming sluit",
     "select_candidate": "Selecteer een kandidaat",
-    "blank_vote": "Blanco stem",
+    "blank_vote": "Blanco stem / Onthouding",
     "cast_vote": "Stemmen",
     "enroll": "Nu inschrijven",
     "enroll_pending": "Inschrijven…",
@@ -159,7 +161,8 @@
     "voting_opens": "Stemmen opent",
     "cta_upcoming": "De inschrijving is nog niet geopend.",
     "cta_pending_vote": "De inschrijving is gesloten. Het stemmen is nog niet begonnen.",
-    "starts_in": "Begint over"
+    "starts_in": "Begint over",
+    "verified_on_chain": "Geverifieerd op de blockchain"
   },
   "how": {
     "title": "Hoe Votain werkt",
@@ -330,7 +333,8 @@
     "enrollment_until_vote_start": "Inschrijving is open vanaf de uitrol tot het stemmen begint.",
     "yes_no_hint": "Hier valt niets in te stellen: de opties liggen vast door de gekozen stemregel. Kiezers kiezen er één van.",
     "yes_no_preview": "Het stembiljet dat kiezers te zien krijgen",
-    "current_tank": "Je gasvoorraad bevat al {{amount}} {{currency}}."
+    "current_tank": "Je gasvoorraad bevat al {{amount}} {{currency}}.",
+    "short_enrollment_warning": "De stemming begint over minder dan een dag, en de inschrijving sluit zodra die opengaat. Wie zich niet op tijd inschrijft, kan helemaal niet stemmen. Overweeg een latere start of een aparte inschrijfperiode."
   },
   "election_mgmt": {
     "actions": "Acties",
@@ -447,7 +451,12 @@
     "candidates_unique": "Kandidaatnamen moeten uniek zijn",
     "quorum_min": "Moet minstens 1 zijn",
     "number_positive": "Voer een geldig, niet-negatief getal in",
-    "fix_previous_steps": "Verplichte velden ontbreken of zijn ongeldig. Ga terug en controleer de vorige stappen."
+    "fix_previous_steps": "Verplichte velden ontbreken of zijn ongeldig. Ga terug en controleer de vorige stappen.",
+    "too_short": "Minstens {{min}} tekens",
+    "too_long": "Hoogstens {{max}} tekens",
+    "candidate_too_short": "Elke kandidaat heeft minstens {{min}} tekens nodig",
+    "candidate_too_long": "Kandidaatnamen mogen maximaal {{max}} tekens hebben",
+    "must_be_future_chain": "Moet na de klok van de keten liggen, die nu {{time}} aangeeft"
   },
   "devices": {
     "title": "Mijn apparaten",
@@ -527,12 +536,16 @@
     "error_no_record": "Nog geen record gevonden. DNS-wijzigingen doen er minuten tot uren over, probeer het zo nog eens.",
     "error_mismatch": "Er bestaat een record, maar het noemt een andere wallet ({{found}}). Vervang het door de waarde hierboven.",
     "error_lookup": "De DNS-opvraging mislukte. Dat zegt niets over uw domein, probeer het opnieuw.",
-    "verified_hint": "De DNS van dit domein noemt de wallet van de organisator",
-    "lapsed_hint": "Dit domein noemt de wallet van de organisator niet meer",
+    "verified_hint": "De organisator van deze verkiezing beheert {{domain}}, bewezen door een DNS-record dat hun wallet noemt.",
+    "lapsed_hint": "Deze verkiezing is onder {{domain}} aangemaakt, maar de DNS daarvan noemt de wallet van de organisator niet meer.",
     "lapsed": "niet langer geverifieerd",
     "check_yourself": "Controleer het zelf",
     "select_label": "Domein voor deze verkiezing",
     "select_none": "Geen domein tonen",
     "select_hint": "Opgeslagen bij de verkiezing. Uw domeinen later wijzigen verandert niets aan al aangemaakte verkiezingen."
+  },
+  "eligibility": {
+    "world_id": "World ID geverifieerd",
+    "enrolled": "Ingeschreven voor deze verkiezing"
   }
 }

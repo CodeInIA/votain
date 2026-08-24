@@ -126,6 +126,21 @@ contract ElectionV4 is ERC2771Context {
     event ElectionVoided(address indexed by);
     event ResultsPublished(string ipfsCid, uint256[] tally, Outcome outcome, uint256 winnerIndex);
 
+    /**
+     * Name and metadata bounds, in BYTES rather than characters: Solidity cannot
+     * count code points affordably. That makes this a coarse backstop against
+     * the absurd (an empty or one-letter election, a metadata blob that would
+     * cost a fortune to store), not the meaningful rule. The wizard applies the
+     * character-aware minimum, where a three-byte floor is one CJK ideograph and
+     * still passes here by design.
+     */
+    uint256 private constant MIN_NAME_BYTES = 3;
+    uint256 private constant MAX_NAME_BYTES = 200;
+    /// metadataJson holds the description, candidates and organizer name, and
+    /// lives on chain in full. Unbounded, a pasted document would blow past the
+    /// block gas limit after the organizer had filled in the entire wizard.
+    uint256 private constant MAX_METADATA_BYTES = 16000;
+
     error InvalidConfig();
     error NotOrganizer();
     error AlreadyCancelled();
@@ -173,6 +188,9 @@ contract ElectionV4 is ERC2771Context {
             _registry == address(0) ||
             _organizer == address(0) ||
             cfg.numOptions == 0 ||
+            bytes(cfg.name).length < MIN_NAME_BYTES ||
+            bytes(cfg.name).length > MAX_NAME_BYTES ||
+            bytes(cfg.metadataJson).length > MAX_METADATA_BYTES ||
             cfg.enrollStart >= cfg.enrollEnd ||
             cfg.enrollEnd > cfg.voteStart ||
             cfg.voteStart >= cfg.voteEnd

@@ -99,6 +99,35 @@ explains itself and anyone can re-check it. Do not "simplify" it into a tick.
 - **No badge is normal, not suspicious.** Most organizers will never own a domain, and
   making them look deficient would only push them to fake it.
 - A contract cannot do the lookup: DNS is non-deterministic and would break consensus.
+- **Where the badge appears**: election cards, the dashboard list, the voter detail, the
+  public preview and the organizer's own management page. `interactive` (tap reveals the
+  explanation, since touch has no hover) is ON only where the badge stands alone. Inside a
+  clickable card it would be a button nested in a button, and the tap would be stolen from
+  the card; those cards lead to a detail page where it IS interactive.
+- **Discover filters by live status, not by the stored field.** Whether a domain verifies
+  is a DNS answer, so the page resolves it once per DISTINCT organizer/domain pair rather
+  than per card. Only "verified" is offered as a chip: no domain is the normal state for
+  most organizers, and a chip for its absence would read as a category of suspicion.
+
+## Dates in the create wizard
+
+Deadlines are judged by `block.timestamp`, so the wizard reads the CHAIN's clock and uses
+it for both validation and the pickers' lower bound. The browser clock is only a fallback
+for the no-chain seed mode. A local node seeded with time jumps can sit days ahead, and
+when the two disagree by more than five minutes the error names the chain's time rather
+than saying "must be in the future", which reads as plainly wrong to someone looking at
+their own calendar.
+
+Bounds carry the time, not just the day, and the picker clamps to them on BOTH paths:
+editing the hour spinners and selecting a day. Selecting a day used to land on 00:00,
+under a bound of 20:25.
+
+With no separate enrolment window, the earliest selectable vote start sits
+`MIN_VOTE_LEAD_MS` ahead: `enrollStart` is stamped at submission and `enrollEnd` IS the
+vote start, so offering the current instant hands the organizer a deployment the contract
+refuses. Anything under a day still gets a warning rather than an error, because a short
+notice is legitimate for a group already waiting and only the organizer knows which case
+they are in.
 - Navigation (`TopNav`, `BottomTabNav`) is driven ONLY by auth state, never by the page
 
 ## Voter identity (Semaphore)

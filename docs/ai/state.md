@@ -601,6 +601,58 @@ Decisions worth keeping:
   DNS-over-HTTPS resolver for the same reason, which is a privacy property the
   `.well-known` alternative could not have offered.
 
+## Create wizard, seeding and domain badge placement (2026-08-25)
+
+From a session of real use against the local chain. Most of these were found because the
+chain clock and the browser clock disagreed, which turned out to be a lens on several
+separate bugs rather than one.
+
+**Dates were validated against the wrong clock.** `phase()` reads `block.timestamp`, but
+the wizard compared with `Date.now()`. On a node seeded with time jumps, 44 hours apart,
+every election was born ACTIVE with an enrolment window that had closed before it existed,
+so nobody could ever join it. The wizard now reads the chain's clock for validation and
+for the pickers' lower bound, and names that clock in the error when the two disagree by
+more than five minutes: "must be in the future" reads as wrong to someone whose own
+calendar says otherwise.
+
+Related, and separate: the picker's bound only constrained the DAY, so at six in the
+evening it still offered today at nine in the morning. Bounds now carry the time, clamped
+on both paths, since selecting a day set 00:00 without consulting the bound at all.
+
+**The wizard offered a value its own validation rejects.** With no separate enrolment
+window, `enrollStart` is stamped at submission and `enrollEnd` IS the vote start, so
+offering the current instant produces a deployment that reverts with InvalidConfig once
+mined. The minimum now sits five minutes ahead. The under-24h warning also never fired
+where it mattered most: a `> 0` guard hid it at exactly zero enrolment time.
+
+**Seeding drags the chain clock forward and it never comes back.** Finished elections
+must be created live, voted on, then advanced past their voteEnd to publish a tally.
+`SEED_LIVE_ONLY=1` skips them and compresses the one live spec that carries ballots, which
+brought the drift from 44 hours to about 3 minutes. The compression matters: without it
+that single spec's `voteFrom: HOUR` accounted for the whole remaining hour.
+
+**No length bounds anywhere.** `ElectionV4` did not check `cfg.name` at all, and nothing
+capped `metadataJson`, which holds the description and candidates and lives on chain in
+full. Bounds added in bytes on chain, in code points in the wizard. A minimum is a weak
+filter (aa clears it as easily as a) and exists to catch a slip before it is permanent;
+the ceilings are the ones that protect anything.
+
+**Navigation after creating.** The wizard pushed instead of replacing, so the browser's
+back button returned to a filled-in wizard whose deploy had already happened, one click
+from a duplicate election. The management page's back button used history, which does
+nothing at all after a reload.
+
+**Hardcoded English in four places**, rendered untranslated in all thirteen locales:
+the blockchain badge, the blank-vote option generated for every chain election, and both
+eligibility labels. Three live in `chainElections.ts`, a data layer with no hook, so they
+use the i18n singleton. The tradeoff, documented there: a language change does not
+retranslate an already-fetched election until it is refetched, which navigation does.
+
+**Domain badge placement.** Added to the dashboard list, the organizer's management page
+and the public preview, and made tap-revealable where it stands alone. Discover searches
+domains and filters by LIVE verification status, resolved once per distinct
+organizer/domain pair. Only "verified" is offered as a chip, never its negative.
+
 ## Pending user actions (block a live Amoy run, not code)
 - Fund the deployer key with ~1.5 to 2 POL (`npm run estimate:amoy` reports the gap), set
   `PRIVATE_KEY` in `contracts/.env` → `npm run deploy:amoy` → verify on PolygonScan.

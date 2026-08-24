@@ -74,7 +74,8 @@
     "integration_pending": "此功能将在集成阶段连接。",
     "all": "全部",
     "yes": "同意",
-    "no": "反对"
+    "no": "反对",
+    "clear": "清除"
   },
   "nav": {
     "discover": "发现",
@@ -122,7 +123,8 @@
     "results_count": "{{count}} 个选举",
     "results_count_plural": "{{count}} 个选举",
     "empty_title": "未找到选举",
-    "empty_desc": "请尝试不同的搜索或清除筛选条件。"
+    "empty_desc": "请尝试不同的搜索或清除筛选条件。",
+    "verified_domain": "已验证域名"
   },
   "election": {
     "by": "由",
@@ -135,7 +137,7 @@
     "enrollment_closes": "报名截止",
     "voting_closes": "投票截止",
     "select_candidate": "选择候选人",
-    "blank_vote": "空白票",
+    "blank_vote": "空白票 / 弃权",
     "cast_vote": "投票",
     "enroll": "立即报名",
     "enroll_pending": "报名中…",
@@ -159,7 +161,8 @@
     "voting_opens": "投票开放于",
     "cta_upcoming": "报名尚未开放。",
     "cta_pending_vote": "报名已关闭，投票尚未开始。",
-    "starts_in": "开始于"
+    "starts_in": "开始于",
+    "verified_on_chain": "已在区块链上验证"
   },
   "how": {
     "title": "Votain 工作原理",
@@ -330,7 +333,8 @@
     "enrollment_until_vote_start": "报名从部署开始一直开放，到投票开始时关闭。",
     "yes_no_hint": "这里无需配置：选项由您选择的投票规则决定，选民将从中选择一项。",
     "yes_no_preview": "选民将看到的选票",
-    "current_tank": "你的 gas 储备中已有 {{amount}} {{currency}}。"
+    "current_tank": "你的 gas 储备中已有 {{amount}} {{currency}}。",
+    "short_enrollment_warning": "投票将在一天内开始，而报名在投票开始时截止。未能及时报名的人将完全无法投票。可考虑推迟开始时间，或设置单独的报名窗口。"
   },
   "election_mgmt": {
     "actions": "操作",
@@ -447,7 +451,12 @@
     "candidates_unique": "候选人姓名必须唯一",
     "quorum_min": "至少为 1",
     "number_positive": "请输入有效的非负数",
-    "fix_previous_steps": "必填字段缺失或无效。请返回检查前面的步骤。"
+    "fix_previous_steps": "必填字段缺失或无效。请返回检查前面的步骤。",
+    "too_short": "至少 {{min}} 个字符",
+    "too_long": "最多 {{max}} 个字符",
+    "candidate_too_short": "每位候选人至少需要 {{min}} 个字符",
+    "candidate_too_long": "候选人姓名最多 {{max}} 个字符",
+    "must_be_future_chain": "必须晚于链上时钟，当前为 {{time}}"
   },
   "devices": {
     "title": "我的设备",
@@ -527,12 +536,16 @@
     "error_no_record": "尚未找到记录。DNS 变更需要数分钟至数小时才能生效，请稍后重试。",
     "error_mismatch": "存在记录但指向了另一个钱包（{{found}}）。请将其更新为上面的值。",
     "error_lookup": "DNS 查询失败。这并不能说明您的域名有问题，请重试。",
-    "verified_hint": "该域名的 DNS 指向组织者的钱包",
-    "lapsed_hint": "该域名不再指向组织者的钱包",
+    "verified_hint": "本次选举的组织者控制 {{domain}}，由一条指向其钱包的 DNS 记录证明。",
+    "lapsed_hint": "本次选举创建于 {{domain}} 之下，但该域名的 DNS 已不再指向组织者的钱包。",
     "lapsed": "已失效",
     "check_yourself": "自行核验",
     "select_label": "本次选举显示的域名",
     "select_none": "不显示域名",
     "select_hint": "随选举一同保存。之后更改域名不会影响已创建的选举。"
+  },
+  "eligibility": {
+    "world_id": "World ID 已验证",
+    "enrolled": "已报名本次选举"
   }
 }

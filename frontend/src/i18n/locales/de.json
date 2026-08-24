@@ -74,7 +74,8 @@
     "integration_pending": "Diese Funktion wird in der Integrationsphase verbunden.",
     "all": "Alle",
     "yes": "Ja",
-    "no": "Nein"
+    "no": "Nein",
+    "clear": "Löschen"
   },
   "nav": {
     "discover": "Entdecken",
@@ -122,7 +123,8 @@
     "results_count": "{{count}} Wahl",
     "results_count_plural": "{{count}} Wahlen",
     "empty_title": "Keine Wahlen gefunden",
-    "empty_desc": "Versuchen Sie eine andere Suche oder löschen Sie Ihre Filter."
+    "empty_desc": "Versuchen Sie eine andere Suche oder löschen Sie Ihre Filter.",
+    "verified_domain": "Verifizierte Domain"
   },
   "election": {
     "by": "von",
@@ -135,7 +137,7 @@
     "enrollment_closes": "Anmeldung endet",
     "voting_closes": "Abstimmung endet",
     "select_candidate": "Kandidaten wählen",
-    "blank_vote": "Leerstimme",
+    "blank_vote": "Enthaltung / Weiße Stimme",
     "cast_vote": "Abstimmen",
     "enroll": "Jetzt anmelden",
     "enroll_pending": "Anmelden…",
@@ -159,7 +161,8 @@
     "voting_opens": "Abstimmung öffnet",
     "cta_upcoming": "Die Anmeldung ist noch nicht geöffnet.",
     "cta_pending_vote": "Die Anmeldung ist geschlossen. Die Abstimmung hat noch nicht begonnen.",
-    "starts_in": "Beginnt in"
+    "starts_in": "Beginnt in",
+    "verified_on_chain": "Auf der Blockchain verifiziert"
   },
   "how": {
     "title": "Wie Votain funktioniert",
@@ -330,7 +333,8 @@
     "enrollment_until_vote_start": "Die Anmeldung ist von der Bereitstellung bis zum Beginn der Abstimmung geöffnet.",
     "yes_no_hint": "Hier gibt es nichts einzurichten: Die Optionen ergeben sich aus der gewählten Abstimmungsregel. Die Wählenden entscheiden sich für eine davon.",
     "yes_no_preview": "Der Stimmzettel, den die Wählenden sehen",
-    "current_tank": "Ihr Gas-Vorrat enthält bereits {{amount}} {{currency}}."
+    "current_tank": "Ihr Gas-Vorrat enthält bereits {{amount}} {{currency}}.",
+    "short_enrollment_warning": "Die Abstimmung beginnt in weniger als einem Tag, und die Anmeldung schließt mit ihrem Start. Wer sich nicht rechtzeitig anmeldet, kann gar nicht abstimmen. Erwägen Sie einen späteren Start oder ein eigenes Anmeldefenster."
   },
   "election_mgmt": {
     "actions": "Aktionen",
@@ -447,7 +451,12 @@
     "candidates_unique": "Kandidatennamen müssen eindeutig sein",
     "quorum_min": "Muss mindestens 1 sein",
     "number_positive": "Gültige, nicht negative Zahl eingeben",
-    "fix_previous_steps": "Pflichtfelder fehlen oder sind ungültig. Gehen Sie zurück und prüfen Sie die vorherigen Schritte."
+    "fix_previous_steps": "Pflichtfelder fehlen oder sind ungültig. Gehen Sie zurück und prüfen Sie die vorherigen Schritte.",
+    "too_short": "Mindestens {{min}} Zeichen",
+    "too_long": "Höchstens {{max}} Zeichen",
+    "candidate_too_short": "Jeder Kandidat braucht mindestens {{min}} Zeichen",
+    "candidate_too_long": "Kandidatennamen sind auf {{max}} Zeichen begrenzt",
+    "must_be_future_chain": "Muss nach der Uhr der Blockchain liegen, die {{time}} anzeigt"
   },
   "devices": {
     "title": "Meine Geräte",
@@ -527,12 +536,16 @@
     "error_no_record": "Noch kein Eintrag gefunden. DNS-Änderungen brauchen Minuten bis Stunden, versuchen Sie es gleich noch einmal.",
     "error_mismatch": "Ein Eintrag existiert, nennt aber eine andere Wallet ({{found}}). Ersetzen Sie ihn durch den Wert oben.",
     "error_lookup": "Die DNS-Abfrage schlug fehl. Das sagt nichts über Ihre Domain aus, bitte erneut versuchen.",
-    "verified_hint": "Das DNS dieser Domain nennt die Wallet des Organisators",
-    "lapsed_hint": "Diese Domain nennt die Wallet des Organisators nicht mehr",
+    "verified_hint": "Die organisierende Person kontrolliert {{domain}}, nachgewiesen durch einen DNS-Eintrag, der ihre Wallet nennt.",
+    "lapsed_hint": "Diese Wahl wurde unter {{domain}} angelegt, aber deren DNS nennt die Wallet der organisierenden Person nicht mehr.",
     "lapsed": "nicht mehr verifiziert",
     "check_yourself": "Selbst prüfen",
     "select_label": "Domain für diese Wahl",
     "select_none": "Keine Domain anzeigen",
     "select_hint": "Wird mit der Wahl gespeichert. Spätere Änderungen an Ihren Domains ändern bereits erstellte Wahlen nicht."
+  },
+  "eligibility": {
+    "world_id": "World ID verifiziert",
+    "enrolled": "Für diese Wahl angemeldet"
   }
 }

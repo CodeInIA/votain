@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Users, Calendar, Lock, ExternalLink } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Badge } from '../../components/ui/Badge';
+import { DomainBadge } from '../../components/ui/DomainBadge';
 import { Button } from '../../components/ui/Button';
 import { BackButton } from '../../components/ui/BackButton';
 import { Card } from '../../components/ui/Card';
@@ -129,7 +130,17 @@ export default function ElectionPreview() {
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white mb-2">
             {election.title}
           </h1>
-          <p className="text-sm text-on-surface-meta">{t('election.by')} {election.organizer}</p>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <p className="text-sm text-on-surface-meta">{t('election.by')} {election.organizer}</p>
+            {/* Public page: the check link belongs here most of all, since this
+                is where someone deciding whether to trust the election lands. */}
+            <DomainBadge
+              domain={election.organizerDomain}
+              organizerAddress={election.organizerAddress}
+              showCheckLink
+              interactive
+            />
+          </div>
         </div>
 
         {/* Countdown */}

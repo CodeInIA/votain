@@ -81,6 +81,41 @@ describe("ElectionV4, config validation", () => {
       ),
     ).to.be.revertedWithCustomError(Election, "InvalidConfig");
   });
+
+  it("rejects names and metadata outside the byte bounds", async () => {
+    const now = await networkHelpers.time.latest();
+    const Election = await ethers.getContractFactory("ElectionV4", {
+      libraries: { "PoseidonT3": stack.poseidonAddress },
+    });
+
+    const deployWith = (cfg: ReturnType<typeof baseConfig>) =>
+      Election.deploy(
+        FORWARDER,
+        stack.verifier.getAddress(),
+        stack.registry.getAddress(),
+        organizer.address,
+        cfg,
+      );
+
+    await expect(deployWith(baseConfig(now, { name: "" })))
+      .to.be.revertedWithCustomError(Election, "InvalidConfig");
+    await expect(deployWith(baseConfig(now, { name: "ab" })))
+      .to.be.revertedWithCustomError(Election, "InvalidConfig");
+    await expect(deployWith(baseConfig(now, { name: "x".repeat(201) })))
+      .to.be.revertedWithCustomError(Election, "InvalidConfig");
+    // Metadata holds the description and candidates and lives on chain in full,
+    // so an unbounded paste would blow past the block gas limit.
+    await expect(deployWith(baseConfig(now, { metadataJson: "x".repeat(16001) })))
+      .to.be.revertedWithCustomError(Election, "InvalidConfig");
+
+    // The floor is BYTES, so one CJK ideograph (three bytes) passes on chain.
+    // That is deliberate: the contract is a coarse backstop against the absurd
+    // and the wizard applies the character-aware rule.
+    await expect(deployWith(baseConfig(now, { name: "選" })))
+      .to.not.be.revert(ethers);
+    await expect(deployWith(baseConfig(now, { name: "x".repeat(200) })))
+      .to.not.be.revert(ethers);
+  });
 });
 
 describe("ElectionV4, phase timeline", () => {

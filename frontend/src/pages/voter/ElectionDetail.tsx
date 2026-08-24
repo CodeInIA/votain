@@ -179,6 +179,7 @@ export default function ElectionDetail() {
               domain={election.organizerDomain}
               organizerAddress={election.organizerAddress}
               showCheckLink
+              interactive
             />
           </div>
         </div>

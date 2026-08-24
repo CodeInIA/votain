@@ -74,7 +74,8 @@
     "integration_pending": "Questa funzione sarà collegata nella fase di integrazione.",
     "all": "Tutti",
     "yes": "Sì",
-    "no": "No"
+    "no": "No",
+    "clear": "Cancella"
   },
   "nav": {
     "discover": "Scopri",
@@ -122,7 +123,8 @@
     "results_count": "{{count}} elezione",
     "results_count_plural": "{{count}} elezioni",
     "empty_title": "Nessuna elezione trovata",
-    "empty_desc": "Prova una ricerca diversa o cancella i tuoi filtri."
+    "empty_desc": "Prova una ricerca diversa o cancella i tuoi filtri.",
+    "verified_domain": "Dominio verificato"
   },
   "election": {
     "by": "di",
@@ -135,7 +137,7 @@
     "enrollment_closes": "Iscrizioni chiudono",
     "voting_closes": "Votazione chiude",
     "select_candidate": "Seleziona un candidato",
-    "blank_vote": "Voto in bianco",
+    "blank_vote": "Voto bianco / Astensione",
     "cast_vote": "Vota",
     "enroll": "Iscriviti ora",
     "enroll_pending": "Iscrizione…",
@@ -159,7 +161,8 @@
     "voting_opens": "Il voto apre",
     "cta_upcoming": "Le iscrizioni non sono ancora aperte.",
     "cta_pending_vote": "Le iscrizioni sono chiuse. Il voto non è ancora iniziato.",
-    "starts_in": "Inizia tra"
+    "starts_in": "Inizia tra",
+    "verified_on_chain": "Verificato sulla blockchain"
   },
   "how": {
     "title": "Come funziona Votain",
@@ -330,7 +333,8 @@
     "enrollment_until_vote_start": "Le iscrizioni sono aperte dal deploy fino all’inizio del voto.",
     "yes_no_hint": "Qui non c'è nulla da configurare: le opzioni sono stabilite dalla regola di voto scelta. Gli elettori ne sceglieranno una.",
     "yes_no_preview": "La scheda che vedranno gli elettori",
-    "current_tank": "Il tuo serbatoio di gas contiene già {{amount}} {{currency}}."
+    "current_tank": "Il tuo serbatoio di gas contiene già {{amount}} {{currency}}.",
+    "short_enrollment_warning": "La votazione inizia tra meno di un giorno, e le iscrizioni chiudono quando si apre. Chi non si iscrive in tempo non potrà votare affatto. Valuta un inizio più tardi, o una finestra di iscrizione separata."
   },
   "election_mgmt": {
     "actions": "Azioni",
@@ -447,7 +451,12 @@
     "candidates_unique": "I nomi dei candidati devono essere unici",
     "quorum_min": "Deve essere almeno 1",
     "number_positive": "Inserisci un numero valido e non negativo",
-    "fix_previous_steps": "Mancano campi obbligatori o non sono validi. Torna indietro e controlla i passaggi precedenti."
+    "fix_previous_steps": "Mancano campi obbligatori o non sono validi. Torna indietro e controlla i passaggi precedenti.",
+    "too_short": "Almeno {{min}} caratteri",
+    "too_long": "Al massimo {{max}} caratteri",
+    "candidate_too_short": "Ogni candidato richiede almeno {{min}} caratteri",
+    "candidate_too_long": "I nomi dei candidati sono limitati a {{max}} caratteri",
+    "must_be_future_chain": "Deve essere successivo all'orologio della catena, che segna {{time}}"
   },
   "devices": {
     "title": "I miei dispositivi",
@@ -527,12 +536,16 @@
     "error_no_record": "Record non ancora trovato. Le modifiche DNS impiegano da minuti a ore a propagarsi, riprova tra poco.",
     "error_mismatch": "Esiste un record ma indica un altro portafoglio ({{found}}). Sostituiscilo con il valore qui sopra.",
     "error_lookup": "La query DNS è fallita. Questo non dice nulla sul tuo dominio, riprova.",
-    "verified_hint": "Il DNS di questo dominio indica il portafoglio dell'organizzatore",
-    "lapsed_hint": "Questo dominio non indica più il portafoglio dell'organizzatore",
+    "verified_hint": "L'organizzatore di questa elezione controlla {{domain}}, provato da un record DNS che indica il suo portafoglio.",
+    "lapsed_hint": "Questa elezione è stata creata sotto {{domain}}, ma il suo DNS non indica più il portafoglio dell'organizzatore.",
     "lapsed": "non più verificato",
     "check_yourself": "Verificalo tu stesso",
     "select_label": "Dominio da mostrare su questa elezione",
     "select_none": "Non mostrare alcun dominio",
     "select_hint": "Salvato con l'elezione. Cambiare i tuoi domini in seguito non modifica quelle già create."
+  },
+  "eligibility": {
+    "world_id": "World ID verificato",
+    "enrolled": "Iscritto a questa elezione"
   }
 }
