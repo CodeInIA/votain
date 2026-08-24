@@ -398,9 +398,6 @@
     "add_passkey": "添加 Passkey",
     "add_passkey_pending": "正在添加 Passkey…",
     "last_used": "最后使用",
-    "delete_passkey_title": "删除 Passkey？",
-    "delete_passkey_desc": "您将无法再使用此 Passkey 登录。",
-    "delete_passkey_confirm": "删除",
     "sign_out": "退出登录",
     "sign_out_title": "退出登录？",
     "sign_out_desc": "您将被带回登录页面。",
@@ -408,10 +405,13 @@
     "signed_out": "已退出",
     "this_device": "此设备",
     "no_passkey": "此设备未注册通行密钥。",
-    "passkey_removed": "已移除通行密钥",
     "linked_wallet": "已关联钱包",
     "wallet_note": "仅用于签署交易。登录使用通行密钥。",
-    "no_wallet_linked": "尚未关联钱包。"
+    "no_wallet_linked": "尚未关联钱包。",
+    "forget_passkey_title": "忘记此通行密钥？",
+    "forget_passkey_desc": "这会在本设备上退出登录并忘记此处的通行密钥。通行密钥本身仍留在您的验证器中，您可以用它重新登录，选举的计票密钥也仍可由它派生。",
+    "forget_passkey_confirm": "忘记",
+    "passkey_forgotten": "已在本设备上忘记通行密钥"
   },
   "tx": {
     "title_pending": "交易进行中",
@@ -456,7 +456,8 @@
     "added": "设备已添加",
     "error": "无法添加此设备",
     "last_passkey": "请先添加其他设备，再移除此设备",
-    "empty": "尚未注册任何设备"
+    "empty": "尚未注册任何设备",
+    "already_registered": "本设备已注册"
   },
   "terms": {
     "title": "使用条款",

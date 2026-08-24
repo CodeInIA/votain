@@ -37,13 +37,21 @@ export default function OrganizerProfile() {
     setEditingName(false);
   };
 
-  /** Removing the passkey ends the session — it *is* the login credential. */
-  const removePasskey = () => {
+  /**
+   * Forgets the passkey ON THIS DEVICE and ends the session, since the passkey
+   * is the login credential. It does NOT delete anything from the authenticator,
+   * and must not: the Paillier tally key of every election created here is
+   * re-derived from this passkey rather than stored, so destroying it would make
+   * those results impossible to decrypt. `derivePrfSecret` asks the
+   * authenticator for an existing credential before minting a new one, which is
+   * what makes coming back from here safe.
+   */
+  const forgetPasskey = () => {
     clearPrfCredential();
     setPasskey(null);
     setDeleteModal(false);
     organizerSignOut();
-    toast({ title: t('profile.passkey_removed'), variant: 'info' });
+    toast({ title: t('profile.passkey_forgotten'), variant: 'info' });
     setTimeout(() => navigate('/organizer/auth', { replace: true }), 600);
   };
 
@@ -117,7 +125,7 @@ export default function OrganizerProfile() {
                 type="button"
                 onClick={() => setDeleteModal(true)}
                 className="text-error hover:text-error/70 transition-colors p-1 cursor-pointer"
-                aria-label={t('profile.delete_passkey_title')}
+                aria-label={t('profile.forget_passkey_title')}
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -179,21 +187,21 @@ export default function OrganizerProfile() {
           </Button>
         </Card>
 
-        {/* Delete passkey modal */}
+        {/* Forget passkey modal */}
         <Modal
           open={deleteModal}
           onClose={() => setDeleteModal(false)}
-          title={t('profile.delete_passkey_title')}
-          description={t('profile.delete_passkey_desc')}
+          title={t('profile.forget_passkey_title')}
+          description={t('profile.forget_passkey_desc')}
         >
           <div className="flex gap-3 mt-2">
             <Button variant="ghost" className="flex-1" onClick={() => setDeleteModal(false)}>{t('common.cancel')}</Button>
             <Button
               variant="default"
               className="flex-1 border-error/30 text-error hover:bg-error/10"
-              onClick={removePasskey}
+              onClick={forgetPasskey}
             >
-              {t('profile.delete_passkey_confirm')}
+              {t('profile.forget_passkey_confirm')}
             </Button>
           </div>
         </Modal>

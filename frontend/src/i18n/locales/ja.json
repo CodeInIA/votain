@@ -398,9 +398,6 @@
     "add_passkey": "Passskeyを追加",
     "add_passkey_pending": "Passkey追加中…",
     "last_used": "最終使用",
-    "delete_passkey_title": "Passkeyを削除？",
-    "delete_passkey_desc": "このPasskeyでログインできなくなります。",
-    "delete_passkey_confirm": "削除",
     "sign_out": "サインアウト",
     "sign_out_title": "サインアウトしますか？",
     "sign_out_desc": "ログイン画面に戻ります。",
@@ -408,10 +405,13 @@
     "signed_out": "サインアウトしました",
     "this_device": "このデバイス",
     "no_passkey": "このデバイスに登録されたパスキーはありません。",
-    "passkey_removed": "パスキーを削除しました",
     "linked_wallet": "連携ウォレット",
     "wallet_note": "取引の署名にのみ使用します。ログインはパスキーで行います。",
-    "no_wallet_linked": "まだウォレットが連携されていません。"
+    "no_wallet_linked": "まだウォレットが連携されていません。",
+    "forget_passkey_title": "このパスキーを忘れますか？",
+    "forget_passkey_desc": "この端末からサインアウトし、ここでのパスキーを忘れます。パスキー自体は認証器に残るため、再度サインインでき、主催した選挙の集計鍵もそこから導出できます。",
+    "forget_passkey_confirm": "忘れる",
+    "passkey_forgotten": "この端末でパスキーを忘れました"
   },
   "tx": {
     "title_pending": "トランザクション処理中",
@@ -456,7 +456,8 @@
     "added": "デバイスを追加しました",
     "error": "このデバイスを追加できませんでした",
     "last_passkey": "このデバイスを削除する前に別のデバイスを追加してください",
-    "empty": "登録済みのデバイスはありません"
+    "empty": "登録済みのデバイスはありません",
+    "already_registered": "この端末はすでに登録されています"
   },
   "terms": {
     "title": "利用規約",

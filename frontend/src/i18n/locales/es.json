@@ -398,9 +398,6 @@
     "add_passkey": "Añadir passkey",
     "add_passkey_pending": "Añadiendo passkey…",
     "last_used": "Último uso",
-    "delete_passkey_title": "¿Eliminar passkey?",
-    "delete_passkey_desc": "Ya no podrás iniciar sesión con esta passkey.",
-    "delete_passkey_confirm": "Eliminar",
     "sign_out": "Cerrar sesión",
     "sign_out_title": "¿Cerrar sesión?",
     "sign_out_desc": "Volverás a la pantalla de inicio de sesión.",
@@ -408,10 +405,13 @@
     "signed_out": "Sesión cerrada",
     "this_device": "Este dispositivo",
     "no_passkey": "No hay ninguna passkey registrada en este dispositivo.",
-    "passkey_removed": "Passkey eliminada",
     "linked_wallet": "Wallet vinculada",
     "wallet_note": "Solo se usa para firmar transacciones. Inicias sesión con tu passkey.",
-    "no_wallet_linked": "Aún no hay wallet vinculada."
+    "no_wallet_linked": "Aún no hay wallet vinculada.",
+    "forget_passkey_title": "¿Olvidar esta passkey?",
+    "forget_passkey_desc": "Cierra la sesión en este dispositivo y olvida aquí la passkey. La passkey sigue en tu autenticador, así que puedes volver a entrar con ella y la clave de recuento de tus elecciones se sigue pudiendo derivar de ella.",
+    "forget_passkey_confirm": "Olvidar",
+    "passkey_forgotten": "Passkey olvidada en este dispositivo"
   },
   "tx": {
     "title_pending": "Transacción en progreso",
@@ -456,7 +456,8 @@
     "added": "Dispositivo añadido",
     "error": "No se pudo añadir este dispositivo",
     "last_passkey": "Añade otro dispositivo antes de eliminar este",
-    "empty": "Aún no hay dispositivos registrados"
+    "empty": "Aún no hay dispositivos registrados",
+    "already_registered": "Este dispositivo ya está registrado"
   },
   "terms": {
     "title": "Condiciones de uso",

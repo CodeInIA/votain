@@ -398,9 +398,6 @@
     "add_passkey": "Passkey hinzufügen",
     "add_passkey_pending": "Passkey wird hinzugefügt…",
     "last_used": "Zuletzt verwendet",
-    "delete_passkey_title": "Passkey entfernen?",
-    "delete_passkey_desc": "Sie können sich nicht mehr mit diesem Passkey anmelden.",
-    "delete_passkey_confirm": "Entfernen",
     "sign_out": "Abmelden",
     "sign_out_title": "Abmelden?",
     "sign_out_desc": "Sie werden zum Anmeldebildschirm zurückgeleitet.",
@@ -408,10 +405,13 @@
     "signed_out": "Abgemeldet",
     "this_device": "Dieses Gerät",
     "no_passkey": "Auf diesem Gerät ist kein Passkey registriert.",
-    "passkey_removed": "Passkey entfernt",
     "linked_wallet": "Verknüpfte Wallet",
     "wallet_note": "Nur zum Signieren von Transaktionen. Die Anmeldung erfolgt per Passkey.",
-    "no_wallet_linked": "Noch keine Wallet verknüpft."
+    "no_wallet_linked": "Noch keine Wallet verknüpft.",
+    "forget_passkey_title": "Diesen Passkey vergessen?",
+    "forget_passkey_desc": "Sie werden auf diesem Gerät abgemeldet und der Passkey wird hier vergessen. Der Passkey selbst bleibt in Ihrem Authentifikator: Sie können sich damit wieder anmelden, und der Auszählungsschlüssel Ihrer Wahlen lässt sich weiterhin daraus ableiten.",
+    "forget_passkey_confirm": "Vergessen",
+    "passkey_forgotten": "Passkey auf diesem Gerät vergessen"
   },
   "tx": {
     "title_pending": "Transaktion läuft",
@@ -456,7 +456,8 @@
     "added": "Gerät hinzugefügt",
     "error": "Gerät konnte nicht hinzugefügt werden",
     "last_passkey": "Fügen Sie ein weiteres Gerät hinzu, bevor Sie dieses entfernen",
-    "empty": "Noch keine Geräte registriert"
+    "empty": "Noch keine Geräte registriert",
+    "already_registered": "Dieses Gerät ist bereits registriert"
   },
   "terms": {
     "title": "Nutzungsbedingungen",

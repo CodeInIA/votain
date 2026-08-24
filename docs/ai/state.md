@@ -475,6 +475,47 @@ Known coupling: voter and organizer share `votain_prf_credential_id`, and the or
 session is invalidated when no credential is cached, so a voter sign-out logs the
 organizer out too on the next reload.
 
+## Passkey handling after real use on two browsers (2026-08-24)
+
+Three problems, all from the same blind spot: the code treated this browser's cached
+credential id as if it were the authenticator's inventory. One machine has ONE
+authenticator and one localStorage PER BROWSER, so the two disagree constantly.
+
+**Adding a device from a second browser created a duplicate.** `enrollThisDevice` went
+straight to creating a passkey whenever nothing was cached here, so a second browser on
+the same machine minted a second credential in the same Windows Hello. Best case a
+duplicate vault entry for one authenticator, worst case Windows Hello overwriting the
+first and quietly breaking the entry the voter already had. What the voter saw was a raw
+`InvalidStateError` under "could not add this device".
+
+Creation now passes `excludeCredentials` with the vault's ids, which is the mechanism
+WebAuthn has for exactly this, and the refusal becomes `PasskeyAlreadyRegisteredError`.
+It is excluded from the retry ladder: retrying only prompts again and fails again.
+
+**Saying "already registered" was not enough.** The refusal carries no credential id, so
+nothing could be cached and the profile kept offering to add the device. `enrollThisDevice`
+now asserts with the known ids after a refusal, which identifies the credential and caches
+it through `assertPrf`, and returns `{ credentialId, alreadyRegistered }` instead of
+signalling by exception. The list then marks the entry "this device" and the button goes.
+
+**The organizer could destroy their own tally keys.** The profile offered "remove passkey",
+which called `clearPrfCredential`: that deletes nothing from the authenticator, it only
+forgets the local id. But `derivePrfSecret` treated a missing id as a missing passkey and
+minted a new credential, and since `organizer.ts` stores the Paillier private key only when
+it is NOT derivable, every election created on that device became undecryptable. The guard
+at `tally.ts:115` compares the derived public key against the election's on-chain one, so
+it failed loudly rather than publishing wrong numbers, but it failed for good.
+
+`derivePrfSecret` now tries `assertPrf([])` before creating anything, so an existing
+passkey answers and the key comes back. This also covers cleared site data and moving
+browser. The button is renamed to forget (`forget_passkey_*`, thirteen locales) and its
+text says what it does: it signs you out here, the passkey stays in the authenticator.
+
+Voter and organizer stay asymmetric on purpose. The voter has a server-side list of
+passkeys over one shared identity, so removing one is meaningful and the last is
+protected. The organizer has no vault, only a local credential id, so forgetting it is
+the only operation that exists.
+
 ## Pending user actions (block a live Amoy run, not code)
 - Fund the deployer key with ~1.5 to 2 POL (`npm run estimate:amoy` reports the gap), set
   `PRIVATE_KEY` in `contracts/.env` → `npm run deploy:amoy` → verify on PolygonScan.

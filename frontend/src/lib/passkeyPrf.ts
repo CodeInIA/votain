@@ -69,6 +69,18 @@ export class NoAuthenticatorError extends Error {
 }
 
 /**
+ * Thrown when the authenticator refuses to create a passkey because it already
+ * holds one that is registered for this voter. Not a failure: the device is
+ * already able to vote, and the caller should say so rather than report an error.
+ */
+export class PasskeyAlreadyRegisteredError extends Error {
+  constructor() {
+    super("This device already has a passkey registered for your identity.");
+    this.name = "PasskeyAlreadyRegisteredError";
+  }
+}
+
+/**
  * Whether this device can act as an authenticator itself.
  *
  * False does NOT mean passkeys are impossible here: a security key or a phone
@@ -118,7 +130,10 @@ function describe(e: unknown): string {
  *    would mint a credential with no hmac-secret, permanently PRF-incapable,
  *    which is far worse than one extra prompt.
  */
-async function registerCredential(salt: Uint8Array = IDENTITY_SALT): Promise<{
+async function registerCredential(
+  salt: Uint8Array = IDENTITY_SALT,
+  excludeCredentialIds: string[] = [],
+): Promise<{
   registered: boolean;
   prfEnabled: boolean;
   credentialId?: string;
@@ -143,6 +158,14 @@ async function registerCredential(salt: Uint8Array = IDENTITY_SALT): Promise<{
       residentKey: "preferred",
       userVerification: "preferred",
     },
+    // Let the authenticator itself refuse a duplicate. It knows which
+    // credentials it holds; this browser only knows what it happens to have
+    // cached, which is nothing at all on a device the voter has used from
+    // another browser.
+    excludeCredentials: excludeCredentialIds.map(id => ({
+      id: b64urlToBuf(id),
+      type: "public-key" as const,
+    })),
     timeout: 60_000,
   };
 
@@ -163,6 +186,11 @@ async function registerCredential(salt: Uint8Array = IDENTITY_SALT): Promise<{
     } catch (e) {
       if (isUserCancellation(e)) {
         throw new Error("Passkey creation was cancelled", { cause: e });
+      }
+      // The exclusion list matched: this authenticator already holds one of the
+      // voter's passkeys. Retrying only prompts again and fails again.
+      if (e instanceof DOMException && e.name === "InvalidStateError") {
+        throw new PasskeyAlreadyRegisteredError();
       }
       if (i === attempts.length - 1) {
         throw new Error(`Could not create a passkey, ${describe(e)}`, { cause: e });
@@ -265,9 +293,13 @@ export async function assertPrf(
  * localStorage fallback.
  */
 export async function enrollPrfPasskey(
+  excludeCredentialIds: string[] = [],
   salt: Uint8Array = IDENTITY_SALT,
 ): Promise<PrfAssertion | null> {
-  const { registered, prfEnabled, credentialId, prfSecret } = await registerCredential(salt);
+  const { registered, prfEnabled, credentialId, prfSecret } = await registerCredential(
+    salt,
+    excludeCredentialIds,
+  );
   if (!registered || !credentialId) return null;
   // The authenticator already evaluated the PRF while creating the credential,
   // so the voter is spared a second prompt. Same (credential, salt) pair, so
@@ -319,6 +351,15 @@ export async function derivePrfSecret(salt: Uint8Array = IDENTITY_SALT): Promise
   try {
     let credId = localStorage.getItem(CRED_ID_KEY);
     if (!credId) {
+      // A missing id does NOT mean a missing passkey: it is only this browser's
+      // cache, and the authenticator may still hold the credential (the
+      // organizer cleared it, moved browser, or wiped site data). Ask for it
+      // before minting a new one, because for the organizer a new credential is
+      // a new PRF, which is a new Paillier key, which makes every election they
+      // created on this device impossible to decrypt.
+      const recovered = await assertPrf([], salt);
+      if (recovered) return recovered.secret;
+
       // Only `registered` is load-bearing: see enrollPrfPasskey on why
       // `prf.enabled` from a creation cannot be trusted to mean anything.
       const { registered, prfSecret } = await registerCredential(salt);

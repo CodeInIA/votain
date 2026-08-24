@@ -100,6 +100,18 @@ identity per device.
   voter is spared a second ceremony. If a creation fails, retry `prf.eval` then `prf` then
   no extensions IN THAT ORDER: a credential minted without the extension has no
   hmac-secret and can never do PRF.
+- **Never mint a passkey without `excludeCredentials`.** One machine has one authenticator
+  but one localStorage per browser, so a second browser sees no cached credential id and
+  would create a duplicate passkey for an authenticator that already holds one. The
+  authenticator knows what it holds: give it the vault's ids and it refuses with
+  `InvalidStateError`, surfaced as `PasskeyAlreadyRegisteredError`. That refusal does not
+  say WHICH credential, so `enrollThisDevice` then asserts to identify and cache it,
+  which is what makes the profile show the device as registered.
+- **A missing cached credential id never means a missing passkey.** `derivePrfSecret`
+  asks the authenticator for an existing credential (`assertPrf([])`) before creating one.
+  For the organizer this is load-bearing: their Paillier tally key is re-derived from the
+  passkey rather than stored, so a new credential would be a new key and every election
+  they created would stop decrypting.
 - `votain_identity_mode` records which mode is active.
 - **Signing out clears the identity** (`clearIdentity` from `voterSignOut`). Leaving it
   behind let the next person on the browser inherit the previous voter's identity, since

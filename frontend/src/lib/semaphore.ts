@@ -25,6 +25,8 @@ import {
   enrollPrfPasskey,
   hasPrfCredential,
   clearPrfCredential,
+  getCachedCredentialId,
+  PasskeyAlreadyRegisteredError,
   type PrfAssertion,
 } from "./passkeyPrf";
 import {
@@ -227,14 +229,46 @@ export async function recoverWithNewPasskey(
  * the device can vote on its own afterwards without reaching for another one.
  * Requires the identity to be unlocked already.
  */
-export async function enrollThisDevice(): Promise<{ credentialId: string }> {
+export async function enrollThisDevice(): Promise<{
+  credentialId: string;
+  /** True when the authenticator already held a registered passkey. */
+  alreadyRegistered: boolean;
+}> {
   const identity = await getOrCreateIdentity();
-  const assertion = await enrollPrfPasskey();
-  if (!assertion) {
-    throw new Error("This device cannot create a PRF-capable passkey");
+
+  // Same machine, different browser is the case this handles. The authenticator
+  // is shared (one Windows Hello, one Touch ID) but localStorage is not, so this
+  // browser can have no cached credential id while the device is already
+  // registered. Minting a second passkey there would add a duplicate vault entry
+  // for a single authenticator, and Windows Hello can overwrite the first while
+  // doing it, quietly breaking the entry the voter already had.
+  const vault = await fetchVault();
+  const known = vault?.entries.map(e => e.credentialId) ?? [];
+  const cached = getCachedCredentialId();
+  if (cached && known.includes(cached)) {
+    return { credentialId: cached, alreadyRegistered: true };
   }
-  await addPasskeyToVault(identity, assertion);
-  return { credentialId: assertion.credentialId };
+
+  try {
+    // Nothing cached to compare against, so hand the ids to the authenticator:
+    // it knows what it holds and refuses with InvalidStateError.
+    const assertion = await enrollPrfPasskey(known);
+    if (!assertion) {
+      throw new Error("This device cannot create a PRF-capable passkey");
+    }
+    await addPasskeyToVault(identity, assertion);
+    return { credentialId: assertion.credentialId, alreadyRegistered: false };
+  } catch (error: unknown) {
+    if (!(error instanceof PasskeyAlreadyRegisteredError)) throw error;
+
+    // The refusal proves a registered passkey is here, but not WHICH one, and
+    // this browser has no cached id to show. Assert it: that both identifies the
+    // credential and caches its id, so the profile marks the device as this one
+    // instead of going on offering to add it.
+    const existing = await assertPrf(known);
+    if (!existing) throw error;
+    return { credentialId: existing.credentialId, alreadyRegistered: true };
+  }
 }
 
 /**

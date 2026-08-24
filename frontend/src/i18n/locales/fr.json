@@ -398,9 +398,6 @@
     "add_passkey": "Ajouter une passkey",
     "add_passkey_pending": "Ajout de la passkey…",
     "last_used": "Dernière utilisation",
-    "delete_passkey_title": "Supprimer la passkey ?",
-    "delete_passkey_desc": "Vous ne pourrez plus vous connecter avec cette passkey.",
-    "delete_passkey_confirm": "Supprimer",
     "sign_out": "Se déconnecter",
     "sign_out_title": "Se déconnecter ?",
     "sign_out_desc": "Vous serez renvoyé à l'écran de connexion.",
@@ -408,10 +405,13 @@
     "signed_out": "Déconnecté",
     "this_device": "Cet appareil",
     "no_passkey": "Aucune passkey enregistrée sur cet appareil.",
-    "passkey_removed": "Passkey supprimée",
     "linked_wallet": "Portefeuille lié",
     "wallet_note": "Utilisé uniquement pour signer les transactions. Vous vous connectez avec votre passkey.",
-    "no_wallet_linked": "Aucun portefeuille lié."
+    "no_wallet_linked": "Aucun portefeuille lié.",
+    "forget_passkey_title": "Oublier cette clé d'accès ?",
+    "forget_passkey_desc": "Vous serez déconnecté sur cet appareil, qui oubliera la clé d'accès. Celle-ci reste dans votre authentificateur : vous pourrez vous reconnecter avec elle et la clé de dépouillement de vos élections pourra toujours en être dérivée.",
+    "forget_passkey_confirm": "Oublier",
+    "passkey_forgotten": "Clé d'accès oubliée sur cet appareil"
   },
   "tx": {
     "title_pending": "Transaction en cours",
@@ -456,7 +456,8 @@
     "added": "Appareil ajouté",
     "error": "Impossible d’ajouter cet appareil",
     "last_passkey": "Ajoutez un autre appareil avant de supprimer celui-ci",
-    "empty": "Aucun appareil enregistré"
+    "empty": "Aucun appareil enregistré",
+    "already_registered": "Cet appareil est déjà enregistré"
   },
   "terms": {
     "title": "Conditions d'utilisation",

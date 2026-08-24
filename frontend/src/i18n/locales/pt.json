@@ -398,9 +398,6 @@
     "add_passkey": "Adicionar passkey",
     "add_passkey_pending": "Adicionando passkey…",
     "last_used": "Último uso",
-    "delete_passkey_title": "Remover passkey?",
-    "delete_passkey_desc": "Você não poderá mais fazer login com esta passkey.",
-    "delete_passkey_confirm": "Remover",
     "sign_out": "Sair",
     "sign_out_title": "Sair?",
     "sign_out_desc": "Você será levado de volta à tela de login.",
@@ -408,10 +405,13 @@
     "signed_out": "Saiu",
     "this_device": "Este dispositivo",
     "no_passkey": "Nenhuma passkey registada neste dispositivo.",
-    "passkey_removed": "Passkey removida",
     "linked_wallet": "Carteira associada",
     "wallet_note": "Usada apenas para assinar transações. Inicia sessão com a sua passkey.",
-    "no_wallet_linked": "Nenhuma carteira associada."
+    "no_wallet_linked": "Nenhuma carteira associada.",
+    "forget_passkey_title": "Esquecer esta passkey?",
+    "forget_passkey_desc": "Termina a sessão neste dispositivo e esquece aqui a passkey. A passkey continua no seu autenticador, por isso pode voltar a entrar com ela e a chave de contagem das suas eleições continua a poder ser derivada dela.",
+    "forget_passkey_confirm": "Esquecer",
+    "passkey_forgotten": "Passkey esquecida neste dispositivo"
   },
   "tx": {
     "title_pending": "Transação em andamento",
@@ -456,7 +456,8 @@
     "added": "Dispositivo adicionado",
     "error": "Não foi possível adicionar este dispositivo",
     "last_passkey": "Adicione outro dispositivo antes de remover este",
-    "empty": "Ainda não há dispositivos registados"
+    "empty": "Ainda não há dispositivos registados",
+    "already_registered": "Este dispositivo já está registado"
   },
   "terms": {
     "title": "Condições de utilização",

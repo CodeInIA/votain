@@ -14,7 +14,7 @@ import { Spinner } from '../ui/Spinner';
 import { useToast } from '../ui/useToast';
 import { fetchVault, removeVaultEntry, type VaultEntry } from '../../lib/identityVault';
 import { enrollThisDevice } from '../../lib/semaphore';
-import { getCachedCredentialId } from '../../lib/passkeyPrf';
+import { getCachedCredentialId, PasskeyAlreadyRegisteredError } from '../../lib/passkeyPrf';
 
 export function MyDevices() {
   const { t } = useTranslation();
@@ -55,10 +55,24 @@ export function MyDevices() {
   const handleAdd = async (): Promise<void> => {
     setBusy(true);
     try {
-      await enrollThisDevice();
-      toast({ title: t('devices.added'), variant: 'success' });
+      // Already registered is not a failure: the authenticator holds one of the
+      // voter's passkeys, which happens on the same machine in a second browser.
+      // enrollThisDevice caches its id, so the reload below marks this entry as
+      // "this device" and drops the add button.
+      const { alreadyRegistered } = await enrollThisDevice();
+      toast({
+        title: alreadyRegistered ? t('devices.already_registered') : t('devices.added'),
+        variant: alreadyRegistered ? 'info' : 'success',
+      });
       reload();
     } catch (error: unknown) {
+      // Same situation, but the voter dismissed the prompt that would have
+      // identified the credential, so there is no id to cache.
+      if (error instanceof PasskeyAlreadyRegisteredError) {
+        toast({ title: t('devices.already_registered'), variant: 'info' });
+        reload();
+        return;
+      }
       toast({
         title: t('devices.error'),
         description: error instanceof Error ? error.message : undefined,

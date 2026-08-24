@@ -398,9 +398,6 @@
     "add_passkey": "Passkey toevoegen",
     "add_passkey_pending": "Passkey toevoegen…",
     "last_used": "Laatste gebruik",
-    "delete_passkey_title": "Passkey verwijderen?",
-    "delete_passkey_desc": "Je kunt niet meer inloggen met deze passkey.",
-    "delete_passkey_confirm": "Verwijderen",
     "sign_out": "Uitloggen",
     "sign_out_title": "Uitloggen?",
     "sign_out_desc": "Je wordt teruggebracht naar het inlogscherm.",
@@ -408,10 +405,13 @@
     "signed_out": "Uitgelogd",
     "this_device": "Dit apparaat",
     "no_passkey": "Geen passkey geregistreerd op dit apparaat.",
-    "passkey_removed": "Passkey verwijderd",
     "linked_wallet": "Gekoppelde wallet",
     "wallet_note": "Alleen gebruikt om transacties te ondertekenen. Je logt in met je passkey.",
-    "no_wallet_linked": "Nog geen wallet gekoppeld."
+    "no_wallet_linked": "Nog geen wallet gekoppeld.",
+    "forget_passkey_title": "Deze passkey vergeten?",
+    "forget_passkey_desc": "Hiermee wordt u op dit apparaat afgemeld en wordt de passkey hier vergeten. De passkey zelf blijft in uw authenticator, dus u kunt er weer mee inloggen en de telsleutel van uw verkiezingen kan er nog steeds uit worden afgeleid.",
+    "forget_passkey_confirm": "Vergeten",
+    "passkey_forgotten": "Passkey vergeten op dit apparaat"
   },
   "tx": {
     "title_pending": "Transactie bezig",
@@ -456,7 +456,8 @@
     "added": "Apparaat toegevoegd",
     "error": "Kon dit apparaat niet toevoegen",
     "last_passkey": "Voeg een ander apparaat toe voordat je dit verwijdert",
-    "empty": "Nog geen apparaten geregistreerd"
+    "empty": "Nog geen apparaten geregistreerd",
+    "already_registered": "Dit apparaat is al geregistreerd"
   },
   "terms": {
     "title": "Gebruiksvoorwaarden",

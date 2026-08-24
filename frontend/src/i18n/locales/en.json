@@ -398,9 +398,6 @@
     "add_passkey": "Add passkey",
     "add_passkey_pending": "Adding passkey…",
     "last_used": "Last used",
-    "delete_passkey_title": "Remove passkey?",
-    "delete_passkey_desc": "You will no longer be able to sign in with this passkey.",
-    "delete_passkey_confirm": "Remove",
     "sign_out": "Sign out",
     "sign_out_title": "Sign out?",
     "sign_out_desc": "You will be returned to the login screen.",
@@ -408,10 +405,13 @@
     "signed_out": "Signed out",
     "this_device": "This device",
     "no_passkey": "No passkey registered on this device.",
-    "passkey_removed": "Passkey removed",
     "linked_wallet": "Linked wallet",
     "wallet_note": "Only used to sign transactions. You sign in with your passkey.",
-    "no_wallet_linked": "No wallet linked yet."
+    "no_wallet_linked": "No wallet linked yet.",
+    "forget_passkey_title": "Forget this passkey?",
+    "forget_passkey_desc": "This signs you out on this device and forgets the passkey here. The passkey itself stays in your authenticator, so you can sign back in with it and your elections' tally key can still be derived from it.",
+    "forget_passkey_confirm": "Forget",
+    "passkey_forgotten": "Passkey forgotten on this device"
   },
   "tx": {
     "title_pending": "Transaction in progress",
@@ -456,7 +456,8 @@
     "added": "Device added",
     "error": "Could not add this device",
     "last_passkey": "Add another device before removing this one",
-    "empty": "No devices registered yet"
+    "empty": "No devices registered yet",
+    "already_registered": "This device is already registered"
   },
   "terms": {
     "title": "Terms of use",

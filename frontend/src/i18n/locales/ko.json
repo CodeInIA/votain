@@ -398,9 +398,6 @@
     "add_passkey": "Passkey 추가",
     "add_passkey_pending": "Passkey 추가 중…",
     "last_used": "마지막 사용",
-    "delete_passkey_title": "Passkey를 삭제하시겠습니까?",
-    "delete_passkey_desc": "이 Passkey로 더 이상 로그인할 수 없습니다.",
-    "delete_passkey_confirm": "삭제",
     "sign_out": "로그아웃",
     "sign_out_title": "로그아웃하시겠습니까?",
     "sign_out_desc": "로그인 화면으로 돌아갑니다.",
@@ -408,10 +405,13 @@
     "signed_out": "로그아웃됨",
     "this_device": "이 기기",
     "no_passkey": "이 기기에 등록된 패스키가 없습니다.",
-    "passkey_removed": "패스키가 삭제되었습니다",
     "linked_wallet": "연결된 지갑",
     "wallet_note": "거래 서명에만 사용됩니다. 로그인은 패스키로 합니다.",
-    "no_wallet_linked": "연결된 지갑이 없습니다."
+    "no_wallet_linked": "연결된 지갑이 없습니다.",
+    "forget_passkey_title": "이 패스키를 잊을까요?",
+    "forget_passkey_desc": "이 기기에서 로그아웃하고 여기에 저장된 패스키를 잊습니다. 패스키 자체는 인증기에 남아 있으므로 다시 로그인할 수 있고, 주최한 선거의 집계 키도 그것에서 다시 유도할 수 있습니다.",
+    "forget_passkey_confirm": "잊기",
+    "passkey_forgotten": "이 기기에서 패스키를 잊었습니다"
   },
   "tx": {
     "title_pending": "트랜잭션 진행 중",
@@ -456,7 +456,8 @@
     "added": "기기가 추가되었습니다",
     "error": "이 기기를 추가할 수 없습니다",
     "last_passkey": "이 기기를 제거하기 전에 다른 기기를 추가하세요",
-    "empty": "등록된 기기가 없습니다"
+    "empty": "등록된 기기가 없습니다",
+    "already_registered": "이 기기는 이미 등록되어 있습니다"
   },
   "terms": {
     "title": "이용 약관",
