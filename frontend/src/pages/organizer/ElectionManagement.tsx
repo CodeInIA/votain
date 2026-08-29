@@ -7,6 +7,8 @@ import { Badge } from '../../components/ui/Badge';
 import { EligibilityChips } from '../../components/ui/EligibilityChips';
 import { Button } from '../../components/ui/Button';
 import { BackButton } from '../../components/ui/BackButton';
+import { ViewAsSwitch } from '../../components/ui/ViewAsSwitch';
+import { voterViewHref } from '../../lib/electionViews';
 import { DomainBadge } from '../../components/ui/DomainBadge';
 import { Card } from '../../components/ui/Card';
 import { Modal } from '../../components/ui/Modal';
@@ -20,6 +22,7 @@ import { usePolicyRequirements } from '../../hooks/usePolicyRequirements';
 import { EligibilityRow } from '../../components/ui/EligibilityRow';
 import { hasPublishedResults } from '../../data/seed';
 import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
+import { useAuth } from '../../contexts/AuthContext';
 import { cancelElection, closeVotingEarly, closeEnrollmentEarly, markVoided, publishResults } from '../../lib/organizer';
 import { computeTally, hasTallyKey, resolveTallyKey, importTallyKey, MissingTallyKeyError, type TallyResult } from '../../lib/tally';
 import { nextBoundary, PULSE_PHASES } from '../../lib/phase';
@@ -30,6 +33,8 @@ export default function ElectionManagement() {
   const { t } = useTranslation();
   const { toast } = useToast();
   const wallet = useOrganizerWallet();
+  // Only to pick which voter view Discover would have led to.
+  const { voterLoggedIn } = useAuth();
   const { election, loading, live, refresh } = useElection(id);
   // Above the early returns: hooks must run in the same order on every render.
   const policyRequirements = usePolicyRequirements(election?.eligibilityPolicy);
@@ -194,7 +199,12 @@ export default function ElectionManagement() {
         {/* Explicit target rather than history back: this page is reached from
             the dashboard, from the members list and from a direct link, and
             after a reload there is no history to step into at all. */}
-        <BackButton className="mb-5" onClick={() => navigate('/organizer/dashboard')} />
+        <div className="flex items-center justify-between gap-3 mb-5">
+          <BackButton onClick={() => navigate('/organizer/dashboard')} />
+          {/* What a voter sees is the thing an organizer most needs to check
+              before an election opens, and there was no way to get to it. */}
+          <ViewAsSwitch to="voter" href={voterViewHref(election.id, voterLoggedIn)} />
+        </div>
 
         {/* Header */}
         <div className="mb-5">
@@ -265,16 +275,25 @@ export default function ElectionManagement() {
             gated on, and the only place they can check it without reading the
             contract. It also explains a low turnout that would otherwise look
             like a problem. */}
-        {policyRequirements.length > 0 && (
-          <Card className="p-5 mb-5">
-            <h2 className="text-sm font-semibold text-on-surface mb-3">
-              {t('election_mgmt.entry_requirements')}
-            </h2>
-            {policyRequirements.map(requirement => (
-              <EligibilityRow key={requirement} label={requirement} status="unknown" />
-            ))}
-          </Card>
-        )}
+        {/* Always rendered, because there is always at least one requirement:
+            every election demands a World ID, and which KIND it demands is a
+            decision the organizer made and should be able to check. Previously
+            this card only appeared for attribute policies, so an organizer had
+            no way to see the platform requirement at all. */}
+        <Card className="p-5 mb-5">
+          <h2 className="text-sm font-semibold text-on-surface mb-3">
+            {t('election_mgmt.entry_requirements')}
+          </h2>
+          <EligibilityRow
+            label={election.requiresOrb
+              ? t('eligibility.world_id_orb')
+              : t('eligibility.world_id_device')}
+            status="unknown"
+          />
+          {policyRequirements.map(requirement => (
+            <EligibilityRow key={requirement} label={requirement} status="unknown" />
+          ))}
+        </Card>
 
         {/* Organizer actions */}
         <Card className="p-5 flex flex-col gap-3">

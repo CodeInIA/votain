@@ -167,7 +167,9 @@
     "cta_upcoming": "登録はまだ開始していません。",
     "cta_pending_vote": "登録は締め切られました。投票はまだ始まっていません。",
     "starts_in": "開始まで",
-    "verified_on_chain": "ブロックチェーンで検証済み"
+    "verified_on_chain": "ブロックチェーンで検証済み",
+    "view_as_voter": "投票者として表示",
+    "view_as_organizer": "主催者として表示"
   },
   "how": {
     "title": "Votainの仕組み",
@@ -318,7 +320,7 @@
     "add_candidate": "候補者を追加",
     "blank_vote_note": "白票オプションは常に自動的に含まれます。",
     "require_orb": "Orb確認を要求",
-    "require_orb_desc": "有権者はWorld ID Orbで確認する必要があります（最高保証）。",
+    "require_orb_desc": "有権者は端末だけでなく、World ID の Orb で対面の確認を受ける必要があります。参加条件として有権者に表示されます。",
     "privacy_quorum": "プライバシー定足数",
     "quorum_hint": "結果を公開するために必要な最低投票数。",
     "deposit_hint": "任意です。共有ガス残高に加算され、あなたのすべての選挙の投票者の手数料に使われます。",
@@ -570,7 +572,6 @@
     "select_hint": "選挙とともに保存されます。後からドメインを変更しても作成済みの選挙は変わりません。"
   },
   "eligibility": {
-    "world_id": "World ID 確認済み",
     "enrolled": "この選挙に登録済み",
     "title": "この選挙には参加条件があります",
     "intro": "パスポートまたは身分証明書で条件を満たしていることを証明してください。読み取りはご自身のスマートフォン上で行われ、外部には出ません。",
@@ -594,7 +595,9 @@
     "failed_nationality_missing": "証明書から国籍を読み取れませんでした。",
     "failed_unknown": "お持ちの証明書はこの選挙の条件を満たしていません。",
     "mobile_return_hint": "完了すると Self がここに戻します。",
-    "requirements_unknown": "この選挙の参加条件を確認できませんでした。もう一度お試しください。"
+    "requirements_unknown": "この選挙の参加条件を確認できませんでした。もう一度お試しください。",
+    "world_id_orb": "World ID を Orb で確認済み",
+    "world_id_device": "World ID 確認済み（端末のみで可）"
   },
   "country_picker": {
     "placeholder": "国を検索…",

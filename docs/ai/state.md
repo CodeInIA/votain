@@ -1237,6 +1237,26 @@ in English, every Hindi noun here) so a new key cannot join that list unnoticed.
 Verified in the browser as well as in the suite: the line now reads "1 election"
 with one result and "13 elections" with thirteen.
 
+## World ID level shown per election (2026-08-29)
+
+The eligibility list said "World ID verified" on every election, which hides the
+distinction that matters: an Orb scan happens in person, a device verification
+does not. It now reads "verified with Orb" or "verified (device is enough)".
+
+Two findings behind it. `requireOrb` was a **dead toggle**: present in the create
+wizard, rendered as a Switch, never passed to `createElection`, never stored,
+never read. An organizer flipped it and nothing anywhere changed. And the
+organizer's own page never showed the platform requirement at all, because its
+entry-requirements card only rendered when an attribute policy existed.
+
+**The declaration does not yet bite.** `lib/worldId.ts` requests `orbLegacy` for
+everyone at sign-in and the backend records no verification level, so every voter
+is Orb-verified regardless of what an election declares. That errs strict, never
+lax: an election saying "device is enough" gets Orb voters. Making it real needs
+sign-in to vary per election, the credential to carry the level, and enrolment to
+check it. Recorded here so the gap is a known boundary rather than an assumption
+that it works.
+
 ## Next: Phase C, Decentralized deployments
 ### H10: Frontend on IPFS via Fleek CD
 ### H11: Backend on Phala TEE

@@ -464,6 +464,50 @@ What is left is unavoidable arithmetic, and a handful of seconds of frozen tab
 still reads as a crash. The create wizard should say what it is doing between the
 passkey prompt and the wallet prompt.
 
+## Which World ID an election asks for
+
+The eligibility list said "World ID verified", which answers the wrong question:
+an Orb scan is in person and a device verification is not, and a voter with only
+the latter needs to know before they try. It now reads "verified with Orb" or
+"verified (device is enough)", from `requiresOrb` on the election.
+
+Two things this uncovered:
+
+- **`requireOrb` was a dead toggle.** It existed in the create wizard, was
+  rendered as a Switch, and went nowhere: never passed to `createElection`,
+  never written to metadata, never read back. It now persists and is read.
+- **The organizer could not see the platform requirement at all.** The entry
+  requirements card only rendered for attribute policies, so an election with no
+  age or nationality rule showed nothing. It now always renders, because every
+  election has at least the World ID requirement.
+
+**Declared, not enforced.** `lib/worldId.ts` requests `orbLegacy` for everyone at
+sign-in, so the platform demands Orb regardless and the backend never records the
+level a voter reached. An election declaring "device is enough" therefore gets
+Orb-verified voters anyway, which errs strict rather than lax. Making the
+declaration bite needs sign-in to vary by election, the credential to carry the
+level, and enrolment to check it; none of that exists yet.
+
+## Switching between the two views of an election
+
+`components/ui/ViewAsSwitch.tsx` with its rules in `lib/electionViews.ts`. An
+organizer managing an election had no way to see what a voter sees, which is the
+thing they most need to check before it opens, and a voter view of an election
+they own had no way back to the controls except through the dashboard.
+
+Two details that are not obvious:
+
+- **There is no single "voter view".** Discover sends a signed-in voter to
+  `/voter/election/:id` and everyone else to the public `/election/:id`, so
+  `voterViewHref` makes the same choice from `voterLoggedIn`. Otherwise the
+  organizer would be shown a page they could not have arrived at.
+- **The organizer direction needs both halves of `canManageElection`.** Owning
+  the election without a live organizer session offers a route `RequireOrganizer`
+  bounces; a live session on somebody else's election offers a page that refuses
+  to load. It appears on the public preview AND on the voter detail page, because
+  which of the two an organizer lands on depends on whether they are also signed
+  in as a voter.
+
 ## Plurals
 
 Every string interpolating `{{count}}` needs one form per plural category the

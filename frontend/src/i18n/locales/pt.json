@@ -169,7 +169,9 @@
     "cta_upcoming": "As inscrições ainda não abriram.",
     "cta_pending_vote": "As inscrições estão encerradas. A votação ainda não começou.",
     "starts_in": "Começa em",
-    "verified_on_chain": "Verificado na blockchain"
+    "verified_on_chain": "Verificado na blockchain",
+    "view_as_voter": "Ver como eleitor",
+    "view_as_organizer": "Ver como organizador"
   },
   "how": {
     "title": "Como o Votain funciona",
@@ -322,7 +324,7 @@
     "add_candidate": "Adicionar candidato",
     "blank_vote_note": "Uma opção de voto em branco é sempre incluída automaticamente.",
     "require_orb": "Exigir verificação Orb",
-    "require_orb_desc": "Eleitores devem verificar com o Orb World ID.",
+    "require_orb_desc": "Os eleitores terão de se verificar num Orb do World ID, presencialmente, e não apenas no seu dispositivo. Mostrado aos eleitores como requisito de entrada.",
     "privacy_quorum": "Quórum de privacidade",
     "quorum_hint": "Mínimo de votos necessários antes de revelar os resultados.",
     "deposit_hint": "Opcional. Reforça o seu depósito de gas partilhado, que paga as taxas dos eleitores de TODAS as suas eleições.",
@@ -578,7 +580,6 @@
     "select_hint": "Guardado com a eleição. Alterar os seus domínios mais tarde não muda as eleições já criadas."
   },
   "eligibility": {
-    "world_id": "World ID verificado",
     "enrolled": "Inscrito nesta eleição",
     "title": "Esta eleição é restrita",
     "intro": "Prove que cumpre os requisitos com o seu passaporte ou cartão de cidadão. É lido no seu próprio telemóvel e nunca sai dele.",
@@ -602,7 +603,9 @@
     "failed_nationality_missing": "Não foi possível ler a sua nacionalidade no documento.",
     "failed_unknown": "O seu documento não cumpre os requisitos desta eleição.",
     "mobile_return_hint": "A Self trá-lo de volta aqui quando terminar.",
-    "requirements_unknown": "Não foi possível verificar os requisitos desta eleição. Tente novamente."
+    "requirements_unknown": "Não foi possível verificar os requisitos desta eleição. Tente novamente.",
+    "world_id_orb": "World ID verificado com Orb",
+    "world_id_device": "World ID verificado (o dispositivo basta)"
   },
   "country_picker": {
     "placeholder": "Procure um país…",

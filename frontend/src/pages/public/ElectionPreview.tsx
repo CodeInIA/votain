@@ -7,6 +7,8 @@ import { EligibilityChips } from '../../components/ui/EligibilityChips';
 import { DomainBadge } from '../../components/ui/DomainBadge';
 import { Button } from '../../components/ui/Button';
 import { BackButton } from '../../components/ui/BackButton';
+import { ViewAsSwitch } from '../../components/ui/ViewAsSwitch';
+import { organizerViewHref, canManageElection } from '../../lib/electionViews';
 import { Card } from '../../components/ui/Card';
 import { Countdown } from '../../components/ui/Countdown';
 import { BlockchainBadge } from '../../components/ui/BlockchainBadge';
@@ -18,14 +20,24 @@ import { usePolicyRequirements } from '../../hooks/usePolicyRequirements';
 import { ResultBarChart } from '../../components/ui/BarChart';
 import { hasPublishedResults } from '../../data/seed';
 import { useAuth } from '../../contexts/AuthContext';
+import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
 import { PULSE_PHASES } from '../../lib/phase';
 
 export default function ElectionPreview() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { voterLoggedIn } = useAuth();
+  const { voterLoggedIn, organizerLoggedIn } = useAuth();
+  const wallet = useOrganizerWallet();
   const { election, loading } = useElection(id);
+
+  // Computed with optional chaining so it sits above the loading and not-found
+  // early returns, where the election may not exist yet.
+  const canManage = canManageElection(
+    organizerLoggedIn,
+    wallet.address,
+    election?.organizerAddress,
+  );
 
   // Verified against the contract's hash when the election was read.
   const policyRequirements = usePolicyRequirements(election?.eligibilityPolicy);
@@ -117,7 +129,12 @@ export default function ElectionPreview() {
   return (
     <PageLayout role="public" showNav>
       <div className="max-w-3xl mx-auto pt-4 pb-24">
-        <BackButton className="mb-6" />
+        <div className="flex items-center justify-between gap-3 mb-6">
+          <BackButton />
+          {canManage && (
+            <ViewAsSwitch to="organizer" href={organizerViewHref(election.id)} />
+          )}
+        </div>
 
         {/* Title block */}
         <div className="mb-6">

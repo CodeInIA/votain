@@ -568,6 +568,7 @@ export default function CreateElection() {
         voteStart: new Date(form.voteStart),
         voteEnd: new Date(form.voteEnd),
         depositMatic: form.depositAmount,
+        requireOrb: form.requireOrb,
         eligibility: policyFromForm(form),
         eligibilityAttester: attester?.address,
       });

@@ -76,6 +76,8 @@ export interface Election {
   voteEnd: Date;
   candidates: Candidate[];
   eligibility: EligibilityCriteria[];
+  /** True when the election asks for Orb rather than a device-level World ID. */
+  requiresOrb?: boolean;
   totalEnrolled: number;
   castVotes: number;
   contractAddress: string;

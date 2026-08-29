@@ -8,6 +8,10 @@ import { Badge } from '../../components/ui/Badge';
 import { EligibilityChips } from '../../components/ui/EligibilityChips';
 import { Button } from '../../components/ui/Button';
 import { BackButton } from '../../components/ui/BackButton';
+import { useAuth } from '../../contexts/AuthContext';
+import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
+import { ViewAsSwitch } from '../../components/ui/ViewAsSwitch';
+import { organizerViewHref, canManageElection } from '../../lib/electionViews';
 import { Card } from '../../components/ui/Card';
 import { Spinner } from '../../components/ui/Spinner';
 import { RadioGroup } from '../../components/ui/RadioCard';
@@ -31,6 +35,15 @@ export default function ElectionDetail() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { election, loading, live, refresh } = useElection(id);
+  const { organizerLoggedIn } = useAuth();
+  const wallet = useOrganizerWallet();
+  // Computed with optional chaining so it sits above the loading and not-found
+  // early returns, where the election may not exist yet.
+  const canManage = canManageElection(
+    organizerLoggedIn,
+    wallet.address,
+    election?.organizerAddress,
+  );
 
   const [selectedCandidate, setSelectedCandidate] = useState('');
   const [showGasWarning] = useState(false);
@@ -217,7 +230,12 @@ export default function ElectionDetail() {
   return (
     <PageLayout role="voter" showNav>
       <div className="max-w-2xl mx-auto pt-4 pb-28">
-        <BackButton className="mb-5" />
+        <div className="flex items-center justify-between gap-3 mb-5">
+          <BackButton />
+          {canManage && (
+            <ViewAsSwitch to="organizer" href={organizerViewHref(election.id)} />
+          )}
+        </div>
 
         {/* Phase badge + title */}
         <div className="mb-5">

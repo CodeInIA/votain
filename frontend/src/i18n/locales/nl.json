@@ -168,7 +168,9 @@
     "cta_upcoming": "De inschrijving is nog niet geopend.",
     "cta_pending_vote": "De inschrijving is gesloten. Het stemmen is nog niet begonnen.",
     "starts_in": "Begint over",
-    "verified_on_chain": "Geverifieerd op de blockchain"
+    "verified_on_chain": "Geverifieerd op de blockchain",
+    "view_as_voter": "Bekijk als kiezer",
+    "view_as_organizer": "Bekijk als organisator"
   },
   "how": {
     "title": "Hoe Votain werkt",
@@ -320,7 +322,7 @@
     "add_candidate": "Kandidaat toevoegen",
     "blank_vote_note": "Een blanco stemoptie wordt altijd automatisch toegevoegd.",
     "require_orb": "Orb-verificatie vereisen",
-    "require_orb_desc": "Kiezers moeten verifiëren met de World ID Orb.",
+    "require_orb_desc": "Kiezers moeten zich in persoon verifiëren bij een World ID-Orb, niet alleen op hun apparaat. Wordt kiezers getoond als toegangsvoorwaarde.",
     "privacy_quorum": "Privacyquorum",
     "quorum_hint": "Minimum stemmen vereist voordat resultaten worden onthuld.",
     "deposit_hint": "Optioneel. Vult je gedeelde gasvoorraad aan, die de transactiekosten van de kiezers van AL je verkiezingen betaalt.",
@@ -574,7 +576,6 @@
     "select_hint": "Opgeslagen bij de verkiezing. Uw domeinen later wijzigen verandert niets aan al aangemaakte verkiezingen."
   },
   "eligibility": {
-    "world_id": "World ID geverifieerd",
     "enrolled": "Ingeschreven voor deze verkiezing",
     "title": "Deze verkiezing is beperkt",
     "intro": "Toon met je paspoort of identiteitskaart aan dat je voldoet. Het wordt op je eigen telefoon gelezen en verlaat die nooit.",
@@ -598,7 +599,9 @@
     "failed_nationality_missing": "Je nationaliteit kon niet uit het document worden gelezen.",
     "failed_unknown": "Je document voldoet niet aan de eisen van deze verkiezing.",
     "mobile_return_hint": "Self brengt je hierna terug naar deze pagina.",
-    "requirements_unknown": "De deelnamevoorwaarden van deze verkiezing konden niet worden gecontroleerd. Probeer het opnieuw."
+    "requirements_unknown": "De deelnamevoorwaarden van deze verkiezing konden niet worden gecontroleerd. Probeer het opnieuw.",
+    "world_id_orb": "World ID geverifieerd met Orb",
+    "world_id_device": "World ID geverifieerd (apparaat volstaat)"
   },
   "country_picker": {
     "placeholder": "Zoek een land…",

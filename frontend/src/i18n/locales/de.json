@@ -168,7 +168,9 @@
     "cta_upcoming": "Die Anmeldung ist noch nicht geöffnet.",
     "cta_pending_vote": "Die Anmeldung ist geschlossen. Die Abstimmung hat noch nicht begonnen.",
     "starts_in": "Beginnt in",
-    "verified_on_chain": "Auf der Blockchain verifiziert"
+    "verified_on_chain": "Auf der Blockchain verifiziert",
+    "view_as_voter": "Als Wähler ansehen",
+    "view_as_organizer": "Als Veranstalter ansehen"
   },
   "how": {
     "title": "Wie Votain funktioniert",
@@ -320,7 +322,7 @@
     "add_candidate": "Kandidaten hinzufügen",
     "blank_vote_note": "Eine Leerstimmoption wird immer automatisch hinzugefügt.",
     "require_orb": "Orb-Verifizierung erforderlich",
-    "require_orb_desc": "Wähler müssen sich mit dem World ID Orb verifizieren.",
+    "require_orb_desc": "Wählende müssen sich persönlich an einem World-ID-Orb verifizieren, nicht nur auf ihrem Gerät. Wird Wählenden als Zugangsvoraussetzung angezeigt.",
     "privacy_quorum": "Datenschutz-Quorum",
     "quorum_hint": "Mindestanzahl Stimmen, bevor Ergebnisse angezeigt werden.",
     "deposit_hint": "Optional. Füllt Ihren gemeinsamen Gas-Vorrat auf, der die Gebühren der Wählenden ALLER Ihrer Wahlen bezahlt.",
@@ -574,7 +576,6 @@
     "select_hint": "Wird mit der Wahl gespeichert. Spätere Änderungen an Ihren Domains ändern bereits erstellte Wahlen nicht."
   },
   "eligibility": {
-    "world_id": "World ID verifiziert",
     "enrolled": "Für diese Wahl angemeldet",
     "title": "Diese Wahl ist eingeschränkt",
     "intro": "Weisen Sie mit Ihrem Reisepass oder Personalausweis nach, dass Sie die Bedingungen erfüllen. Er wird auf Ihrem eigenen Handy gelesen und verlässt es nie.",
@@ -598,7 +599,9 @@
     "failed_nationality_missing": "Ihre Staatsangehörigkeit konnte dem Dokument nicht entnommen werden.",
     "failed_unknown": "Ihr Dokument erfüllt die Bedingungen dieser Wahl nicht.",
     "mobile_return_hint": "Self bringt Sie danach hierher zurück.",
-    "requirements_unknown": "Die Teilnahmebedingungen dieser Wahl konnten nicht geprüft werden. Bitte erneut versuchen."
+    "requirements_unknown": "Die Teilnahmebedingungen dieser Wahl konnten nicht geprüft werden. Bitte erneut versuchen.",
+    "world_id_orb": "World ID mit Orb verifiziert",
+    "world_id_device": "World ID verifiziert (Gerät genügt)"
   },
   "country_picker": {
     "placeholder": "Land suchen…",

@@ -167,7 +167,9 @@
     "cta_upcoming": "등록이 아직 열리지 않았습니다.",
     "cta_pending_vote": "등록이 마감되었습니다. 투표가 아직 시작되지 않았습니다.",
     "starts_in": "시작까지",
-    "verified_on_chain": "블록체인에서 검증됨"
+    "verified_on_chain": "블록체인에서 검증됨",
+    "view_as_voter": "유권자로 보기",
+    "view_as_organizer": "주최자로 보기"
   },
   "how": {
     "title": "Votain 작동 방식",
@@ -318,7 +320,7 @@
     "add_candidate": "후보자 추가",
     "blank_vote_note": "백지 투표 옵션은 항상 자동으로 포함됩니다.",
     "require_orb": "Orb 인증 요구",
-    "require_orb_desc": "유권자는 World ID Orb로 인증해야 합니다 (최고 보증).",
+    "require_orb_desc": "유권자는 기기만이 아니라 World ID Orb에서 대면으로 확인을 받아야 합니다. 참여 조건으로 유권자에게 표시됩니다.",
     "privacy_quorum": "프라이버시 정족수",
     "quorum_hint": "결과 공개 전 필요한 최소 투표 수.",
     "deposit_hint": "선택 사항입니다. 모든 선거의 유권자 수수료를 지불하는 공용 가스 잔액을 충전합니다.",
@@ -570,7 +572,6 @@
     "select_hint": "선거와 함께 저장됩니다. 나중에 도메인을 바꿔도 이미 만든 선거는 바뀌지 않습니다."
   },
   "eligibility": {
-    "world_id": "World ID 확인됨",
     "enrolled": "이 선거에 등록됨",
     "title": "이 선거는 참여 자격이 제한됩니다",
     "intro": "여권이나 신분증으로 자격을 증명하세요. 본인 휴대폰에서 읽히며 절대 밖으로 나가지 않습니다.",
@@ -594,7 +595,9 @@
     "failed_nationality_missing": "증서에서 국적을 읽을 수 없습니다.",
     "failed_unknown": "귀하의 증서는 이 선거의 조건을 충족하지 않습니다.",
     "mobile_return_hint": "완료되면 Self가 이 화면으로 돌려보냅니다.",
-    "requirements_unknown": "이 선거의 참여 조건을 확인하지 못했습니다. 다시 시도해 주세요."
+    "requirements_unknown": "이 선거의 참여 조건을 확인하지 못했습니다. 다시 시도해 주세요.",
+    "world_id_orb": "Orb로 확인된 World ID",
+    "world_id_device": "World ID 확인됨 (기기만으로 충분)"
   },
   "country_picker": {
     "placeholder": "국가 검색…",

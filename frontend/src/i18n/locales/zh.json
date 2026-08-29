@@ -167,7 +167,9 @@
     "cta_upcoming": "报名尚未开放。",
     "cta_pending_vote": "报名已关闭，投票尚未开始。",
     "starts_in": "开始于",
-    "verified_on_chain": "已在区块链上验证"
+    "verified_on_chain": "已在区块链上验证",
+    "view_as_voter": "以选民身份查看",
+    "view_as_organizer": "以组织者身份查看"
   },
   "how": {
     "title": "Votain 工作原理",
@@ -318,7 +320,7 @@
     "add_candidate": "添加候选人",
     "blank_vote_note": "始终自动包含空白票选项。",
     "require_orb": "需要 Orb 验证",
-    "require_orb_desc": "选民必须使用 World ID Orb 进行验证（最高保障）。",
+    "require_orb_desc": "选民必须亲自到 World ID 的 Orb 完成验证，仅用设备验证不够。会作为参加条件向选民显示。",
     "privacy_quorum": "隐私法定人数",
     "quorum_hint": "公布结果前所需的最低票数。",
     "deposit_hint": "可选。为你的共享 gas 储备充值，它支付你所有选举中选民的交易费用。",
@@ -570,7 +572,6 @@
     "select_hint": "随选举一同保存。之后更改域名不会影响已创建的选举。"
   },
   "eligibility": {
-    "world_id": "World ID 已验证",
     "enrolled": "已报名本次选举",
     "title": "本次选举有资格限制",
     "intro": "用护照或身份证证明你符合条件。证件在你自己的手机上读取，绝不外传。",
@@ -594,7 +595,9 @@
     "failed_nationality_missing": "无法从证件中读取你的国籍。",
     "failed_unknown": "你的证件不符合本次选举的要求。",
     "mobile_return_hint": "完成后 Self 会把你带回这里。",
-    "requirements_unknown": "无法查询本次选举的参加条件。请重试。"
+    "requirements_unknown": "无法查询本次选举的参加条件。请重试。",
+    "world_id_orb": "已通过 Orb 验证 World ID",
+    "world_id_device": "已验证 World ID（设备验证即可）"
   },
   "country_picker": {
     "placeholder": "搜索国家…",

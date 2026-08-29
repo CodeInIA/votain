@@ -91,6 +91,14 @@ export interface CreateElectionInput {
   voteStart: Date;
   voteEnd: Date;
   depositMatic: string; // decimal string
+  /**
+   * Whether this election asks for Orb verification rather than accepting a
+   * device-level World ID. Declared, not enforced here: sign-in currently
+   * requests Orb for everyone, so voters always exceed a device-level
+   * declaration. Recording it is what lets the requirement be shown honestly
+   * and what a per-election check would read when sign-in learns to vary.
+   */
+  requireOrb?: boolean;
   tags?: string[];
   /**
    * Attribute restrictions on who may enroll. Omitted or empty leaves the
@@ -168,6 +176,7 @@ export async function createElection(
     candidates: input.candidates,
     privacyQuorum: input.privacyQuorum,
     ...(keyDerivable ? { keyNonce } : {}),
+    requireOrb: input.requireOrb ?? false,
     ...(gated ? { eligibility: input.eligibility } : {}),
     tags: input.tags ?? [],
   };

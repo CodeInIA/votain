@@ -35,6 +35,9 @@ interface ElectionMetadata {
   privacyQuorum?: number;
   keyNonce?: string;
   eligibility?: EligibilityPolicy;
+  /** Absent on elections created before the field existed: those predate any
+   *  choice, and sign-in demanded Orb of everyone then as it does now. */
+  requireOrb?: boolean;
   tags?: string[];
 }
 
@@ -172,9 +175,17 @@ export async function fetchElection(address: string): Promise<Election> {
     voteEnd: toDate(voteEnd),
     candidates,
     eligibility: [
-      { id: "platform", label: i18n.t("eligibility.world_id"), status: commitment !== null ? "met" : "unknown" },
+      // Which World ID the election asks for, not just that it asks for one.
+      // "Orb" and "device" are different bars, and a voter with only a device
+      // verification needs to know before they try.
+      {
+        id: "platform",
+        label: meta.requireOrb ? i18n.t("eligibility.world_id_orb") : i18n.t("eligibility.world_id_device"),
+        status: commitment !== null ? "met" : "unknown",
+      },
       { id: "enrolled", label: i18n.t("eligibility.enrolled"), status: isEnrolled ? "met" : "not-met" },
     ],
+    requiresOrb: meta.requireOrb ?? false,
     totalEnrolled: Number(memberCount),
     castVotes: Number(voteCount),
     ipfsCid,
