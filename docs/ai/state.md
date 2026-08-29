@@ -1257,6 +1257,37 @@ sign-in to vary per election, the credential to carry the level, and enrolment t
 check it. Recorded here so the gap is a known boundary rather than an assumption
 that it works.
 
+## World ID credential level actually checked (2026-08-29)
+
+The backend called the verify API, checked only that it returned 200, and took
+the nullifier. The API confirms a proof is valid, not that it is the credential
+the app asked for, so a device-level or selfie proof verified and was accepted
+exactly like an Orb. The Orb requirement lived entirely in the client's request,
+which is to say nowhere.
+
+`ElectionV4.enroll` deduplicates on that nullifier and treats it as one human.
+Only Proof of Human carries that guarantee, so the platform was silently offering
+one-account-one-vote while claiming one-person-one-vote.
+
+`auth/worldId.ts` now rejects anything below Proof of Human, before spending the
+API call, and `verify-human` goes through it instead of keeping a second copy of
+the same fetch: both copies had the same hole, so it had to be closed twice or
+not at all.
+
+Three details the docs settled. `issuer_schema_id` beats the identifier string,
+because one is assigned by the protocol and the other is a label the caller
+writes. Every response is checked rather than the first, since a 200 means "at
+least one proof verified" and a mixed payload would otherwise ride in on its
+strongest entry. And Orb is spelled `orb` in 3.0, `proof_of_human` in 4.0 and
+`poh` in the authenticator.
+
+`backend/src/auth/worldId.test.ts` covers it in 12 cases. Verified by reverting
+the check: 5 of them fail without it.
+
+Unchanged on purpose: the approach stays Orb-minimum, one identity one vote. The
+wider question of what a Spanish voter does when Orbs are unavailable is still
+open (see the entry above on the World ID level shown per election).
+
 ## Next: Phase C, Decentralized deployments
 ### H10: Frontend on IPFS via Fleek CD
 ### H11: Backend on Phala TEE

@@ -3,6 +3,7 @@ import { signRequest } from '@worldcoin/idkit-core/signing';
 import { sdJwt, SELECTIVE_DISCLOSURE_FRAME, type VotainCredentialPayload } from '../sd/issuer.js';
 import { allocateIndex, DEFAULT_LIST_ID } from '../status/statusList.js';
 import { verifySession } from '../auth/session.js';
+import { verifyWorldIdProof, type WorldIdPayload } from '../auth/worldId.js';
 
 const router = Router();
 
@@ -74,30 +75,18 @@ router.post('/rp-signature', async (req: Request, res: Response) => {
 // ────────────────────────────────────────────────
 router.post('/verify-human', async (req: Request, res: Response) => {
   try {
-    const worldIdPayload = req.body as {
-      responses?: Array<{ nullifier?: string }>;
-      nullifier_hash?: string;
-    };
+    const worldIdPayload = req.body as WorldIdPayload;
 
-    const rpId = process.env.WORLD_ID_RP_ID;
-    if (!rpId) throw new Error('WORLD_ID_RP_ID not configured');
-
-    const verifyRes = await fetch(`https://developer.world.org/api/v4/verify/${rpId}`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(worldIdPayload),
-    });
-
-    if (!verifyRes.ok) {
-      const wldError: unknown = await verifyRes.json();
-      console.error('World ID verification failed:', wldError);
-      return res.status(400).json({ error: 'Invalid World ID proof', details: wldError });
+    // Through the shared helper rather than a second copy of the fetch. This
+    // route had its own, and both were missing the credential-level check, so
+    // the hole had to be closed twice or not at all.
+    const verified = await verifyWorldIdProof(worldIdPayload);
+    if (!verified.ok) {
+      console.error('World ID verification failed:', verified.error);
+      return res.status(400).json({ error: 'Invalid World ID proof', details: verified.error });
     }
 
-    const nullifier_hash: string =
-      worldIdPayload.responses?.[0]?.nullifier ??
-      worldIdPayload.nullifier_hash ??
-      '';
+    const nullifier_hash = verified.nullifier ?? '';
 
     // Revocation entry for this credential
     const statusIndex = allocateIndex();

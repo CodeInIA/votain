@@ -228,6 +228,33 @@ is deliberate here: the managed path bills per verification and puts a third
 party on the enrollment hot path, which is the opposite of what this project
 argues for. Recorded so the deviation is visible rather than accidental.
 
+### The World ID credential level is checked, and it has to be
+
+`auth/worldId.ts` rejects anything below Proof of Human before it spends the API
+call, and `verify-human` goes through it rather than keeping its own copy of the
+fetch.
+
+The API confirms that a proof is VALID, not that it is the KIND of proof the app
+asked for. The frontend requests `orbLegacy`, but the request is the client's to
+build, so until this checked, a device-level or selfie proof verified and was
+accepted exactly like an Orb.
+
+That is not cosmetic. `ElectionV4.enroll` deduplicates on this nullifier and
+treats it as one human; only Proof of Human carries that guarantee. A weaker
+credential turns one-person-one-vote into one-account-one-vote with no visible
+sign.
+
+Three details worth keeping:
+
+- **The schema id wins over the identifier.** `issuer_schema_id` is a number the
+  protocol assigns; the identifier is a label a caller can write. Only 3.0
+  proofs, which have no schema id, fall back to matching `orb`.
+- **Every response is checked, not the first.** A 200 means "at least one proof
+  verified", so a payload mixing an Orb proof with a weaker one would otherwise
+  pass on the strength of the one that happened to be looked at.
+- **Orb is spelled three ways** across versions: `orb` (3.0), `proof_of_human`
+  (4.0), `poh` (authenticator). All three are the same credential.
+
 ### Identity vault
 
 A voter has exactly ONE Semaphore identity. Two active identities for one human
