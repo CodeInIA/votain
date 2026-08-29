@@ -20,6 +20,14 @@ import {
   setOrganizerName,
 } from '../../lib/organizer';
 import { PULSE_PHASES } from '../../lib/phase';
+import { ElectionFilters } from '../../components/ui/ElectionFilters';
+import {
+  matchesElectionFilter,
+  EMPTY_FILTERS,
+  type ElectionFilterState,
+} from '../../lib/electionFilter';
+import { useVerifiedDomains } from '../../hooks/useVerifiedDomains';
+import { EligibilityChips } from '../../components/ui/EligibilityChips';
 
 /** Approximate native-token cost of one sponsored vote. */
 const VOTE_COST = 0.03;
@@ -81,19 +89,15 @@ export default function OrganizerDashboard() {
     setOrganizerName(trimmed);
     setNameHandled(true);
   };
-  const [query, setQuery] = useState('');
+  const [filters, setFilters] = useState<ElectionFilterState>(EMPTY_FILTERS);
+  const [showFilters, setShowFilters] = useState(false);
+  const isDomainVerified = useVerifiedDomains(myElections);
 
   // The stat tiles above count EVERY election, not the filtered view: a search
   // box should narrow what you are looking at, not silently restate the totals.
-  const visibleElections = query.trim()
-    ? myElections.filter(e => {
-        const needle = query.trim().toLowerCase();
-        return (
-          e.title.toLowerCase().includes(needle) ||
-          (e.organizerDomain?.toLowerCase().includes(needle) ?? false)
-        );
-      })
-    : myElections;
+  const visibleElections = myElections.filter(e =>
+    matchesElectionFilter(e, filters, isDomainVerified),
+  );
 
   const totalEnrolled = myElections.reduce((s, e) => s + e.totalEnrolled, 0);
   const totalVotes    = myElections.reduce((s, e) => s + e.castVotes, 0);
@@ -150,11 +154,17 @@ export default function OrganizerDashboard() {
                   organizer has, and there is no fuller page to send them to. */}
               <CardHeader className="flex flex-col gap-3">
                 <CardTitle>{t('dashboard.my_elections')}</CardTitle>
+                {/* The same component Discover uses, not a copy of it. The two
+                    had drifted: this list had the eligibility inputs but no
+                    phase chips, so an organizer could not narrow by state at
+                    all and had to learn a second set of rules. */}
                 {myElections.length > 0 && (
-                  <Input
-                    value={query}
-                    onChange={e => setQuery(e.target.value)}
-                    placeholder={t('dashboard.search_placeholder')}
+                  <ElectionFilters
+                    value={filters}
+                    onChange={setFilters}
+                    open={showFilters}
+                    onToggleOpen={() => setShowFilters(v => !v)}
+                    searchPlaceholder={t('dashboard.search_placeholder')}
                   />
                 )}
               </CardHeader>
@@ -192,9 +202,16 @@ export default function OrganizerDashboard() {
                             </div>
                           )}
                         </div>
-                        <Badge variant={e.phase as Parameters<typeof Badge>[0]['variant']} dot={PULSE_PHASES.has(e.phase)}>
-                          {t(`phase.${e.phase}`)}
-                        </Badge>
+                        {/* Stacked, so a restricted election is identifiable
+                            from the list without opening it, and with the same
+                            chips voters see on Discover: an organizer should
+                            recognise their own election by the same marks. */}
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                          <Badge variant={e.phase as Parameters<typeof Badge>[0]['variant']} dot={PULSE_PHASES.has(e.phase)}>
+                            {t(`phase.${e.phase}`)}
+                          </Badge>
+                          <EligibilityChips policy={e.eligibilityPolicy} className="justify-end" />
+                        </div>
                       </button>
                     ))}
                   </div>

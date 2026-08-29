@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Users, Calendar, Lock, ExternalLink } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Badge } from '../../components/ui/Badge';
+import { EligibilityChips } from '../../components/ui/EligibilityChips';
 import { DomainBadge } from '../../components/ui/DomainBadge';
 import { Button } from '../../components/ui/Button';
 import { BackButton } from '../../components/ui/BackButton';
@@ -13,6 +14,9 @@ import { EligibilityRow } from '../../components/ui/EligibilityRow';
 import { Spinner } from '../../components/ui/Spinner';
 import { StatusNotice } from '../../components/ui/StatusNotice';
 import { useElection } from '../../hooks/useElections';
+import { usePolicyRequirements } from '../../hooks/usePolicyRequirements';
+import { ResultBarChart } from '../../components/ui/BarChart';
+import { hasPublishedResults } from '../../data/seed';
 import { useAuth } from '../../contexts/AuthContext';
 import { PULSE_PHASES } from '../../lib/phase';
 
@@ -22,6 +26,9 @@ export default function ElectionPreview() {
   const { t } = useTranslation();
   const { voterLoggedIn } = useAuth();
   const { election, loading } = useElection(id);
+
+  // Verified against the contract's hash when the election was read.
+  const policyRequirements = usePolicyRequirements(election?.eligibilityPolicy);
 
   if (loading) {
     return (
@@ -44,7 +51,7 @@ export default function ElectionPreview() {
   }
 
   const isActive   = election.phase === 'active';
-  const hasResults = election.phase === 'closed' && election.ipfsCid;
+  const hasResults = hasPublishedResults(election);
 
   const voterPage = `/voter/election/${election.id}`;
 
@@ -72,15 +79,8 @@ export default function ElectionPreview() {
       case 'voided':
         return infoPanel(t('election.cta_voided'));
       case 'closed':
-        return hasResults
-          ? (
-            <Button variant="default" className="w-full sm:w-auto rounded-full"
-              onClick={() => navigate(`/election/${election.id}/results`)}>
-              {t('election.view_results')}
-              <ExternalLink className="w-4 h-4 ml-2" />
-            </Button>
-          )
-          : infoPanel(t('results.not_available'));
+        // See ElectionDetail: the breakdown is already on the page.
+        return hasResults ? null : infoPanel(t('results.not_available'));
       case 'tallying':
         return infoPanel(t('election.cta_tallying'));
     }
@@ -125,6 +125,10 @@ export default function ElectionPreview() {
             <Badge variant={election.phase as Parameters<typeof Badge>[0]['variant']} dot={PULSE_PHASES.has(election.phase)}>
               {t(`phase.${election.phase}`)}
             </Badge>
+            {/* The rules themselves, in the same chips the lists use. The
+                full sentences are further down the page; this row is for
+                things you can read at a glance. */}
+            <EligibilityChips policy={election?.eligibilityPolicy} />
             <BlockchainBadge href={`https://amoy.polygonscan.com/address/${election.contractAddress}`} />
           </div>
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white mb-2">
@@ -173,22 +177,44 @@ export default function ElectionPreview() {
           </div>
         </Card>
 
-        {/* Candidates */}
+        {/* Candidates, or the result once there is one. Someone opening a decided
+            election's link is asking who won; the numbers are already on chain,
+            so answering with a bare list and a link elsewhere withholds it. */}
         <Card className="p-5 mb-4">
-          <h2 className="text-sm font-semibold text-on-surface mb-3">{t('election.candidates')}</h2>
-          <div className="flex flex-col gap-2">
-            {election.candidates.map(c => (
-              <div key={c.id} className="flex items-center gap-3 p-3 rounded-xl bg-surface-lowest/40 border border-white/5">
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">
-                  {c.name.charAt(0)}
+          <h2 className="text-sm font-semibold text-on-surface mb-3">
+            {hasResults ? t('results.breakdown') : t('election.candidates')}
+          </h2>
+          {hasResults ? (
+            <>
+              <ResultBarChart
+                candidates={election.candidates as Parameters<typeof ResultBarChart>[0]['candidates']}
+                totalVotes={election.castVotes}
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-4"
+                onClick={() => navigate(`/election/${election.id}/results`)}
+              >
+                {t('election.view_results')}
+                <ExternalLink className="w-3.5 h-3.5 ml-1.5" />
+              </Button>
+            </>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {election.candidates.map(c => (
+                <div key={c.id} className="flex items-center gap-3 p-3 rounded-xl bg-surface-lowest/40 border border-white/5">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">
+                    {c.name.charAt(0)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-on-surface">{c.name}</p>
+                    {c.description && <p className="text-xs text-on-surface-meta">{c.description}</p>}
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-on-surface">{c.name}</p>
-                  {c.description && <p className="text-xs text-on-surface-meta">{c.description}</p>}
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </Card>
 
         {/* Eligibility */}
@@ -197,6 +223,9 @@ export default function ElectionPreview() {
           <div>
             {election.eligibility.map(e => (
               <EligibilityRow key={e.id} label={e.label} status={e.status} description={e.description} />
+            ))}
+            {policyRequirements.map(requirement => (
+              <EligibilityRow key={requirement} label={requirement} status="unknown" />
             ))}
           </div>
         </Card>

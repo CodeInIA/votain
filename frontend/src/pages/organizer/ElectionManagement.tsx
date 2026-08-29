@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { XCircle, Clock, BarChart3, Users, KeyRound } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Badge } from '../../components/ui/Badge';
+import { EligibilityChips } from '../../components/ui/EligibilityChips';
 import { Button } from '../../components/ui/Button';
 import { BackButton } from '../../components/ui/BackButton';
 import { DomainBadge } from '../../components/ui/DomainBadge';
@@ -15,6 +16,9 @@ import { BlockchainBadge } from '../../components/ui/BlockchainBadge';
 import { Spinner } from '../../components/ui/Spinner';
 import { useToast } from '../../components/ui/useToast';
 import { useElection } from '../../hooks/useElections';
+import { usePolicyRequirements } from '../../hooks/usePolicyRequirements';
+import { EligibilityRow } from '../../components/ui/EligibilityRow';
+import { hasPublishedResults } from '../../data/seed';
 import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
 import { cancelElection, closeVotingEarly, closeEnrollmentEarly, markVoided, publishResults } from '../../lib/organizer';
 import { computeTally, hasTallyKey, resolveTallyKey, importTallyKey, MissingTallyKeyError, type TallyResult } from '../../lib/tally';
@@ -27,6 +31,8 @@ export default function ElectionManagement() {
   const { toast } = useToast();
   const wallet = useOrganizerWallet();
   const { election, loading, live, refresh } = useElection(id);
+  // Above the early returns: hooks must run in the same order on every render.
+  const policyRequirements = usePolicyRequirements(election?.eligibilityPolicy);
   const [cancelModal, setCancelModal] = useState(false);
   const [closeModal, setCloseModal]   = useState(false);
   const [tallyModal, setTallyModal]   = useState(false);
@@ -92,6 +98,10 @@ export default function ElectionManagement() {
   // Known before the organizer clicks anything: without the key there is nothing
   // to try, so say so up front instead of failing on the button press.
   const tallyKeyPresent = hasTallyKey(election.contractAddress, election.keyNonce);
+  // The key exists to make the tally possible. A decided election has either had
+  // its tally published or will never have one, so from here it is only a
+  // liability to be disposed of.
+  const keyStillNeeded = !['closed', 'voided', 'cancelled'].includes(election.phase);
 
   // Drop the decrypted counts on close so reopening always recomputes from the
   // current chain state rather than showing a stale tally.
@@ -175,7 +185,7 @@ export default function ElectionManagement() {
       setBusy(false);
     }
   };
-  const hasResults = election.phase === 'closed' && election.candidates.some(c => c.votes !== undefined);
+  const hasResults = hasPublishedResults(election);
   const totalVotes = election.candidates.reduce((s, c) => s + (c.votes ?? 0), 0);
 
   return (
@@ -192,6 +202,10 @@ export default function ElectionManagement() {
             <Badge variant={election.phase as Parameters<typeof Badge>[0]['variant']} dot={PULSE_PHASES.has(election.phase)}>
               {t(`phase.${election.phase}`)}
             </Badge>
+            {/* The rules themselves, in the same chips the lists use. The
+                full sentences are further down the page; this row is for
+                things you can read at a glance. */}
+            <EligibilityChips policy={election?.eligibilityPolicy} />
             <BlockchainBadge href={`https://amoy.polygonscan.com/address/${election.contractAddress}`} />
           </div>
           <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white leading-tight">{election.title}</h1>
@@ -246,6 +260,22 @@ export default function ElectionManagement() {
           </Card>
         )}
 
+        {/* Entry restrictions. The organizer chose these at creation and cannot
+            change them afterwards, so this is a record of what the election was
+            gated on, and the only place they can check it without reading the
+            contract. It also explains a low turnout that would otherwise look
+            like a problem. */}
+        {policyRequirements.length > 0 && (
+          <Card className="p-5 mb-5">
+            <h2 className="text-sm font-semibold text-on-surface mb-3">
+              {t('election_mgmt.entry_requirements')}
+            </h2>
+            {policyRequirements.map(requirement => (
+              <EligibilityRow key={requirement} label={requirement} status="unknown" />
+            ))}
+          </Card>
+        )}
+
         {/* Organizer actions */}
         <Card className="p-5 flex flex-col gap-3">
           <h2 className="text-sm font-semibold text-on-surface mb-1">{t('election_mgmt.actions')}</h2>
@@ -283,22 +313,37 @@ export default function ElectionManagement() {
             <Users className="w-4 h-4 mr-2" />
             {t('election_mgmt.view_members')}
           </Button>
-          {/* Decryption key: if this device has it, offer a backup export; if
-              not (e.g. a second device), import the file exported elsewhere. */}
-          <input ref={keyFileInput} type="file" accept="application/json,.json"
-            className="hidden" onChange={handleImportKey} />
-          {tallyKeyPresent ? (
-            <Button variant="ghost" className="w-full rounded-2xl" disabled={busy}
-              onClick={handleExportKey}>
-              <KeyRound className="w-4 h-4 mr-2" />
-              {t('election_mgmt.export_key')}
-            </Button>
+          {/* Decryption key. Both actions exist for one reason: making sure the
+              tally CAN be run, from this device or another. Once the election is
+              decided that reason is gone, and offering the export is worse than
+              useless. Every ballot is a Paillier ciphertext sitting publicly on
+              chain, and this key is the only thing between those ciphertexts and
+              reading them one by one, so writing a fresh unencrypted copy of it
+              into a Downloads folder is exactly the wrong end of the election to
+              do it at. The right move afterwards is to delete the copies, which
+              is what the note says. */}
+          {keyStillNeeded ? (
+            <>
+              <input ref={keyFileInput} type="file" accept="application/json,.json"
+                className="hidden" onChange={handleImportKey} />
+              {tallyKeyPresent ? (
+                <Button variant="ghost" className="w-full rounded-2xl" disabled={busy}
+                  onClick={handleExportKey}>
+                  <KeyRound className="w-4 h-4 mr-2" />
+                  {t('election_mgmt.export_key')}
+                </Button>
+              ) : (
+                <Button variant="ghost" className="w-full rounded-2xl" disabled={busy}
+                  onClick={() => keyFileInput.current?.click()}>
+                  <KeyRound className="w-4 h-4 mr-2" />
+                  {t('election_mgmt.import_key')}
+                </Button>
+              )}
+            </>
           ) : (
-            <Button variant="ghost" className="w-full rounded-2xl" disabled={busy}
-              onClick={() => keyFileInput.current?.click()}>
-              <KeyRound className="w-4 h-4 mr-2" />
-              {t('election_mgmt.import_key')}
-            </Button>
+            <p className="text-xs text-on-surface-meta px-1 pt-1">
+              {t('election_mgmt.key_no_longer_needed')}
+            </p>
           )}
         </Card>
 

@@ -7,6 +7,7 @@ import { PageLayout } from '../../components/layout/PageLayout';
 import { Button } from '../../components/ui/Button';
 import { BlockchainBadge } from '../../components/ui/BlockchainBadge';
 import { getElection as getSeedElection } from '../../data/seed';
+import { shortenReference } from '../../lib/utils';
 
 const FALLBACK_REF = 'VTN-2025-' + String(Math.floor(Math.random() * 90000) + 10000);
 
@@ -27,10 +28,8 @@ export default function VoteConfirmation() {
   const title = seedElection?.title;
 
   const reference = state.referenceNumber ?? FALLBACK_REF;
-  // Copy the FULL reference; only shorten it for display (middle ellipsis).
-  const referenceDisplay = reference.length > 24
-    ? `${reference.slice(0, 12)}…${reference.slice(-8)}`
-    : reference;
+  // Copy the FULL reference; only shorten it for display.
+  const referenceDisplay = shortenReference(reference);
   const txHash = state.txHash;
   const explorerUrl = txHash
     ? `https://amoy.polygonscan.com/tx/${txHash}`

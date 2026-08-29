@@ -9,6 +9,7 @@ import { Spinner } from '../../components/ui/Spinner';
 import { VOTER_HISTORY } from '../../data/seed';
 import { useElections } from '../../hooks/useElections';
 import { fetchVoteHistory } from '../../lib/voting';
+import { shortenReference } from '../../lib/utils';
 
 interface HistoryRow {
   electionId: string;
@@ -119,7 +120,7 @@ export default function VoterHistory() {
                     <Badge variant={v.phase as Parameters<typeof Badge>[0]['variant']} className="text-[10px]">
                       {t(`phase.${v.phase}`)}
                     </Badge>
-                    <span className="text-xs text-on-surface-meta font-mono">{v.referenceNumber}</span>
+                    <span className="text-xs text-on-surface-meta font-mono truncate">{shortenReference(v.referenceNumber)}</span>
                   </div>
                 </div>
                 <div className="text-right shrink-0">

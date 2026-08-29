@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Users, Calendar, ChevronRight } from 'lucide-react';
 import { Badge } from './Badge';
 import { DomainBadge } from './DomainBadge';
+import { EligibilityChips } from './EligibilityChips';
 import { Countdown } from './Countdown';
 import { Button } from './Button';
 import { cn } from '../../lib/utils';
@@ -56,9 +57,16 @@ export function ElectionCard({ election, voterView = false, className }: Electio
             {election.title}
           </h3>
         </div>
-        <Badge variant={phaseVariant(election.phase)} dot={isLive} className="shrink-0 mt-0.5">
-          {t(`phase.${election.phase}`)}
-        </Badge>
+        <div className="flex flex-col items-end gap-2 shrink-0 mt-0.5">
+          <Badge variant={phaseVariant(election.phase)} dot={isLive}>
+            {t(`phase.${election.phase}`)}
+          </Badge>
+          {/* A card is where someone decides whether to open an election at
+              all, so the rules they would have to meet belong here rather than
+              three screens in. The rules themselves, not the word: "18+" and a
+              flag answer "do I qualify" where "Restricted" only asks it. */}
+          <EligibilityChips policy={election.eligibilityPolicy} className="justify-end" />
+        </div>
       </div>
 
       {/* Description */}

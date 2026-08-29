@@ -6,10 +6,16 @@ export default defineConfig({
   plugins: [hardhatToolboxMochaEthers],
   solidity: {
     profiles: {
+      // The optimizer runs here too, not just in `production`. ElectionFactory
+      // embeds ElectionV4's creation code, and unoptimized it sits past the
+      // 24576-byte Spurious Dragon limit, so an unoptimized build cannot deploy
+      // the stack at all. Building tests the same way the deployment does also
+      // keeps the suite from passing on bytecode nobody will ever run.
       default: {
         version: "0.8.36",
         settings: {
           evmVersion: "paris",
+          optimizer: { enabled: true, runs: 200 },
         },
       },
       production: {

@@ -99,6 +99,55 @@ Default in the Create Election wizard: `SIMPLE_PLURALITY` (most common globally)
 
 **Out of scope** (future work, noted in chapter 10 of the thesis): ranked-choice voting, STV, Borda count, quadratic voting. These either require additional cryptography or contradict the additive-homomorphic tally design.
 
+### Identity and selective disclosure sources (decision 2026-05-25, revised 2026-08-26)
+
+For elections that require attribute verification (age, nationality), Votain
+delegates to an external provider instead of building the document-reading and
+ZK-proof pipeline from scratch. Reading a passport chip end to end means MRZ OCR
+for the BAC key, raw ISO 7816 APDU exchange (which Web NFC cannot do, so a native
+app would be required), the ICAO PKD master list to validate the SOD chain, and
+RSA-2048 with SHA-256 verified inside a circuit. That is months of work to
+reproduce something already built and audited.
+
+| Source | What it provides | Status for Spain | Notes |
+|--------|------------------|------------------|-------|
+| **Self** (implemented) | Passport or EU identity card NFC read, ICAO 9303 PKI verification, ZK proofs of `minimumAge` and country rules | ✅ Spain is on the full-support list (DSC and CSCA). No geographic allowlist. Spanish passports have carried a chip since 2006, and the DNI is an EU identity card | **The implemented path.** Open-source `@selfxyz/core` verifier, self-hosted, free, no third party in the enrollment path. Mock passports with configurable nationality and age make the whole flow testable without a real document |
+| **World ID Credentials, Identity Check** | Same document-backed attributes, requested through IDKit's `identityCheck` preset (`minimum_age`, `nationality`, `issuing_country`, `document_type`) | 🟡 Preview. Coverage is Argentina, Chile, Colombia, Costa Rica, Japan, Malaysia, Mexico, Panama, South Korea, Taiwan, the UK and a few more. **Spain is not on that list** | Not chosen. The library is already installed, so the integration would be small, but a feature that cannot be demonstrated on a Spanish document is not one this project can rely on |
+| **EUDI Wallet (eIDAS 2.0)** | EU-wide wallet with SD-JWT VC. All 27 member states obliged to offer one from 2026 | 🟡 Pilot. Spain's **Cartera Digital Beta** publishes its age-verification protocol for integrating platforms | Future work (thesis chapter 10). The natural successor to the Self integration, and the reason the eligibility layer is provider agnostic |
+| **Demo issuer (TFG fallback)** | Self-declared attributes during onboarding, signed by Votain's backend EdDSA key. Carries an explicit `evidence: "self-declared"` claim | Always available | Development and demo only, so testers without a supported document can still vote. UI shows a clear disclaimer |
+
+**World ID stays the personhood layer.** Self supplies attributes and nothing
+else. `ElectionV4.enroll` already deduplicates by human through the World ID
+nullifier, which closes Self's two weak spots: a dual national's second passport
+buys no second ballot, and a borrowed passport is still bound to somebody else's
+World ID. Passive Authentication proves a document is genuine, never that the
+holder owns it, so the two layers are complementary rather than competing.
+
+**The trust boundary, stated plainly.** A contract cannot verify a passport
+attribute proof: it is anchored on another network, and going to look for it
+would break consensus for the same reason a contract cannot resolve a DNS record.
+The relay verifies off chain and signs an EIP-712 attestation that the contract
+checks. The election publishes the hash of the policy it was gated on, so the
+rules are auditable even though their enforcement is not on chain. This is the
+same shape as the domain verification already in the project.
+
+**The anonymity set is the real limit, not the cryptography.** The proof reveals
+nothing, but the predicate itself does. An election restricted to a narrow
+attribute combination shrinks the set of people any given ballot could have come
+from. One predicate is defensible; stacking several on a small election is not.
+Worth a section of its own in the thesis.
+
+**Layer impact**:
+
+- **Contracts (H5)**: `ElectionV4` gets a `VotingType` enum field + `thresholdValue` uint (used as N for WITNESS_THRESHOLD, ignored for the others). `publishResults` applies the corresponding rule.
+- **Tally script (H9)**: same Paillier sum, branches on `VotingType` for the Approved/Rejected verdict.
+- **Frontend Create Election wizard (H3 visual, H8 real)**: extra step "Voting type". Selecting WITNESS_THRESHOLD reveals an N input.
+- **Frontend ballot UIs (H2)**: candidate-vs-Yes/No layouts depending on type. Wedding-style witness vote shows fewer candidates and clearer Approve/Reject framing.
+- **`seed.ts` (H2)**: must include at least one example of each voting type so all UI states are covered in Phase A.
+- **Results UI (H2 visual, H9 real)**: outcome rendering changes. Yes/No outcome for witness and supermajority; multi-candidate outcome for majority elections.
+
+**Out of scope** (future work, noted in chapter 10 of the thesis): ranked-choice voting, STV, Borda count, quadratic voting. These either require additional cryptography or contradict the additive-homomorphic tally design.
+
 ### Identity and selective disclosure sources (decision 2026-05-25)
 
 For national or restricted elections that require attribute verification (age, nationality, region), Votain delegates to **World ID Credentials** instead of building the document-reading and ZK-proof pipeline from scratch.
@@ -113,10 +162,10 @@ All three sources emit an SD-JWT VC with the same attribute schema (`country`, `
 
 **Layer impact**:
 
-- **Backend (H6)**: scope of "selective disclosure" reduces. No need to implement attribute extraction from scratch. Instead, integrate World ID Credentials via IDKit and keep the demo issuer for fallback. Architect the SD-JWT issuer as a thin connector layer that can plug in EUDI Wallet later.
-- **Frontend Onboarding (H2 visual, H7 real)**: extra step in the onboarding flow where the user picks "Verify with my passport (World ID)" or "Demo identity (development only)".
+- **Backend (H6)**: scope of "selective disclosure" reduces. No need to implement attribute extraction from scratch. Implemented in `backend/src/eligibility/`, split so that only `self.ts` knows which provider is in use and an EUDI connector could sit beside it.
+- **Frontend create wizard**: optional attribute policy in step 3, off by default. **Frontend voter flow**: `EligibilityCheck` takes over the enrol footer for a restricted election.
 - **Election eligibility check (H7)**: same code path regardless of which source emitted the SD-JWT. The eligibility checklist in Screen 8 just reads the VC.
-- **Thesis (H12.3)**: dedicated section on comparison of the three sources, trust model of each, and roadmap to EUDI Wallet.
+- **Thesis (H12.3)**: comparison of the sources, the trust model of each, the anonymity-set limit above, and the roadmap to EUDI Wallet.
 
 ---
 

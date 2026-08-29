@@ -120,11 +120,18 @@
     "title": "Elezioni",
     "subtitle": "Sfoglia elezioni aperte e passate",
     "search_placeholder": "Cerca elezioni…",
-    "results_count": "{{count}} elezione",
-    "results_count_plural": "{{count}} elezioni",
     "empty_title": "Nessuna elezione trovata",
     "empty_desc": "Prova una ricerca diversa o cancella i tuoi filtri.",
-    "verified_domain": "Dominio verificato"
+    "verified_domain": "Dominio verificato",
+    "min_age": "Età minima",
+    "age_from": "Da",
+    "age_to": "a",
+    "age_to_placeholder": "A",
+    "nationality": "Cittadinanza",
+    "restricted_only": "Con requisiti",
+    "results_count_other": "{{count}} elezioni",
+    "results_count_one": "{{count}} elezione",
+    "results_count_many": "{{count}} elezioni"
   },
   "election": {
     "by": "di",
@@ -208,8 +215,10 @@
     "title": "Le mie Elezioni",
     "subtitle": "Elezioni a cui sei iscritto",
     "empty": "Non sei ancora iscritto a nessuna elezione.",
-    "urgent": "{{count}} in scadenza",
-    "ends_soon": "In scadenza"
+    "ends_soon": "In scadenza",
+    "urgent_other": "{{count}} in scadenza",
+    "urgent_one": "{{count}} in scadenza",
+    "urgent_many": "{{count}} in scadenza"
   },
   "zk": {
     "title": "Generazione della prova",
@@ -231,7 +240,8 @@
     "new_choice": "Seleziona la nuova scelta",
     "modal_title": "Conferma cambio voto",
     "modal_desc": "Stai per cambiare il tuo voto in {{candidate}}.",
-    "confirm_change": "Cambia voto"
+    "confirm_change": "Cambia voto",
+    "voting_closed": "La votazione di questa elezione è chiusa, quindi il tuo voto non si può più cambiare."
   },
   "history": {
     "title": "Cronologia voti",
@@ -334,7 +344,20 @@
     "yes_no_hint": "Qui non c'è nulla da configurare: le opzioni sono stabilite dalla regola di voto scelta. Gli elettori ne sceglieranno una.",
     "yes_no_preview": "La scheda che vedranno gli elettori",
     "current_tank": "Il tuo serbatoio di gas contiene già {{amount}} {{currency}}.",
-    "short_enrollment_warning": "La votazione inizia tra meno di un giorno, e le iscrizioni chiudono quando si apre. Chi non si iscrive in tempo non potrà votare affatto. Valuta un inizio più tardi, o una finestra di iscrizione separata."
+    "short_enrollment_warning": "La votazione inizia tra meno di un giorno, e le iscrizioni chiudono quando si apre. Chi non si iscrive in tempo non potrà votare affatto. Valuta un inizio più tardi, o una finestra di iscrizione separata.",
+    "eligibility_enable": "Limitare chi può iscriversi",
+    "eligibility_enable_desc": "Gli elettori dimostrano un'età o una cittadinanza dal chip del proprio documento d'identità prima di poter entrare. Serviranno l'app Self e un telefono con NFC.",
+    "eligibility_unavailable": "Il servizio di verifica non risponde, quindi questa elezione non può essere creata con restrizioni. Lascia l'interruttore spento oppure riprova più tardi.",
+    "min_age": "Età minima",
+    "min_age_hint": "Lascia vuoto per non applicare regole di età. La data di nascita non viene mai rivelata, solo se supera questa soglia.",
+    "country_rule": "Regola di cittadinanza",
+    "country_rule_none": "Nessuna regola di cittadinanza",
+    "country_rule_block": "Blocca questi paesi",
+    "country_rule_allow": "Consenti solo questi paesi",
+    "nationality_reveal_note": "Consentire solo alcuni paesi costringe l'elettore a rivelare la propria cittadinanza, perché il sistema di prove sa esprimere solo esclusioni. Bloccare paesi no: risponde sì o no senza nominare il paese.",
+    "countries_allowed": "Paesi ammessi",
+    "countries_blocked": "Paesi bloccati",
+    "country_picker_hint": "Cerca e seleziona i paesi. Fino a {{max}}."
   },
   "election_mgmt": {
     "actions": "Azioni",
@@ -364,7 +387,6 @@
     "tally_compute": "Calcola lo scrutinio",
     "tally_computing": "Decifratura…",
     "tally_publish": "Pubblica i risultati",
-    "tally_voters": "{{count}} elettori dopo aver rimosso i voti sostituiti",
     "tally_quorum_short": "Quorum di privacy non raggiunto ({{voters}} su {{quorum}}). Invalida invece di pubblicare.",
     "tally_key_missing": "La chiave di decifratura di questa elezione non è su questo dispositivo. Apri Votain sul dispositivo con cui hai creato l'elezione.",
     "results_published": "Risultati pubblicati",
@@ -372,7 +394,12 @@
     "export_key": "Esporta chiave di decifratura (backup)",
     "key_exported": "Chiave di decifratura esportata",
     "import_key": "Importa chiave di decifratura",
-    "key_imported": "Chiave di decifratura importata"
+    "key_imported": "Chiave di decifratura importata",
+    "key_no_longer_needed": "La chiave di decifratura non serve più: lo spoglio è pubblicato e non può cambiare. Elimina ogni copia esportata, perché decifrerebbe ancora le singole schede memorizzate sulla catena.",
+    "entry_requirements": "Requisiti di accesso",
+    "tally_voters_other": "{{count}} elettori dopo aver rimosso i voti sostituiti",
+    "tally_voters_one": "{{count}} elettore dopo aver rimosso i voti sostituiti",
+    "tally_voters_many": "{{count}} elettori dopo aver rimosso i voti sostituiti"
   },
   "gas": {
     "title": "Gestione Gas",
@@ -383,10 +410,12 @@
     "history": "Cronologia transazioni",
     "deposit": "Deposito",
     "used": "Gas utilizzato",
-    "votes_remaining": "~{{count}} voti rimanenti",
     "amount_token": "Importo ({{currency}})",
     "withdraw": "Prelievo",
-    "history_empty": "Nessun movimento di gas."
+    "history_empty": "Nessun movimento di gas.",
+    "votes_remaining_other": "~{{count}} voti rimanenti",
+    "votes_remaining_one": "~{{count}} voto rimanente",
+    "votes_remaining_many": "~{{count}} voti rimanenti"
   },
   "members": {
     "title": "Membri Registrati",
@@ -456,7 +485,11 @@
     "too_long": "Al massimo {{max}} caratteri",
     "candidate_too_short": "Ogni candidato richiede almeno {{min}} caratteri",
     "candidate_too_long": "I nomi dei candidati sono limitati a {{max}} caratteri",
-    "must_be_future_chain": "Deve essere successivo all'orologio della catena, che segna {{time}}"
+    "must_be_future_chain": "Deve essere successivo all'orologio della catena, che segna {{time}}",
+    "min_age_range": "L'età minima deve essere compresa tra {{min}} e {{max}}",
+    "country_list_empty": "Aggiungi almeno un codice paese",
+    "country_list_long": "Al massimo {{max}} paesi",
+    "eligibility_empty": "Imposta una regola di età o di cittadinanza, oppure disattiva la restrizione"
   },
   "devices": {
     "title": "I miei dispositivi",
@@ -546,6 +579,38 @@
   },
   "eligibility": {
     "world_id": "World ID verificato",
-    "enrolled": "Iscritto a questa elezione"
+    "enrolled": "Iscritto a questa elezione",
+    "title": "Questa elezione è riservata",
+    "intro": "Dimostra di avere i requisiti con il passaporto o la carta d'identità. Viene letto sul tuo telefono e non ne esce mai.",
+    "req_min_age": "Devi avere almeno {{age}} anni",
+    "req_allowed": "La tua cittadinanza deve essere una di: {{countries}}",
+    "req_blocked": "La tua cittadinanza non può essere una di: {{countries}}",
+    "privacy_note": "Votain riceve un sì o un no per ogni regola. Non la tua data di nascita, non il tuo nome, non il numero del documento.",
+    "privacy_note_reveal": "Votain riceve un sì o un no per ogni regola, più la tua cittadinanza, che viene confrontata con l'elenco e poi scartata. Non la tua data di nascita, non il tuo nome, non il numero del documento.",
+    "restricted_hint": "Ti verrà chiesto di verificarti prima con un documento ufficiale.",
+    "start": "Verifica con il mio documento",
+    "opening": "Preparazione della verifica…",
+    "scan_hint": "Inquadra questo codice con l'app Self, poi avvicina il documento al telefono.",
+    "open_app": "Verifica con l'app Self",
+    "waiting": "In attesa del tuo telefono…",
+    "claiming": "Verificato. Completamento dell'iscrizione…",
+    "mock_mode": "Modalità di prova: si accettano solo documenti simulati creati nell'app Self.",
+    "error": "Non è stato possibile completare la verifica. Riprova.",
+    "failed_min_age": "Il tuo documento non raggiunge l'età minima di questa elezione.",
+    "failed_nationality_not_allowed": "La tua cittadinanza non rientra tra quelle ammesse da questa elezione.",
+    "failed_nationality_blocked": "Questa elezione non accetta la tua cittadinanza.",
+    "failed_nationality_missing": "Non è stato possibile leggere la tua cittadinanza dal documento.",
+    "failed_unknown": "Il tuo documento non soddisfa i requisiti di questa elezione.",
+    "mobile_return_hint": "Self ti riporterà qui al termine.",
+    "requirements_unknown": "Non è stato possibile verificare i requisiti di questa elezione. Riprova."
+  },
+  "country_picker": {
+    "placeholder": "Cerca un paese…",
+    "no_results": "Nessun paese corrisponde alla ricerca",
+    "limit_reached": "Hai raggiunto il limite di {{max}} paesi",
+    "remove": "Rimuovi {{country}}",
+    "more_results_other": "e altri {{count}}. Continua a scrivere per restringere.",
+    "more_results_one": "e altro {{count}}. Continua a scrivere per restringere.",
+    "more_results_many": "e altri {{count}}. Continua a scrivere per restringere."
   }
 }

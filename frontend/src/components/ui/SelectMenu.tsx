@@ -8,6 +8,7 @@
 import * as Select from '@radix-ui/react-select';
 import { ChevronDown, Check } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { useTapSafeSelect } from '../../hooks/useTapSafeSelect';
 
 export interface SelectMenuOption {
   value: string;
@@ -40,6 +41,9 @@ export function SelectMenu({
 }: SelectMenuProps) {
   const selectId = id ?? label?.toLowerCase().replace(/\s+/g, '-');
   const selected = options.find(o => o.value === value);
+  // Controlled so a tap on the trigger closes the list instead of reopening it
+  // on touch devices. See the hook for what Radix does.
+  const { open, onOpenChange } = useTapSafeSelect();
 
   return (
     <div className="flex flex-col gap-1.5 w-full">
@@ -49,7 +53,7 @@ export function SelectMenu({
         </label>
       )}
 
-      <Select.Root value={value} onValueChange={onChange}>
+      <Select.Root open={open} onOpenChange={onOpenChange} value={value} onValueChange={onChange}>
         <Select.Trigger
           id={selectId}
           aria-label={label}

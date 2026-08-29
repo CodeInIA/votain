@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, ExternalLink, Users, Calendar } from 'lucide-react';
+import { AlertTriangle, ExternalLink, Users, Calendar, Copy, Check } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { DomainBadge } from '../../components/ui/DomainBadge';
 import { Badge } from '../../components/ui/Badge';
+import { EligibilityChips } from '../../components/ui/EligibilityChips';
 import { Button } from '../../components/ui/Button';
 import { BackButton } from '../../components/ui/BackButton';
 import { Card } from '../../components/ui/Card';
@@ -15,7 +16,13 @@ import { Countdown } from '../../components/ui/Countdown';
 import { StatusNotice } from '../../components/ui/StatusNotice';
 import { TransactionPendingModal, type TxState } from '../../components/ui/TransactionPendingModal';
 import { useElection } from '../../hooks/useElections';
+import { shortenReference } from '../../lib/utils';
+import { usePolicyRequirements } from '../../hooks/usePolicyRequirements';
+import { ResultBarChart } from '../../components/ui/BarChart';
+import { hasPublishedResults } from '../../data/seed';
 import { enrollInElection } from '../../lib/voting';
+import { EligibilityCheck } from '../../components/voter/EligibilityCheck';
+import type { EnrollAttestationInput } from '../../lib/relay';
 import { getOrCreateIdentity, getStoredCommitment } from '../../lib/semaphore';
 import { nextBoundary, PULSE_PHASES } from '../../lib/phase';
 
@@ -27,7 +34,16 @@ export default function ElectionDetail() {
 
   const [selectedCandidate, setSelectedCandidate] = useState('');
   const [showGasWarning] = useState(false);
+  const [referenceCopied, setReferenceCopied] = useState(false);
   const [txState, setTxState] = useState<TxState>('idle');
+
+  // The policy travels with the election, verified against the contract's hash
+  // in `chainElections`. It used to be a separate request to the backend, which
+  // meant a second thing that could fail and a state for not knowing. Reading it
+  // from data the page already had to load removes both.
+  const [showEligibility, setShowEligibility] = useState(false);
+  const eligibilityPolicy = election?.eligibilityPolicy ?? null;
+  const policyRequirements = usePolicyRequirements(eligibilityPolicy);
 
   // In PRF mode the identity isn't cached across sessions, so enrollment status
   // can read as "unknown" (isEnrolled === undefined) with no commitment stored.
@@ -65,7 +81,7 @@ export default function ElectionDetail() {
   const isEnrollPhase = election.phase === 'enrolling';
   const isActivePhase = election.phase === 'active';
   const isLivePhase   = isEnrollPhase || isActivePhase;
-  const hasResults    = election.phase === 'closed' && election.ipfsCid;
+  const hasResults     = hasPublishedResults(election);
   const boundary      = nextBoundary(election);
   // The ballot is only interactive for an enrolled voter who has not voted yet;
   // every other case still gets to *see* the options, just read-only.
@@ -89,18 +105,30 @@ export default function ElectionDetail() {
       case 'tallying':
         return infoPanel(t('election.cta_tallying'));
       case 'closed':
-        return hasResults
-          ? (
-            <Button variant="default" className="w-full rounded-full"
-              onClick={() => navigate(`/election/${election.id}/results`)}>
-              {t('election.view_results')}
-              <ExternalLink className="w-4 h-4 ml-2" />
-            </Button>
-          )
-          : infoPanel(t('results.not_available'));
+        // No footer action once the results are on the page: the breakdown is
+        // above with its own link to the full view, and repeating it as the
+        // main call to action would send the reader away from what they came for.
+        return hasResults ? null : infoPanel(t('results.not_available'));
     }
 
     if (isEnrollPhase) {
+      // The attribute check takes over the footer while it runs: the voter has
+      // a phone to pick up, and leaving the enrol button live underneath it
+      // would invite a second attempt that the contract would reject anyway.
+      if (showEligibility && eligibilityPolicy) {
+        return (
+          <EligibilityCheck
+            election={election.contractAddress}
+            policy={eligibilityPolicy}
+            onVerified={attestation => {
+              setShowEligibility(false);
+              void submitEnrollment(attestation);
+            }}
+            onCancel={() => setShowEligibility(false)}
+          />
+        );
+      }
+
       return election.isEnrolled
         ? (
           <div className="flex items-center justify-center gap-2 py-4 text-success text-sm font-semibold">
@@ -108,9 +136,18 @@ export default function ElectionDetail() {
           </div>
         )
         : (
-          <Button variant="gradient" size="lg" className="w-full rounded-full h-14" onClick={handleEnroll}>
-            {t('election.enroll')}
-          </Button>
+          <div className="flex flex-col gap-2">
+            <Button variant="gradient" size="lg" className="w-full rounded-full h-14" onClick={handleEnroll}>
+              {t('election.enroll')}
+            </Button>
+            {/* Said before the tap, not after: a voter without a passport to
+                hand should find that out here rather than mid-flow. */}
+            {eligibilityPolicy && (
+              <p className="text-xs text-on-surface-meta text-center">
+                {t('eligibility.restricted_hint')}
+              </p>
+            )}
+          </div>
         );
     }
 
@@ -130,6 +167,26 @@ export default function ElectionDetail() {
     );
   };
 
+  // Copies the FULL reference, never the shortened form on screen.
+  const copyReference = async () => {
+    if (!election?.referenceNumber) return;
+    await navigator.clipboard.writeText(election.referenceNumber);
+    setReferenceCopied(true);
+    setTimeout(() => setReferenceCopied(false), 2000);
+  };
+
+  const submitEnrollment = async (attestation?: EnrollAttestationInput) => {
+    setTxState('pending');
+    try {
+      await enrollInElection(election.contractAddress, attestation);
+      setTxState('success');
+      void refresh();
+    } catch (e) {
+      console.error('Enroll failed:', e);
+      setTxState('failed');
+    }
+  };
+
   const handleEnroll = async () => {
     // Phase A / no chain: simulate. Live: real relayed enrollment.
     if (!live) {
@@ -137,15 +194,15 @@ export default function ElectionDetail() {
       setTimeout(() => setTxState('success'), 2500);
       return;
     }
-    setTxState('pending');
-    try {
-      await enrollInElection(election.contractAddress);
-      setTxState('success');
-      void refresh();
-    } catch (e) {
-      console.error('Enroll failed:', e);
-      setTxState('failed');
+
+    // A restricted election cannot be enrolled in directly: the contract
+    // refuses the plain entry point, so the attribute check has to come first.
+    if (eligibilityPolicy) {
+      setShowEligibility(true);
+      return;
     }
+
+    await submitEnrollment();
   };
 
   const handleVote = () => {
@@ -169,6 +226,13 @@ export default function ElectionDetail() {
               {t(`phase.${election.phase}`)}
             </Badge>
             {election.hasVoted && <Badge variant="voted" dot>{t('phase.voted')}</Badge>}
+            {/* Visible before anything is clicked. The requirements themselves
+                are spelled out in the eligibility card below; this is so nobody
+                has to scroll to learn the election is not open to everyone. */}
+            {/* The rules themselves, in the same chips the lists use. The
+                full sentences are further down the page; this row is for
+                things you can read at a glance. */}
+            <EligibilityChips policy={eligibilityPolicy} />
           </div>
           <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white leading-tight">
             {election.title}
@@ -230,15 +294,46 @@ export default function ElectionDetail() {
             {election.eligibility.map(e => (
               <EligibilityRow key={e.id} label={e.label} status={e.status} description={e.description} />
             ))}
+            {/* The attribute restrictions belong here, beside the other entry
+                conditions, not hidden until the voter presses enrol. Someone
+                without a passport to hand should be able to see that this
+                election is not for them without starting a flow to find out.
+                Status is `unknown` on purpose: nothing is known about whether
+                this voter meets them until they verify. */}
+            {policyRequirements.map(requirement => (
+              <EligibilityRow key={requirement} label={requirement} status="unknown" />
+            ))}
           </Card>
         )}
 
-        {/* Ballot: interactive only when this voter can actually cast it. */}
+        {/* Ballot, or the result once there is one.
+            A decided election has its totals on chain already, so listing the
+            candidates with no numbers and a button to go and see them elsewhere
+            withholds what the page is for. The full results view still exists
+            for the verification badges and the audit trail; this is the answer. */}
         <Card className="p-5 mb-4">
           <h2 className="text-sm font-semibold text-on-surface mb-3">
-            {canPickCandidate ? t('election.select_candidate') : t('election.candidates')}
+            {hasResults
+              ? t('results.breakdown')
+              : canPickCandidate ? t('election.select_candidate') : t('election.candidates')}
           </h2>
-          {canPickCandidate ? (
+          {hasResults ? (
+            <>
+              <ResultBarChart
+                candidates={election.candidates as Parameters<typeof ResultBarChart>[0]['candidates']}
+                totalVotes={election.castVotes}
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-4"
+                onClick={() => navigate(`/election/${election.id}/results`)}
+              >
+                {t('election.view_results')}
+                <ExternalLink className="w-3.5 h-3.5 ml-1.5" />
+              </Button>
+            </>
+          ) : canPickCandidate ? (
             <RadioGroup
               value={selectedCandidate}
               onChange={setSelectedCandidate}
@@ -265,14 +360,39 @@ export default function ElectionDetail() {
           )}
         </Card>
 
-        {/* Already voted */}
+        {/* Already voted. The receipt stays visible for the life of the election,
+            because it is the voter's own proof that they took part. The button
+            does not: re-voting is only possible while voting is open, so offering
+            it on a closed, tallying, cancelled or voided election invites an
+            action the contract would reject. */}
         {election.hasVoted && (
           <Card className="p-5 mb-4">
             <p className="text-sm font-medium text-on-surface mb-1">{t('election.already_voted')}</p>
-            <p className="text-xs text-on-surface-meta mb-3">{t('election.reference')}: <span className="font-mono">{election.referenceNumber}</span></p>
-            <Button variant="ghost" size="sm" onClick={() => navigate(`/voter/election/${election.id}/change-vote`)}>
-              {t('election.change_vote')}
-            </Button>
+            {/* Shortened for display and copied in full, the same treatment the
+                confirmation screen gives it. A reference is one unbroken hex
+                token, so at full length it does not wrap and simply leaves the
+                card on a phone. */}
+            <div className="flex items-center gap-2 mb-3">
+              <p className="text-xs text-on-surface-meta min-w-0">
+                {t('election.reference')}:{' '}
+                <span className="font-mono">{shortenReference(election.referenceNumber ?? '')}</span>
+              </p>
+              <button
+                type="button"
+                aria-label={t('common.copy')}
+                onClick={() => { void copyReference(); }}
+                className="text-on-surface-meta hover:text-on-surface cursor-pointer shrink-0"
+              >
+                {referenceCopied
+                  ? <Check className="w-3.5 h-3.5 text-success" />
+                  : <Copy className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+            {isActivePhase && (
+              <Button variant="ghost" size="sm" onClick={() => navigate(`/voter/election/${election.id}/change-vote`)}>
+                {t('election.change_vote')}
+              </Button>
+            )}
           </Card>
         )}
 

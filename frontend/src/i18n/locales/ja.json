@@ -120,11 +120,16 @@
     "title": "選挙",
     "subtitle": "開催中および過去の選挙を閲覧",
     "search_placeholder": "選挙を検索…",
-    "results_count": "{{count}}件の選挙",
-    "results_count_plural": "{{count}}件の選挙",
     "empty_title": "選挙が見つかりません",
     "empty_desc": "別の検索を試すかフィルターをクリアしてください。",
-    "verified_domain": "確認済みドメイン"
+    "verified_domain": "確認済みドメイン",
+    "min_age": "最低年齢",
+    "age_from": "下限",
+    "age_to": "から",
+    "age_to_placeholder": "上限",
+    "nationality": "国籍",
+    "restricted_only": "条件あり",
+    "results_count_other": "{{count}}件の選挙"
   },
   "election": {
     "by": "主催:",
@@ -208,8 +213,8 @@
     "title": "マイ選挙",
     "subtitle": "登録している選挙",
     "empty": "まだ選挙に登録していません。",
-    "urgent": "{{count}}件が間もなく終了",
-    "ends_soon": "間もなく終了"
+    "ends_soon": "間もなく終了",
+    "urgent_other": "{{count}}件が間もなく終了"
   },
   "zk": {
     "title": "証明を生成中",
@@ -231,7 +236,8 @@
     "new_choice": "新しい選択肢を選んでください",
     "modal_title": "投票変更の確認",
     "modal_desc": "{{candidate}}に投票を変更しようとしています。",
-    "confirm_change": "投票を変更"
+    "confirm_change": "投票を変更",
+    "voting_closed": "この選挙の投票は終了したため、投票内容は変更できません。"
   },
   "history": {
     "title": "投票履歴",
@@ -334,7 +340,20 @@
     "yes_no_hint": "ここで設定する項目はありません。選択肢は選んだ投票ルールによって決まり、投票者はそのいずれかを選びます。",
     "yes_no_preview": "投票者に表示される投票用紙",
     "current_tank": "共有ガス残高には現在 {{amount}} {{currency}} があります。",
-    "short_enrollment_warning": "投票開始まで一日を切っており、登録は投票開始と同時に締め切られます。間に合わなかった人はまったく投票できません。開始を遅らせるか、登録期間を別に設けることを検討してください。"
+    "short_enrollment_warning": "投票開始まで一日を切っており、登録は投票開始と同時に締め切られます。間に合わなかった人はまったく投票できません。開始を遅らせるか、登録期間を別に設けることを検討してください。",
+    "eligibility_enable": "参加できる人を制限する",
+    "eligibility_enable_desc": "有権者は参加前に、身分証明書のチップから年齢または国籍を証明します。Self アプリと NFC 対応スマートフォンが必要です。",
+    "eligibility_unavailable": "検証サービスに接続できないため、制限付きの選挙を作成できません。スイッチはオフのままにするか、後でもう一度お試しください。",
+    "min_age": "最低年齢",
+    "min_age_hint": "年齢の条件を設けない場合は空欄にします。生年月日は決して開示されず、この基準を満たすかどうかだけが伝わります。",
+    "country_rule": "国籍の条件",
+    "country_rule_none": "国籍の条件なし",
+    "country_rule_block": "これらの国を除外する",
+    "country_rule_allow": "これらの国のみ許可する",
+    "nationality_reveal_note": "特定の国のみを許可すると、有権者は国籍を開示することになります。証明の仕組みが除外しか表現できないためです。国を除外する場合はそうなりません。国名を明かさずに可否だけを答えます。",
+    "countries_allowed": "許可する国",
+    "countries_blocked": "除外する国",
+    "country_picker_hint": "国を検索して選択します。最大 {{max}} か国。"
   },
   "election_mgmt": {
     "actions": "アクション",
@@ -364,7 +383,6 @@
     "tally_compute": "集計を計算",
     "tally_computing": "復号中…",
     "tally_publish": "結果を公開",
-    "tally_voters": "上書きされた票を除いて {{count}} 人の投票者",
     "tally_quorum_short": "プライバシー定足数に未達です（{{quorum}} 中 {{voters}}）。公開せず無効にしてください。",
     "tally_key_missing": "この選挙の復号鍵がこの端末にありません。選挙を作成した端末で Votain を開いてください。",
     "results_published": "結果を公開しました",
@@ -372,7 +390,10 @@
     "export_key": "復号鍵をエクスポート（バックアップ）",
     "key_exported": "復号鍵をエクスポートしました",
     "import_key": "復号鍵をインポート",
-    "key_imported": "復号鍵をインポートしました"
+    "key_imported": "復号鍵をインポートしました",
+    "key_no_longer_needed": "復号鍵はもう必要ありません。集計は公開済みで変更できません。書き出した控えは削除してください。ブロックチェーン上の個々の投票を今も復号できてしまいます。",
+    "entry_requirements": "参加条件",
+    "tally_voters_other": "上書きされた票を除いて {{count}} 人の投票者"
   },
   "gas": {
     "title": "ガス管理",
@@ -383,10 +404,10 @@
     "history": "トランザクション履歴",
     "deposit": "入金",
     "used": "使用済みガス",
-    "votes_remaining": "残り約{{count}}票",
     "amount_token": "金額 ({{currency}})",
     "withdraw": "出金",
-    "history_empty": "ガスの履歴はまだありません。"
+    "history_empty": "ガスの履歴はまだありません。",
+    "votes_remaining_other": "残り約{{count}}票"
   },
   "members": {
     "title": "登録メンバー",
@@ -456,7 +477,11 @@
     "too_long": "{{max}} 文字以内",
     "candidate_too_short": "各候補者には {{min}} 文字以上が必要です",
     "candidate_too_long": "候補者名は {{max}} 文字までです",
-    "must_be_future_chain": "チェーンの時計より後にしてください。現在は {{time}} です"
+    "must_be_future_chain": "チェーンの時計より後にしてください。現在は {{time}} です",
+    "min_age_range": "最低年齢は {{min}} 以上 {{max}} 以下にしてください",
+    "country_list_empty": "国コードを少なくとも1つ追加してください",
+    "country_list_long": "国は最大 {{max}} 件までです",
+    "eligibility_empty": "年齢または国籍の条件を設定するか、制限をオフにしてください"
   },
   "devices": {
     "title": "マイデバイス",
@@ -546,6 +571,36 @@
   },
   "eligibility": {
     "world_id": "World ID 確認済み",
-    "enrolled": "この選挙に登録済み"
+    "enrolled": "この選挙に登録済み",
+    "title": "この選挙には参加条件があります",
+    "intro": "パスポートまたは身分証明書で条件を満たしていることを証明してください。読み取りはご自身のスマートフォン上で行われ、外部には出ません。",
+    "req_min_age": "{{age}} 歳以上である必要があります",
+    "req_allowed": "国籍が次のいずれかである必要があります: {{countries}}",
+    "req_blocked": "国籍が次のいずれかであってはなりません: {{countries}}",
+    "privacy_note": "Votain が受け取るのは条件ごとの可否だけです。生年月日も氏名も証券番号も受け取りません。",
+    "privacy_note_reveal": "Votain が受け取るのは条件ごとの可否と、リストと照合したうえで破棄される国籍だけです。生年月日も氏名も証券番号も受け取りません。",
+    "restricted_hint": "先に公的な身分証明書での確認を求められます。",
+    "start": "身分証明書で確認する",
+    "opening": "確認を準備しています…",
+    "scan_hint": "Self アプリでこのコードを読み取り、身分証明書をスマートフォンにかざしてください。",
+    "open_app": "Self アプリで確認する",
+    "waiting": "スマートフォンからの応答を待っています…",
+    "claiming": "確認できました。登録を完了しています…",
+    "mock_mode": "テストモード: Self アプリで作成した模擬書類のみ受け付けます。",
+    "error": "確認を完了できませんでした。もう一度お試しください。",
+    "failed_min_age": "お持ちの証明書はこの選挙の最低年齢を満たしていません。",
+    "failed_nationality_not_allowed": "お持ちの国籍はこの選挙が認めるものに含まれていません。",
+    "failed_nationality_blocked": "この選挙はお持ちの国籍を受け付けていません。",
+    "failed_nationality_missing": "証明書から国籍を読み取れませんでした。",
+    "failed_unknown": "お持ちの証明書はこの選挙の条件を満たしていません。",
+    "mobile_return_hint": "完了すると Self がここに戻します。",
+    "requirements_unknown": "この選挙の参加条件を確認できませんでした。もう一度お試しください。"
+  },
+  "country_picker": {
+    "placeholder": "国を検索…",
+    "no_results": "その検索に一致する国はありません",
+    "limit_reached": "{{max}} か国の上限に達しました",
+    "remove": "{{country}} を削除",
+    "more_results_other": "ほか {{count}} 件。入力を続けると絞り込めます。"
   }
 }

@@ -120,11 +120,17 @@
     "title": "Elections",
     "subtitle": "Browse open and past elections",
     "search_placeholder": "Search elections…",
-    "results_count": "{{count}} election",
-    "results_count_plural": "{{count}} elections",
     "empty_title": "No elections found",
     "empty_desc": "Try a different search or clear your filters.",
-    "verified_domain": "Verified domain"
+    "verified_domain": "Verified domain",
+    "min_age": "Minimum age",
+    "age_from": "From",
+    "age_to": "to",
+    "age_to_placeholder": "To",
+    "nationality": "Nationality",
+    "restricted_only": "With requirements",
+    "results_count_other": "{{count}} elections",
+    "results_count_one": "{{count}} election"
   },
   "election": {
     "by": "by",
@@ -208,8 +214,9 @@
     "title": "My Elections",
     "subtitle": "Elections you are enrolled in",
     "empty": "You haven't enrolled in any elections yet.",
-    "urgent": "{{count}} ending soon",
-    "ends_soon": "Ends soon"
+    "ends_soon": "Ends soon",
+    "urgent_other": "{{count}} ending soon",
+    "urgent_one": "{{count}} ending soon"
   },
   "zk": {
     "title": "Generating your proof",
@@ -231,7 +238,8 @@
     "new_choice": "Select your new choice",
     "modal_title": "Confirm vote change",
     "modal_desc": "You are about to change your vote to {{candidate}}. This action cannot be undone immediately.",
-    "confirm_change": "Change vote"
+    "confirm_change": "Change vote",
+    "voting_closed": "Voting has closed for this election, so your vote can no longer be changed."
   },
   "history": {
     "title": "Vote history",
@@ -334,7 +342,20 @@
     "yes_no_hint": "There is nothing to configure here: the options are set by the voting rule you chose. Voters will pick one of them.",
     "yes_no_preview": "The ballot voters will see",
     "current_tank": "Your gas tank already holds {{amount}} {{currency}}.",
-    "short_enrollment_warning": "Voting starts in under a day, and enrolment closes when it opens. Voters who do not join in time cannot vote at all. Consider a later start, or a separate enrolment window."
+    "short_enrollment_warning": "Voting starts in under a day, and enrolment closes when it opens. Voters who do not join in time cannot vote at all. Consider a later start, or a separate enrolment window.",
+    "eligibility_enable": "Restrict who can enrol",
+    "eligibility_enable_desc": "Voters prove an age or a nationality from the chip in their identity document before they can join. They will need the Self app and an NFC phone.",
+    "eligibility_unavailable": "The verification service is not reachable, so this election could not be created with restrictions. Leave the switch off, or try again later.",
+    "min_age": "Minimum age",
+    "min_age_hint": "Leave empty for no age rule. The date of birth is never revealed, only whether it clears this threshold.",
+    "country_rule": "Nationality rule",
+    "country_rule_none": "No nationality rule",
+    "country_rule_block": "Block these countries",
+    "country_rule_allow": "Allow only these countries",
+    "nationality_reveal_note": "Allowing only certain countries makes voters disclose their nationality, because the proof system can only express exclusions. Blocking countries does not: it answers yes or no without naming the country.",
+    "countries_allowed": "Allowed countries",
+    "countries_blocked": "Blocked countries",
+    "country_picker_hint": "Search and pick countries. Up to {{max}}."
   },
   "election_mgmt": {
     "actions": "Actions",
@@ -364,7 +385,6 @@
     "tally_compute": "Compute tally",
     "tally_computing": "Decrypting…",
     "tally_publish": "Publish results",
-    "tally_voters": "{{count}} voters after removing superseded votes",
     "tally_quorum_short": "Privacy quorum not met ({{voters}} of {{quorum}}). Void the election instead of publishing.",
     "tally_key_missing": "The decryption key for this election is not on this device. Open Votain on the device you created the election with.",
     "results_published": "Results published",
@@ -372,7 +392,11 @@
     "export_key": "Export decryption key (backup)",
     "key_exported": "Decryption key exported",
     "import_key": "Import decryption key",
-    "key_imported": "Decryption key imported"
+    "key_imported": "Decryption key imported",
+    "key_no_longer_needed": "The decryption key is no longer needed: the count is published and cannot change. Delete any copy you exported, since it would still decrypt the individual ballots stored on chain.",
+    "entry_requirements": "Entry requirements",
+    "tally_voters_other": "{{count}} voters after removing superseded votes",
+    "tally_voters_one": "{{count}} voter after removing superseded votes"
   },
   "gas": {
     "title": "Gas Management",
@@ -383,10 +407,11 @@
     "history": "Transaction history",
     "deposit": "Deposit",
     "used": "Gas used",
-    "votes_remaining": "~{{count}} votes remaining",
     "amount_token": "Amount ({{currency}})",
     "withdraw": "Withdrawal",
-    "history_empty": "No gas movements yet."
+    "history_empty": "No gas movements yet.",
+    "votes_remaining_other": "~{{count}} votes remaining",
+    "votes_remaining_one": "~{{count}} vote remaining"
   },
   "members": {
     "title": "Registered Members",
@@ -456,7 +481,11 @@
     "too_long": "At most {{max}} characters",
     "candidate_too_short": "Each candidate needs at least {{min}} characters",
     "candidate_too_long": "Candidate names are limited to {{max}} characters",
-    "must_be_future_chain": "Must be after the chain's clock, which currently reads {{time}}"
+    "must_be_future_chain": "Must be after the chain's clock, which currently reads {{time}}",
+    "min_age_range": "Minimum age must be between {{min}} and {{max}}",
+    "country_list_empty": "Add at least one country code",
+    "country_list_long": "At most {{max}} countries",
+    "eligibility_empty": "Set an age or a nationality rule, or turn the restriction off"
   },
   "devices": {
     "title": "My devices",
@@ -546,6 +575,37 @@
   },
   "eligibility": {
     "world_id": "World ID verified",
-    "enrolled": "Enrolled in this election"
+    "enrolled": "Enrolled in this election",
+    "title": "This election is restricted",
+    "intro": "Prove you qualify with your passport or national identity document. It is read on your own phone and never leaves it.",
+    "req_min_age": "You must be at least {{age}} years old",
+    "req_allowed": "Your nationality must be one of: {{countries}}",
+    "req_blocked": "Your nationality must not be one of: {{countries}}",
+    "privacy_note": "Votain receives a yes or no per rule. Not your date of birth, not your name, not your document number.",
+    "privacy_note_reveal": "Votain receives a yes or no per rule, plus your nationality, which is checked against the list and then discarded. Not your date of birth, not your name, not your document number.",
+    "restricted_hint": "You will be asked to verify with an official document first.",
+    "start": "Verify with my document",
+    "opening": "Preparing the check…",
+    "scan_hint": "Scan this code with the Self app, then hold your document against your phone.",
+    "open_app": "Verify with the Self app",
+    "waiting": "Waiting for your phone…",
+    "claiming": "Verified. Finishing enrolment…",
+    "mock_mode": "Test mode: only mock documents created in the Self app are accepted.",
+    "error": "The check could not be completed. Please try again.",
+    "failed_min_age": "Your document does not meet the minimum age for this election.",
+    "failed_nationality_not_allowed": "Your nationality is not among those this election allows.",
+    "failed_nationality_blocked": "This election does not accept your nationality.",
+    "failed_nationality_missing": "Your nationality could not be read from the document.",
+    "failed_unknown": "Your document does not meet this election's requirements.",
+    "mobile_return_hint": "Self will bring you back here when it finishes.",
+    "requirements_unknown": "This election could not be checked for entry requirements. Try again."
+  },
+  "country_picker": {
+    "placeholder": "Search for a country…",
+    "no_results": "No country matches that search",
+    "limit_reached": "You have reached the limit of {{max}} countries",
+    "remove": "Remove {{country}}",
+    "more_results_other": "and {{count}} more. Keep typing to narrow it down.",
+    "more_results_one": "and {{count}} more. Keep typing to narrow it down."
   }
 }

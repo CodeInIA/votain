@@ -293,6 +293,8 @@ src/lib/
 ├── logs.ts            # queryFilter from the deployment block, windowed on strict RPCs
 ├── worldId.ts         # shared IDKit request (login and recovery)
 ├── tally.ts           # in-app homomorphic tally
+├── countries.ts       # ISO 3166-1 alpha-3 table, localised names, flags, search
+├── eligibility.ts     # attribute policy, its hash, and the voter-side challenge
 ├── voting.ts          # enroll / castVote / history (voter actions)
 └── organizer.ts       # createElection (+ Paillier keygen), lifecycle, gas
 src/hooks/
@@ -310,8 +312,338 @@ Key rules:
   (`votain_paillier_sk_<address>`); the organizer exports it for the tally CLI. Known
   limitation (documented for the thesis): production would seal it to the organizer's
   passkey via WebAuthn PRF, as done for the voter's Semaphore identity.
-- History/receipts can prove *that* and *when* you voted, never *what*: the candidate is
-  unrecoverable on-chain by design.
+- History/receipts prove *that* and *when* you voted. They do not reveal *what*,
+  but say why precisely: the ballot is a Paillier ciphertext in the `VoteCast`
+  event, paired with the voter's nullifier, and the receipt shown to the voter IS
+  that nullifier. So the choice is hidden by the tally key being secret, not by
+  the chain being unable to hold it. Anyone with a voter's receipt AND that key
+  reads their vote, and every re-vote they made. The key never leaves the
+  organizer, is never published as an audit artefact, and the management page
+  stops offering to export it once an election is decided (see below).
+- The nullifier is not an identity: Semaphore keeps it unlinkable from the
+  enrolment commitment, so the key alone yields an anonymous table of votes and
+  deanonymizes nobody. It is the pairing with a receipt that matters, which is
+  also why it weakens coercion resistance rather than privacy in general.
+
+## Vote references never render at full length
+
+A reference is a 32-byte nullifier as hex: around 60 characters with no spaces,
+so it is a single unbreakable token that runs straight off a phone screen.
+`shortenReference` in `lib/utils.ts` keeps both ends, which is what someone
+compares when checking a receipt, and it is display only: every place that offers
+one copies or verifies the full value.
+
+The confirmation screen already did this inline; the helper is that logic moved
+somewhere the other three callers could reach. The election detail card now
+shortens and gains a copy button, because shortening without one would take away
+the value the voter came for. History rows shorten. `VerifyReceipt` keeps the
+full string and only allows it to wrap: that page exists for comparing a
+reference against a record, so it is the one place the whole thing must be
+readable.
+
+## Coercion: what actually defends, and what only looks like it
+
+The receipt shown to a voter is their nullifier, and the `VoteCast` event pairs
+that nullifier with the ballot ciphertext. So a coercer holding both a receipt
+and the tally key reads the vote. Two ideas for closing that turn out to be
+worth writing down, one because it fails and one because it works.
+
+**Deriving the receipt from the nullifier does not help.** A one-way function of
+the nullifier looks safer, but the attacker never has to invert it: they compute
+it over every nullifier on chain, of which there are only as many as there are
+voters, and match. One-wayness buys nothing when the input space is small and
+public. More fundamentally, any receipt that lets a voter confirm their ballot is
+on chain also lets them point at it. That is the same capability, and it is the
+classic tension between individual verifiability and receipt-freeness rather than
+a formatting problem.
+
+**Re-voting is the defence, and it holds even against a coercer with the key.**
+The tally keeps only the highest nonce per nullifier (`tally.ts`), so a coercer
+can read a ballot but can never know it is the final one. To be certain they
+would have to control the voter at the moment voting closes, which is a far more
+expensive attack than reading a receipt.
+
+**The threat that stays open is the organizer.** A coercer only holds the key if
+the organizer leaked it or is the coercer, and the second case breaks the
+property outright. The structural answer is threshold decryption, splitting the
+key so no single party can decrypt alone. Votain has one key and one organizer,
+so the honest claim is coercion MITIGATION through re-voting, in the Estonian
+sense, not receipt-freeness in the JCJ or Civitas sense. Worth a paragraph in the
+thesis rather than a silent gap.
+
+## The tally key disappears once the election is decided
+
+Export and import of the Paillier key exist for one reason: making sure the tally
+CAN be run, on this device or another. A closed, voided or cancelled election has
+either had its tally published or will never have one, so both actions are gone
+from that point and a line explains why.
+
+Removing the export is not only tidiness. Every ballot is a Paillier ciphertext
+stored publicly on chain, and that key is the only thing between those
+ciphertexts and reading them one at a time. Writing a fresh unencrypted copy of
+it into a Downloads folder is worth doing while it protects against losing the
+ability to count, and is pure liability afterwards. The replacement note says to
+delete the copies, and says why.
+
+Worth stating for the thesis: this is also why the key must never be published as
+an audit artefact. Handing it to a verifier would let them confirm the tally, and
+also read every individual ballot. A system that wants third-party verification
+of the count publishes a proof of correct decryption instead, which Votain does
+not implement. The count is verifiable here in the weaker sense that it is
+immutable and its inputs are public, not in the sense that a stranger can
+recompute it.
+
+## Radix Selects are controlled, so a tap can close them
+
+Radix opens a Select on `pointerdown` for a mouse, but on touch and pen it opens
+on `click`, and that handler only opens: it never toggles. Tapping the trigger
+while the list is open runs the dismiss layer first, which closes it, and then
+the trigger's click, which reopens it. On a phone that reads as a very fast
+closing animation followed by a list that will not go away.
+
+`useTapSafeSelect` takes control of the open state and ignores an opening that
+lands within 300ms of a close. A deliberate second tap is far slower than the
+reflex being guarded against, so nothing a person can actually do is swallowed.
+
+Both `LanguageSelector` and `SelectMenu` use it, which is every Radix Select in
+the app. Any new one should too.
+
+## The results chart gives labels a line of their own on narrow screens
+
+`ResultBarChart` put the option name in a fixed 7rem column with `truncate`,
+which cut off any name longer than a word or two. On a phone that meant a set of
+results with the choices themselves unreadable, and the blank-vote label is a
+sentence in most locales: 27 characters in Spanish, 31 in Russian.
+
+The row now wraps. The label takes a full line below `sm` and only sits beside
+the bar once there is room, and it no longer truncates at any width: a candidate
+name is the one thing on that chart that cannot be inferred from what is left of
+it. Percentages and counts keep their column.
+
+## Published results are shown, not linked
+
+A decided election has its totals on chain, so both the voter page and the public
+preview render the breakdown inline with `ResultBarChart`, the same component the
+full results page uses. Someone opening a decided election's link is asking who
+won, and a bare candidate list with a button to go and see the answer elsewhere
+withholds it.
+
+The full results view still exists and is linked from inside that card: it
+carries the verification badges and the audit trail. What it no longer gets is
+the footer call to action, which would have sent the reader away from the page
+they were already on.
+
+`hasPublishedResults` decides this in one place, keyed on the tally being
+present. It used to be three conditions in three files, and two of them tested
+`ipfsCid`, which is empty for every tally run in the app.
+
+## Tally key derivation cost
+
+The organizer's Paillier key is re-derived from the passkey PRF secret rather
+than stored, which means a 2048-bit key is generated in the browser every time an
+election is created. That is pure BigInt work: **nothing in the path touches the
+chain or the network**, so the cost is identical on a local node and on Amoy.
+
+The prime search discards candidates by trial division against the primes below
+10000 before running Miller-Rabin, and screens survivors with a single MR round
+before paying for the full forty. Roughly seven candidates in eight never reach a
+modular exponentiation. Measured in the vitest environment, one derivation went
+from **43.7s to about 6.5s**.
+
+Both filters are exact, not probabilistic shortcuts: trial division rejects only
+numbers a small prime divides, and the one-round screen rejects only numbers
+Miller-Rabin proves composite. Neither can skip a value the original walk would
+have accepted, so the derivation is unchanged.
+
+**`tallyKey.test.ts` pins the derived keypair for a fixed secret and nonce.** The
+derivation is a compatibility surface, not an implementation detail: a change
+that yields a different key silently makes every election created before it
+undecryptable. If that test fails, the fix is not to update the vector.
+
+What is left is unavoidable arithmetic, and a handful of seconds of frozen tab
+still reads as a crash. The create wizard should say what it is doing between the
+passkey prompt and the wallet prompt.
+
+## Plurals
+
+Every string interpolating `{{count}}` needs one form per plural category the
+language actually uses, and that is not two everywhere: Spanish, French,
+Portuguese and Italian add `many`, Russian has four, Arabic six, and Chinese,
+Japanese and Korean have exactly one. `Intl.PluralRules` is the authority;
+`src/i18n/plurals.test.ts` asks it rather than assuming.
+
+The suffixes are the CLDR category names (`_one`, `_other`, `_few`, …), which is
+i18next's JSON v4 format. **`_plural` is the v3 format and this version ignores
+it**, silently falling back to the unsuffixed key. That is how the results line
+read "13 elección": the plural translation was there, correct, and dead. The test
+forbids the suffix and forbids leaving an unsuffixed form beside the suffixed
+ones, since that is the other way the singular disappears.
+
+## Election filters are shared, not copied
+
+Discover and the organizer dashboard filter different sets of elections but
+offer the same filters, so all of it lives in one place:
+
+- `lib/electionFilter.ts` owns the state shape, the empty value, the
+  "is anything active" predicate and the matching rule.
+- `components/ui/ElectionFilters.tsx` is the bar itself, fully controlled. Its
+  property filters (verified domain, has requirements) are hueless chips rather
+  than `Badge`s: every colour in the palette is already a phase (primary is
+  `enrolled`, secondary `tallying`, tertiary `pending_vote`, warning `tie`,
+  error `cancelled`, yellow `enrolling`, green `active`), so any hue picked for
+  them could only collide with a state. Contrast alone carries the on/off.
+- `hooks/useVerifiedDomains.ts` resolves domain verification once per distinct
+  organizer and domain pair, and hands back a predicate.
+- `components/ui/EligibilityChips.tsx` shows an election's entry requirements.
+  A component rather than a snippet because the summary comes from a hook, which
+  cannot be called from inside a list callback.
+- `restrictedOnly` is a separate filter from the age and nationality inputs
+  beside it. Those ask "would I qualify", which an unrestricted election
+  satisfies trivially, so it matches every value; this asks "which of these have
+  requirements at all", which no combination of the inputs can express.
+
+### Requirements are shown, not labelled
+
+`EligibilityChips` deliberately does not use `Badge`. Every Badge variant is the
+same shape, an uppercase translucent pill with a ring, which is the vocabulary of
+election PHASE; a restriction rendered in that vocabulary read as another status
+and vanished beside one. The chips are square-cornered, solid, mixed case and
+carry an icon.
+
+They also show the rules rather than the word "Restricted". Someone scanning a
+list wants to know whether THEY qualify, and "18+" beside a Spanish flag settles
+that at a glance where a generic label only raises the question and sends them
+into the election to find out. The full sentences stay in the `title`, and on the
+election page, so the short form never costs the precise one.
+
+One rule holds across the app, and it is worth keeping: **a rounded-full
+uppercase pill is a PHASE; a rounded chip with an icon is a PROPERTY.** Phase is
+the only thing allowed to use hue as its primary signal.
+
+Colour lives in the ICON, never in the fill. A solid amber block competed with
+the phase pill beside it, which is already yellow while an election is enrolling,
+and read as a warning rather than as a fact about the election. The chips sit on
+the same neutral surface as the rest of a card's metadata; only the blocked-
+countries icon takes a colour of its own, because it is the one rule that
+excludes rather than admits.
+
+They were copies before, and the copies drifted: the dashboard had the age and
+nationality inputs but no phase chips and no restricted badge, so an organizer
+could not narrow by state and could not tell which of their own elections were
+restricted. Discover's "clear filters" also reset three filters by name and left
+the rest on, which could leave the list still empty after clearing it.
+
+## Attribute eligibility (age, nationality)
+
+An election can restrict enrollment to voters who prove a minimum age or a
+nationality from their passport chip.
+
+**Organizer side**, in step 3 of the create wizard, off by default. The policy is
+written into `metadataJson` and its `keccak256` into the contract, so anyone can
+recompute one from the other. The attester address is fetched from the backend at
+creation time and frozen into the election: it cannot be changed afterwards,
+which is what makes the restriction something voters can rely on rather than
+something the organizer can rewrite mid-election.
+
+Countries are chosen through `components/ui/CountryPicker.tsx`: type part of a
+name, pick from the filtered list, and the selection appears as removable cards
+with flags. Nobody types an ISO code, because nobody knows offhand that Spain is
+ESP and a typo there silently produces a policy that excludes the wrong country.
+
+`lib/countries.ts` stores only the alpha-3 to alpha-2 mapping. Names come from
+`Intl.DisplayNames` in the active locale, so the list is translated into all
+thirteen languages without a single string in the locale files, and flags are the
+alpha-2 code rewritten as regional indicator symbols (`main.tsx` already installs
+country-flag-emoji-polyfill for Windows). Search folds diacritics, so "espana"
+finds España, and matches substrings so "korea" finds "South Korea". The policy
+itself always speaks alpha-3: the alpha-2 code never leaves that module.
+
+The voter sees the same treatment. `EligibilityCheck` lists requirements as
+flagged, localised country names rather than "ESP, PRT", which asks the reader to
+decode something they were never told.
+
+The wizard says out loud that "allow only these countries" makes voters disclose
+their nationality while "block these countries" does not. That asymmetry is not
+ours: Self can only express exclusions, so an allowlist has to be checked against
+a revealed value. An organizer choosing between the two should know which one
+asks more of the voter.
+
+**The policy travels with the election, not in a separate request.** It lives in
+the on-chain `metadataJson`, and `chainElections` verifies it against the
+`eligibilityPolicyHash` the contract stores, which is the same check the backend
+makes before it will attest anything. A policy whose hash does not match is
+treated as no policy and logged. Two consequences: lists and cards can show
+restrictions without a request per election, and there is no second source of
+truth to disagree with the first. An earlier version fetched it per election from
+the backend, which added a failure mode and a state for not knowing; both are
+gone.
+
+**Restrictions appear at every level a decision is made.** A badge on the
+election card, so someone scanning Discover or the dashboard can see an election
+is not open to everyone before opening it. The requirements themselves on the
+voter page, the public preview and the organizer's management page, the last of
+which is also the only place an organizer can check what their own election was
+gated on without reading the contract.
+
+**Discover and the dashboard filter by age and nationality with the same
+controls.** `EligibilityFilterControls` and `matchesEligibilityFilter` are shared
+so the two lists cannot mean different things by the same input. Two decisions
+worth keeping: an election with no age rule counts as requiring zero rather than
+being excluded from every range, and the nationality control asks which elections
+would ADMIT a country rather than which ones name it, so an unrestricted election
+matches every choice. Filtering for "Spain" and losing every open election would
+be the wrong answer to the question being asked.
+
+**The restrictions are on the election page, not behind the enrol button.** Both
+the voter page and the public preview list them in the eligibility card, beside
+the other entry conditions, and carry a "Restricted" badge next to the phase so
+nobody has to scroll to learn the election is not open to everyone. Someone
+without a document to hand should be able to see that an election is not for them
+without starting a flow to find out.
+
+Status on those rows is `unknown` on purpose: nothing is known about whether this
+particular voter meets them until they verify, and a green tick would be a claim
+the app cannot make.
+
+`usePolicyRequirements` writes the text once, so the election page and the
+verification flow cannot describe the same policy differently. The public preview
+fetches the policy itself, because that is the link people share, and fails quiet
+there: the restriction is enforced on chain regardless, and the voter page is
+where a failure needs reporting.
+
+**Voter side**, `components/voter/EligibilityCheck.tsx`. Replaces the enrol
+button while it runs, shows the requirements before asking for anything, opens a
+challenge, polls the backend, then collects an attestation and enrolls with it.
+
+The two ways in are mutually exclusive, not a QR with a link underneath. On a
+phone the Self app is on this very device, so there is nothing to scan and the
+voter gets a button, matching what `WorldIdVerify` already does and reusing the
+same `isMobile` user-agent test. That link carries a `deeplinkCallback`, so Self
+returns the voter here rather than leaving them to find the browser again. On a
+desktop the app is on a different device, so the QR is the only bridge and the
+callback is deliberately absent: it would redirect the phone, not the screen the
+voter is watching.
+
+The QR is drawn with `qrcode.react`, already a dependency, from a link the
+BACKEND built with Self's own `SelfAppBuilder`. `@selfxyz/qrcode` is not used: it
+is a React wrapper from the legacy SDK whose job is drawing a QR and holding a
+websocket open, the drawing is three lines here, and the websocket is redundant
+because the proof reaches our server directly from Self's relayer while this
+component polls the session for the outcome. Keeping it out also keeps its React
+version constraints out.
+
+This app does not assemble the payload either, and that is the more important
+half. A hand-copied version of `SelfAppBuilder`'s defaults went stale within two
+SDK releases: it was missing `selfDefinedData` and carried a staging chain id
+that had changed. Nothing fails loudly when that happens, it just produces a QR
+the app half understands.
+
+**The canonical policy serialiser is duplicated** between `lib/eligibility.ts`
+and `backend/src/eligibility/policy.ts`, on purpose. The organizer's browser
+computes the hash at creation and the backend recomputes it at enrollment, in
+processes that never talk to each other about it. Any drift surfaces as a policy
+that "does not match its published hash", which is exactly the alarm it should
+raise, and both copies are one small deliberately boring function.
 
 ## Extra env (Phase B)
 

@@ -120,11 +120,16 @@
     "title": "选举",
     "subtitle": "浏览开放及历史选举",
     "search_placeholder": "搜索选举…",
-    "results_count": "{{count}} 个选举",
-    "results_count_plural": "{{count}} 个选举",
     "empty_title": "未找到选举",
     "empty_desc": "请尝试不同的搜索或清除筛选条件。",
-    "verified_domain": "已验证域名"
+    "verified_domain": "已验证域名",
+    "min_age": "最低年龄",
+    "age_from": "从",
+    "age_to": "到",
+    "age_to_placeholder": "到",
+    "nationality": "国籍",
+    "restricted_only": "有资格要求",
+    "results_count_other": "{{count}} 个选举"
   },
   "election": {
     "by": "由",
@@ -208,8 +213,8 @@
     "title": "我的选举",
     "subtitle": "您已报名的选举",
     "empty": "您尚未报名任何选举。",
-    "urgent": "{{count}} 即将结束",
-    "ends_soon": "即将结束"
+    "ends_soon": "即将结束",
+    "urgent_other": "{{count}} 即将结束"
   },
   "zk": {
     "title": "正在生成证明",
@@ -231,7 +236,8 @@
     "new_choice": "选择新的选项",
     "modal_title": "确认更改投票",
     "modal_desc": "您即将将投票更改为 {{candidate}}。",
-    "confirm_change": "更改投票"
+    "confirm_change": "更改投票",
+    "voting_closed": "本次选举的投票已结束，无法再更改你的投票。"
   },
   "history": {
     "title": "投票历史",
@@ -334,7 +340,20 @@
     "yes_no_hint": "这里无需配置：选项由您选择的投票规则决定，选民将从中选择一项。",
     "yes_no_preview": "选民将看到的选票",
     "current_tank": "你的 gas 储备中已有 {{amount}} {{currency}}。",
-    "short_enrollment_warning": "投票将在一天内开始，而报名在投票开始时截止。未能及时报名的人将完全无法投票。可考虑推迟开始时间，或设置单独的报名窗口。"
+    "short_enrollment_warning": "投票将在一天内开始，而报名在投票开始时截止。未能及时报名的人将完全无法投票。可考虑推迟开始时间，或设置单独的报名窗口。",
+    "eligibility_enable": "限制谁可以报名",
+    "eligibility_enable_desc": "选民需先用身份证件芯片证明年龄或国籍才能参加。他们需要 Self 应用和一部支持 NFC 的手机。",
+    "eligibility_unavailable": "验证服务无法连接，因此无法创建带限制的选举。请保持开关关闭，或稍后再试。",
+    "min_age": "最低年龄",
+    "min_age_hint": "留空表示不设年龄规则。出生日期永不公开，只判断是否超过该门槛。",
+    "country_rule": "国籍规则",
+    "country_rule_none": "不设国籍规则",
+    "country_rule_block": "屏蔽这些国家",
+    "country_rule_allow": "仅允许这些国家",
+    "nationality_reveal_note": "仅允许特定国家会迫使选民披露国籍，因为证明系统只能表达排除。屏蔽国家则不会：它只回答是或否，不会说出国家名。",
+    "countries_allowed": "允许的国家",
+    "countries_blocked": "屏蔽的国家",
+    "country_picker_hint": "搜索并选择国家。最多 {{max}} 个。"
   },
   "election_mgmt": {
     "actions": "操作",
@@ -364,7 +383,6 @@
     "tally_compute": "计算票数",
     "tally_computing": "正在解密…",
     "tally_publish": "发布结果",
-    "tally_voters": "剔除被替代的选票后共 {{count}} 名选民",
     "tally_quorum_short": "未达到隐私法定人数（{{voters}}/{{quorum}}）。请作废而非发布。",
     "tally_key_missing": "本设备上没有此选举的解密密钥。请在创建该选举的设备上打开 Votain。",
     "results_published": "结果已发布",
@@ -372,7 +390,10 @@
     "export_key": "导出解密密钥（备份）",
     "key_exported": "解密密钥已导出",
     "import_key": "导入解密密钥",
-    "key_imported": "解密密钥已导入"
+    "key_imported": "解密密钥已导入",
+    "key_no_longer_needed": "解密密钥已不再需要：计票结果已公布且无法更改。请删除你导出的任何副本，因为它仍能解密链上保存的每一张选票。",
+    "entry_requirements": "参加条件",
+    "tally_voters_other": "剔除被替代的选票后共 {{count}} 名选民"
   },
   "gas": {
     "title": "Gas 管理",
@@ -383,10 +404,10 @@
     "history": "交易历史",
     "deposit": "充值",
     "used": "已使用 Gas",
-    "votes_remaining": "剩余约 {{count}} 票",
     "amount_token": "金额（{{currency}}）",
     "withdraw": "提现",
-    "history_empty": "暂无 gas 变动。"
+    "history_empty": "暂无 gas 变动。",
+    "votes_remaining_other": "剩余约 {{count}} 票"
   },
   "members": {
     "title": "已注册成员",
@@ -456,7 +477,11 @@
     "too_long": "最多 {{max}} 个字符",
     "candidate_too_short": "每位候选人至少需要 {{min}} 个字符",
     "candidate_too_long": "候选人姓名最多 {{max}} 个字符",
-    "must_be_future_chain": "必须晚于链上时钟，当前为 {{time}}"
+    "must_be_future_chain": "必须晚于链上时钟，当前为 {{time}}",
+    "min_age_range": "最低年龄必须在 {{min}} 到 {{max}} 之间",
+    "country_list_empty": "请至少添加一个国家代码",
+    "country_list_long": "最多 {{max}} 个国家",
+    "eligibility_empty": "请设置年龄或国籍规则，或关闭该限制"
   },
   "devices": {
     "title": "我的设备",
@@ -546,6 +571,36 @@
   },
   "eligibility": {
     "world_id": "World ID 已验证",
-    "enrolled": "已报名本次选举"
+    "enrolled": "已报名本次选举",
+    "title": "本次选举有资格限制",
+    "intro": "用护照或身份证证明你符合条件。证件在你自己的手机上读取，绝不外传。",
+    "req_min_age": "你必须年满 {{age}} 岁",
+    "req_allowed": "你的国籍必须是其中之一：{{countries}}",
+    "req_blocked": "你的国籍不能是其中之一：{{countries}}",
+    "privacy_note": "Votain 每条规则只收到是或否。不会收到你的出生日期、姓名或证件号码。",
+    "privacy_note_reveal": "Votain 每条规则只收到是或否，外加你的国籍，用于比对名单后即丢弃。不会收到你的出生日期、姓名或证件号码。",
+    "restricted_hint": "系统会先要求你用官方证件完成验证。",
+    "start": "用我的证件验证",
+    "opening": "正在准备验证…",
+    "scan_hint": "用 Self 应用扫描此二维码，然后将证件贴近手机。",
+    "open_app": "用 Self 应用验证",
+    "waiting": "正在等待你的手机…",
+    "claiming": "已验证。正在完成报名…",
+    "mock_mode": "测试模式：仅接受在 Self 应用中创建的模拟证件。",
+    "error": "验证未能完成。请重试。",
+    "failed_min_age": "你的证件未达到本次选举的最低年龄。",
+    "failed_nationality_not_allowed": "你的国籍不在本次选举允许的范围内。",
+    "failed_nationality_blocked": "本次选举不接受你的国籍。",
+    "failed_nationality_missing": "无法从证件中读取你的国籍。",
+    "failed_unknown": "你的证件不符合本次选举的要求。",
+    "mobile_return_hint": "完成后 Self 会把你带回这里。",
+    "requirements_unknown": "无法查询本次选举的参加条件。请重试。"
+  },
+  "country_picker": {
+    "placeholder": "搜索国家…",
+    "no_results": "没有符合该搜索的国家",
+    "limit_reached": "已达到 {{max}} 个国家的上限",
+    "remove": "移除{{country}}",
+    "more_results_other": "还有 {{count}} 个。继续输入以缩小范围。"
   }
 }

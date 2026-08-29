@@ -82,17 +82,68 @@ function bytesToBigInt(b: Uint8Array): bigint {
 const bitLength = (x: bigint): number => x.toString(2).length;
 
 /**
+ * Odd primes below TRIAL_DIVISION_LIMIT, for cheaply discarding composites.
+ *
+ * Around one odd number in 355 is prime at this size, so a naive walk spends
+ * almost all of its time running full Miller-Rabin on numbers a single division
+ * would have rejected. Dividing by the small primes first removes roughly seven
+ * candidates in eight before any modular exponentiation happens.
+ *
+ * The limit is where the returns flatten: a larger sieve rejects a few percent
+ * more candidates while costing a proportionally larger division pass on every
+ * survivor.
+ */
+const TRIAL_DIVISION_LIMIT = 10_000;
+
+const SMALL_PRIMES: bigint[] = (() => {
+  const composite = new Uint8Array(TRIAL_DIVISION_LIMIT + 1);
+  const primes: bigint[] = [];
+  for (let i = 3; i <= TRIAL_DIVISION_LIMIT; i += 2) {
+    if (composite[i]) continue;
+    primes.push(BigInt(i));
+    for (let j = i * i; j <= TRIAL_DIVISION_LIMIT; j += i) composite[j] = 1;
+  }
+  return primes;
+})();
+
+/** True when a small prime divides x, which proves x composite. */
+function hasSmallFactor(x: bigint): boolean {
+  for (const p of SMALL_PRIMES) {
+    if (x % p === 0n) return x !== p;
+  }
+  return false;
+}
+
+/**
  * Draws a candidate of exactly `bits` bits from the stream (top bit set, odd),
  * then walks upward by 2 to the next probable prime. Deterministic given the
- * stream. Setting only the top bit — not the second — keeps p·q from spilling
+ * stream. Setting only the top bit, not the second, keeps p·q from spilling
  * into an extra bit (the caller redraws q if n is still the wrong size).
+ *
+ * THE WALK IS PART OF THE KEY. This function must return the same prime it
+ * always has: the organizer's tally key is re-derived rather than stored, so a
+ * different result here makes every earlier election undecryptable. Both filters
+ * below are therefore chosen to be exact rather than merely likely. Trial
+ * division only rejects numbers a small prime divides, and the one-round test
+ * only rejects numbers Miller-Rabin proves composite; neither can skip a value
+ * the original loop would have accepted. `tallyKey.test.ts` pins the result.
  */
 async function nextPrime(stream: SeededStream, bits: number): Promise<bigint> {
   const bytes = await stream.take(Math.ceil(bits / 8));
   let x = bytesToBigInt(bytes) & ((1n << BigInt(bits)) - 1n);
   x |= (1n << BigInt(bits - 1)) | 1n;
-  while (!(await isProbablyPrime(x, MR_ROUNDS))) x += 2n;
-  return x;
+
+  for (;;) {
+    if (!hasSmallFactor(x)) {
+      // One round first. A single Miller-Rabin witness rejects almost every
+      // composite that survived the sieve, at a fortieth of the cost, so the
+      // full MR_ROUNDS margin is only ever paid on a genuine candidate.
+      if (await isProbablyPrime(x, 1)) {
+        if (await isProbablyPrime(x, MR_ROUNDS)) return x;
+      }
+    }
+    x += 2n;
+  }
 }
 
 /**

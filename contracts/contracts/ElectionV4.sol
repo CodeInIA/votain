@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.36;
 
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 import {ISemaphoreVerifier} from "@semaphore-protocol/contracts/interfaces/ISemaphoreVerifier.sol";
 import {InternalLeanIMT, LeanIMTData} from "@zk-kit/lean-imt.sol/InternalLeanIMT.sol";
@@ -52,6 +53,8 @@ contract ElectionV4 is ERC2771Context {
         uint256 scope;          // Semaphore V4 scope (external nullifier)
         string paillierPublicKey; // JSON {"n": "0x…", "g": "0x…"} voters encrypt with
         string metadataJson;    // description, candidates, organizer name, tags (IPFS on mainnet)
+        address eligibilityAttester;   // address(0) = open election, no attribute policy
+        bytes32 eligibilityPolicyHash; // keccak256 of the policy declared in metadataJson
     }
 
     // ────────────────────────────────────────────────
@@ -68,6 +71,43 @@ contract ElectionV4 is ERC2771Context {
     address public immutable organizer;
     ISemaphoreVerifier public immutable verifier;
     IPlatformRegistry public immutable registry;
+
+    /**
+     * Attribute eligibility (age, nationality) cannot be checked on chain. The
+     * proof of a passport attribute is anchored in another network, and a
+     * contract that went looking for it would break consensus for the same
+     * reason it cannot resolve a DNS record. What a contract CAN check is a
+     * signature, so the relay verifies the attribute proof off chain and signs
+     * an attestation that this commitment may enroll.
+     *
+     * address(0) means the election has no attribute policy and enrollment stays
+     * permissionless, exactly as it was before this existed.
+     */
+    address public immutable eligibilityAttester;
+
+    /// @dev keccak256 of the canonical policy JSON published inside metadataJson.
+    /// Enforcement lives off chain, so this is what makes the rules auditable:
+    /// anyone can recompute it from the metadata and see which policy the
+    /// organizer committed to before a single voter enrolled.
+    bytes32 public immutable eligibilityPolicyHash;
+
+    bytes32 private constant ENROLL_TYPEHASH =
+        keccak256("EnrollAttestation(uint256 identityCommitment,uint256 deadline)");
+
+    /**
+     * EIP-712 domain, built here rather than inherited from OpenZeppelin's
+     * EIP712. That helper reaches ShortStrings and Bytes, which use `mcopy` and
+     * therefore need a Cancun target, while this project compiles for paris.
+     * Retargeting the whole codebase to get a domain separator would be a
+     * deployment decision taken for a formatting convenience.
+     */
+    bytes32 private constant DOMAIN_TYPEHASH =
+        keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+    bytes32 private constant DOMAIN_NAME = keccak256("VotainElection");
+    bytes32 private constant DOMAIN_VERSION = keccak256("1");
+
+    uint256 private immutable _cachedChainId;
+    bytes32 private immutable _cachedDomainSeparator;
 
     // ────────────────────────────────────────────────
     // Election config
@@ -155,6 +195,10 @@ contract ElectionV4 is ERC2771Context {
     error InvalidProof();
     error InvalidTally();
     error WrongPhase();
+    error AttestationRequired();
+    error UnexpectedAttestation();
+    error AttestationExpired();
+    error BadAttestation();
 
     // ────────────────────────────────────────────────
     // Modifiers
@@ -207,6 +251,14 @@ contract ElectionV4 is ERC2771Context {
             revert InvalidConfig();
         }
 
+        // An attester without a policy hash would gate enrollment on rules
+        // nobody can read, and a policy hash without an attester would publish
+        // rules nothing enforces. Both are misconfigurations that would only
+        // surface once voters started failing to enroll.
+        if ((cfg.eligibilityAttester == address(0)) != (cfg.eligibilityPolicyHash == bytes32(0))) {
+            revert InvalidConfig();
+        }
+
         verifier = ISemaphoreVerifier(_verifier);
         registry = IPlatformRegistry(_registry);
         organizer = _organizer;
@@ -222,6 +274,25 @@ contract ElectionV4 is ERC2771Context {
         scope = cfg.scope;
         paillierPublicKey = cfg.paillierPublicKey;
         metadataJson = cfg.metadataJson;
+        eligibilityAttester = cfg.eligibilityAttester;
+        eligibilityPolicyHash = cfg.eligibilityPolicyHash;
+
+        _cachedChainId = block.chainid;
+        _cachedDomainSeparator = _buildDomainSeparator();
+    }
+
+    /// @dev Rebuilt when the chain id moved under us, so attestations signed for
+    /// this election cannot be replayed on a fork of it.
+    function _domainSeparator() internal view returns (bytes32) {
+        return block.chainid == _cachedChainId
+            ? _cachedDomainSeparator
+            : _buildDomainSeparator();
+    }
+
+    function _buildDomainSeparator() private view returns (bytes32) {
+        return keccak256(
+            abi.encode(DOMAIN_TYPEHASH, DOMAIN_NAME, DOMAIN_VERSION, block.chainid, address(this))
+        );
     }
 
     // ────────────────────────────────────────────────
@@ -279,6 +350,53 @@ contract ElectionV4 is ERC2771Context {
     /// nullifier the election would count both ballots without any way to link
     /// them. Resolving the commitment back to its World ID nullifier closes that.
     function enroll(uint256 identityCommitment) external notDecided {
+        // Gated elections must come through enrollAttested. Without this branch
+        // the attribute policy would be decorative: anyone refused by the relay
+        // could call enroll() straight from their own wallet and land in the
+        // tree anyway.
+        if (eligibilityAttester != address(0)) revert AttestationRequired();
+        _enroll(identityCommitment);
+    }
+
+    /// @notice Enroll into an election that declares an attribute policy, presenting
+    /// the attester's signature over (identityCommitment, deadline).
+    /// @dev Deliberately callable by anyone. The signature is the authorisation, so
+    /// the voter can submit it themselves or hand it to the paymaster for a gasless
+    /// enrollment, and neither path gives the relay a say in WHICH commitment enrolls.
+    /// The deadline keeps a leaked attestation from being useful indefinitely; the
+    /// per-human deduplication in _enroll is what stops it being replayed.
+    function enrollAttested(
+        uint256 identityCommitment,
+        uint256 deadline,
+        bytes calldata signature
+    ) external notDecided {
+        if (eligibilityAttester == address(0)) revert UnexpectedAttestation();
+        if (block.timestamp > deadline) revert AttestationExpired();
+
+        bytes32 digest = enrollmentDigest(identityCommitment, deadline);
+        (address signer, ECDSA.RecoverError err, ) = ECDSA.tryRecover(digest, signature);
+        if (err != ECDSA.RecoverError.NoError || signer != eligibilityAttester) {
+            revert BadAttestation();
+        }
+
+        _enroll(identityCommitment);
+    }
+
+    /// @notice The EIP-712 digest an attester signs to authorise one enrollment.
+    /// @dev Bound to this contract and this chain through the domain separator, so an
+    /// attestation issued for one election cannot be replayed into another.
+    function enrollmentDigest(uint256 identityCommitment, uint256 deadline)
+        public
+        view
+        returns (bytes32)
+    {
+        bytes32 structHash = keccak256(
+            abi.encode(ENROLL_TYPEHASH, identityCommitment, deadline)
+        );
+        return keccak256(abi.encodePacked(hex"1901", _domainSeparator(), structHash));
+    }
+
+    function _enroll(uint256 identityCommitment) internal {
         if (block.timestamp < enrollStart || block.timestamp >= enrollEnd) {
             revert EnrollmentNotOpen();
         }

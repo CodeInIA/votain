@@ -25,7 +25,13 @@
 | GET | `/api/identity/vault` | This voter's wrapped identity secrets, one per passkey |
 | POST | `/api/identity/vault` | Register a passkey for the voter's identity; the first entry triggers on-chain registration. 409 if a different commitment already exists |
 | DELETE | `/api/identity/vault/:credentialId` | Unlink a passkey. 409 when it is the last one |
-| POST | `/api/relay/enroll` | Relay a voter's enrollment (session required) |
+| POST | `/api/relay/enroll` | Relay a voter's enrollment (session required). Carries `deadline` + `signature` for a restricted election, which routes it to `relayEnrollAttested` |
+| GET | `/api/eligibility/attester` | Address that signs enrollment attestations, and whether the provider is reachable |
+| GET | `/api/eligibility/:election` | The attribute policy an election declares, if any |
+| POST | `/api/eligibility/:election/session` | Open an attribute challenge (session required) |
+| POST | `/api/eligibility/verify` | Callback for the Self relayer. **Unauthenticated on purpose**, see below |
+| GET | `/api/eligibility/session/:sessionId` | Poll a challenge (session required) |
+| POST | `/api/eligibility/:election/attestation` | Collect the signed attestation for a passed challenge (session required) |
 | POST | `/api/relay/vote` | Relay a ballot. **Unauthenticated on purpose**, see below |
 | GET | `/api/credentials/status/:listId` | Status List 2021 revocation credential |
 | POST | `/api/credentials/status/:listId/revoke` | Admin-only revocation (Bearer `ADMIN_TOKEN`) |
@@ -50,6 +56,177 @@ free spam surface.
 
 A compromised relayer can delay or withhold a transaction, never forge one. Relaying is
 permissionless at the contract level, so a censored voter can always submit their own.
+
+### Attribute eligibility (age, nationality)
+
+`eligibility/` holds three layers, and only the innermost knows Self exists.
+
+- `policy.ts`. The `EligibilityPolicy` type, its canonical serialisation and its
+  `keccak256`. Provider agnostic. An EUDI Wallet connector would sit beside the
+  Self adapter without touching this.
+- `self.ts`. Turns a policy into a Self verification request and a Self proof
+  back into a pass or fail, through the open-source `@selfxyz/core` verifier. No
+  managed service and no third party in the enrollment path.
+- `attester.ts`. Signs the EIP-712 attestation the contract verifies.
+
+**What we ask for, and what we refuse to ask for.** Age is always a predicate:
+`minimumAge` yields a yes or no and the date of birth stays on the voter's phone.
+Nationality is a predicate too when the policy blocks countries, because Self
+expresses that natively as an exclusion list. It becomes a reveal only when the
+policy names allowed countries, because an exclusion list cannot express an
+allowlist and the circuit carries the forbidden list as `uint256[4]`, far too
+small for "everyone except Spain". Nothing else is ever requested: not the name,
+not the document number, not the gender, not the expiry date. A revealed
+nationality is compared against the list and dropped, never stored.
+
+That reveal leaks less than it looks. In an election whose published policy
+already says "ESP only", learning that an enrolled voter is Spanish adds nothing
+an observer could not read off the policy itself.
+
+**Passport or national identity card.** `ALLOWED_DOCUMENT_IDS` accepts
+attestation 1 (biometric passport) and 2 (EU identity card), and Self offers no
+per-request document selection: the voter presents whichever they hold. Spain
+appears on Self's full-support list, with both Document Signer Certificates and
+the Country Signing Certificate Authority covered, so a Spanish DNI is expected
+to work alongside the passport. The user-facing copy therefore says "document",
+never "passport": telling a Spanish voter to find a passport they may not own,
+when the card in their wallet would do, would turn a supported case into an
+apparent exclusion.
+
+**Self supplies attributes, not uniqueness.** `ElectionV4.enroll` already
+deduplicates by human through the World ID nullifier, so Self's two weak spots
+stop mattering here: a dual national's second passport buys no second ballot, and
+a borrowed passport is still bound to somebody else's World ID.
+
+**The scope is per election.** The scope is what Self derives its nullifier from.
+One app-wide scope would hand this server a stable pseudonym per voter across
+every election they verify for. `scopeForElection` derives it from the election
+address instead, capped at Self's 25-character limit.
+
+**Sessions live in memory.** A challenge is a round trip through a phone, so
+something has to remember between two requests which challenge belonged to whom.
+`sessions.ts` keeps that in a `Map` with a 15-minute TTL. This backend has no
+database and here that costs nothing: a restart only makes a voter mid-scan scan
+again, and persisting it would write a durable record linking a World ID
+nullifier to an in-flight passport check.
+
+`/eligibility/verify` is unauthenticated because it has to be: the request comes
+from Self's infrastructure after the voter's phone produced the proof, not from
+the voter's browser. It cannot obtain an attestation. Only the voter who opened
+the session can claim one, holding their own cookie and naming their own
+commitment. A submission that does not verify leaves the session untouched, so
+learning a session id does not let anyone cancel a scan in progress.
+
+**`SELF_ENDPOINT` must be publicly reachable.** The Self relayer POSTs to it and
+the SDK rejects localhost outright, so development needs a tunnel. It is also
+baked into the QR the voter scans, so a code generated before the URL changed
+carries the old one: regenerate the challenge after touching it.
+
+**The public signals arrive as `publicSignals`.** Confirmed against the official
+endpoint reference, which also documents the body as `attestationId`, `proof`,
+`publicSignals`, `userContextData`. The route accepts `pubSignals` too, since
+Self's own migration note uses that name, and reports a missing field under the
+name the sender used rather than our internal one. A rejected body logs the keys
+it did carry, never their values.
+
+**The route always answers 200.** That is the documented contract for this
+endpoint: the status code says the callback arrived, and the body
+(`{ status, result, reason }`) says whether the proof passed. Answering 4xx makes
+the relayer read a verdict as a transport failure, so a voter whose document
+merely misses the age rule would see a network error instead of the reason.
+
+**Rejections are logged with the SDK's own diagnosis.** `ConfigMismatchError`
+names what failed: `InvalidScope` when the proof was built for another election,
+`InvalidRoot` when the document is absent from the tree that hub serves (what a
+real document verified in mock mode looks like), `InvalidTimestamp` on clock
+drift. Flattening those into "proof_invalid" discards the only actionable part.
+
+**The scope is a SEED, and the endpoint is part of it.** Self names the field
+`scope`, but the value bound into the proof is Poseidon(seed, endpoint). Changing
+`SELF_ENDPOINT`, a fresh development tunnel for instance, therefore changes the
+effective scope and invalidates every QR generated before it. A per-election seed
+is what keeps nullifiers unlinkable between elections, and it is also why a
+verifier is built per election rather than kept as one long-lived instance:
+`DefaultConfigStore` is the single-config kind, and each verifier serves exactly
+one election's rules. `InMemoryConfigStore` would be the alternative, but it
+selects among configs for ONE scope, which is the design this deliberately
+avoids.
+
+**`@selfxyz/qrcode` is not a dependency, and the deep link is built here.** That
+package is a React wrapper that draws a QR and holds a websocket open. The
+drawing is three lines in the frontend with a library it already has, and the
+websocket is redundant because Self's relayer posts the proof to this server
+directly while the browser polls the session. The link itself comes from the
+official `SelfAppBuilder` plus `getUniversalLink` (via `@selfxyz/common`, the
+same `utils/appType` subpath `@selfxyz/core` uses), never assembled by hand: a
+hand-copied version of those defaults went stale within two releases, missing
+`selfDefinedData` and carrying a staging chain id that had changed. Building it
+here also runs the builder's validation before a voter sees anything, so a
+localhost endpoint or an over-long scope fails with a clear message.
+
+**Two links, because the two ways in end differently.** The session route
+returns `universalLink` for the QR and `mobileLink` for the tappable link, and
+they differ only in `deeplinkCallback`. A voter scanning the QR is looking at a
+desktop while the Self app runs on their phone, so a callback would redirect the
+wrong screen and leave the one they are watching untouched. A voter who tapped
+the link left Votain on that same device and has no reason to find their way back
+by hand.
+
+The return address comes from the browser, because only it knows the origin that
+served the page: a LAN address in development, whatever is deployed in
+production. `sanitiseCallbackUrl` treats it as untrusted, since it is written
+into a payload the Self app navigates to and displays during its countdown. Only
+http and https pass, and in production the origin must match `FRONTEND_URL`, so
+this endpoint cannot be talked into minting a Self link that sends voters
+somewhere else.
+
+**The session id comes from `userContextData`, not from the public signals.**
+The obvious-looking slot, `pubSignals[userIdentifierIndex]`, holds a SHA-256 hash
+of the whole `userContextData` that the SDK recomputes as an integrity check, not
+the identifier. Reading it as one yields a value matching no session. The
+identifier sits in `userContextData` itself: 32 bytes of destination chain id,
+32 bytes of identifier, then the caller's data. That also keeps circuit indices,
+which belong to a circuit version and can move under an SDK upgrade, out of our
+code entirely.
+
+**`SELF_MOCK` picks one world or the other.** With `1` the verifier checks the
+staging identity trees and only mock documents pass; with `0` it checks
+production and only real ones do. Nothing accepts both, and the rejection does
+not say which side the mismatch is on. Set it to `0` as soon as a real document
+is available.
+
+Both variables are read once at startup through `dotenv`, and `tsx watch` only
+follows source files, so editing `.env` alone changes nothing. `npm run dev`
+therefore passes `--include .env` and restarts on it.
+
+**The SDK is on `@selfxyz/core@1.2.0-beta.2`, and the floor is not optional.**
+Self documents a hard minimum of 1.1.0-beta.1: earlier versions point at Celo
+Alfajores for mock documents and will not verify correctly. The newest release
+that merely looks stable, 1.0.8, sits below that floor, so "the last non-beta"
+was the wrong thing to pin to.
+
+**Git dependencies are allowed, not overridden.** `@selfxyz/common` declares
+`node-forge` as `github:remicolin/forge`, and the 1.2.x line reaches a forked
+`snarkjs` the same way. npm 12 disables git dependencies by default
+(`allow-git=none`), so a plain `npm install` refuses them with `EALLOWGIT`. The
+project `.npmrc` sets `allow-git=all`, which installs exactly what Self declared.
+
+The alternative, an `overrides` entry pointing those names back at the registry,
+was tried and then removed. It silently swaps a dependency the author
+deliberately forked: for `node-forge` that is a guess about why the fork exists,
+and for `snarkjs` it would replace the library that verifies the proofs. `root`
+is not enough either, because the git dependency is transitive rather than
+declared here.
+
+The tradeoff is real: `allow-git=all` relaxes npm's supply-chain protection for
+every dependency of this package. It is scoped to this workspace, and it is the
+price of using this SDK at all.
+
+**`@selfxyz/core` is the Self Pass SDK, which Self now labels Legacy** and steers
+new integrations away from, towards the managed `@selfxyz/enterprise-sdk`. That
+is deliberate here: the managed path bills per verification and puts a third
+party on the enrollment hot path, which is the opposite of what this project
+argues for. Recorded so the deviation is visible rather than accidental.
 
 ### Identity vault
 

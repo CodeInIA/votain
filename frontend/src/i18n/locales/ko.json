@@ -120,11 +120,16 @@
     "title": "선거",
     "subtitle": "진행 중 및 과거 선거 탐색",
     "search_placeholder": "선거 검색…",
-    "results_count": "선거 {{count}}개",
-    "results_count_plural": "선거 {{count}}개",
     "empty_title": "선거를 찾을 수 없음",
     "empty_desc": "다른 검색을 시도하거나 필터를 지우세요.",
-    "verified_domain": "확인된 도메인"
+    "verified_domain": "확인된 도메인",
+    "min_age": "최소 나이",
+    "age_from": "부터",
+    "age_to": "까지",
+    "age_to_placeholder": "까지",
+    "nationality": "국적",
+    "restricted_only": "조건 있음",
+    "results_count_other": "선거 {{count}}개"
   },
   "election": {
     "by": "주최:",
@@ -208,8 +213,8 @@
     "title": "내 선거",
     "subtitle": "등록한 선거",
     "empty": "아직 선거에 등록하지 않았습니다.",
-    "urgent": "{{count}}개 곧 종료",
-    "ends_soon": "곧 종료"
+    "ends_soon": "곧 종료",
+    "urgent_other": "{{count}}개 곧 종료"
   },
   "zk": {
     "title": "증명 생성 중",
@@ -231,7 +236,8 @@
     "new_choice": "새 선택지를 선택하세요",
     "modal_title": "투표 변경 확인",
     "modal_desc": "{{candidate}}로 투표를 변경하려고 합니다.",
-    "confirm_change": "투표 변경"
+    "confirm_change": "투표 변경",
+    "voting_closed": "이 선거의 투표가 종료되어 투표를 변경할 수 없습니다."
   },
   "history": {
     "title": "투표 기록",
@@ -334,7 +340,20 @@
     "yes_no_hint": "여기서 설정할 항목은 없습니다. 선택지는 선택한 투표 규칙에 따라 정해지며, 유권자가 그중 하나를 고릅니다.",
     "yes_no_preview": "유권자에게 표시될 투표용지",
     "current_tank": "공용 가스 잔액에 이미 {{amount}} {{currency}}가 있습니다.",
-    "short_enrollment_warning": "투표가 하루도 남지 않아 시작되며, 등록은 투표가 열리는 순간 마감됩니다. 제때 등록하지 못한 사람은 아예 투표할 수 없습니다. 시작을 늦추거나 별도의 등록 기간을 두는 것을 고려하세요."
+    "short_enrollment_warning": "투표가 하루도 남지 않아 시작되며, 등록은 투표가 열리는 순간 마감됩니다. 제때 등록하지 못한 사람은 아예 투표할 수 없습니다. 시작을 늦추거나 별도의 등록 기간을 두는 것을 고려하세요.",
+    "eligibility_enable": "등록할 수 있는 사람 제한",
+    "eligibility_enable_desc": "유권자는 참여하기 전에 신분증 칩으로 나이나 국적을 증명합니다. Self 앱과 NFC 지원 휴대폰이 필요합니다.",
+    "eligibility_unavailable": "검증 서비스에 연결할 수 없어 제한이 있는 선거를 만들 수 없습니다. 스위치를 꺼 두거나 나중에 다시 시도하세요.",
+    "min_age": "최소 나이",
+    "min_age_hint": "나이 조건을 두지 않으려면 비워 두세요. 생년월일은 절대 공개되지 않고 이 기준을 넘는지만 확인됩니다.",
+    "country_rule": "국적 규칙",
+    "country_rule_none": "국적 규칙 없음",
+    "country_rule_block": "이 국가들을 차단",
+    "country_rule_allow": "이 국가들만 허용",
+    "nationality_reveal_note": "특정 국가만 허용하면 유권자가 국적을 공개해야 합니다. 증명 방식이 배제만 표현할 수 있기 때문입니다. 국가를 차단할 때는 그렇지 않습니다. 국가명을 밝히지 않고 예 또는 아니오만 답합니다.",
+    "countries_allowed": "허용 국가",
+    "countries_blocked": "차단 국가",
+    "country_picker_hint": "국가를 검색해 선택하세요. 최대 {{max}}개."
   },
   "election_mgmt": {
     "actions": "작업",
@@ -364,7 +383,6 @@
     "tally_compute": "개표 계산",
     "tally_computing": "복호화 중…",
     "tally_publish": "결과 공개",
-    "tally_voters": "대체된 표를 제외하고 {{count}}명의 유권자",
     "tally_quorum_short": "프라이버시 정족수 미달({{quorum}} 중 {{voters}}). 공개 대신 무효 처리하세요.",
     "tally_key_missing": "이 선거의 복호화 키가 이 기기에 없습니다. 선거를 만든 기기에서 Votain을 열어 주세요.",
     "results_published": "결과가 공개되었습니다",
@@ -372,7 +390,10 @@
     "export_key": "복호화 키 내보내기(백업)",
     "key_exported": "복호화 키를 내보냈습니다",
     "import_key": "복호화 키 가져오기",
-    "key_imported": "복호화 키를 가져왔습니다"
+    "key_imported": "복호화 키를 가져왔습니다",
+    "key_no_longer_needed": "복호화 키는 더 이상 필요하지 않습니다. 집계가 공개되었고 변경할 수 없습니다. 내보낸 사본은 삭제하세요. 체인에 저장된 개별 투표를 여전히 복호화할 수 있습니다.",
+    "entry_requirements": "참여 조건",
+    "tally_voters_other": "대체된 표를 제외하고 {{count}}명의 유권자"
   },
   "gas": {
     "title": "가스 관리",
@@ -383,10 +404,10 @@
     "history": "트랜잭션 기록",
     "deposit": "입금",
     "used": "사용된 가스",
-    "votes_remaining": "약 {{count}}표 남음",
     "amount_token": "금액 ({{currency}})",
     "withdraw": "출금",
-    "history_empty": "가스 내역이 없습니다."
+    "history_empty": "가스 내역이 없습니다.",
+    "votes_remaining_other": "약 {{count}}표 남음"
   },
   "members": {
     "title": "등록된 회원",
@@ -456,7 +477,11 @@
     "too_long": "{{max}}자 이하",
     "candidate_too_short": "각 후보자는 {{min}}자 이상이어야 합니다",
     "candidate_too_long": "후보자 이름은 {{max}}자까지 가능합니다",
-    "must_be_future_chain": "체인 시계보다 뒤여야 합니다. 현재 {{time}}입니다"
+    "must_be_future_chain": "체인 시계보다 뒤여야 합니다. 현재 {{time}}입니다",
+    "min_age_range": "최소 나이는 {{min}}에서 {{max}} 사이여야 합니다",
+    "country_list_empty": "국가 코드를 하나 이상 추가하세요",
+    "country_list_long": "국가는 최대 {{max}}개까지입니다",
+    "eligibility_empty": "나이 또는 국적 규칙을 설정하거나 제한을 끄세요"
   },
   "devices": {
     "title": "내 기기",
@@ -546,6 +571,36 @@
   },
   "eligibility": {
     "world_id": "World ID 확인됨",
-    "enrolled": "이 선거에 등록됨"
+    "enrolled": "이 선거에 등록됨",
+    "title": "이 선거는 참여 자격이 제한됩니다",
+    "intro": "여권이나 신분증으로 자격을 증명하세요. 본인 휴대폰에서 읽히며 절대 밖으로 나가지 않습니다.",
+    "req_min_age": "만 {{age}}세 이상이어야 합니다",
+    "req_allowed": "국적이 다음 중 하나여야 합니다: {{countries}}",
+    "req_blocked": "국적이 다음 중 하나여서는 안 됩니다: {{countries}}",
+    "privacy_note": "Votain은 규칙마다 예 또는 아니오만 받습니다. 생년월일도, 이름도, 증서 번호도 받지 않습니다.",
+    "privacy_note_reveal": "Votain은 규칙마다 예 또는 아니오를 받고, 목록과 대조한 뒤 버리는 국적을 함께 받습니다. 생년월일도, 이름도, 증서 번호도 받지 않습니다.",
+    "restricted_hint": "먼저 공식 신분증으로 확인을 요청받게 됩니다.",
+    "start": "내 신분증으로 확인하기",
+    "opening": "확인을 준비하는 중…",
+    "scan_hint": "Self 앱으로 이 코드를 스캔한 뒤 신분증을 휴대폰에 대세요.",
+    "open_app": "Self 앱으로 확인하기",
+    "waiting": "휴대폰 응답을 기다리는 중…",
+    "claiming": "확인되었습니다. 등록을 마무리하는 중…",
+    "mock_mode": "테스트 모드: Self 앱에서 만든 모의 서류만 허용됩니다.",
+    "error": "확인을 완료하지 못했습니다. 다시 시도해 주세요.",
+    "failed_min_age": "이 선거의 최소 나이 조건을 충족하지 않습니다.",
+    "failed_nationality_not_allowed": "귀하의 국적은 이 선거가 허용하는 국적에 포함되지 않습니다.",
+    "failed_nationality_blocked": "이 선거는 귀하의 국적을 받지 않습니다.",
+    "failed_nationality_missing": "증서에서 국적을 읽을 수 없습니다.",
+    "failed_unknown": "귀하의 증서는 이 선거의 조건을 충족하지 않습니다.",
+    "mobile_return_hint": "완료되면 Self가 이 화면으로 돌려보냅니다.",
+    "requirements_unknown": "이 선거의 참여 조건을 확인하지 못했습니다. 다시 시도해 주세요."
+  },
+  "country_picker": {
+    "placeholder": "국가 검색…",
+    "no_results": "검색과 일치하는 국가가 없습니다",
+    "limit_reached": "{{max}}개 국가 한도에 도달했습니다",
+    "remove": "{{country}} 제거",
+    "more_results_other": "외 {{count}}개. 계속 입력하면 범위가 좁아집니다."
   }
 }

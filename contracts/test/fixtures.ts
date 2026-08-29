@@ -3,6 +3,51 @@ import poseidon from "poseidon-solidity";
 /// Library name used for linking (HH3 resolves the bare name when unambiguous).
 export const POSEIDON_FQN = "PoseidonT3";
 
+export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+export const ZERO_HASH = "0x" + "00".repeat(32);
+
+/// EIP-712 payload an eligibility attester signs to authorise one enrollment.
+/// Mirrors ENROLL_TYPEHASH and the domain built in ElectionV4.
+export function enrollAttestationTypedData(
+  electionAddress: string,
+  chainId: bigint,
+  identityCommitment: bigint,
+  deadline: number | bigint,
+) {
+  return {
+    domain: {
+      name: "VotainElection",
+      version: "1",
+      chainId,
+      verifyingContract: electionAddress,
+    },
+    types: {
+      EnrollAttestation: [
+        { name: "identityCommitment", type: "uint256" },
+        { name: "deadline", type: "uint256" },
+      ],
+    },
+    value: { identityCommitment, deadline },
+  };
+}
+
+/// Signs an enrollment attestation the way the relay does in production.
+export async function signEnrollAttestation(
+  attester: any,
+  electionAddress: string,
+  chainId: bigint,
+  identityCommitment: bigint,
+  deadline: number | bigint,
+): Promise<string> {
+  const { domain, types, value } = enrollAttestationTypedData(
+    electionAddress,
+    chainId,
+    identityCommitment,
+    deadline,
+  );
+  return attester.signTypedData(domain, types, value);
+}
+
 /// Deploys the PoseidonT3 external library (required by LeanIMT) on the local
 /// test network and returns its address.
 export async function deployPoseidonT3(ethers: any): Promise<string> {
@@ -66,6 +111,8 @@ export interface ElectionConfig {
   scope: bigint;
   paillierPublicKey: string;
   metadataJson: string;
+  eligibilityAttester: string;
+  eligibilityPolicyHash: string;
 }
 
 export const VotingType = {
@@ -108,7 +155,9 @@ export function baseConfig(now: number, overrides: Partial<ElectionConfig> = {})
     voteEnd: now + 2000,
     scope: 42n,
     paillierPublicKey: '{"n":"0x1234","g":"0x1235"}',
-    metadataJson: '{}',
+    metadataJson: "{}",
+    eligibilityAttester: ZERO_ADDRESS,
+    eligibilityPolicyHash: ZERO_HASH,
     ...overrides,
   };
 }

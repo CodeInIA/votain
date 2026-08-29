@@ -120,11 +120,17 @@
     "title": "Wahlen",
     "subtitle": "Offene und vergangene Wahlen durchsuchen",
     "search_placeholder": "Wahlen suchen…",
-    "results_count": "{{count}} Wahl",
-    "results_count_plural": "{{count}} Wahlen",
     "empty_title": "Keine Wahlen gefunden",
     "empty_desc": "Versuchen Sie eine andere Suche oder löschen Sie Ihre Filter.",
-    "verified_domain": "Verifizierte Domain"
+    "verified_domain": "Verifizierte Domain",
+    "min_age": "Mindestalter",
+    "age_from": "Von",
+    "age_to": "bis",
+    "age_to_placeholder": "Bis",
+    "nationality": "Staatsangehörigkeit",
+    "restricted_only": "Mit Voraussetzungen",
+    "results_count_other": "{{count}} Wahlen",
+    "results_count_one": "{{count}} Wahl"
   },
   "election": {
     "by": "von",
@@ -208,8 +214,9 @@
     "title": "Meine Wahlen",
     "subtitle": "Wahlen, für die Sie angemeldet sind",
     "empty": "Sie sind noch bei keiner Wahl angemeldet.",
-    "urgent": "{{count}} endet bald",
-    "ends_soon": "Endet bald"
+    "ends_soon": "Endet bald",
+    "urgent_other": "{{count}} enden bald",
+    "urgent_one": "{{count}} endet bald"
   },
   "zk": {
     "title": "Beweis wird generiert",
@@ -231,7 +238,8 @@
     "new_choice": "Neue Wahl treffen",
     "modal_title": "Stimmänderung bestätigen",
     "modal_desc": "Sie sind dabei, Ihre Stimme auf {{candidate}} zu ändern.",
-    "confirm_change": "Stimme ändern"
+    "confirm_change": "Stimme ändern",
+    "voting_closed": "Die Abstimmung zu dieser Wahl ist beendet, Ihre Stimme lässt sich nicht mehr ändern."
   },
   "history": {
     "title": "Abstimmungsverlauf",
@@ -334,7 +342,20 @@
     "yes_no_hint": "Hier gibt es nichts einzurichten: Die Optionen ergeben sich aus der gewählten Abstimmungsregel. Die Wählenden entscheiden sich für eine davon.",
     "yes_no_preview": "Der Stimmzettel, den die Wählenden sehen",
     "current_tank": "Ihr Gas-Vorrat enthält bereits {{amount}} {{currency}}.",
-    "short_enrollment_warning": "Die Abstimmung beginnt in weniger als einem Tag, und die Anmeldung schließt mit ihrem Start. Wer sich nicht rechtzeitig anmeldet, kann gar nicht abstimmen. Erwägen Sie einen späteren Start oder ein eigenes Anmeldefenster."
+    "short_enrollment_warning": "Die Abstimmung beginnt in weniger als einem Tag, und die Anmeldung schließt mit ihrem Start. Wer sich nicht rechtzeitig anmeldet, kann gar nicht abstimmen. Erwägen Sie einen späteren Start oder ein eigenes Anmeldefenster.",
+    "eligibility_enable": "Einschränken, wer sich anmelden darf",
+    "eligibility_enable_desc": "Wählende weisen ein Alter oder eine Staatsangehörigkeit aus dem Chip ihres Ausweisdokuments nach, bevor sie teilnehmen können. Dafür brauchen sie die Self-App und ein NFC-Handy.",
+    "eligibility_unavailable": "Der Verifizierungsdienst ist nicht erreichbar, daher lässt sich diese Wahl nicht mit Einschränkungen anlegen. Lassen Sie den Schalter aus oder versuchen Sie es später erneut.",
+    "min_age": "Mindestalter",
+    "min_age_hint": "Leer lassen, wenn keine Altersregel gelten soll. Das Geburtsdatum wird nie offengelegt, nur ob es diese Schwelle überschreitet.",
+    "country_rule": "Regel zur Staatsangehörigkeit",
+    "country_rule_none": "Keine Regel zur Staatsangehörigkeit",
+    "country_rule_block": "Diese Länder sperren",
+    "country_rule_allow": "Nur diese Länder zulassen",
+    "nationality_reveal_note": "Nur bestimmte Länder zuzulassen zwingt Wählende, ihre Staatsangehörigkeit offenzulegen, denn das Beweissystem kennt nur Ausschlüsse. Länder zu sperren nicht: es antwortet mit ja oder nein, ohne das Land zu nennen.",
+    "countries_allowed": "Zugelassene Länder",
+    "countries_blocked": "Gesperrte Länder",
+    "country_picker_hint": "Länder suchen und auswählen. Höchstens {{max}}."
   },
   "election_mgmt": {
     "actions": "Aktionen",
@@ -364,7 +385,6 @@
     "tally_compute": "Auszählung berechnen",
     "tally_computing": "Entschlüsseln…",
     "tally_publish": "Ergebnisse veröffentlichen",
-    "tally_voters": "{{count}} Wähler nach Entfernen ersetzter Stimmen",
     "tally_quorum_short": "Datenschutz-Quorum nicht erreicht ({{voters}} von {{quorum}}). Wahl für ungültig erklären.",
     "tally_key_missing": "Der Entschlüsselungsschlüssel dieser Wahl ist nicht auf diesem Gerät. Öffnen Sie Votain auf dem Gerät, mit dem Sie die Wahl erstellt haben.",
     "results_published": "Ergebnisse veröffentlicht",
@@ -372,7 +392,11 @@
     "export_key": "Entschlüsselungsschlüssel exportieren (Backup)",
     "key_exported": "Entschlüsselungsschlüssel exportiert",
     "import_key": "Entschlüsselungsschlüssel importieren",
-    "key_imported": "Entschlüsselungsschlüssel importiert"
+    "key_imported": "Entschlüsselungsschlüssel importiert",
+    "key_no_longer_needed": "Der Entschlüsselungsschlüssel wird nicht mehr gebraucht: die Zählung ist veröffentlicht und unveränderlich. Löschen Sie exportierte Kopien, denn damit ließen sich die einzelnen auf der Blockchain gespeicherten Stimmzettel weiterhin entschlüsseln.",
+    "entry_requirements": "Teilnahmebedingungen",
+    "tally_voters_other": "{{count}} Wähler nach Entfernen ersetzter Stimmen",
+    "tally_voters_one": "{{count}} Wähler nach Entfernen ersetzter Stimmen"
   },
   "gas": {
     "title": "Gas-Verwaltung",
@@ -383,10 +407,11 @@
     "history": "Transaktionsverlauf",
     "deposit": "Einzahlung",
     "used": "Verwendetes Gas",
-    "votes_remaining": "~{{count}} verbleibende Stimmen",
     "amount_token": "Betrag ({{currency}})",
     "withdraw": "Auszahlung",
-    "history_empty": "Noch keine Gas-Bewegungen."
+    "history_empty": "Noch keine Gas-Bewegungen.",
+    "votes_remaining_other": "~{{count}} verbleibende Stimmen",
+    "votes_remaining_one": "~{{count}} verbleibende Stimme"
   },
   "members": {
     "title": "Registrierte Mitglieder",
@@ -456,7 +481,11 @@
     "too_long": "Höchstens {{max}} Zeichen",
     "candidate_too_short": "Jeder Kandidat braucht mindestens {{min}} Zeichen",
     "candidate_too_long": "Kandidatennamen sind auf {{max}} Zeichen begrenzt",
-    "must_be_future_chain": "Muss nach der Uhr der Blockchain liegen, die {{time}} anzeigt"
+    "must_be_future_chain": "Muss nach der Uhr der Blockchain liegen, die {{time}} anzeigt",
+    "min_age_range": "Das Mindestalter muss zwischen {{min}} und {{max}} liegen",
+    "country_list_empty": "Fügen Sie mindestens einen Ländercode hinzu",
+    "country_list_long": "Höchstens {{max}} Länder",
+    "eligibility_empty": "Legen Sie eine Alters- oder Staatsangehörigkeitsregel fest, oder schalten Sie die Einschränkung ab"
   },
   "devices": {
     "title": "Meine Geräte",
@@ -546,6 +575,37 @@
   },
   "eligibility": {
     "world_id": "World ID verifiziert",
-    "enrolled": "Für diese Wahl angemeldet"
+    "enrolled": "Für diese Wahl angemeldet",
+    "title": "Diese Wahl ist eingeschränkt",
+    "intro": "Weisen Sie mit Ihrem Reisepass oder Personalausweis nach, dass Sie die Bedingungen erfüllen. Er wird auf Ihrem eigenen Handy gelesen und verlässt es nie.",
+    "req_min_age": "Sie müssen mindestens {{age}} Jahre alt sein",
+    "req_allowed": "Ihre Staatsangehörigkeit muss eine von diesen sein: {{countries}}",
+    "req_blocked": "Ihre Staatsangehörigkeit darf keine von diesen sein: {{countries}}",
+    "privacy_note": "Votain erhält pro Regel ein Ja oder Nein. Nicht Ihr Geburtsdatum, nicht Ihren Namen, nicht Ihre Dokumentnummer.",
+    "privacy_note_reveal": "Votain erhält pro Regel ein Ja oder Nein, dazu Ihre Staatsangehörigkeit, die mit der Liste abgeglichen und danach verworfen wird. Nicht Ihr Geburtsdatum, nicht Ihren Namen, nicht Ihre Dokumentnummer.",
+    "restricted_hint": "Sie werden zuerst gebeten, sich mit einem amtlichen Dokument zu verifizieren.",
+    "start": "Mit meinem Dokument verifizieren",
+    "opening": "Prüfung wird vorbereitet…",
+    "scan_hint": "Scannen Sie diesen Code mit der Self-App und halten Sie dann Ihr Dokument an das Handy.",
+    "open_app": "Mit der Self-App verifizieren",
+    "waiting": "Warten auf Ihr Handy…",
+    "claiming": "Verifiziert. Anmeldung wird abgeschlossen…",
+    "mock_mode": "Testmodus: es werden nur in der Self-App erzeugte Testdokumente akzeptiert.",
+    "error": "Die Prüfung konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.",
+    "failed_min_age": "Ihr Dokument erfüllt das Mindestalter dieser Wahl nicht.",
+    "failed_nationality_not_allowed": "Ihre Staatsangehörigkeit gehört nicht zu denen, die diese Wahl zulässt.",
+    "failed_nationality_blocked": "Diese Wahl akzeptiert Ihre Staatsangehörigkeit nicht.",
+    "failed_nationality_missing": "Ihre Staatsangehörigkeit konnte dem Dokument nicht entnommen werden.",
+    "failed_unknown": "Ihr Dokument erfüllt die Bedingungen dieser Wahl nicht.",
+    "mobile_return_hint": "Self bringt Sie danach hierher zurück.",
+    "requirements_unknown": "Die Teilnahmebedingungen dieser Wahl konnten nicht geprüft werden. Bitte erneut versuchen."
+  },
+  "country_picker": {
+    "placeholder": "Land suchen…",
+    "no_results": "Kein Land passt zu dieser Suche",
+    "limit_reached": "Sie haben die Grenze von {{max}} Ländern erreicht",
+    "remove": "{{country}} entfernen",
+    "more_results_other": "und {{count}} weitere. Tippen Sie weiter, um einzugrenzen.",
+    "more_results_one": "und {{count}} weiteres. Tippen Sie weiter, um einzugrenzen."
   }
 }

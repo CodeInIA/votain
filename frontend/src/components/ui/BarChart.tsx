@@ -22,16 +22,22 @@ export function ResultBarChart({ candidates, totalVotes, className }: ResultBarC
   return (
     <div className={cn('w-full', className)}>
       {data.map(c => (
-        <div key={c.name} className="flex items-center gap-3 mb-3 last:mb-0">
-          <div className="w-28 sm:w-36 shrink-0 text-right">
+        /* The label takes a full line of its own on narrow screens and only sits
+           beside the bar once there is room. A fixed 7rem column truncated every
+           option whose name is a sentence, and "Blank vote / Abstain" is one, so
+           a phone showed results with the choices cut off. It also never
+           truncates now: a candidate name is the one thing on this chart that
+           cannot be inferred from what is left. */
+        <div key={c.name} className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3 last:mb-0">
+          <div className="w-full sm:w-36 sm:shrink-0 text-left sm:text-right">
             <span className={cn(
-              'text-sm font-medium truncate block',
+              'text-sm font-medium block break-words',
               c.isWinner || c.isTie ? 'text-on-surface' : 'text-on-surface-variant'
             )}>
               {c.name}
             </span>
           </div>
-          <div className="flex-1 relative">
+          <div className="flex-1 min-w-0 relative">
             <div className="h-8 rounded-lg bg-surface-high/50 overflow-hidden">
               <div
                 className={cn(

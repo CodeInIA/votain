@@ -14,6 +14,7 @@ import { queryLogsFrom } from "./logs";
 import i18n from "../i18n/config";
 import { getStoredCommitment, getStoredVoteNullifier } from "./semaphore";
 import type { Candidate, Election, ElectionPhase, VotingType } from "../data/seed";
+import { policyHash, type EligibilityPolicy } from "./eligibility";
 
 // Index order MUST match ElectionV4's Phase enum exactly.
 const PHASE_MAP: ElectionPhase[] = [
@@ -33,6 +34,7 @@ interface ElectionMetadata {
   candidates?: Array<{ name: string; description?: string }>;
   privacyQuorum?: number;
   keyNonce?: string;
+  eligibility?: EligibilityPolicy;
   tags?: string[];
 }
 
@@ -65,6 +67,7 @@ export async function fetchElection(address: string): Promise<Election> {
     voteCount,
     resultsPublished,
     metadataJson,
+    policyHashOnChain,
   ] = await Promise.all([
     c.name(),
     c.organizer(),
@@ -80,9 +83,29 @@ export async function fetchElection(address: string): Promise<Election> {
     c.voteCount(),
     c.resultsPublished(),
     c.metadataJson(),
+    c.eligibilityPolicyHash() as Promise<string>,
   ]);
 
   const meta = parseMetadata(metadataJson);
+
+  // The attribute policy comes from the metadata, checked against the hash the
+  // contract stores, which is the same check the backend makes before it will
+  // attest anything. Reading it here rather than asking the backend per election
+  // is what lets lists and cards show restrictions without a request each, and
+  // it removes a second source of truth that could disagree with the first.
+  //
+  // A policy whose hash does not match is treated as no policy: it is either
+  // written by something that disagrees about the canonical form, or it was
+  // never consistent, and either way it is not what enrollment is gated on.
+  let eligibilityPolicy: EligibilityPolicy | undefined;
+  if (meta.eligibility) {
+    const declared = await policyHash(meta.eligibility);
+    if (declared === String(policyHashOnChain).toLowerCase()) {
+      eligibilityPolicy = meta.eligibility;
+    } else {
+      console.warn(`Election ${address}: eligibility policy does not match its published hash`);
+    }
+  }
 
   const candidates: Candidate[] = (meta.candidates ?? []).map((cand, i) => ({
     id: `option-${i}`,
@@ -155,6 +178,7 @@ export async function fetchElection(address: string): Promise<Election> {
     totalEnrolled: Number(memberCount),
     castVotes: Number(voteCount),
     ipfsCid,
+    eligibilityPolicy,
     votingType: VOTING_TYPE_MAP[Number(votingType)] ?? "simple_plurality",
     privacyQuorum: meta.privacyQuorum ?? (Number(thresholdValue) || 0),
     keyNonce: meta.keyNonce,

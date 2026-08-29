@@ -1,77 +1,32 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Search, SlidersHorizontal, X, Globe } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
-import { Button } from '../../components/ui/Button';
 import { ElectionCard } from '../../components/ui/ElectionCard';
-import { Input } from '../../components/ui/Input';
-import { Badge } from '../../components/ui/Badge';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { useElections } from '../../hooks/useElections';
+import { useVerifiedDomains } from '../../hooks/useVerifiedDomains';
 import { useAuth } from '../../contexts/AuthContext';
-import { type ElectionPhase } from '../../data/seed';
-import { checkElectionDomain } from '../../lib/organizerDomains';
-
-const PHASE_FILTERS: ElectionPhase[] = ['enrolling', 'active', 'tallying', 'closed'];
+import { ElectionFilters } from '../../components/ui/ElectionFilters';
+import {
+  matchesElectionFilter,
+  isAnyFilterActive,
+  EMPTY_FILTERS,
+  type ElectionFilterState,
+} from '../../lib/electionFilter';
 
 export default function Discover() {
   const { t } = useTranslation();
   const { voterLoggedIn } = useAuth();
-  const [query, setQuery]           = useState('');
-  const [phase, setPhase]           = useState<ElectionPhase | null>(null);
-  const [domainOnly, setDomainOnly] = useState(false);
+  const [filters, setFilters] = useState<ElectionFilterState>(EMPTY_FILTERS);
   const [showFilters, setShowFilters] = useState(false);
-  const { elections, loading }      = useElections();
+  const { elections, loading } = useElections();
 
-  const pairKey = (address: string, domain: string) => `${address.toLowerCase()}|${domain}`;
+  const isDomainVerified = useVerifiedDomains(elections);
 
-  // Verification is a live DNS answer, so it cannot be read off the election.
-  // Resolved once per DISTINCT organizer/domain pair rather than per card: a
-  // list is usually a handful of organizers, and the backend caches on top.
-  const domainPairs = useMemo(() => {
-    const seen = new Map<string, { address: string; domain: string }>();
-    for (const e of elections) {
-      if (!e.organizerDomain) continue;
-      const key = pairKey(e.organizerAddress, e.organizerDomain);
-      if (!seen.has(key)) seen.set(key, { address: e.organizerAddress, domain: e.organizerDomain });
-    }
-    return [...seen.entries()];
-  }, [elections]);
-
-  const [verifiedPairs, setVerifiedPairs] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const checked = await Promise.all(
-        domainPairs.map(async ([key, p]) => {
-          const result = await checkElectionDomain(p.address, p.domain);
-          return [key, result.status === 'verified'] as const;
-        }),
-      );
-      if (!cancelled) {
-        setVerifiedPairs(new Set(checked.filter(([, ok]) => ok).map(([key]) => key)));
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [domainPairs]);
-
-  const filtered = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    return elections.filter(e => {
-      const matchPhase = phase ? e.phase === phase : true;
-      const matchQuery = needle
-        ? e.title.toLowerCase().includes(needle) ||
-          e.organizer.toLowerCase().includes(needle) ||
-          // Searching "gob.es" should find the elections published under it.
-          (e.organizerDomain?.toLowerCase().includes(needle) ?? false)
-        : true;
-      const matchDomain = domainOnly
-        ? !!e.organizerDomain && verifiedPairs.has(pairKey(e.organizerAddress, e.organizerDomain))
-        : true;
-      return matchPhase && matchQuery && matchDomain;
-    });
-  }, [elections, query, phase, domainOnly, verifiedPairs]);
+  const filtered = useMemo(
+    () => elections.filter(e => matchesElectionFilter(e, filters, isDomainVerified)),
+    [elections, filters, isDomainVerified],
+  );
 
   return (
     <PageLayout role="public" showNav>
@@ -84,76 +39,13 @@ export default function Discover() {
           <p className="text-on-surface-variant text-sm">{t('discover.subtitle')}</p>
         </div>
 
-        {/* Search + filter bar */}
-        <div className="flex gap-3 mb-4">
-          <div className="flex-1">
-            <Input
-              placeholder={t('discover.search_placeholder')}
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              leftIcon={<Search className="w-4 h-4" />}
-              rightIcon={query ? (
-                <button
-                  type="button"
-                  onClick={() => setQuery('')}
-                  aria-label={t('common.clear')}
-                  className="cursor-pointer hover:text-on-surface transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              ) : undefined}
-            />
-          </div>
-          <Button
-            onClick={() => setShowFilters(v => !v)}
-            className="gap-2 h-11 px-4 rounded-2xl text-sm text-on-surface-variant hover:text-on-surface"
-          >
-            <SlidersHorizontal className="w-4 h-4" />
-            <span className="hidden sm:inline">{t('common.filter')}</span>
-            {/* Any active filter, not just the phase: with only the domain chip
-                on, the collapsed bar gave no sign the list was being filtered. */}
-            {(phase || domainOnly) && <span className="w-2 h-2 rounded-full bg-primary" />}
-          </Button>
-        </div>
-
-        {/* Phase filter chips */}
-        {showFilters && (
-          <div className="flex flex-wrap gap-2 mb-6">
-            {PHASE_FILTERS.map(p => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => setPhase(phase === p ? null : p)}
-                className="transition-all cursor-pointer"
-              >
-                <Badge
-                  variant={p}
-                  dot={p === 'active' || p === 'enrolling'}
-                  className={phase === p ? 'ring-2 ring-primary/40' : 'opacity-60 hover:opacity-100'}
-                >
-                  {t(`phase.${p}`)}
-                </Badge>
-              </button>
-            ))}
-
-            {/* Only verified is offered, not its negative: "no verified domain"
-                is the normal state for most organizers, so a chip for it would
-                read as a category of suspicion rather than a filter. */}
-            <button
-              type="button"
-              onClick={() => setDomainOnly(v => !v)}
-              className="transition-all cursor-pointer"
-            >
-              <Badge
-                variant="blockchain"
-                className={domainOnly ? 'ring-2 ring-primary/40' : 'opacity-60 hover:opacity-100'}
-              >
-                <Globe className="w-3 h-3 shrink-0" />
-                {t('discover.verified_domain')}
-              </Badge>
-            </button>
-          </div>
-        )}
+        <ElectionFilters
+          value={filters}
+          onChange={setFilters}
+          open={showFilters}
+          onToggleOpen={() => setShowFilters(v => !v)}
+          searchPlaceholder={t('discover.search_placeholder')}
+        />
 
         {/* Results */}
         {loading ? (
@@ -165,11 +57,14 @@ export default function Discover() {
             <span className="text-5xl mb-4">🗳️</span>
             <h2 className="text-xl font-bold text-on-surface mb-2">{t('discover.empty_title')}</h2>
             <p className="text-on-surface-variant text-sm max-w-xs">{t('discover.empty_desc')}</p>
-            {(query || phase) && (
+            {/* Resets EVERY filter. The old version cleared three of them by
+                name and silently left the age and nationality inputs on, so
+                "clear filters" could leave the list still empty. */}
+            {(filters.query || isAnyFilterActive(filters)) && (
               <button
                 type="button"
                 className="mt-4 text-sm text-primary hover:underline cursor-pointer"
-                onClick={() => { setQuery(''); setPhase(null); setDomainOnly(false); }}
+                onClick={() => setFilters(EMPTY_FILTERS)}
               >
                 {t('common.clear_filters')}
               </button>

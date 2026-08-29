@@ -3,6 +3,7 @@ import { ChevronDown, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import { LANGUAGES, getLanguageByCode } from '../../data/languages';
+import { useTapSafeSelect } from '../../hooks/useTapSafeSelect';
 
 interface LanguageSelectorProps {
   className?: string;
@@ -12,9 +13,14 @@ interface LanguageSelectorProps {
 export function LanguageSelector({ className, align = 'right' }: LanguageSelectorProps) {
   const { i18n } = useTranslation();
   const currentLang = getLanguageByCode(i18n.language) ?? LANGUAGES[0];
+  // Controlled so a tap on the trigger closes the list instead of reopening it
+  // on touch devices. See the hook for what Radix does.
+  const { open, onOpenChange } = useTapSafeSelect();
 
   return (
     <Select.Root
+      open={open}
+      onOpenChange={onOpenChange}
       value={currentLang.code}
       onValueChange={code => void i18n.changeLanguage(code)}
     >

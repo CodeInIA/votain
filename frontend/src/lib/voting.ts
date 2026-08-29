@@ -11,7 +11,12 @@
  */
 import { getElection } from "./contracts";
 import { queryLogsFrom } from "./logs";
-import { ensureLocalRegistration, relayEnroll, relayVote } from "./relay";
+import {
+  ensureLocalRegistration,
+  relayEnroll,
+  relayVote,
+  type EnrollAttestationInput,
+} from "./relay";
 import { encryptBallot } from "./paillier";
 import {
   computeNullifier,
@@ -29,11 +34,20 @@ export interface VoteResult {
   referenceNumber: string;
 }
 
-/** Enrolls the voter's Semaphore identity into an election, via the relayer. */
-export async function enrollInElection(electionAddress: string): Promise<{ txHash: string }> {
+/**
+ * Enrolls the voter's Semaphore identity into an election, via the relayer.
+ *
+ * `attestation` is required by elections that declare an attribute policy and
+ * refused by those that do not, so the caller passes whichever the election
+ * asked for. See `lib/eligibility.ts` for how one is obtained.
+ */
+export async function enrollInElection(
+  electionAddress: string,
+  attestation?: EnrollAttestationInput,
+): Promise<{ txHash: string }> {
   const identity = await getOrCreateIdentity();
   await ensureLocalRegistration(identity.commitment); // no-op off the local chain
-  return relayEnroll(electionAddress, identity.commitment);
+  return relayEnroll(electionAddress, identity.commitment, attestation);
 }
 
 /** Casts (or re-casts) a vote for `optionIndex` (blank = numOptions). */

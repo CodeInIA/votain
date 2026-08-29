@@ -28,6 +28,7 @@ import { Group } from "@semaphore-protocol/group";
 import { generateProof } from "@semaphore-protocol/proof";
 import { poseidon2 } from "poseidon-lite/poseidon2";
 import { generateRandomKeys, PublicKey } from "paillier-bigint";
+import type { Wallet } from "ethers";
 
 const { ethers } = await network.connect();
 
@@ -111,8 +112,59 @@ interface Spec {
   finish?: "publish" | "leave-tallying" | "void";
   cancelImmediately?: boolean;
   organizerAccount?: number;
+  /**
+   * Attribute policy. Present means the election is gated: the contract refuses
+   * plain `enroll` and the seed has to sign an attestation for each voter, the
+   * same way the relay does after a Self proof clears.
+   */
+  eligibility?: EligibilityPolicy;
   tags?: string[];
 }
+
+interface EligibilityPolicy {
+  minAge?: number;
+  allowedCountries?: string[];
+  blockedCountries?: string[];
+}
+
+/**
+ * Canonical policy form. Must match backend and frontend byte for byte.
+ *
+ * Returns the OBJECT as well as its JSON, because the metadata has to carry the
+ * canonical form too. Writing the spec verbatim while hashing the sorted version
+ * produced elections whose published policy did not match their own hash, and
+ * the frontend correctly refused to trust them: every policy naming more than
+ * one country was quietly unusable.
+ */
+function canonicalPolicy(policy: EligibilityPolicy): EligibilityPolicy {
+  const ordered: EligibilityPolicy = {};
+  if (policy.minAge !== undefined) ordered.minAge = policy.minAge;
+  if (policy.allowedCountries?.length) ordered.allowedCountries = [...policy.allowedCountries].sort();
+  if (policy.blockedCountries?.length) ordered.blockedCountries = [...policy.blockedCountries].sort();
+  return ordered;
+}
+
+function canonicalPolicyJson(policy: EligibilityPolicy): string {
+  return JSON.stringify(canonicalPolicy(policy));
+}
+
+const ENROLL_ATTESTATION_TYPES = {
+  EnrollAttestation: [
+    { name: "identityCommitment", type: "uint256" },
+    { name: "deadline", type: "uint256" },
+  ],
+} as const;
+
+/**
+ * The wallet that signs enrolment attestations for gated elections.
+ *
+ * Must be the same key the backend holds in ELIGIBILITY_ATTESTER_PRIVATE_KEY,
+ * because the address is frozen into each election at creation: seeding with a
+ * different one produces elections the running backend can never let anyone
+ * into. Only required when a spec declares a policy.
+ */
+const attesterKey = process.env.SEED_ATTESTER_KEY;
+const attesterWallet = attesterKey ? new ethers.Wallet(attesterKey) : null;
 
 async function main(): Promise<void> {
   const chainId = (await ethers.provider.getNetwork()).chainId;
@@ -180,6 +232,14 @@ async function main(): Promise<void> {
     const organizer = signers[spec.organizerAccount ?? 0];
     step(`${spec.name}: generating Paillier key`);
     const keys = await generateRandomKeys(PAILLIER_BITS);
+    if (spec.eligibility && !attesterWallet) {
+      throw new Error(
+        `"${spec.name}" declares an eligibility policy but SEED_ATTESTER_KEY is unset. ` +
+          "Set it to the backend's ELIGIBILITY_ATTESTER_PRIVATE_KEY, or the election " +
+          "would be deployed naming an attester nobody holds.",
+      );
+    }
+
     const created = await chainNow();
 
     const cfg = {
@@ -203,8 +263,15 @@ async function main(): Promise<void> {
         organizerName: spec.organizerName,
         candidates: spec.candidates,
         privacyQuorum: 3,
+        ...(spec.eligibility ? { eligibility: canonicalPolicy(spec.eligibility) } : {}),
         tags: spec.tags ?? ["demo"],
       }),
+      eligibilityAttester: spec.eligibility
+        ? (attesterWallet as Wallet).address
+        : "0x0000000000000000000000000000000000000000",
+      eligibilityPolicyHash: spec.eligibility
+        ? ethers.keccak256(ethers.toUtf8Bytes(canonicalPolicyJson(spec.eligibility)))
+        : "0x" + "00".repeat(32),
     };
 
     const receipt = await (
@@ -238,7 +305,23 @@ async function main(): Promise<void> {
     await advanceTo(created + spec.enrollFrom + 60);
     const participants = voters.slice(0, spec.ballots.length);
     for (const v of participants) {
-      await (await paymaster.relayEnroll(address, v.commitment)).wait();
+      if (!spec.eligibility) {
+        await (await paymaster.relayEnroll(address, v.commitment)).wait();
+        continue;
+      }
+
+      // Stands in for a Self proof clearing the policy. The seed cannot produce
+      // one, but it holds the key the election trusts, so it can sign the same
+      // attestation the relay would have signed afterwards.
+      const deadline = (await chainNow()) + 900;
+      const signature = await (attesterWallet as Wallet).signTypedData(
+        { name: "VotainElection", version: "1", chainId, verifyingContract: address },
+        ENROLL_ATTESTATION_TYPES as unknown as Record<string, Array<{ name: string; type: string }>>,
+        { identityCommitment: v.commitment, deadline },
+      );
+      await (
+        await paymaster.relayEnrollAttested(address, v.commitment, deadline, signature)
+      ).wait();
     }
 
     // Voting.
@@ -522,6 +605,7 @@ async function main(): Promise<void> {
     votingType: VotingType.SIMPLE_PLURALITY,
     thresholdValue: 0n,
     candidates: [{ name: "List A" }, { name: "List B" }, { name: "List C" }],
+    organizerAccount: 4,
     enrollFrom: -HOUR,
     enrollTo: 2 * DAY,
     voteFrom: 2 * DAY,
@@ -573,9 +657,103 @@ async function main(): Promise<void> {
     tags: ["other-organizer"],
   });
 
+
+  // ── Restricted elections (attribute policies) ──────────────────────────
+  // What the eligibility feature exists for. Only the first carries seeded
+  // voters; the rest are left empty on purpose, so there is always a gated
+  // election to walk into with a real document and an empty member list.
+
+  await build({
+    name: "Elecciones Generales - Circunscripcion Madrid",
+    organizerName: "Junta Electoral Central",
+    description:
+      "Restricted to adults holding Spanish nationality. Enrolment requires proving both from an identity document. The proof reveals neither the date of birth nor anything beyond the nationality being on the allowed list.",
+    votingType: VotingType.SIMPLE_PLURALITY,
+    thresholdValue: 0n,
+    candidates: [
+      { name: "Candidatura A", description: "Coalicion progresista" },
+      { name: "Candidatura B", description: "Partido conservador" },
+      { name: "Candidatura C", description: "Plataforma ciudadana" },
+    ],
+    enrollFrom: -HOUR,
+    enrollTo: 3 * DAY,
+    voteFrom: 3 * DAY,
+    voteTo: 6 * DAY,
+    ballots: [0, 1, 0],
+    eligibility: { minAge: 18, allowedCountries: ["ESP"] },
+    tags: ["restricted", "test-me"],
+  });
+
+  await build({
+    name: "Youth Assembly - Age Restricted Ballot",
+    organizerName: "Consejo de la Juventud",
+    description:
+      "Restricted by age alone. Nationality is never asked for, so the proof is a pure yes or no and nothing about the voter's document is disclosed at all.",
+    votingType: VotingType.ABSOLUTE_MAJORITY,
+    thresholdValue: 0n,
+    candidates: [{ name: "Yes" }, { name: "No" }],
+    enrollFrom: -HOUR,
+    enrollTo: 4 * DAY,
+    voteFrom: 4 * DAY,
+    voteTo: 8 * DAY,
+    eligibility: { minAge: 18 },
+    tags: ["restricted", "age-only"],
+  });
+
+  await build({
+    name: "Notarial Deed - Restricted Witnesses",
+    organizerName: "Notaria Perez y Asociados",
+    description:
+      "A witness threshold with an age requirement, confirming the attested enrolment path works for every voting type and not only for plain plurality.",
+    votingType: VotingType.WITNESS_THRESHOLD,
+    thresholdValue: 2n,
+    candidates: [{ name: "I confirm" }, { name: "I decline" }],
+    enrollFrom: -HOUR,
+    enrollTo: 2 * DAY,
+    voteFrom: 2 * DAY,
+    voteTo: 5 * DAY,
+    eligibility: { minAge: 18 },
+    tags: ["restricted", "witness"],
+  });
+
+  await build({
+    name: "Iberian Cooperative - Members Assembly",
+    organizerName: "Cooperativa Iberica",
+    description:
+      "Open to several nationalities, and owned by a different organizer. An allowlist of more than one country is where disclosure starts to narrow the anonymity set, which is the tradeoff this policy makes visible.",
+    votingType: VotingType.SIMPLE_PLURALITY,
+    thresholdValue: 0n,
+    candidates: [{ name: "Proposal A" }, { name: "Proposal B" }],
+    enrollFrom: -HOUR,
+    enrollTo: 5 * DAY,
+    voteFrom: 5 * DAY,
+    voteTo: 9 * DAY,
+    eligibility: { minAge: 16, allowedCountries: ["ESP", "PRT", "FRA"] },
+    organizerAccount: 3,
+    tags: ["restricted", "other-organizer"],
+  });
+
+  await build({
+    name: "Sanctions Compliance Vote - Blocklist",
+    organizerName: "Global Trade Association",
+    description:
+      "Restricted by exclusion rather than by allowlist, and owned by a different organizer. Self expresses this natively, so the voter proves their country is not on the list without revealing which country it is.",
+    votingType: VotingType.SUPERMAJORITY_TWO_THIRDS,
+    thresholdValue: 0n,
+    candidates: [{ name: "Yes" }, { name: "No" }],
+    enrollFrom: -HOUR,
+    enrollTo: 6 * DAY,
+    voteFrom: 6 * DAY,
+    voteTo: 10 * DAY,
+    eligibility: { minAge: 18, blockedCountries: ["PRK", "IRN"] },
+    organizerAccount: 4,
+    tags: ["restricted", "blocklist", "other-organizer"],
+  });
+
   console.log(`\nTotal elections on chain: ${await factory.electionsCount()}`);
-  console.log(`Main organizer  (Hardhat #0): ${signers[0].address}`);
-  console.log(`Other organizer (Hardhat #2): ${signers[2].address}`);
+  console.log(`Main organizer   (Hardhat #0): ${signers[0].address}`);
+  console.log(`Other organizers (Hardhat #2/#3/#4): ${signers[2].address}, ${signers[3].address}, ${signers[4].address}`);
+  console.log(`Eligibility attester: ${attesterWallet?.address ?? "none (no gated elections)"}`);
   console.log(`Tally keys written to: ${keyDir}`);
 }
 

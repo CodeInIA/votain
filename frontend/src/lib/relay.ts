@@ -78,6 +78,7 @@ async function localRelay(functionName: string, args: unknown[]): Promise<{ txHa
     requirePaymaster(),
     [
       "function relayEnroll(address election, uint256 identityCommitment)",
+      "function relayEnrollAttested(address election, uint256 identityCommitment, uint256 deadline, bytes signature)",
       "function relayVote(address election, bytes voteCiphertext, uint256 nullifier, uint256 merkleRoot, uint256 merkleDepth, uint256[2] pA, uint256[2][2] pB, uint256[2] pC)",
     ],
     new Wallet(LOCAL_RELAY_KEY, provider),
@@ -149,16 +150,40 @@ export async function ensureLocalRegistration(commitment: bigint): Promise<void>
 // Relayed operations
 // ────────────────────────────────────────────────
 
+/**
+ * Attestation from the eligibility attester, required only by elections that
+ * declare an attribute policy. `ElectionV4` exposes a separate entry point for
+ * them, so passing this is what decides which one gets called.
+ */
+export interface EnrollAttestationInput {
+  deadline: number;
+  signature: string;
+}
+
 export async function relayEnroll(
   election: string,
   identityCommitment: bigint,
+  attestation?: EnrollAttestationInput,
 ): Promise<{ txHash: string }> {
-  if (isLocalChain()) return localRelay("relayEnroll", [election, identityCommitment]);
+  if (isLocalChain()) {
+    return attestation
+      ? localRelay("relayEnrollAttested", [
+          election,
+          identityCommitment,
+          BigInt(attestation.deadline),
+          attestation.signature,
+        ])
+      : localRelay("relayEnroll", [election, identityCommitment]);
+  }
   // Enrollment is a public act and the endpoint is session-gated, so the cookie
   // belongs here.
   return post(
     "/api/relay/enroll",
-    { election, identityCommitment: identityCommitment.toString() },
+    {
+      election,
+      identityCommitment: identityCommitment.toString(),
+      ...(attestation ?? {}),
+    },
     "include",
   );
 }

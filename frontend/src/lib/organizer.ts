@@ -12,6 +12,12 @@ import { getFactory, getElection, getPaymaster } from "./contracts";
 import { queryLogsFrom } from "./logs";
 import { generateElectionKeys, type SerializedKeyPair } from "./paillier";
 import { deriveElectionKeys, newKeyNonce } from "./tallyKey";
+import {
+  isEmptyPolicy,
+  policyHash,
+  ZERO_HASH,
+  type EligibilityPolicy,
+} from "./eligibility";
 
 const PRIVKEY_STORAGE_PREFIX = "votain_paillier_sk_";
 const ORGANIZER_NAME_KEY = "votain_organizer_name";
@@ -68,6 +74,8 @@ export const VOTING_TYPE_ENUM: Record<string, number> = {
   witness_threshold: 3,
 };
 
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+
 export interface CreateElectionInput {
   name: string;
   description: string;
@@ -84,6 +92,21 @@ export interface CreateElectionInput {
   voteEnd: Date;
   depositMatic: string; // decimal string
   tags?: string[];
+  /**
+   * Attribute restrictions on who may enroll. Omitted or empty leaves the
+   * election open, which is the default and the path every existing election
+   * takes.
+   */
+  eligibility?: EligibilityPolicy;
+  /**
+   * Address that will sign enrollment attestations for this election. Required
+   * when `eligibility` is set and ignored otherwise. Read from the backend at
+   * creation time, then frozen into the contract: an election cannot be moved
+   * to a different attester afterwards, which is what makes the restriction
+   * something voters can rely on rather than something the organizer can
+   * rewrite mid-election.
+   */
+  eligibilityAttester?: string;
 }
 
 const toUnix = (d: Date): number => Math.floor(d.getTime() / 1000);
@@ -134,6 +157,10 @@ export async function createElection(
 
   // 2. Metadata bundle stored on-chain (kept small; IPFS on mainnet).
   //    keyNonce is public (a salt), included only when the key is derivable.
+  //    The eligibility policy rides along here, and its hash goes into the
+  //    contract, so anyone can recompute one from the other and see that the
+  //    published rules are the ones enrollment was actually gated on.
+  const gated = !isEmptyPolicy(input.eligibility);
   const metadata = {
     description: input.description,
     organizerName: input.organizerName,
@@ -141,8 +168,13 @@ export async function createElection(
     candidates: input.candidates,
     privacyQuorum: input.privacyQuorum,
     ...(keyDerivable ? { keyNonce } : {}),
+    ...(gated ? { eligibility: input.eligibility } : {}),
     tags: input.tags ?? [],
   };
+
+  if (gated && !input.eligibilityAttester) {
+    throw new Error("an election with an eligibility policy needs an attester address");
+  }
 
   // 3. Random scope (external nullifier): unique per election
   const scope = BigInt(ethers.hexlify(ethers.randomBytes(31)));
@@ -159,6 +191,8 @@ export async function createElection(
     scope,
     paillierPublicKey: JSON.stringify(paillierKeys.publicKey),
     metadataJson: JSON.stringify(metadata),
+    eligibilityAttester: gated ? (input.eligibilityAttester as string) : ZERO_ADDRESS,
+    eligibilityPolicyHash: gated ? await policyHash(input.eligibility as EligibilityPolicy) : ZERO_HASH,
   };
 
   const factory = getFactory(signer);
@@ -189,24 +223,47 @@ export async function createElection(
 // Lifecycle controls (organizer signer)
 // ────────────────────────────────────────────────
 
+/**
+ * Waits for a lifecycle transaction and returns its hash.
+ *
+ * `wait()` resolves to null when ethers cannot find the transaction any more,
+ * which is what a dropped or replaced one looks like. Dereferencing that gives
+ * "Cannot read properties of null", which tells the organizer nothing. The
+ * common cause on a local chain is a wallet whose cached nonce has fallen behind
+ * the node, usually because transactions were sent from the same account outside
+ * the wallet, so the message names the fix.
+ *
+ * A REVERT does not come through here: ethers throws for a receipt with status
+ * 0, and the caller reports that error as it is.
+ */
+async function waitForLifecycleTx(tx: { wait: () => Promise<{ hash: string } | null> }): Promise<string> {
+  const receipt = await tx.wait();
+  if (!receipt) {
+    throw new Error(
+      "The transaction was dropped or replaced before it confirmed. If the wallet is on a local chain, clear its activity data to resync the account nonce, then try again.",
+    );
+  }
+  return receipt.hash;
+}
+
 export async function cancelElection(signer: Signer, address: string): Promise<string> {
   const tx = await getElection(address, signer).cancelElection();
-  return (await tx.wait()).hash;
+  return waitForLifecycleTx(tx);
 }
 
 export async function closeEnrollmentEarly(signer: Signer, address: string): Promise<string> {
   const tx = await getElection(address, signer).closeEnrollmentEarly();
-  return (await tx.wait()).hash;
+  return waitForLifecycleTx(tx);
 }
 
 export async function closeVotingEarly(signer: Signer, address: string): Promise<string> {
   const tx = await getElection(address, signer).closeVotingEarly();
-  return (await tx.wait()).hash;
+  return waitForLifecycleTx(tx);
 }
 
 export async function markVoided(signer: Signer, address: string): Promise<string> {
   const tx = await getElection(address, signer).markVoided();
-  return (await tx.wait()).hash;
+  return waitForLifecycleTx(tx);
 }
 
 /**
@@ -222,7 +279,7 @@ export async function publishResults(
   ipfsCid = "",
 ): Promise<string> {
   const tx = await getElection(address, signer).publishResults(ipfsCid, counts.map(BigInt));
-  return (await tx.wait()).hash;
+  return waitForLifecycleTx(tx);
 }
 
 // ────────────────────────────────────────────────
@@ -232,13 +289,13 @@ export async function publishResults(
 export async function depositGas(signer: Signer, organizer: string, matic: string): Promise<string> {
   const { ethers } = await import("ethers");
   const tx = await getPaymaster(signer).depositFor(organizer, { value: ethers.parseEther(matic) });
-  return (await tx.wait()).hash;
+  return waitForLifecycleTx(tx);
 }
 
 export async function withdrawGas(signer: Signer, matic: string): Promise<string> {
   const { ethers } = await import("ethers");
   const tx = await getPaymaster(signer).withdraw(ethers.parseEther(matic));
-  return (await tx.wait()).hash;
+  return waitForLifecycleTx(tx);
 }
 
 export async function getGasBalance(organizer: string): Promise<bigint> {

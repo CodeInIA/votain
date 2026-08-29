@@ -43,6 +43,9 @@ contract ElectionPaymaster {
     /// makes padding free to send and worth nothing.
     /// relayEnroll: selector + address + uint256.
     uint256 private constant ENROLL_CALLDATA = 4 + 32 + 32;
+    /// relayEnrollAttested head: selector + address + 2 uint256 + bytes offset +
+    /// length word, then the padded signature added at call time.
+    uint256 private constant ATTESTED_ENROLL_CALLDATA_HEAD = 4 + 32 + (32 * 2) + 32 + 32;
     /// relayVote head: selector + address + bytes offset + 3 uint256 + pA + pB + pC,
     /// then the bytes tail (length word + padded contents) added at call time.
     uint256 private constant VOTE_CALLDATA_HEAD = 4 + 32 + 32 + (32 * 3) + 64 + 128 + 64 + 32;
@@ -190,6 +193,27 @@ contract ElectionPaymaster {
         ElectionV4(election).enroll(identityCommitment);
 
         _reimburse(organizer, startGas, ENROLL_CALLDATA);
+    }
+
+    /// @notice Relay an enrollment into an election that declares an attribute
+    /// policy, reimbursed from the organizer's tank.
+    /// @dev Separate entry point rather than an optional argument on relayEnroll,
+    /// because the two bill different calldata sizes and folding them together
+    /// would make the cheap call pay for the signature it never sent.
+    function relayEnrollAttested(
+        address election,
+        uint256 identityCommitment,
+        uint256 deadline,
+        bytes calldata signature
+    ) external nonReentrant {
+        uint256 startGas = gasleft();
+        address organizer = _organizerOrRevert(election);
+
+        ElectionV4(election).enrollAttested(identityCommitment, deadline, signature);
+
+        uint256 billable =
+            ATTESTED_ENROLL_CALLDATA_HEAD + ((signature.length + 31) / 32) * 32;
+        _reimburse(organizer, startGas, billable);
     }
 
     /// @notice Relay a voter's ballot, reimbursed from the organizer's tank.

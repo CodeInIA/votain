@@ -10,6 +10,7 @@ import { Card } from '../../components/ui/Card';
 import { Input, Textarea } from '../../components/ui/Input';
 import { DatePicker } from '../../components/ui/DatePicker';
 import { SelectMenu } from '../../components/ui/SelectMenu';
+import { CountryPicker } from '../../components/ui/CountryPicker';
 import { Switch } from '../../components/ui/Switch';
 import { Modal } from '../../components/ui/Modal';
 import { TransactionPendingModal, type TxState } from '../../components/ui/TransactionPendingModal';
@@ -19,6 +20,16 @@ import { fetchOrganizerDomains } from '../../lib/organizerDomains';
 import { isChainConfigured, chainInfo } from '../../lib/deployments';
 import { getReadProvider } from '../../lib/contracts';
 import { createElection, getOrganizerName, type VOTING_TYPE_ENUM } from '../../lib/organizer';
+import {
+  fetchAttester,
+  isEmptyPolicy,
+  normaliseCountries,
+  requiresNationalityReveal,
+  MAX_COUNTRY_LIST,
+  MIN_AGE_FLOOR,
+  MAX_AGE_CEILING,
+  type EligibilityPolicy,
+} from '../../lib/eligibility';
 
 interface Candidate { name: string; description: string }
 
@@ -39,7 +50,15 @@ interface FormState {
   requireOrb: boolean;
   privacyQuorum: string;
   depositAmount: string;
+  /** Attribute restrictions. Off by default: an open election is the norm. */
+  eligibilityEnabled: boolean;
+  minAge: string;
+  countryMode: CountryMode;
+  /** Selected ISO 3166-1 alpha-3 codes, chosen through CountryPicker. */
+  countries: string[];
 }
+
+type CountryMode = 'none' | 'allow' | 'block';
 
 const INITIAL: FormState = {
   title: '', description: '', votingType: 'simple_plurality', threshold: '2',
@@ -47,7 +66,31 @@ const INITIAL: FormState = {
   enrollStart: '', enrollEnd: '', voteStart: '', voteEnd: '',
   candidates: [{ name: '', description: '' }, { name: '', description: '' }],
   requireOrb: false, privacyQuorum: '10', depositAmount: '0.05',
+  eligibilityEnabled: false, minAge: '', countryMode: 'none', countries: [],
 };
+
+/**
+ * Turns the wizard's fields into the policy that gets hashed into the contract.
+ *
+ * Returns an empty policy whenever the toggle is off, so the "no policy"
+ * sentinel is produced by exactly one code path.
+ */
+function policyFromForm(form: FormState): EligibilityPolicy {
+  if (!form.eligibilityEnabled) return {};
+
+  const policy: EligibilityPolicy = {};
+  const age = Number(form.minAge);
+  if (form.minAge.trim() !== '' && Number.isInteger(age)) policy.minAge = age;
+
+  // normaliseCountries still runs even though the picker only ever emits valid
+  // codes: it is what sorts them, and the policy hash depends on that order.
+  const codes = normaliseCountries(form.countries);
+  if (codes.length > 0) {
+    if (form.countryMode === 'allow') policy.allowedCountries = codes;
+    if (form.countryMode === 'block') policy.blockedCountries = codes;
+  }
+  return policy;
+}
 
 /**
  * Only a witness threshold is inherently a single proposition: it counts
@@ -105,7 +148,8 @@ const nowValue = (nowMs: number) => {
 
 type FieldErrors = Partial<Record<
   'title' | 'description' | 'threshold' | 'enrollStart' | 'enrollEnd' | 'voteStart'
-  | 'voteEnd' | 'candidates' | 'privacyQuorum' | 'depositAmount', string>>;
+  | 'voteEnd' | 'candidates' | 'privacyQuorum' | 'depositAmount'
+  | 'minAge' | 'countries' | 'eligibility', string>>;
 
 /**
  * Per-step validation.
@@ -132,6 +176,13 @@ function validateStep(
    * at their own calendar, so the message names the clock that actually decides.
    */
   chainNowLabel?: string,
+  /**
+   * False when the backend could not name an attester. A gated election is
+   * deployed with that address frozen in, so creating one without it produces
+   * an election nobody can ever enroll in. Blocking here beats letting the
+   * deploy fail with a message about a missing argument.
+   */
+  attesterAvailable = true,
 ): FieldErrors {
   const notFuture = () =>
     chainNowLabel
@@ -210,6 +261,31 @@ function validateStep(
     if (!Number.isInteger(q) || q < 1) e.privacyQuorum = t('validation.quorum_min');
     const d = Number(form.depositAmount);
     if (Number.isNaN(d) || d < 0) e.depositAmount = t('validation.number_positive');
+
+    if (form.eligibilityEnabled) {
+      if (form.minAge.trim() !== '') {
+        const age = Number(form.minAge);
+        if (!Number.isInteger(age) || age < MIN_AGE_FLOOR || age > MAX_AGE_CEILING) {
+          e.minAge = t('validation.min_age_range', { min: MIN_AGE_FLOOR, max: MAX_AGE_CEILING });
+        }
+      }
+
+      if (form.countryMode !== 'none') {
+        if (form.countries.length === 0) e.countries = t('validation.country_list_empty');
+        else if (form.countries.length > MAX_COUNTRY_LIST) {
+          e.countries = t('validation.country_list_long', { max: MAX_COUNTRY_LIST });
+        }
+      }
+
+      // A restriction that restricts nothing is a configuration the organizer
+      // almost certainly did not mean, and it would deploy a gated election
+      // that every voter still has to scan a passport for.
+      if (isEmptyPolicy(policyFromForm(form)) && !e.minAge && !e.countries) {
+        e.eligibility = t('validation.eligibility_empty');
+      } else if (!attesterAvailable) {
+        e.eligibility = t('create.eligibility_unavailable');
+      }
+    }
   }
 
   return e;
@@ -251,6 +327,24 @@ export default function CreateElection() {
   // choose, and with none the field does not exist at all.
   const [domains, setDomains] = useState<string[]>([]);
   const [chosenDomain, setChosenDomain] = useState<string | undefined>(undefined);
+
+  // Address that will sign enrollment attestations, and whether the provider is
+  // reachable at all. Fetched once: it is frozen into the election at creation,
+  // so an organizer who turns the restriction on without a working attester
+  // would deploy a gated election nobody could ever enroll in.
+  const [attester, setAttester] = useState<{ address: string; available: boolean } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const info = await fetchAttester();
+        if (!cancelled) setAttester({ address: info.address, available: info.available });
+      } catch {
+        if (!cancelled) setAttester(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // The chain's own clock. Deadlines are judged by `block.timestamp`, so the
   // browser's clock is the wrong reference: a local node whose time was advanced
@@ -369,7 +463,7 @@ export default function CreateElection() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDirty, navigate]);
 
-  const stepErrors = validateStep(step, form, t, nowMs, chainNowLabel);
+  const stepErrors = validateStep(step, form, t, nowMs, chainNowLabel, attester?.available === true);
 
   /**
    * Without a separate window, enrolment runs from creation until voting opens,
@@ -396,7 +490,7 @@ export default function CreateElection() {
   // Every step must be valid before deploying: the user could otherwise skip
   // back and blank a field after passing its step.
   const allStepsValid = [0, 1, 2, 3].every(
-    s => Object.keys(validateStep(s, form, t, nowMs, chainNowLabel)).length === 0,
+    s => Object.keys(validateStep(s, form, t, nowMs, chainNowLabel, attester?.available === true)).length === 0,
   );
 
   const goNext = () => {
@@ -474,6 +568,8 @@ export default function CreateElection() {
         voteStart: new Date(form.voteStart),
         voteEnd: new Date(form.voteEnd),
         depositMatic: form.depositAmount,
+        eligibility: policyFromForm(form),
+        eligibilityAttester: attester?.address,
       });
 
       setTxState('success');
@@ -620,6 +716,78 @@ export default function CreateElection() {
           <div className="flex flex-col gap-4">
             <Card className="p-5 flex flex-col gap-4">
               <Switch label={t('create.require_orb')} description={t('create.require_orb_desc')} checked={form.requireOrb} onChange={v => set('requireOrb', v)} />
+
+              {/* Attribute eligibility. Off by default, and deliberately the
+                  only place in the wizard that can make enrollment harder:
+                  every voter who wants in will have to scan a passport. */}
+              <div className="flex flex-col gap-4 pt-1">
+                <Switch
+                  label={t('create.eligibility_enable')}
+                  description={t('create.eligibility_enable_desc')}
+                  checked={form.eligibilityEnabled}
+                  onChange={v => set('eligibilityEnabled', v)}
+                />
+
+                {form.eligibilityEnabled && attester?.available !== true && (
+                  <div className="flex items-start gap-3 px-4 py-3 rounded-2xl bg-warning/10 border border-warning/25">
+                    <AlertTriangle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
+                    <p className="text-xs text-warning">{t('create.eligibility_unavailable')}</p>
+                  </div>
+                )}
+
+                {form.eligibilityEnabled && (
+                  <div className="flex flex-col gap-4 pl-1">
+                    <Input
+                      label={t('create.min_age')}
+                      type="number"
+                      min={MIN_AGE_FLOOR}
+                      max={MAX_AGE_CEILING}
+                      value={form.minAge}
+                      onChange={e => set('minAge', e.target.value)}
+                      hint={t('create.min_age_hint')}
+                      error={err('minAge')}
+                    />
+
+                    <SelectMenu
+                      label={t('create.country_rule')}
+                      value={form.countryMode}
+                      onChange={v => set('countryMode', v as CountryMode)}
+                      options={[
+                        { value: 'none', label: t('create.country_rule_none') },
+                        { value: 'block', label: t('create.country_rule_block') },
+                        { value: 'allow', label: t('create.country_rule_allow') },
+                      ]}
+                    />
+
+                    {form.countryMode !== 'none' && (
+                      <CountryPicker
+                        label={form.countryMode === 'allow'
+                          ? t('create.countries_allowed')
+                          : t('create.countries_blocked')}
+                        value={form.countries}
+                        onChange={codes => set('countries', codes)}
+                        max={MAX_COUNTRY_LIST}
+                        hint={t('create.country_picker_hint', { max: MAX_COUNTRY_LIST })}
+                        error={err('countries')}
+                      />
+                    )}
+
+                    {/* The allowlist is the only setting here that costs the
+                        voter a disclosure rather than a yes/no answer. Saying
+                        so is the difference between an informed choice and a
+                        surprise. */}
+                    {requiresNationalityReveal(policyFromForm(form)) && (
+                      <p className="text-xs text-on-surface-meta">
+                        {t('create.nationality_reveal_note')}
+                      </p>
+                    )}
+
+                    {err('eligibility') && (
+                      <p className="text-xs text-error">{err('eligibility')}</p>
+                    )}
+                  </div>
+                )}
+              </div>
               <Input label={t('create.privacy_quorum')} type="number" min="1" max="100" value={form.privacyQuorum} onChange={e => set('privacyQuorum', e.target.value)} hint={t('create.quorum_hint')} error={err('privacyQuorum')} />
               <div className="flex flex-col gap-1.5">
                 <Input label={t('create.deposit_token', { currency: chainInfo.currency })} type="number" step="0.01" min="0" value={form.depositAmount} onChange={e => set('depositAmount', e.target.value)} hint={t('create.deposit_hint')} error={err('depositAmount')} />

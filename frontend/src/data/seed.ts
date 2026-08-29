@@ -1,3 +1,5 @@
+import type { EligibilityPolicy } from '../lib/eligibility';
+
 export type ElectionPhase =
   | 'upcoming'       // deployed, enrollment not yet open
   | 'enrolling'
@@ -42,6 +44,22 @@ export interface VoteRecord {
   nullifier: string;
 }
 
+/**
+ * Whether an election's results are actually readable.
+ *
+ * Keyed on the tally being present, NOT on `ipfsCid`. That CID is the audit
+ * trail of a tally pinned to IPFS and is empty whenever the organizer ran the
+ * count in the app, which is the normal path (see `lib/organizer.ts`). Gating on
+ * it made the public and voter views claim results were unavailable for a closed
+ * election whose totals were sitting on chain, while the organizer's own view,
+ * which tested the tally, showed them.
+ *
+ * One function so the three views cannot drift apart again.
+ */
+export function hasPublishedResults(election: Election): boolean {
+  return election.phase === "closed" && election.candidates.some(c => c.votes !== undefined);
+}
+
 export interface Election {
   id: string;
   title: string;
@@ -62,6 +80,8 @@ export interface Election {
   castVotes: number;
   contractAddress: string;
   ipfsCid?: string;
+  /** Attribute restrictions on enrolment, verified against the contract's hash. */
+  eligibilityPolicy?: EligibilityPolicy;
   votingType: VotingType;
   privacyQuorum: number;
   /** Public per-election salt for deriving the tally key from the organizer's

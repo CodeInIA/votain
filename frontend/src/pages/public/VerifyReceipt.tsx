@@ -71,11 +71,11 @@ export default function VerifyReceipt() {
               </div>
               <div className="flex justify-between">
                 <span className="text-on-surface-meta">{t('verify_receipt.reference')}</span>
-                <span className="text-on-surface font-mono">{match.referenceNumber}</span>
+                <span className="text-on-surface font-mono break-all text-right">{match.referenceNumber}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-on-surface-meta">{t('verify_receipt.nullifier')}</span>
-                <span className="text-on-surface font-mono text-xs">{match.nullifier}</span>
+                <span className="text-on-surface font-mono text-xs break-all text-right">{match.nullifier}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-on-surface-meta">{t('verify_receipt.date')}</span>

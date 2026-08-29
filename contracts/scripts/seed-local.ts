@@ -98,6 +98,8 @@ async function main() {
         privacyQuorum: 3,
         tags: ["local", "dev"],
       }),
+      eligibilityAttester: "0x0000000000000000000000000000000000000000",
+      eligibilityPolicyHash: "0x" + "00".repeat(32),
     };
 
     const tx = await factory.createElection(cfg, { value: ethers.parseEther("1") });

@@ -30,6 +30,24 @@ export default function ChangeVote() {
 
   if (!election) return null;
 
+  // Reachable by its own URL, so the guard cannot live only on the button that
+  // links here. Re-voting runs through the same `castVote` the contract limits
+  // to an open voting window, so any other phase would let the voter pick a
+  // candidate, generate a proof and only then be refused.
+  if (election.phase !== 'active') {
+    return (
+      <PageLayout role="voter" showNav>
+        <div className="max-w-2xl mx-auto pt-4 pb-28">
+          <BackButton className="mb-5" />
+          <Card className="p-5 flex items-start gap-3">
+            <AlertTriangle className="w-4.5 h-4.5 text-warning shrink-0 mt-0.5" />
+            <p className="text-sm text-on-surface">{t('change_vote.voting_closed')}</p>
+          </Card>
+        </div>
+      </PageLayout>
+    );
+  }
+
   const handleConfirm = () => {
     setConfirmOpen(false);
     // Re-vote is the same castVote path: same nullifier, next nonce is read on-chain.

@@ -662,6 +662,581 @@ organizer/domain pair. Only "verified" is offered as a chip, never its negative.
 - Pinata JWT for the tally CLI: deferred, the in-app tally path does not need it.
 - ZeroDev project RPC + passkey server URL: ✅ done, in frontend `.env`.
 
+## Anonymous age and nationality eligibility, via Self (2026-08-26)
+
+Elections can now restrict enrollment to voters who prove a minimum age or a
+nationality from their passport chip, without revealing either. The proof is
+generated on the voter's phone by the Self app reading the document over NFC, and
+what reaches Votain is a yes or no per rule.
+
+### The bug this uncovered first
+
+`ElectionV4.enroll` was `external` with no access control, gated only on
+`registry.verifiedMembers`. Any eligibility check living in the backend would
+have been decorative: a voter the relay refused could call `enroll` from their
+own wallet and land in the tree anyway. That is a real hole independent of this
+feature, and closing it is what the contract change is actually for.
+
+The fix follows the principle already written down for domain verification: a
+contract cannot resolve DNS, and it cannot verify a proof anchored on another
+network either, but it can verify a signature. So `ElectionV4` gained two
+immutable fields, `eligibilityAttester` and `eligibilityPolicyHash`, and a second
+entry point `enrollAttested(commitment, deadline, signature)` behind an EIP-712
+domain. `address(0)` leaves an election open and behaving exactly as before; a
+gated one reverts `AttestationRequired` on the plain path. The constructor
+rejects one field without the other, since an attester with no published policy
+gates on rules nobody can read and a policy hash with no attester publishes rules
+nothing enforces.
+
+The domain separator is hand rolled. OpenZeppelin's `EIP712` reaches
+`ShortStrings` and `Bytes`, which need `mcopy` and a Cancun target, and this
+project compiles for paris. Retargeting the whole codebase to obtain a domain
+separator would be a deployment decision taken for a formatting convenience.
+
+### The optimizer had to move to the default profile
+
+`ElectionFactory` embeds `ElectionV4`'s creation code, and unoptimized it went
+past the 24576-byte limit the moment `enrollAttested` was added, which made every
+test fail at `deployStack`. It was already sitting a few hundred bytes below the
+ceiling before any of this. The default profile now enables the optimizer like
+`production` already did, so the suite exercises the bytecode that actually
+deploys.
+
+### Why Self and not World ID Credentials
+
+World ID **does** have this now: `@worldcoin/idkit-core`, already installed,
+exposes an `identityCheck` preset with `minimum_age`, `nationality`,
+`issuing_country` and `document_type`. The table in `docs/PLAN.md` claiming
+otherwise was out of date and has been rewritten.
+
+It was not chosen because World ID Credentials has a geographic allowlist and
+Spain is not on it. A feature the author cannot demonstrate on his own document
+is not one this project can rely on. Self has no such allowlist, reads any ICAO
+passport, and ships mock passports with configurable nationality and age, so
+every branch is testable without a real document and the real one still works for
+the defence.
+
+**World ID stays the personhood layer.** Self supplies attributes only. That is
+not a compromise, it is what makes Self's weak spots irrelevant here: `enroll`
+already deduplicates by human through the World ID nullifier, so a dual national's
+second passport buys no second ballot, and a borrowed passport is still bound to
+somebody else's World ID. Passive Authentication proves a document is genuine,
+never that the holder owns it.
+
+### The copy says "document", not "passport"
+
+`ALLOWED_DOCUMENT_IDS` accepted attestation 2 (EU identity card) alongside 1
+(passport) from the start, and Self has no per-request document selection: the
+voter presents whichever they hold. The interface strings said "passport"
+throughout anyway, which understated what the code already accepted. For a
+Spanish voter that is the difference between using the card in their wallet and
+going to look for a passport they may not own. Spain is on Self's full-support
+list, DSC and CSCA both, so the DNI is expected to work.
+
+Six strings changed across all thirteen locales. `eligibility.mock_mode` still
+names the passport on purpose: that is what the Self app labels the button a
+developer has to tap five times to reach it.
+
+### The Spanish DNI works, confirmed on a real document
+
+The author added his real Spanish DNI to the Self app without trouble. That
+settles the doubt this design was built around and makes the note in
+`docs/PLAN.md` about the Spanish DNI not being supported obsolete: that line came
+from World ID Credentials, not from Self.
+
+Two traps surfaced while testing it, both now documented in `.env.example`:
+
+- **`SELF_MOCK` picks one world or the other.** `1` verifies against the staging
+  trees and only mock documents pass; `0` verifies against production and only
+  real ones do. Nothing accepts both, and the rejection does not say which side
+  the mismatch is on.
+- **The session id is not in the public signals.** `readSessionIdFromProof` read
+  `pubSignals[userIdentifierIndex]`, which holds a SHA-256 hash of the whole
+  `userContextData` that the SDK recomputes as an integrity check. Every real
+  proof came back as "carried no session". It now reads `userContextData` itself
+  (32 bytes chain id, 32 bytes identifier, then caller data), mirroring the SDK's
+  own `slice(64, 128)`. That removes the last dependency on a circuit index,
+  which belongs to a circuit version rather than to the request format.
+  `backend/src/eligibility/self.test.ts` is new and covers the parser and the
+  scope, 10 cases.
+- **The wire field is `publicSignals`, not `pubSignals`.** The route was written
+  against the SDK's method signature rather than the HTTP payload, so every real
+  proof was rejected as missing a field the app had sent. Self's own docs
+  disagree with themselves about the name, so both are now accepted, and a
+  rejected body logs the keys it carried.
+- **`.env` changes did not reach the running server.** `dotenv` reads it once at
+  startup and `tsx watch` follows only source files, so a corrected
+  `SELF_ENDPOINT` sat unused while the process kept serving the old one. The dev
+  script now passes `--include .env`. The endpoint is also baked into the QR, so
+  a code generated before the change carries the stale URL even after a restart.
+
+### The allowlist costs a reveal, and why that is acceptable
+
+Self expresses country rules as an **exclusion** list, carried in the circuit as
+`uint256[4]`. "Only Spaniards" cannot be phrased that way: it would mean listing
+the 194 countries it excludes, which does not fit and never will. So a blocklist
+is a pure predicate and an allowlist is not; the allowlist is checked against a
+revealed nationality.
+
+The leak is smaller than it looks. In an election whose published policy already
+says "ESP only", learning that an enrolled voter is Spanish adds nothing an
+observer could not read off the policy. It is still compared and discarded, never
+stored. Age is always a predicate: the date of birth never leaves the phone.
+Nothing else is ever requested, not the name, not the document number, not the
+gender, not the expiry date. The create wizard states the asymmetry so an
+organizer knows which of the two options asks more of the voter.
+
+### Shape of the code
+
+Three layers, only the innermost aware of Self, so an EUDI Wallet connector could
+sit beside it: `eligibility/policy.ts` (type, canonical JSON, hash),
+`eligibility/self.ts` (adapter over the open-source `@selfxyz/core` verifier),
+`eligibility/attester.ts` (EIP-712 signer). The managed Self Enterprise service
+is deliberately not used: a paid third party sitting in the enrollment path would
+contradict the thesis it is meant to support.
+
+The scope is **per election**, derived from the address and capped at Self's 25
+characters. The scope is what the nullifier comes from, so one app-wide scope
+would give this server a stable pseudonym per voter across every election they
+ever verify for.
+
+Sessions live in an in-memory `Map` with a 15-minute TTL. The backend has no
+database and here that costs nothing: a restart only makes a voter mid-scan scan
+again, while persisting would write a durable record tying a World ID nullifier
+to an in-flight passport check.
+
+The canonical policy serialiser is duplicated between frontend and backend on
+purpose. Two processes compute the same hash at different times and never compare
+notes; drift surfaces as "policy does not match its published hash", which is the
+alarm it should raise.
+
+Countries are picked, never typed. `CountryPicker` searches the localised list
+live and shows the selection as flagged cards. `lib/countries.ts` keeps only the
+alpha-3 to alpha-2 table and derives names from `Intl.DisplayNames`, which means
+250 country names in 13 languages cost zero locale strings and stay correct on
+their own. Asking an organizer to remember that Spain is ESP invites a typo that
+would silently exclude the wrong country, and the policy hash would faithfully
+commit to the mistake.
+
+The Self app returns the voter to Votain, but only when that means anything.
+`deeplinkCallback` is set on the tappable link and left off the QR: scanning the
+QR means Votain is on a desktop and the app is on a phone, so a redirect would
+move the wrong screen. The return address is supplied by the browser (only it
+knows the origin serving the page, a LAN address under `vite --host` in
+development) and sanitised on arrival, since it lands in a payload the Self app
+navigates to and shows to the voter: http and https only, and in production the
+origin must match `FRONTEND_URL`, or this endpoint becomes a way to mint Self
+links pointing anywhere.
+
+`@selfxyz/qrcode` is not used, and does not need to be: it is a React wrapper
+from the legacy SDK that draws a QR and holds a websocket open. The drawing is
+three lines with `qrcode.react`, already a dependency, and the websocket is
+redundant because Self's relayer posts the proof to our server directly while the
+browser polls the session it opened.
+
+The deep link itself is built by the BACKEND with Self's own `SelfAppBuilder`,
+not assembled in the browser. Hand-copying that builder's defaults, which is what
+the first version did, went stale within two SDK releases: the payload gained a
+`selfDefinedData` field and the staging chain id changed from 44787 to 11142220.
+Neither would have failed loudly. Building it through the SDK also runs its
+validation server-side, so a localhost endpoint or an over-long scope is caught
+before a voter sees a QR. `@selfxyz/common` is now a declared dependency for
+that, imported through the same `utils/appType` subpath `@selfxyz/core` uses.
+
+### Two environment quirks worth remembering
+
+`@selfxyz/common` declares `node-forge` as a **GitHub URL** in every published
+version, so any environment blocking git dependency fetches cannot install the
+SDK at all. `backend/package.json` now overrides it to the registry release
+`^1.3.3`, which current `@selfxyz/core` asks for anyway. Re-check on upgrade.
+
+`skipLibCheck` was turned on in the backend tsconfig and then turned back off.
+It was a workaround for `pkijs` and `elliptic` declarations that did not
+typecheck under `@selfxyz/core@1.0.8`, and the upgrade to 1.2.0-beta.2 resolved
+them: the build is clean without it. Suppressing dependency declaration errors
+that no longer exist would only hide the next real one.
+
+### The QR that never advanced, and why it was invisible
+
+The end-to-end test finally reached the point where Self verified a real Spanish
+DNI and reported success. The browser kept showing the QR anyway.
+
+Nothing was wrong with the verification. `EligibilityCheck` guarded its polling
+loop with a ref set in an unmount cleanup:
+
+```ts
+const cancelled = useRef(false);
+useEffect(() => () => { cancelled.current = true; }, []);
+```
+
+StrictMode mounts, unmounts and mounts again in development. That first simulated
+unmount ran the cleanup and set the flag; a ref survives the remount, and nothing
+ever set it back. So the flag was true for the component's entire life, and every
+poll tick returned on its first line. The loop was running and doing nothing.
+
+It is invisible from every angle that usually catches things: tsc and eslint are
+happy, the tests do not mount this component, the backend log shows a successful
+verification, and Self shows a success screen. Only the browser stays still. The
+fix is one line, resetting the flag on the way in, and it is now the reason the
+comment there exists.
+
+Two things made it harder to diagnose than it should have been. Sessions live in
+memory, so the backend restarts that `tsx watch` performs on every edit wipe
+them: editing files while somebody is mid-scan invalidates their session. And the
+poll gave up on the first failed request, which would strand a voter over a
+momentary blip; it now distinguishes a vanished session, which is final, from a
+transient failure, which is retried up to four times.
+
+### Three runtime bugs that no static check would have caught
+
+Found while preparing the end-to-end walkthrough, all of them invisible to tsc
+and eslint and all of them fatal in the browser:
+
+- `lib/eligibility.ts` read `VITE_API_URL`, which exists nowhere. Every other
+  module uses `VITE_BACKEND_URL`. Requests would have gone to the Vite dev server
+  instead of the backend, so the whole feature was dead on arrival.
+- `EligibilityCheck` listed `onVerified` in the polling effect's dependencies.
+  The parent passes an inline arrow, so the prop is a new function on every
+  render and the interval was torn down and recreated each time: a 2.5 second
+  timer that keeps restarting never fires. It now lives in a ref.
+- The create wizard only WARNED when no attester was reachable, then deployed
+  anyway and failed with a message about a missing argument. A gated election
+  freezes the attester address in at creation, so this would have produced an
+  election nobody could ever enroll in. It is now a blocking validation error.
+
+### Checked against the official docs (2026-08-28)
+
+With Self's documentation MCP available, the integration was audited against the
+source rather than against memory. Four things were wrong.
+
+**The SDK was below Self's documented floor.** Self requires
+`@selfxyz/core >= 1.1.0-beta.1`, because earlier versions point at Celo Alfajores
+for mock documents and will not verify correctly. We were on 1.0.8, chosen for
+being the newest non-beta, which turned out to be the wrong criterion: the floor
+is a correctness requirement, not a preference. Now on **1.2.0-beta.2**, the
+published latest, whose bundle references celo and sepolia rather than alfajores.
+
+**The `node-forge` override is gone.** It was never the right fix, only the
+reachable one. `@selfxyz/common` declares that dependency as a GitHub fork, and
+npm 12 disables git dependencies by default (`allow-git=none`), which is what
+produced `EALLOWGIT`; the restriction is npm's supply-chain hardening, not a
+sandbox or anything configured on this machine. A project `.npmrc` now sets
+`allow-git=all`, so a plain `npm install` works and installs exactly what Self
+declared. An override would instead swap a dependency the author deliberately
+forked: a guess for node-forge, and for the 1.2.x line's forked `snarkjs` it
+would replace the library that verifies the proofs. `root` does not help, because
+the git dependency is transitive.
+
+The cost is stated rather than hidden: `allow-git=all` relaxes npm's protection
+for the whole dependency tree of that package.
+
+**The endpoint must always answer 200.** The documented contract puts the verdict
+in the body, `{ status, result, reason }`, and reserves the status code for
+whether the callback arrived. The route answered 400 and 404, which a relayer
+reads as a transport failure: a voter who merely missed the age rule would have
+seen a network error instead of the reason.
+
+**Rejections threw away the diagnosis.** 1.1.0-beta.1 exports typed errors, so a
+`ConfigMismatchError` now logs which expectation failed (`InvalidScope`,
+`InvalidRoot`, `InvalidTimestamp`) instead of collapsing to "proof_invalid".
+
+**The age threshold read one field name.** The SDK type and runtime say
+`minimumAge`; the published API reference still says `olderThan`. Reading only
+one meant a rename would make the secondary check reject a voter the SDK had just
+approved, since `isMinimumAgeValid` is verified immediately before it. Both names
+are read now, and an unreadable value defers to the SDK's verdict with a warning
+rather than failing the voter.
+
+Three decisions were confirmed correct: `MAX_COUNTRY_LIST = 40` is exactly the
+documented cap above which proofs fail in the Self app; `publicSignals` is the
+wire field name; and the allowlist genuinely has to be enforced by us, because
+`nationality` is a disclosure request rather than a verification rule and Self
+never checks it.
+
+Document types now come from the SDK's own `ATTESTATION_ID` constants
+(`PASSPORT`, `BIOMETRIC_ID_CARD`) rather than the literals 1 and 2, so a
+renumbering becomes a compile error instead of silently admitting the wrong
+document. Aadhaar and the newer `SELFRICA_ID_CARD` stay out: Self documents
+Aadhaar as unable to satisfy country rules, so a nationality-restricted election
+would be accepting a document that cannot answer the question it asks.
+
+Also noted: `@selfxyz/core` is the Self Pass SDK, which Self now labels Legacy in
+favour of the managed `@selfxyz/enterprise-sdk`. Staying is deliberate. The
+managed path bills per verification and puts a third party on the enrollment hot
+path, which is the opposite of what this project argues for.
+
+### What the code review changed (2026-08-28)
+
+A review of the whole pending diff raised seven items. One was wrong, six were
+real and are fixed.
+
+**Wrong: the claimed under-age bypass.** The report said a proof disclosing no
+age (`"00"`) would satisfy an 18+ policy. It conflated two different SDK
+computations. The one that tolerates `"00"` is the config-mismatch guard at
+`index.js:726`, which only decides whether to raise `ConfigMismatchError`. The
+verdict actually read here is `isValidDetails.isMinimumAgeValid` at line 836,
+`config.minimumAge <= parseInt(disclosed.minimumAge)`, which is false for `"00"`
+(0) and false for a missing field (NaN), and it is checked before anything else.
+The proof was already rejected.
+
+**But the construct it pointed at deserved to go.** `minimumAgeProved:
+provedThreshold ?? policy.minAge` compared the policy against itself whenever it
+fired, so it could never fail. It was meant to survive a field rename, and that
+scenario already fails closed at the SDK, so it bought nothing. An unreadable
+threshold is now a rejection.
+
+**Real: a blocklist election required a nationality nobody was asked for.**
+`checkAttributes` demanded the value whenever a policy named countries, but
+`requiresNationalityReveal` only asks for it on an allowlist. It survived purely
+because an undisclosed field arrives as NUL padding, which is truthy. Trimming
+those, which is correct anyway, would have rejected every voter in every "block
+these countries" election. The requirement is now keyed on the allowlist alone;
+the blocklist checks the value only if it happens to be there, since it is
+enforced in-circuit regardless.
+
+**Real: the Self callback was rate-limited per client address.** That request
+comes from Self's relayer, so every voter shared one bucket, and the 429 past it
+is exactly the non-2xx the relayer reads as a transport failure. Now keyed on the
+session the proof names, falling back to the address only for bodies with no
+recoverable session.
+
+**Real: a failed attestation claim stranded the voter.** The poll stops on
+`passed`, so a cancelled passkey prompt or a refused signature left the component
+on a spinner with no button. The claim now has its own terminal failure.
+
+**Real: the attestation was consumed after two awaits.** Two concurrent claims
+with the same session and different commitments could both pass the status check
+and both get signatures. Consumed before the awaits now.
+
+**Real: an unreadable eligibility check silently downgraded an election to
+open.** A backend that is down sent the voter to the ungated path and a bare
+`AttestationRequired` revert. There is now a distinct unknown state that blocks
+and offers a retry.
+
+Two React compiler rules pushed the shape of that last fix: dependencies must be
+the address rather than the election object, and the reload has to be a re-run of
+the effect rather than a callback it calls, because the compiler cannot see that
+the writes are deferred behind an await.
+
+## Results hidden from everyone except the organizer (2026-08-28)
+
+A closed election showed its results on the organizer's management page and
+claimed there were none on the public and voter pages. The tally was on chain
+the whole time.
+
+Three views asked the same question and one of them asked it differently:
+
+```
+organizer   phase === 'closed' && candidates.some(c => c.votes !== undefined)
+public      phase === 'closed' && election.ipfsCid
+voter       phase === 'closed' && election.ipfsCid
+```
+
+`ipfsCid` is the audit trail of a tally pinned to IPFS, and `lib/organizer.ts`
+already documents it as empty whenever the count was run in the app, which is the
+normal path and the only one wired up. So the two views that tested it were
+gating public results on an artefact nobody produces.
+
+Now one exported predicate, `hasPublishedResults`, beside the type it tests, used
+by all three. The condition that was already right is the one that survived.
+
+## Change vote offered after voting had ended
+
+A voter who had already voted saw "change my vote" on an election whose results
+were published. The contract would have refused it: `castVote` requires an open
+voting window. The button was gated on `hasVoted` alone, with no phase in the
+condition, so it appeared in tallying, closed, cancelled and voided elections
+too.
+
+The card stays, the button does not. The receipt is the voter's own proof that
+they took part and should remain readable for the life of the election; the
+action is only real while voting is open.
+
+`ChangeVote` has its own route, so the guard could not live on the button alone:
+reaching that URL directly let a voter pick a candidate and start generating a
+proof before anything refused them. The page now checks the phase itself and says
+voting has closed.
+
+## Lifecycle transactions that vanish rather than revert
+
+Closing enrollment, closing voting and publishing results sometimes showed an
+error in the wallet while the app reported success, and the chain agreed with the
+app: the state had changed.
+
+The wallet was out of sync, not wrong about its own view. Transactions had been
+sent from that same account by script (deployment, seeding, the end-to-end
+walkthrough), so its cached nonce trailed the node's. That is worth knowing as
+an operational fact: **a local chain plus a scripted account plus MetaMask means
+clearing the wallet's activity data periodically.**
+
+The code had a real weakness that surfaces exactly there, though.
+`(await tx.wait()).hash` dereferences a receipt that ethers returns as **null**
+when it can no longer find the transaction, which is what a dropped or replaced
+one looks like, and a nonce conflict is the usual way that happens. The organizer
+would have got "Cannot read properties of null". All seven organizer writes now
+go through `waitForLifecycleTx`, which names the likely cause and the fix. A
+genuine revert is unaffected: ethers throws on a status-0 receipt and that error
+is reported as it is.
+
+### Verification
+
+Contracts 84 passing (16 new in `test/Eligibility.test.ts`, covering the bypass,
+a forged signer, an expired deadline, a swapped commitment, malformed bytes,
+cross-election replay, and that platform verification and the enrollment window
+still apply). Backend 73 passing. Frontend 38 passing, tsc and eslint clean, the
+production build green, and 522 i18n keys in parity across 13 locales.
+
+`frontend/src/lib/eligibility.test.ts` pins the canonical policy string
+`{"minAge":18,"allowedCountries":["ESP"]}` and so does the backend suite. The two
+serialisers are only ever compared through the on-chain hash, so pinning the same
+literal on both sides turns a silent drift, which would surface to a voter as
+apparent tampering, into a failing test.
+
+**Exercised end to end on a local node** by `contracts/scripts/e2e-eligibility.ts`
+(17 checks, all passing) plus the HTTP endpoints by hand: a gated election
+deployed through the factory, its published policy hash recomputed from its own
+metadata, `enroll` refused with `AttestationRequired`, an attestation signed the
+way `attester.ts` signs it and relayed through the paymaster, and the rejections
+for a forged signer, an expired deadline, a swapped commitment, a second
+enrollment by the same human, an unverified voter, and an attestation aimed at an
+open election. On the backend: the policy read back off chain, the challenge
+issued only to an authenticated voter, a forged cookie refused, another voter
+refused a session that is not theirs, an attestation refused before the check
+passed, and a junk proof leaving the pending session untouched.
+
+**Not exercised by anyone yet**: the real Self app, the passport read, the QR and
+the deep link. They sit behind a phone and a public tunnel. `SELF_ENDPOINT` must be
+internet-reachable (the SDK rejects localhost), so testing locally needs ngrok or
+similar, and `SELF_MOCK=1` accepts mock passports (five taps on "Passport" in the
+Self app opens an editor for nationality, age and OFAC).
+
+**Open question for the thesis, not for the code**: what the nullifier is derived
+from, and therefore what happens when a passport is renewed. It does not affect
+this design, since Self supplies no uniqueness here, but it is the kind of detail
+a tribunal asks about.
+
+## Tally key derivation, 6.7x faster (2026-08-28)
+
+Creating an election sat silent for about three minutes after the passkey prompt
+and before the wallet prompt, which reads as a crash: the organizer reported it
+as a deploy failure. Nothing was failing. The organizer's Paillier key is
+re-derived from the PRF secret rather than stored, so a 2048-bit key is generated
+in the browser on every creation.
+
+`nextPrime` walked upward by two running a full forty-round Miller-Rabin on every
+candidate. At this size roughly one odd number in 355 is prime, so almost all of
+that work was spent proving composite numbers composite. It now discards
+candidates by trial division against the primes below 10000, then screens
+survivors with a single MR round before paying for the full forty. Measured: one
+derivation went from 43.7s to about 6.5s in the vitest environment. Incremental
+residue tracking was measured too and added only 7 percent, not worth the extra
+complexity in a determinism-critical path.
+
+**Nothing in this path touches the chain**, so the wait was never a local-node
+artefact and would have been identical on Amoy.
+
+The derivation itself is unchanged, and that is the whole point: both filters are
+exact rather than probabilistic shortcuts, so neither can skip a value the
+original walk would have accepted. `frontend/src/lib/tallyKey.test.ts` is new and
+pins the derived keypair for a fixed secret and nonce, captured from the
+implementation BEFORE the change and still reproduced after it. That test did not
+exist, which is why a compatibility surface that makes old elections undecryptable
+if it moves had nothing guarding it.
+
+Still open: six seconds of frozen tab between the passkey and the wallet prompt
+is better than three minutes but still unexplained to the organizer. The wizard
+should name what it is doing, and the work belongs in a worker so the tab stays
+alive.
+
+## Election filters unified across the two lists (2026-08-28)
+
+The organizer dashboard and Discover had grown separate copies of the same
+filter row, and the copies had drifted. The dashboard carried the age and
+nationality inputs but no phase chips, no verified-domain chip and no restricted
+badge, so an organizer could not narrow their own list by state and could not
+tell from it which of their elections were restricted at all.
+
+Extracted rather than patched, because patching would have left two copies to
+drift again: `lib/electionFilter.ts` (state, defaults, active predicate,
+matching rule), `components/ui/ElectionFilters.tsx` (the controlled bar),
+`hooks/useVerifiedDomains.ts` (one DNS check per distinct organizer and domain
+pair, returning a predicate) and `components/ui/RestrictedBadge.tsx`, which is a
+component rather than a snippet because its summary comes from a hook and hooks
+cannot be called from inside a list callback. `ElectionCard` now uses that badge
+too instead of its own copy.
+
+### The restricted marker became the requirements themselves
+
+First attempt reused `Badge`, which was wrong twice over. Every Badge variant is
+the same uppercase translucent pill, the vocabulary of election phase, so the
+marker read as another status and disappeared next to one. And "Restricted" is
+the wrong content: a reader scanning a list wants to know whether they qualify,
+and the word only raises that question.
+
+`EligibilityChips` now renders the rules compactly, "18+" and a flag, mixed case
+and softer cornered so it cannot be mistaken for an uppercase phase pill. The
+full sentence stays in the tooltip.
+
+A first pass filled them solid amber, which was worse than the badge: it
+competed with the enrolling pill, which is already yellow, and read as a warning
+rather than as a fact. Colour now lives in the icon alone, on the neutral surface
+the rest of a card's metadata uses, with red reserved for the blocked-countries
+icon because that is the one rule that excludes rather than admits.
+The three detail pages that had their own copy of the badge use it too, and
+`eligibility.restricted` is gone from all thirteen locales.
+
+The filter chip went the same way. It started as `variant="tie"`, which is the
+warning amber, sitting next to `enrolling`, which is yellow. Reaching for another
+palette colour was not an option either: primary is `enrolled`, secondary
+`tallying`, tertiary `pending_vote`, error `cancelled`, green `active`. Every hue
+is a phase, so any choice could only collide with a state.
+
+Both property filters are therefore hueless now, square-cornered chips with an
+icon where contrast alone says on or off. That settles a rule worth keeping: a
+rounded-full uppercase pill is a phase, a rounded chip with an icon is a
+property, and phase is the only thing that gets to use hue as its signal.
+
+A `restrictedOnly` filter joins the chips row. It is deliberately separate from
+the age and nationality inputs: those ask "would I qualify", which every
+unrestricted election satisfies trivially, so they can never answer "which of
+these have requirements at all".
+
+Two bugs fell out of the merge. Discover's "clear filters" reset three filters by
+name and left the age and nationality inputs untouched, so clearing could leave
+the list still empty; it now resets the whole state object. And the dashboard's
+search covered the title and domain but not the organizer name, which Discover's
+did.
+
+## Plurals were never resolving (2026-08-29)
+
+The Discover results line read "13 elección" in Spanish and "13 election" in
+English. The plural translation existed and was correct: it was written as
+`discover.results_count_plural`, i18next's **JSON v3** suffix, and this project
+runs i18next 26, which reads JSON v4 and ignores it. It fell back to the
+unsuffixed key and nothing warned. A translation that is quietly ignored is worse
+than a missing one, because it looks done.
+
+All five count-bearing keys had the same shape of problem, not just the reported
+one: `discover.results_count`, `gas.votes_remaining`,
+`election_mgmt.tally_voters`, `voter_elections.urgent` and
+`country_picker.more_results`. Each now carries one form per category its
+language actually uses, generated by asking `Intl.PluralRules` rather than
+assuming two: Spanish, French, Portuguese and Italian add `many`, Russian has
+four, Arabic six, and Chinese, Japanese and Korean have one.
+
+Russian needed a word change as well. "выборы" is pluralia tantum and cannot be
+counted, so the countable "голосование" replaces it and declines properly across
+one, few and many.
+
+`frontend/src/i18n/plurals.test.ts` guards all of it in four checks: no `_plural`
+keys, every category present for every count key in every locale, no unsuffixed
+form left beside the suffixed ones, and a pinned list of the places where
+singular and plural legitimately read the same ("Wähler" in German, "and N more"
+in English, every Hindi noun here) so a new key cannot join that list unnoticed.
+
+Verified in the browser as well as in the suite: the line now reads "1 election"
+with one result and "13 elections" with thirteen.
+
 ## Next: Phase C, Decentralized deployments
 ### H10: Frontend on IPFS via Fleek CD
 ### H11: Backend on Phala TEE

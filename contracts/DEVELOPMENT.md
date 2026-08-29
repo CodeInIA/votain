@@ -15,9 +15,9 @@
 
 | Contract | Description |
 |----------|-------------|
-| ElectionV4.sol | Single election. On-chain Semaphore V4 group (LeanIMT/PoseidonT3), `enroll` gated to PlatformRegistry members, `castVote` (bytes Paillier ciphertext) with merkle-root validation + coercion resistance (nullifier+nonce), `VotingType` enum + `thresholdValue`, lifecycle (cancel/closeEarly/void/publishResults with per-type outcome). ERC-2771 meta-tx. |
+| ElectionV4.sol | Single election. On-chain Semaphore V4 group (LeanIMT/PoseidonT3), `enroll` gated to PlatformRegistry members plus an optional attribute policy (`enrollAttested`), `castVote` (bytes Paillier ciphertext) with merkle-root validation + coercion resistance (nullifier+nonce), `VotingType` enum + `thresholdValue`, lifecycle (cancel/closeEarly/void/publishResults with per-type outcome). ERC-2771 meta-tx. |
 | ElectionFactory.sol | Deploys ElectionV4 from a `Config` struct, routes MATIC deposit to the paymaster, enumerable `getElections(offset, limit)`. |
-| ElectionPaymaster.sol | Gas tank **and relay hub**. `relayEnroll` / `relayVote` call the election and reimburse the caller from `gasBalance[organizerOf[election]]` in the same tx. `depositFor` / `withdraw`; `setFactory` and `setRelayParams` are onlyOwner. |
+| ElectionPaymaster.sol | Gas tank **and relay hub**. `relayEnroll` / `relayEnrollAttested` / `relayVote` call the election and reimburse the caller from `gasBalance[organizerOf[election]]` in the same tx. `depositFor` / `withdraw`; `setFactory` and `setRelayParams` are onlyOwner. |
 | PlatformRegistry.sol | Identity-commitment registry (issuer-owned). Gates enrollment. Binds one World ID nullifier to exactly one active commitment; `rotateMember` is the recovery path and revokes the old commitment atomically. `nullifierOf` resolves a commitment (even a revoked one) back to its human. |
 | vendor/SemaphoreVerifierVendor.sol | `SemaphoreVerifierV4`: official Groth16 verifier (production). |
 | mocks/MockVerifier.sol | Always-true verifier, unit tests only. |
@@ -34,10 +34,64 @@ own Semaphore nullifier, so the election would count both ballots with no way to
 link them. Multi-device voting is solved off-chain instead, by sealing one identity
 under several passkeys (see `frontend/src/lib/identityVault.ts`).
 
+### Attribute eligibility: why enrollment needs a signature
+
+An election may restrict enrollment to voters who prove a minimum age or a
+nationality from their passport chip. That proof cannot be checked on chain: it
+is anchored on another network, and a contract that went looking for it would
+break consensus for the same reason it cannot resolve a DNS record. So the relay
+checks the proof off chain and signs an EIP-712 attestation, which the contract
+verifies. A signature is the one attestation a contract can check on its own.
+
+Two fields carry it, both immutable and set at creation:
+
+- `eligibilityAttester`. The address whose signature `enrollAttested` accepts.
+  `address(0)` means the election is open and behaves exactly as before.
+- `eligibilityPolicyHash`. `keccak256` of the canonical policy JSON published
+  inside `metadataJson`. Enforcement is off chain, so this is what keeps the
+  rules auditable: anyone can recompute it from the metadata and confirm the
+  organizer did not move the goalposts after voters enrolled.
+
+The constructor rejects one without the other. An attester with no policy hash
+gates enrollment on rules nobody can read; a policy hash with no attester
+publishes rules nothing enforces.
+
+**The bypass this closes.** `enroll` was `external` with no access control,
+protected only by `registry.verifiedMembers`. Any eligibility check living purely
+in the backend would have been decorative: a voter the relay refused could call
+`enroll` from their own wallet and land in the tree anyway. A gated election now
+reverts `AttestationRequired` on that path.
+
+Attestations carry a deadline and are bound to one election through the EIP-712
+domain, so one cannot be replayed into another. Replay within the same election
+is stopped by the per-human deduplication that was already there.
+
+The domain separator is built by hand rather than inherited from OpenZeppelin's
+`EIP712`. That helper reaches `ShortStrings` and `Bytes`, which use `mcopy` and
+need a Cancun target, and retargeting the whole codebase to get a domain
+separator would be a deployment decision taken for a formatting convenience.
+
+### The optimizer now runs in the default profile too
+
+`ElectionFactory` embeds `ElectionV4`'s creation code. Unoptimized it sits past
+the 24576-byte Spurious Dragon limit, which the test network enforces, so an
+unoptimized build cannot deploy the stack at all. It was already within a few
+hundred bytes of that ceiling before `enrollAttested` existed. Building tests the
+same way the deployment builds also stops the suite passing on bytecode nobody
+will ever run.
+
 ## Commands
 
 ```bash
-npx hardhat test                    # 67 tests, including the E2E suite
+npx hardhat test                    # 84 tests, including the E2E suite
+
+# Restricted-election walkthrough against a running local node. Covers every leg
+# of the eligibility flow except the Self app reading a passport, which needs a
+# phone: creates a gated election, proves plain enroll() is refused, signs an
+# attestation the way the backend does, enrolls through the paymaster, and
+# checks the rejections (forged signer, expired deadline, swapped commitment,
+# second enrollment, unverified voter, attestation on an open election).
+ATTESTER_FILE=path/to/attester.json   npx hardhat run scripts/e2e-eligibility.ts --network localhost
 npx hardhat test --coverage         # line coverage report -> coverage/
 npx hardhat test test/E2E.test.ts   # full election with REAL Groth16 proofs
 npx hardhat compile
@@ -83,7 +137,8 @@ which is why the ceiling matters more than the floor.
 `hardhat.config.ts` (ESM TypeScript, HH3 format):
 
 - `defineConfig({ plugins: [hardhatToolboxMochaEthers], ... })`
-- Solidity 0.8.36, profiles `default` and `production` (with optimizer).
+- Solidity 0.8.36, profiles `default` and `production`, both with the optimizer
+  enabled (see "The optimizer now runs in the default profile too" above).
 - Network `amoy`: uses `AMOY_RPC_URL` and `PRIVATE_KEY` from `.env`.
 
 ## Required environment variables

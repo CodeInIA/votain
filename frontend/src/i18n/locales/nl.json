@@ -120,11 +120,17 @@
     "title": "Verkiezingen",
     "subtitle": "Bekijk open en afgelopen verkiezingen",
     "search_placeholder": "Verkiezingen zoeken…",
-    "results_count": "{{count}} verkiezing",
-    "results_count_plural": "{{count}} verkiezingen",
     "empty_title": "Geen verkiezingen gevonden",
     "empty_desc": "Probeer een andere zoekopdracht of wis je filters.",
-    "verified_domain": "Geverifieerd domein"
+    "verified_domain": "Geverifieerd domein",
+    "min_age": "Minimumleeftijd",
+    "age_from": "Van",
+    "age_to": "tot",
+    "age_to_placeholder": "Tot",
+    "nationality": "Nationaliteit",
+    "restricted_only": "Met voorwaarden",
+    "results_count_other": "{{count}} verkiezingen",
+    "results_count_one": "{{count}} verkiezing"
   },
   "election": {
     "by": "door",
@@ -208,8 +214,9 @@
     "title": "Mijn Verkiezingen",
     "subtitle": "Verkiezingen waarvoor je bent ingeschreven",
     "empty": "Je hebt je nog niet ingeschreven voor verkiezingen.",
-    "urgent": "{{count}} eindigt binnenkort",
-    "ends_soon": "Eindigt binnenkort"
+    "ends_soon": "Eindigt binnenkort",
+    "urgent_other": "{{count}} eindigen binnenkort",
+    "urgent_one": "{{count}} eindigt binnenkort"
   },
   "zk": {
     "title": "Bewijs genereren",
@@ -231,7 +238,8 @@
     "new_choice": "Selecteer je nieuwe keuze",
     "modal_title": "Stemwijziging bevestigen",
     "modal_desc": "Je staat op het punt je stem te wijzigen naar {{candidate}}.",
-    "confirm_change": "Stem wijzigen"
+    "confirm_change": "Stem wijzigen",
+    "voting_closed": "De stemming voor deze verkiezing is gesloten, je stem kan niet meer worden gewijzigd."
   },
   "history": {
     "title": "Stemgeschiedenis",
@@ -334,7 +342,20 @@
     "yes_no_hint": "Hier valt niets in te stellen: de opties liggen vast door de gekozen stemregel. Kiezers kiezen er één van.",
     "yes_no_preview": "Het stembiljet dat kiezers te zien krijgen",
     "current_tank": "Je gasvoorraad bevat al {{amount}} {{currency}}.",
-    "short_enrollment_warning": "De stemming begint over minder dan een dag, en de inschrijving sluit zodra die opengaat. Wie zich niet op tijd inschrijft, kan helemaal niet stemmen. Overweeg een latere start of een aparte inschrijfperiode."
+    "short_enrollment_warning": "De stemming begint over minder dan een dag, en de inschrijving sluit zodra die opengaat. Wie zich niet op tijd inschrijft, kan helemaal niet stemmen. Overweeg een latere start of een aparte inschrijfperiode.",
+    "eligibility_enable": "Beperken wie zich mag inschrijven",
+    "eligibility_enable_desc": "Kiezers tonen een leeftijd of een nationaliteit aan vanaf de chip in hun identiteitsbewijs voordat ze mee kunnen doen. Daarvoor hebben ze de Self-app en een telefoon met NFC nodig.",
+    "eligibility_unavailable": "De verificatiedienst is onbereikbaar, dus deze verkiezing kan niet met beperkingen worden aangemaakt. Laat de schakelaar uit of probeer het later opnieuw.",
+    "min_age": "Minimumleeftijd",
+    "min_age_hint": "Laat leeg voor geen leeftijdsregel. De geboortedatum wordt nooit onthuld, alleen of die boven deze drempel ligt.",
+    "country_rule": "Nationaliteitsregel",
+    "country_rule_none": "Geen nationaliteitsregel",
+    "country_rule_block": "Deze landen blokkeren",
+    "country_rule_allow": "Alleen deze landen toestaan",
+    "nationality_reveal_note": "Alleen bepaalde landen toestaan dwingt de kiezer zijn nationaliteit prijs te geven, omdat het bewijssysteem enkel uitsluitingen kan uitdrukken. Landen blokkeren niet: dat antwoordt ja of nee zonder het land te noemen.",
+    "countries_allowed": "Toegestane landen",
+    "countries_blocked": "Geblokkeerde landen",
+    "country_picker_hint": "Zoek en kies landen. Maximaal {{max}}."
   },
   "election_mgmt": {
     "actions": "Acties",
@@ -364,7 +385,6 @@
     "tally_compute": "Telling berekenen",
     "tally_computing": "Ontsleutelen…",
     "tally_publish": "Resultaten publiceren",
-    "tally_voters": "{{count}} kiezers na verwijdering van vervangen stemmen",
     "tally_quorum_short": "Privacyquorum niet gehaald ({{voters}} van {{quorum}}). Verklaar ongeldig i.p.v. publiceren.",
     "tally_key_missing": "De ontsleutelsleutel van deze verkiezing staat niet op dit apparaat. Open Votain op het apparaat waarmee u de verkiezing hebt aangemaakt.",
     "results_published": "Resultaten gepubliceerd",
@@ -372,7 +392,11 @@
     "export_key": "Ontsleutelsleutel exporteren (back-up)",
     "key_exported": "Ontsleutelsleutel geëxporteerd",
     "import_key": "Ontsleutelsleutel importeren",
-    "key_imported": "Ontsleutelsleutel geïmporteerd"
+    "key_imported": "Ontsleutelsleutel geïmporteerd",
+    "key_no_longer_needed": "De ontsleutelsleutel is niet meer nodig: de telling is gepubliceerd en kan niet meer wijzigen. Verwijder geëxporteerde kopieën, want daarmee zijn de afzonderlijke stembiljetten op de keten nog te ontsleutelen.",
+    "entry_requirements": "Deelnamevoorwaarden",
+    "tally_voters_other": "{{count}} kiezers na verwijdering van vervangen stemmen",
+    "tally_voters_one": "{{count}} kiezer na verwijdering van vervangen stemmen"
   },
   "gas": {
     "title": "Gasbeheer",
@@ -383,10 +407,11 @@
     "history": "Transactiegeschiedenis",
     "deposit": "Storting",
     "used": "Gas gebruikt",
-    "votes_remaining": "~{{count}} stemmen resterend",
     "amount_token": "Bedrag ({{currency}})",
     "withdraw": "Opname",
-    "history_empty": "Nog geen gasbewegingen."
+    "history_empty": "Nog geen gasbewegingen.",
+    "votes_remaining_other": "~{{count}} stemmen resterend",
+    "votes_remaining_one": "~{{count}} stem resterend"
   },
   "members": {
     "title": "Geregistreerde leden",
@@ -456,7 +481,11 @@
     "too_long": "Hoogstens {{max}} tekens",
     "candidate_too_short": "Elke kandidaat heeft minstens {{min}} tekens nodig",
     "candidate_too_long": "Kandidaatnamen mogen maximaal {{max}} tekens hebben",
-    "must_be_future_chain": "Moet na de klok van de keten liggen, die nu {{time}} aangeeft"
+    "must_be_future_chain": "Moet na de klok van de keten liggen, die nu {{time}} aangeeft",
+    "min_age_range": "De minimumleeftijd moet tussen {{min}} en {{max}} liggen",
+    "country_list_empty": "Voeg minstens één landcode toe",
+    "country_list_long": "Maximaal {{max}} landen",
+    "eligibility_empty": "Stel een leeftijds- of nationaliteitsregel in, of zet de beperking uit"
   },
   "devices": {
     "title": "Mijn apparaten",
@@ -546,6 +575,37 @@
   },
   "eligibility": {
     "world_id": "World ID geverifieerd",
-    "enrolled": "Ingeschreven voor deze verkiezing"
+    "enrolled": "Ingeschreven voor deze verkiezing",
+    "title": "Deze verkiezing is beperkt",
+    "intro": "Toon met je paspoort of identiteitskaart aan dat je voldoet. Het wordt op je eigen telefoon gelezen en verlaat die nooit.",
+    "req_min_age": "Je moet minstens {{age}} jaar oud zijn",
+    "req_allowed": "Je nationaliteit moet een van deze zijn: {{countries}}",
+    "req_blocked": "Je nationaliteit mag geen van deze zijn: {{countries}}",
+    "privacy_note": "Votain krijgt per regel een ja of nee. Niet je geboortedatum, niet je naam, niet je documentnummer.",
+    "privacy_note_reveal": "Votain krijgt per regel een ja of nee, plus je nationaliteit, die tegen de lijst wordt gelegd en daarna weggegooid. Niet je geboortedatum, niet je naam, niet je documentnummer.",
+    "restricted_hint": "Er wordt je eerst gevraagd je met een officieel document te verifiëren.",
+    "start": "Verifiëren met mijn document",
+    "opening": "De controle wordt voorbereid…",
+    "scan_hint": "Scan deze code met de Self-app en houd daarna je document tegen je telefoon.",
+    "open_app": "Verifiëren met de Self-app",
+    "waiting": "Wachten op je telefoon…",
+    "claiming": "Geverifieerd. Inschrijving wordt afgerond…",
+    "mock_mode": "Testmodus: alleen in de Self-app aangemaakte testdocumenten worden geaccepteerd.",
+    "error": "De controle kon niet worden afgerond. Probeer het opnieuw.",
+    "failed_min_age": "Je document haalt de minimumleeftijd van deze verkiezing niet.",
+    "failed_nationality_not_allowed": "Je nationaliteit hoort niet bij de nationaliteiten die deze verkiezing toestaat.",
+    "failed_nationality_blocked": "Deze verkiezing accepteert je nationaliteit niet.",
+    "failed_nationality_missing": "Je nationaliteit kon niet uit het document worden gelezen.",
+    "failed_unknown": "Je document voldoet niet aan de eisen van deze verkiezing.",
+    "mobile_return_hint": "Self brengt je hierna terug naar deze pagina.",
+    "requirements_unknown": "De deelnamevoorwaarden van deze verkiezing konden niet worden gecontroleerd. Probeer het opnieuw."
+  },
+  "country_picker": {
+    "placeholder": "Zoek een land…",
+    "no_results": "Geen land komt overeen met die zoekopdracht",
+    "limit_reached": "Je hebt de grens van {{max}} landen bereikt",
+    "remove": "{{country}} verwijderen",
+    "more_results_other": "en nog {{count}}. Typ verder om te verfijnen.",
+    "more_results_one": "en nog {{count}}. Typ verder om te verfijnen."
   }
 }

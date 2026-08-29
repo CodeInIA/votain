@@ -23,6 +23,7 @@ import { Contract, JsonRpcProvider, Wallet, isAddress } from 'ethers';
 
 const PAYMASTER_ABI = [
   'function relayEnroll(address election, uint256 identityCommitment)',
+  'function relayEnrollAttested(address election, uint256 identityCommitment, uint256 deadline, bytes signature)',
   'function relayVote(address election, bytes voteCiphertext, uint256 nullifier, uint256 merkleRoot, uint256 merkleDepth, uint256[2] pA, uint256[2][2] pB, uint256[2] pC)',
   'function organizerOf(address election) view returns (address)',
   'function gasBalance(address organizer) view returns (uint256)',
@@ -78,6 +79,38 @@ export async function relayEnroll(election: string, commitment: string): Promise
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     console.error('relayEnroll failed:', message);
+    return { relayed: false, error: message };
+  }
+}
+
+/**
+ * Relays an enrollment into an election that declares an attribute policy.
+ *
+ * Separate from `relayEnroll` because the contract exposes two entry points:
+ * a gated election refuses the plain one, so that a voter the attester turned
+ * down cannot simply submit the transaction themselves.
+ */
+export async function relayEnrollAttested(
+  election: string,
+  commitment: string,
+  deadline: number,
+  signature: string,
+): Promise<RelayResult> {
+  if (!isRelayerConfigured()) return { relayed: false, error: 'relayer not configured' };
+
+  try {
+    requireElection(election);
+    const paymaster = getPaymaster();
+    const args = [election, BigInt(commitment), BigInt(deadline), signature] as const;
+    // Same reason as relayEnroll: a reverting call still costs the relayer its
+    // gas, and an expired or malformed attestation reverts.
+    await paymaster.relayEnrollAttested.staticCall(...args);
+    const tx = await paymaster.relayEnrollAttested(...args);
+    const receipt = await tx.wait();
+    return { relayed: true, txHash: receipt?.hash };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('relayEnrollAttested failed:', message);
     return { relayed: false, error: message };
   }
 }

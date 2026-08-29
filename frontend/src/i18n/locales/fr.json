@@ -120,11 +120,18 @@
     "title": "Élections",
     "subtitle": "Parcourez les élections ouvertes et passées",
     "search_placeholder": "Rechercher des élections…",
-    "results_count": "{{count}} élection",
-    "results_count_plural": "{{count}} élections",
     "empty_title": "Aucune élection trouvée",
     "empty_desc": "Essayez une autre recherche ou effacez vos filtres.",
-    "verified_domain": "Domaine vérifié"
+    "verified_domain": "Domaine vérifié",
+    "min_age": "Âge minimum",
+    "age_from": "De",
+    "age_to": "à",
+    "age_to_placeholder": "À",
+    "nationality": "Nationalité",
+    "restricted_only": "Avec conditions",
+    "results_count_one": "{{count}} élection",
+    "results_count_other": "{{count}} élections",
+    "results_count_many": "{{count}} élections"
   },
   "election": {
     "by": "par",
@@ -208,8 +215,10 @@
     "title": "Mes Élections",
     "subtitle": "Élections auxquelles vous êtes inscrit",
     "empty": "Vous n'êtes encore inscrit à aucune élection.",
-    "urgent": "{{count}} se termine bientôt",
-    "ends_soon": "Se termine bientôt"
+    "ends_soon": "Se termine bientôt",
+    "urgent_one": "{{count}} se termine bientôt",
+    "urgent_other": "{{count}} se terminent bientôt",
+    "urgent_many": "{{count}} se terminent bientôt"
   },
   "zk": {
     "title": "Génération de votre preuve",
@@ -231,7 +240,8 @@
     "new_choice": "Sélectionnez votre nouveau choix",
     "modal_title": "Confirmer le changement de vote",
     "modal_desc": "Vous allez changer votre vote pour {{candidate}}.",
-    "confirm_change": "Changer le vote"
+    "confirm_change": "Changer le vote",
+    "voting_closed": "Le vote est clos pour cette élection, votre choix ne peut plus être modifié."
   },
   "history": {
     "title": "Historique des votes",
@@ -334,7 +344,20 @@
     "yes_no_hint": "Rien à configurer ici : les options sont fixées par la règle de vote choisie. Les électeurs en choisiront une.",
     "yes_no_preview": "Le bulletin que verront les électeurs",
     "current_tank": "Votre réserve de gas contient déjà {{amount}} {{currency}}.",
-    "short_enrollment_warning": "Le vote commence dans moins d'un jour, et les inscriptions ferment à son ouverture. Qui ne s'inscrit pas à temps ne pourra pas voter du tout. Envisagez un début plus tardif, ou une fenêtre d'inscription distincte."
+    "short_enrollment_warning": "Le vote commence dans moins d'un jour, et les inscriptions ferment à son ouverture. Qui ne s'inscrit pas à temps ne pourra pas voter du tout. Envisagez un début plus tardif, ou une fenêtre d'inscription distincte.",
+    "eligibility_enable": "Restreindre qui peut s'inscrire",
+    "eligibility_enable_desc": "Les électeurs prouvent un âge ou une nationalité depuis la puce de leur pièce d'identité avant de pouvoir entrer. Il leur faudra l'application Self et un téléphone NFC.",
+    "eligibility_unavailable": "Le service de vérification est injoignable, cette élection ne peut donc pas être créée avec des restrictions. Laissez l'interrupteur éteint, ou réessayez plus tard.",
+    "min_age": "Âge minimum",
+    "min_age_hint": "Laissez vide pour ne pas appliquer de règle d'âge. La date de naissance n'est jamais révélée, seulement si elle dépasse ce seuil.",
+    "country_rule": "Règle de nationalité",
+    "country_rule_none": "Aucune règle de nationalité",
+    "country_rule_block": "Bloquer ces pays",
+    "country_rule_allow": "N'autoriser que ces pays",
+    "nationality_reveal_note": "N'autoriser que certains pays oblige l'électeur à divulguer sa nationalité, car le système de preuves ne sait exprimer que des exclusions. Bloquer des pays non : il répond oui ou non sans nommer le pays.",
+    "countries_allowed": "Pays autorisés",
+    "countries_blocked": "Pays bloqués",
+    "country_picker_hint": "Cherchez et sélectionnez des pays. Jusqu'à {{max}}."
   },
   "election_mgmt": {
     "actions": "Actions",
@@ -364,7 +387,6 @@
     "tally_compute": "Calculer le dépouillement",
     "tally_computing": "Déchiffrement…",
     "tally_publish": "Publier les résultats",
-    "tally_voters": "{{count}} électeurs après suppression des votes remplacés",
     "tally_quorum_short": "Quorum de confidentialité non atteint ({{voters}} sur {{quorum}}). Invalidez plutôt que publier.",
     "tally_key_missing": "La clé de déchiffrement de cette élection n'est pas sur cet appareil. Ouvrez Votain sur l'appareil ayant créé l'élection.",
     "results_published": "Résultats publiés",
@@ -372,7 +394,12 @@
     "export_key": "Exporter la clé de déchiffrement (sauvegarde)",
     "key_exported": "Clé de déchiffrement exportée",
     "import_key": "Importer la clé de déchiffrement",
-    "key_imported": "Clé de déchiffrement importée"
+    "key_imported": "Clé de déchiffrement importée",
+    "key_no_longer_needed": "La clé de déchiffrement n'est plus nécessaire : le décompte est publié et ne peut plus changer. Supprimez toute copie exportée, car elle déchiffrerait encore les bulletins individuels stockés sur la chaîne.",
+    "entry_requirements": "Conditions d'accès",
+    "tally_voters_one": "{{count}} électeur après suppression des votes remplacés",
+    "tally_voters_other": "{{count}} électeurs après suppression des votes remplacés",
+    "tally_voters_many": "{{count}} électeurs après suppression des votes remplacés"
   },
   "gas": {
     "title": "Gestion du gaz",
@@ -383,10 +410,12 @@
     "history": "Historique des transactions",
     "deposit": "Dépôt",
     "used": "Gaz utilisé",
-    "votes_remaining": "~{{count}} votes restants",
     "amount_token": "Montant ({{currency}})",
     "withdraw": "Retrait",
-    "history_empty": "Aucun mouvement de gaz."
+    "history_empty": "Aucun mouvement de gaz.",
+    "votes_remaining_one": "~{{count}} vote restant",
+    "votes_remaining_other": "~{{count}} votes restants",
+    "votes_remaining_many": "~{{count}} votes restants"
   },
   "members": {
     "title": "Membres enregistrés",
@@ -456,7 +485,11 @@
     "too_long": "Au plus {{max}} caractères",
     "candidate_too_short": "Chaque candidat doit compter au moins {{min}} caractères",
     "candidate_too_long": "Les noms de candidat sont limités à {{max}} caractères",
-    "must_be_future_chain": "Doit être postérieur à l'horloge de la chaîne, qui indique {{time}}"
+    "must_be_future_chain": "Doit être postérieur à l'horloge de la chaîne, qui indique {{time}}",
+    "min_age_range": "L'âge minimum doit être compris entre {{min}} et {{max}}",
+    "country_list_empty": "Ajoutez au moins un code pays",
+    "country_list_long": "Au maximum {{max}} pays",
+    "eligibility_empty": "Définissez une règle d'âge ou de nationalité, ou désactivez la restriction"
   },
   "devices": {
     "title": "Mes appareils",
@@ -546,6 +579,38 @@
   },
   "eligibility": {
     "world_id": "World ID vérifié",
-    "enrolled": "Inscrit à cette élection"
+    "enrolled": "Inscrit à cette élection",
+    "title": "Cette élection est restreinte",
+    "intro": "Prouvez que vous remplissez les conditions avec votre passeport ou votre carte d'identité. La lecture se fait sur votre propre téléphone et n'en sort jamais.",
+    "req_min_age": "Vous devez avoir au moins {{age}} ans",
+    "req_allowed": "Votre nationalité doit être l'une de : {{countries}}",
+    "req_blocked": "Votre nationalité ne peut pas être l'une de : {{countries}}",
+    "privacy_note": "Votain reçoit un oui ou un non par règle. Ni votre date de naissance, ni votre nom, ni le numéro de votre document.",
+    "privacy_note_reveal": "Votain reçoit un oui ou un non par règle, plus votre nationalité, comparée à la liste puis écartée. Ni votre date de naissance, ni votre nom, ni le numéro de votre document.",
+    "restricted_hint": "Il vous sera d'abord demandé de vous vérifier avec un document officiel.",
+    "start": "Vérifier avec mon document",
+    "opening": "Préparation de la vérification…",
+    "scan_hint": "Scannez ce code avec l'application Self, puis approchez votre document du téléphone.",
+    "open_app": "Vérifier avec l'application Self",
+    "waiting": "En attente de votre téléphone…",
+    "claiming": "Vérifié. Finalisation de l'inscription…",
+    "mock_mode": "Mode test : seuls les documents simulés créés dans l'application Self sont acceptés.",
+    "error": "La vérification n'a pas pu aboutir. Veuillez réessayer.",
+    "failed_min_age": "Votre document ne satisfait pas l'âge minimum de cette élection.",
+    "failed_nationality_not_allowed": "Votre nationalité ne figure pas parmi celles que cette élection autorise.",
+    "failed_nationality_blocked": "Cette élection n'accepte pas votre nationalité.",
+    "failed_nationality_missing": "Votre nationalité n'a pas pu être lue sur le document.",
+    "failed_unknown": "Votre document ne remplit pas les conditions de cette élection.",
+    "mobile_return_hint": "Self vous ramènera ici une fois terminé.",
+    "requirements_unknown": "Les conditions d'accès à cette élection n'ont pas pu être vérifiées. Réessayez."
+  },
+  "country_picker": {
+    "placeholder": "Cherchez un pays…",
+    "no_results": "Aucun pays ne correspond à cette recherche",
+    "limit_reached": "Vous avez atteint la limite de {{max}} pays",
+    "remove": "Retirer {{country}}",
+    "more_results_one": "et {{count}} de plus. Continuez à taper pour affiner.",
+    "more_results_other": "et {{count}} de plus. Continuez à taper pour affiner.",
+    "more_results_many": "et {{count}} de plus. Continuez à taper pour affiner."
   }
 }

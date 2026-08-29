@@ -19,7 +19,13 @@
  */
 import { Router, Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
-import { relayEnroll, relayVote, isRelayerConfigured, type VoteCall } from '../chain/relayer.js';
+import {
+  relayEnroll,
+  relayEnrollAttested,
+  relayVote,
+  isRelayerConfigured,
+  type VoteCall,
+} from '../chain/relayer.js';
 import { verifySession } from '../auth/session.js';
 
 const router = Router();
@@ -41,9 +47,11 @@ router.post('/relay/enroll', relayLimiter, async (req: Request, res: Response) =
   const session = await verifySession(req.cookies?.voter_vc);
   if (!session) return res.status(401).json({ error: 'Not authenticated' });
 
-  const { election, identityCommitment } = req.body as {
+  const { election, identityCommitment, deadline, signature } = req.body as {
     election?: string;
     identityCommitment?: string;
+    deadline?: number;
+    signature?: string;
   };
   if (!election || !identityCommitment) {
     return res.status(400).json({ error: 'election and identityCommitment are required' });
@@ -52,7 +60,14 @@ router.post('/relay/enroll', relayLimiter, async (req: Request, res: Response) =
     return res.status(400).json({ error: 'identityCommitment must be a decimal string' });
   }
 
-  const result = await relayEnroll(election, identityCommitment);
+  // An attestation turns this into the gated entry point. The contract decides
+  // which one an election accepts, so passing the wrong one reverts rather than
+  // enrolling on weaker terms.
+  const result =
+    deadline !== undefined && signature
+      ? await relayEnrollAttested(election, identityCommitment, deadline, signature)
+      : await relayEnroll(election, identityCommitment);
+
   if (!result.relayed) return res.status(400).json({ error: result.error });
   return res.status(200).json({ txHash: result.txHash });
 });
