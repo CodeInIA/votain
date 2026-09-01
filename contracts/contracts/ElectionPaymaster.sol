@@ -43,9 +43,9 @@ contract ElectionPaymaster {
     /// makes padding free to send and worth nothing.
     /// relayEnroll: selector + address + uint256.
     uint256 private constant ENROLL_CALLDATA = 4 + 32 + 32;
-    /// relayEnrollAttested head: selector + address + 2 uint256 + bytes offset +
+    /// relayEnrollAttested head: selector + address + 3 uint256 + bytes offset +
     /// length word, then the padded signature added at call time.
-    uint256 private constant ATTESTED_ENROLL_CALLDATA_HEAD = 4 + 32 + (32 * 2) + 32 + 32;
+    uint256 private constant ATTESTED_ENROLL_CALLDATA_HEAD = 4 + 32 + (32 * 3) + 32 + 32;
     /// relayVote head: selector + address + bytes offset + 3 uint256 + pA + pB + pC,
     /// then the bytes tail (length word + padded contents) added at call time.
     uint256 private constant VOTE_CALLDATA_HEAD = 4 + 32 + 32 + (32 * 3) + 64 + 128 + 64 + 32;
@@ -203,13 +203,19 @@ contract ElectionPaymaster {
     function relayEnrollAttested(
         address election,
         uint256 identityCommitment,
+        uint256 personhoodNullifier,
         uint256 deadline,
         bytes calldata signature
     ) external nonReentrant {
         uint256 startGas = gasleft();
         address organizer = _organizerOrRevert(election);
 
-        ElectionV4(election).enrollAttested(identityCommitment, deadline, signature);
+        ElectionV4(election).enrollAttested(
+            identityCommitment,
+            personhoodNullifier,
+            deadline,
+            signature
+        );
 
         uint256 billable =
             ATTESTED_ENROLL_CALLDATA_HEAD + ((signature.length + 31) / 32) * 32;

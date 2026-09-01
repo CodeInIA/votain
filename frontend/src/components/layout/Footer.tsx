@@ -22,6 +22,7 @@ export function Footer({ className }: { className?: string }) {
           <Link to="/terms" className="hover:text-on-surface transition-colors">{t('landing.footer.terms')}</Link>
           <Link to="/privacy" className="hover:text-on-surface transition-colors">{t('landing.footer.privacy')}</Link>
           <Link to="/how-it-works" className="hover:text-on-surface transition-colors">{t('nav.how_it_works')}</Link>
+          <Link to="/verify-receipt" className="hover:text-on-surface transition-colors">{t('nav.verify')}</Link>
         </div>
 
         <span className="text-xs text-on-surface-meta">{t('landing.footer.copyright')}</span>

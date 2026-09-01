@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { BlockchainBadge } from '../../components/ui/BlockchainBadge';
 import { getElection as getSeedElection } from '../../data/seed';
 import { shortenReference } from '../../lib/utils';
+import { explorerTxUrl } from '../../lib/deployments';
 
 const FALLBACK_REF = 'VTN-2025-' + String(Math.floor(Math.random() * 90000) + 10000);
 
@@ -31,9 +32,10 @@ export default function VoteConfirmation() {
   // Copy the FULL reference; only shorten it for display.
   const referenceDisplay = shortenReference(reference);
   const txHash = state.txHash;
-  const explorerUrl = txHash
-    ? `https://amoy.polygonscan.com/tx/${txHash}`
-    : 'https://amoy.polygonscan.com/';
+  // Null on a chain with no explorer, and then the button is not rendered at
+  // all. It used to fall back to the Amoy homepage, so a voter on any other
+  // network was sent somewhere that could never show them their transaction.
+  const explorerUrl = explorerTxUrl(txHash);
 
   const [copied, setCopied] = useState(false);
   const [visible, setVisible] = useState(false);
@@ -86,28 +88,36 @@ export default function VoteConfirmation() {
             <p className="text-xs text-on-surface-meta mb-6 px-2 line-clamp-2">{title}</p>
           )}
 
-          {/* Blockchain badge */}
+          {/* A statement, not a second door to the same room. It carried the
+              same explorer link as the button directly below it, so the screen
+              offered two controls that looked different and did one thing. The
+              button keeps the link because it says where it goes; this says
+              what happened. */}
           <div className="mb-6">
-            <BlockchainBadge href={explorerUrl} />
+            <BlockchainBadge />
           </div>
 
           {/* Actions */}
           <div className="flex flex-col gap-3 w-full">
-            <a
-              href={explorerUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full"
-            >
-              <Button variant="default" className="w-full rounded-full gap-2">
-                <ExternalLink className="w-4 h-4" />
-                {t('confirmation.view_tx')}
-              </Button>
-            </a>
+            {explorerUrl && (
+              <a href={explorerUrl} target="_blank" rel="noopener noreferrer" className="w-full">
+                <Button variant="default" className="w-full rounded-full gap-2">
+                  <ExternalLink className="w-4 h-4" />
+                  {t('confirmation.view_tx')}
+                </Button>
+              </a>
+            )}
+            {/* Carries the reference, which is the whole difference between an
+                offer and an errand: it used to open an empty search box and ask
+                the voter to paste back the number they had just been given.
+                Worth keeping even though the vote is plainly recorded, because
+                this is the one moment the voter holds that reference, and the
+                page it opens is the tool anyone else would use to check the
+                same thing. */}
             <Button variant="ghost" className="w-full rounded-full gap-2"
-              onClick={() => navigate('/verify-receipt')}>
+              onClick={() => navigate(`/verify-receipt?ref=${encodeURIComponent(reference)}`)}>
               <SearchCheck className="w-4 h-4" />
-              {t('verify_receipt.title')}
+              {t('confirmation.check_receipt')}
             </Button>
             <Button variant="ghost" className="w-full rounded-full"
               onClick={() => navigate('/voter/elections')}>

@@ -12,6 +12,7 @@ export function enrollAttestationTypedData(
   electionAddress: string,
   chainId: bigint,
   identityCommitment: bigint,
+  personhoodNullifier: bigint,
   deadline: number | bigint,
 ) {
   return {
@@ -24,10 +25,11 @@ export function enrollAttestationTypedData(
     types: {
       EnrollAttestation: [
         { name: "identityCommitment", type: "uint256" },
+        { name: "personhoodNullifier", type: "uint256" },
         { name: "deadline", type: "uint256" },
       ],
     },
-    value: { identityCommitment, deadline },
+    value: { identityCommitment, personhoodNullifier, deadline },
   };
 }
 
@@ -37,12 +39,14 @@ export async function signEnrollAttestation(
   electionAddress: string,
   chainId: bigint,
   identityCommitment: bigint,
+  personhoodNullifier: bigint,
   deadline: number | bigint,
 ): Promise<string> {
   const { domain, types, value } = enrollAttestationTypedData(
     electionAddress,
     chainId,
     identityCommitment,
+    personhoodNullifier,
     deadline,
   );
   return attester.signTypedData(domain, types, value);

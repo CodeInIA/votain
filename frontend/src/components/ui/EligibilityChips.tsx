@@ -15,7 +15,7 @@
  * Renders nothing for an unrestricted election, so callers can drop it in
  * without guarding first.
  */
-import { CalendarCheck, Globe, Ban } from 'lucide-react';
+import { CalendarCheck, Globe, Ban, IdCard, ScanFace } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { usePolicyChips, type PolicyChipKind } from '../../hooks/usePolicyChips';
 import type { EligibilityPolicy } from '../../lib/eligibility';
@@ -30,6 +30,8 @@ import type { EligibilityPolicy } from '../../lib/eligibility';
  * quieter and, next to a loud status pill, actually easier to pick out.
  */
 const ICON_COLORS: Record<PolicyChipKind, string> = {
+  document: 'text-primary',
+  orb:      'text-primary',
   age:     'text-primary',
   allowed: 'text-primary',
   // The one rule that excludes rather than admits, so the one that earns a
@@ -38,6 +40,10 @@ const ICON_COLORS: Record<PolicyChipKind, string> = {
 };
 
 const CHIP_ICONS: Record<PolicyChipKind, typeof Globe> = {
+  // A document scan and an Orb are different enough acts to deserve different
+  // pictures: one is held in the hand, the other looked into.
+  document: IdCard,
+  orb: ScanFace,
   age: CalendarCheck,
   allowed: Globe,
   blocked: Ban,

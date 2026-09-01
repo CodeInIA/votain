@@ -10,6 +10,7 @@ import { ResultBarChart } from '../../components/ui/BarChart';
 import { BlockchainBadge, IPFSBadge } from '../../components/ui/BlockchainBadge';
 import { Spinner } from '../../components/ui/Spinner';
 import { useElection } from '../../hooks/useElections';
+import { explorerAddressUrl } from '../../lib/deployments';
 
 export default function ElectionResults() {
   const { id } = useParams<{ id: string }>();
@@ -71,13 +72,13 @@ export default function ElectionResults() {
         <div className="mb-6">
           <div className="flex flex-wrap items-center gap-2 mb-3">
             <Badge variant="closed">{t('phase.closed')}</Badge>
-            <BlockchainBadge href={`https://amoy.polygonscan.com/address/${election.contractAddress}`} />
+            <BlockchainBadge href={explorerAddressUrl(election.contractAddress) ?? undefined} />
             {election.ipfsCid && <IPFSBadge href={`https://ipfs.io/ipfs/${election.ipfsCid}`} />}
           </div>
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white mb-1">
             {t('results.title')}
           </h1>
-          <p className="text-sm text-on-surface-variant">{election.title}</p>
+          <p className="text-sm text-on-surface-variant break-words">{election.title}</p>
         </div>
 
         {/* Summary card */}

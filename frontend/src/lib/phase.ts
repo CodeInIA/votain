@@ -32,3 +32,31 @@ export function nextBoundary(
     default:             return null;
   }
 }
+
+/**
+ * How long before the close of voting an election counts as urgent.
+ *
+ * `Countdown` turns red at the same figure, and it is the same fact, so the two
+ * are not allowed to disagree about when it starts being true.
+ */
+export const ENDS_SOON_MS = 3_600_000;
+
+/**
+ * A ballot the voter can still cast and is about to lose the chance to.
+ *
+ * All three conditions matter. Voting has to be open, because there is nothing
+ * to hurry towards otherwise; the voter has to be in, because an election they
+ * cannot enter is not their deadline; and they must not have voted already,
+ * since a cast ballot makes the clock somebody else's problem.
+ */
+export function endsSoon(
+  election: Pick<Election, "phase" | "voteEnd" | "isEnrolled" | "hasVoted">,
+  now: number = Date.now(),
+): boolean {
+  return (
+    election.phase === "active" &&
+    election.isEnrolled === true &&
+    !election.hasVoted &&
+    election.voteEnd.getTime() - now < ENDS_SOON_MS
+  );
+}

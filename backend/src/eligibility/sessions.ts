@@ -35,6 +35,11 @@ export interface EligibilitySession {
   status: SessionStatus;
   /** Machine-readable failure cause, for the UI to translate. */
   reason?: string;
+  /**
+   * The document nullifier the passing proof carried. Held only until the
+   * attestation is claimed, then dropped with the session.
+   */
+  personhoodNullifier?: string;
   createdAt: number;
 }
 
@@ -79,11 +84,17 @@ export function getSession(id: string): EligibilitySession | undefined {
   return session;
 }
 
-export function markSession(id: string, status: SessionStatus, reason?: string): void {
+export function markSession(
+  id: string,
+  status: SessionStatus,
+  reason?: string,
+  personhoodNullifier?: string,
+): void {
   const session = getSession(id);
   if (!session) return;
   session.status = status;
   session.reason = reason;
+  session.personhoodNullifier = personhoodNullifier;
 }
 
 /**

@@ -14,10 +14,17 @@
  */
 import { sdJwt, type VotainCredentialPayload } from '../sd/issuer.js';
 import { isRevoked } from '../status/statusList.js';
+import type { CredentialLevel } from './worldId.js';
 
 export interface Session {
   /** World ID nullifier (the credential subject). */
   nullifier: string;
+  /**
+   * Credential level this session was signed in with. `undefined` on sessions
+   * issued before the claim existed, and an election demanding an Orb must
+   * treat that as "not proved" rather than assume the best.
+   */
+  personhood?: CredentialLevel;
   payload: VotainCredentialPayload;
 }
 
@@ -47,5 +54,5 @@ export async function verifySession(vc: string | undefined): Promise<Session | n
   const index = payload.credentialStatus?.statusListIndex;
   if (index !== undefined && isRevoked(Number(index))) return null;
 
-  return { nullifier: payload.sub, payload };
+  return { nullifier: payload.sub, personhood: payload.personhood, payload };
 }

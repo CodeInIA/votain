@@ -92,7 +92,9 @@ contract ElectionV4 is ERC2771Context {
     bytes32 public immutable eligibilityPolicyHash;
 
     bytes32 private constant ENROLL_TYPEHASH =
-        keccak256("EnrollAttestation(uint256 identityCommitment,uint256 deadline)");
+        keccak256(
+            "EnrollAttestation(uint256 identityCommitment,uint256 personhoodNullifier,uint256 deadline)"
+        );
 
     /**
      * EIP-712 domain, built here rather than inherited from OpenZeppelin's
@@ -140,6 +142,22 @@ contract ElectionV4 is ERC2771Context {
 
     /// @dev nullifier => next expected nonce (number of votes cast by that member)
     mapping(uint256 => uint256) public nullifierNonces;
+
+    /**
+     * @dev Personhood nullifier => already used in THIS election.
+     *
+     * `enrolledHumans` deduplicates on the World ID nullifier, which means one
+     * HUMAN only while sign-in demands an Orb. Where it does not, that nullifier
+     * identifies an account, and somebody with two of them holds two.
+     *
+     * A gated election therefore carries a second nullifier, supplied by the
+     * attester and derived from something a person has one of: a passport or
+     * national ID read by the voter's own phone. It is scoped to this election,
+     * so it says nothing about the same voter anywhere else, and it is stored
+     * rather than merely checked because the relay has no durable memory and a
+     * restart must not reopen a closed door.
+     */
+    mapping(uint256 => bool) public usedPersonhoodNullifiers;
 
     /// @dev World ID nullifier => already enrolled in THIS election.
     /// Keyed by human rather than by commitment so that rotating to a new
@@ -199,6 +217,8 @@ contract ElectionV4 is ERC2771Context {
     error UnexpectedAttestation();
     error AttestationExpired();
     error BadAttestation();
+    error MissingPersonhoodNullifier();
+    error PersonhoodNullifierUsed();
 
     // ────────────────────────────────────────────────
     // Modifiers
@@ -367,17 +387,31 @@ contract ElectionV4 is ERC2771Context {
     /// per-human deduplication in _enroll is what stops it being replayed.
     function enrollAttested(
         uint256 identityCommitment,
+        uint256 personhoodNullifier,
         uint256 deadline,
         bytes calldata signature
     ) external notDecided {
         if (eligibilityAttester == address(0)) revert UnexpectedAttestation();
         if (block.timestamp > deadline) revert AttestationExpired();
 
-        bytes32 digest = enrollmentDigest(identityCommitment, deadline);
+        // A gated election is one that decided its own membership rules, so it
+        // must also know that each person passed them once. Refusing zero is
+        // what stops a relay bug, or a relay under pressure, from quietly
+        // enrolling everyone under "no nullifier available".
+        if (personhoodNullifier == 0) revert MissingPersonhoodNullifier();
+        if (usedPersonhoodNullifiers[personhoodNullifier]) revert PersonhoodNullifierUsed();
+
+        bytes32 digest = enrollmentDigest(identityCommitment, personhoodNullifier, deadline);
         (address signer, ECDSA.RecoverError err, ) = ECDSA.tryRecover(digest, signature);
         if (err != ECDSA.RecoverError.NoError || signer != eligibilityAttester) {
             revert BadAttestation();
         }
+
+        // Recorded before enrolling, and recorded even though `_enroll` also
+        // deduplicates: the two answer different questions. `enrolledHumans`
+        // asks whether this ACCOUNT already joined; this asks whether this
+        // PERSON did, and only the second survives a voter with two accounts.
+        usedPersonhoodNullifiers[personhoodNullifier] = true;
 
         _enroll(identityCommitment);
     }
@@ -385,13 +419,13 @@ contract ElectionV4 is ERC2771Context {
     /// @notice The EIP-712 digest an attester signs to authorise one enrollment.
     /// @dev Bound to this contract and this chain through the domain separator, so an
     /// attestation issued for one election cannot be replayed into another.
-    function enrollmentDigest(uint256 identityCommitment, uint256 deadline)
-        public
-        view
-        returns (bytes32)
-    {
+    function enrollmentDigest(
+        uint256 identityCommitment,
+        uint256 personhoodNullifier,
+        uint256 deadline
+    ) public view returns (bytes32) {
         bytes32 structHash = keccak256(
-            abi.encode(ENROLL_TYPEHASH, identityCommitment, deadline)
+            abi.encode(ENROLL_TYPEHASH, identityCommitment, personhoodNullifier, deadline)
         );
         return keccak256(abi.encodePacked(hex"1901", _domainSeparator(), structHash));
     }

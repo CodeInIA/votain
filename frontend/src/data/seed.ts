@@ -1,4 +1,4 @@
-import type { EligibilityPolicy } from '../lib/eligibility';
+import type { EligibilityPolicy, PersonhoodLevel } from '../lib/eligibility';
 
 export type ElectionPhase =
   | 'upcoming'       // deployed, enrollment not yet open
@@ -76,7 +76,10 @@ export interface Election {
   voteEnd: Date;
   candidates: Candidate[];
   eligibility: EligibilityCriteria[];
-  /** True when the election asks for Orb rather than a device-level World ID. */
+  /** How distinct a human the election insists the voter is, taken from the
+   *  hash-committed policy. */
+  personhood?: PersonhoodLevel;
+  /** True when that level is `orb`. Kept for the views that only ask that. */
   requiresOrb?: boolean;
   totalEnrolled: number;
   castVotes: number;
@@ -92,7 +95,15 @@ export interface Election {
   isEnrolled?: boolean;
   hasVoted?: boolean;
   userVote?: string;
-  referenceNumber?: string;
+  /**
+   * The vote's anonymous on-chain identifier, as `0x` hex.
+   *
+   * Named for what it is. It used to be called `referenceNumber`, which is also
+   * what the history and the confirmation screen call a TRANSACTION HASH, so
+   * one name meant two different values and either could be handed to the
+   * verifier expecting the other to work.
+   */
+  voteNullifier?: string;
   tags?: string[];
 }
 
@@ -103,7 +114,7 @@ const future = (d: number) => new Date(now.getTime() + d * 86_400_000);
 export const ELECTIONS: Election[] = [
   {
     id: 'e1',
-    title: 'Madrid City Council — District 5 Representative',
+    title: 'Madrid City Council - District 5 Representative',
     description:
       'Elect the representative for District 5 (Carabanchel) to the Madrid City Council for the 2025–2029 term. All verified residents aged 18+ are eligible.',
     phase: 'active',
@@ -135,7 +146,7 @@ export const ELECTIONS: Election[] = [
   },
   {
     id: 'e2',
-    title: 'University of Barcelona — Student Union Elections 2025',
+    title: 'University of Barcelona - Student Union Elections 2025',
     description:
       'Annual election for the student union board. All enrolled students at UB are eligible to vote.',
     phase: 'enrolling',
@@ -166,7 +177,7 @@ export const ELECTIONS: Election[] = [
   },
   {
     id: 'e3',
-    title: 'Catalonia Residents Advisory — Infrastructure Priorities',
+    title: 'Catalonia Residents Advisory - Infrastructure Priorities',
     description:
       'Advisory vote on infrastructure investment priorities for the 2025–2030 period. Orb-verified Catalonia residents only.',
     phase: 'tallying',
@@ -184,7 +195,7 @@ export const ELECTIONS: Election[] = [
     isEnrolled: true,
     hasVoted: true,
     userVote: 'c10',
-    referenceNumber: 'VTN-2025-003841',
+    voteNullifier: 'VTN-2025-003841',
     tags: ['government', 'regional', 'infrastructure'],
     candidates: [
       { id: 'c9',  name: 'High-speed rail expansion',  description: 'Connect all towns >5k pop. by 2030' },
@@ -200,7 +211,7 @@ export const ELECTIONS: Election[] = [
   },
   {
     id: 'e4',
-    title: 'Bilbao Neighbourhood Association — Annual Board',
+    title: 'Bilbao Neighbourhood Association - Annual Board',
     description:
       'Election of the Ategorrieta-Uribarri neighbourhood association board members for the 2025 term.',
     phase: 'closed',
@@ -219,7 +230,7 @@ export const ELECTIONS: Election[] = [
     isEnrolled: true,
     hasVoted: true,
     userVote: 'c15',
-    referenceNumber: 'VTN-2025-001122',
+    voteNullifier: 'VTN-2025-001122',
     tags: ['neighbourhood', 'local'],
     candidates: [
       { id: 'c14', name: 'Itziar Zubicaray',  description: 'Incumbent president', votes: 198, isWinner: true },
@@ -234,7 +245,7 @@ export const ELECTIONS: Election[] = [
   },
   {
     id: 'e5',
-    title: 'Seville Tech Hub — Co-founder Vote 2025',
+    title: 'Seville Tech Hub - Co-founder Vote 2025',
     description:
       'Internal vote to select co-founders for the new Seville Tech Hub cooperative. Member witnesses required.',
     phase: 'voided',
@@ -260,7 +271,7 @@ export const ELECTIONS: Election[] = [
   },
   {
     id: 'e6',
-    title: 'Valencia Green Party — Internal Primary',
+    title: 'Valencia Green Party - Internal Primary',
     description:
       'Internal primary to choose the Valencia Green Party candidate for the 2026 regional elections.',
     phase: 'cancelled',
@@ -289,7 +300,7 @@ export const ELECTIONS: Election[] = [
 export const VOTER_HISTORY: VoteRecord[] = [
   {
     electionId: 'e3',
-    electionTitle: 'Catalonia Residents Advisory — Infrastructure Priorities',
+    electionTitle: 'Catalonia Residents Advisory - Infrastructure Priorities',
     candidateName: 'Renewable energy grid',
     phase: 'tallying',
     date: past(3),
@@ -298,7 +309,7 @@ export const VOTER_HISTORY: VoteRecord[] = [
   },
   {
     electionId: 'e4',
-    electionTitle: 'Bilbao Neighbourhood Association — Annual Board',
+    electionTitle: 'Bilbao Neighbourhood Association - Annual Board',
     candidateName: 'Eneko Larrañaga',
     phase: 'closed',
     date: past(18),

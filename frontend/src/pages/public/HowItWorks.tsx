@@ -4,6 +4,7 @@ import { Fingerprint, ShieldCheck, Vote, BarChart3, ChevronRight } from 'lucide-
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Button } from '../../components/ui/Button';
 import { BlockchainBadge, IPFSBadge } from '../../components/ui/BlockchainBadge';
+import { useAuth } from '../../contexts/AuthContext';
 
 const STEPS = [
   { icon: Fingerprint, color: 'text-secondary',  bg: 'bg-secondary/10',  titleKey: 'how.step1_title', descKey: 'how.step1_desc' },
@@ -15,6 +16,7 @@ const STEPS = [
 export default function HowItWorks() {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { voterLoggedIn, organizerLoggedIn } = useAuth();
 
   return (
     <PageLayout role="public" showNav showFooter>
@@ -73,14 +75,40 @@ export default function HowItWorks() {
             {t('how.cta_discover')}
             <ChevronRight className="w-4 h-4" />
           </Button>
-          <Button
-            variant="ghost"
-            size="lg"
-            className="rounded-full px-8"
-            onClick={() => navigate('/voter/onboarding')}
-          >
-            {t('how.cta_register')}
-          </Button>
+          {/* An invitation to register, offered to someone already registered,
+              reads as the page not knowing who it is talking to. Signed-in
+              voters get the same swap the landing page makes.
+
+              Organizers are sent nowhere either, and the reason is the chrome
+              rather than the roles. `AuthProvider` keeps the two sessions
+              independent, so in principle an organizer could hold a voter
+              session as well, but `TopNav` and `BottomTabNav` both resolve
+              `organizerLoggedIn ? ORGANIZER : voterLoggedIn ? VOTER : PUBLIC`:
+              once both are set, the organizer nav wins outright and every
+              voter route disappears from the chrome. Sending an organizer to
+              register would hand them a session the app then hides. Until the
+              navigation can represent a person holding both, this button must
+              not pretend that it can. */}
+          {!voterLoggedIn && !organizerLoggedIn && (
+            <Button
+              variant="ghost"
+              size="lg"
+              className="rounded-full px-8"
+              onClick={() => navigate('/voter/onboarding')}
+            >
+              {t('how.cta_register')}
+            </Button>
+          )}
+          {voterLoggedIn && (
+            <Button
+              variant="ghost"
+              size="lg"
+              className="rounded-full px-8"
+              onClick={() => navigate('/voter/elections')}
+            >
+              {t('landing.my_elections')}
+            </Button>
+          )}
         </div>
       </div>
     </PageLayout>

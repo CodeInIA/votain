@@ -1,4 +1,4 @@
-import type { EligibilityPolicy } from './eligibility';
+import { effectivePersonhood, type EligibilityPolicy, type PersonhoodLevel } from './eligibility';
 
 /**
  * Filtering a list of elections by the restrictions they declare.
@@ -13,13 +13,24 @@ export interface EligibilityFilter {
   minAgeTo?: number;
   /** ISO 3166-1 alpha-3. Matches elections that would ADMIT this nationality. */
   nationality?: string;
+  /**
+   * Which personhood levels to keep. Empty or absent means all of them.
+   *
+   * A list rather than a single value, and matched EXACTLY rather than "at
+   * least", so the control answers the question the cards ask: each card shows
+   * one level, and picking that level finds the cards showing it. An "at least
+   * Orb" reading would make selecting Document return Orb elections too, which
+   * is not what the badge in front of the reader says.
+   */
+  personhood?: PersonhoodLevel[];
 }
 
 export function isEligibilityFilterActive(filter: EligibilityFilter): boolean {
   return (
     filter.minAgeFrom !== undefined ||
     filter.minAgeTo !== undefined ||
-    (filter.nationality !== undefined && filter.nationality !== '')
+    (filter.nationality !== undefined && filter.nationality !== '') ||
+    (filter.personhood?.length ?? 0) > 0
   );
 }
 
@@ -56,5 +67,8 @@ export function matchesEligibilityFilter(
   if (filter.minAgeFrom !== undefined && age < filter.minAgeFrom) return false;
   if (filter.minAgeTo !== undefined && age > filter.minAgeTo) return false;
   if (filter.nationality && !admitsNationality(policy, filter.nationality)) return false;
+  if (filter.personhood?.length && !filter.personhood.includes(effectivePersonhood(policy))) {
+    return false;
+  }
   return true;
 }

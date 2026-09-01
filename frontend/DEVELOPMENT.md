@@ -464,29 +464,169 @@ What is left is unavoidable arithmetic, and a handful of seconds of frozen tab
 still reads as a crash. The create wizard should say what it is doing between the
 passkey prompt and the wallet prompt.
 
-## Which World ID an election asks for
+## What an election asks of a voter, and where that claim lives
 
 The eligibility list said "World ID verified", which answers the wrong question:
-an Orb scan is in person and a device verification is not, and a voter with only
-the latter needs to know before they try. It now reads "verified with Orb" or
-"verified (device is enough)", from `requiresOrb` on the election.
+the levels are different bars, and a voter who can only reach the lowest needs to
+know before they get their passport out. It now names the level the election
+actually sets.
 
-Two things this uncovered:
+Two things the first attempt uncovered:
 
 - **`requireOrb` was a dead toggle.** It existed in the create wizard, was
   rendered as a Switch, and went nowhere: never passed to `createElection`,
-  never written to metadata, never read back. It now persists and is read.
+  never written to metadata, never read back.
 - **The organizer could not see the platform requirement at all.** The entry
   requirements card only rendered for attribute policies, so an election with no
-  age or nationality rule showed nothing. It now always renders, because every
-  election has at least the World ID requirement.
+  age or nationality rule showed nothing. It now always renders.
 
-**Declared, not enforced.** `lib/worldId.ts` requests `orbLegacy` for everyone at
-sign-in, so the platform demands Orb regardless and the backend never records the
-level a voter reached. An election declaring "device is enough" therefore gets
-Orb-verified voters anyway, which errs strict rather than lax. Making the
-declaration bite needs sign-in to vary by election, the credential to carry the
-level, and enrolment to check it; none of that exists yet.
+Persisting the flag fixed the display and left the real problem: `requireOrb`
+sat at the TOP LEVEL of the metadata, outside the bytes `eligibilityPolicyHash`
+commits to. Nothing could be held to it. The level therefore moved into the
+policy as `personhood`, one of `device`, `document` or `orb`, where the on-chain
+hash covers it and the backend recomputes it before signing anything.
+
+- `effectivePersonhood(policy)` is how it is read, never the raw field. An
+  attribute policy is `document` whether it says so or not, because the scan it
+  already costs is the one that yields the deduplicating nullifier.
+- `isEmptyPolicy` now means "asks nothing beyond being signed in". A policy
+  holding only `personhood: "document"` is a real policy: attester, non-zero
+  hash, and a Self scan that discloses nothing. The wizard defaults to it, and
+  the restricted filter counts it, through the same predicate the badge uses.
+- `requireOrb` is still READ, for elections deployed before the move, and
+  written by nothing. `lib/organizer.ts` no longer emits it.
+
+## Two ballot options that read the same are one option
+
+Uniqueness of candidate names was `new Set(names.map(n => n.toLowerCase()))`,
+which is right about case and blind to two other ways of writing the same line:
+a precomposed `é` against `e` plus a combining accent, and runs of whitespace,
+which HTML collapses when it renders. Either pair reaches the voter as the same
+words twice. The vote is cast by POSITION, so the tally stays correct while the
+intent behind it does not, and the voter has no way of noticing.
+
+`lib/ballotNames.ts` owns the rule now: NFC, collapse whitespace, lowercase. It
+deliberately does not strip accents, because `Jose` and `José` are different
+names and an organizer is entitled to both.
+
+It is applied in three places, and the third is the only one that cannot be
+bypassed:
+
+1. The wizard, so the organizer is told while they can still fix it.
+2. `createElection`, which throws before a transaction exists. This is the last
+   code the app runs, not a defence against a transaction built by hand: an
+   election can be sent straight to the factory, and nothing about creation
+   passes through a server that could refuse it.
+3. `fetchElection`, where `withDistinctNames` appends the ballot position to
+   options that collide. Nothing reaches a voter except through this path. A
+   contract-level check is not the alternative on offer: the names live inside a
+   JSON string in `metadataJson`, and parsing that on chain is neither practical
+   nor worth its gas. It runs AFTER the results are attached, because it returns
+   new objects and would otherwise drop the vote counts written onto the
+   originals.
+
+The blank-vote option is what makes the read side more than belt and braces. It
+is appended when an election is READ, in the reader's language, so no rule in
+the wizard had ever compared against it and a candidate could be given its exact
+name. The wizard now refuses that collision in the organizer's own language, and
+the read path catches it in every other.
+
+## The public verifier, which was verifying nothing
+
+`VerifyReceipt` searched `VOTER_HISTORY`, the hardcoded demo data in
+`data/seed.ts`. Against a real deployment it found nothing and always would,
+which made the one public verification tool the only screen in the app that
+never touched the chain.
+
+It now goes through `findVoteReceipt` in `lib/voting.ts`, reading the same
+public `VoteCast` events the voter's own history reads. Two ways in, and the
+ambiguity between them is worth knowing about: a nullifier is a field element
+and prints at exactly the same width as a transaction hash, so a `0x` string of
+32 bytes could be either and nothing about it says which. The transaction
+lookup runs first because it is one request and settles the question; only when
+no such transaction exists is the string tried as a nullifier, which costs one
+`queryFilter` per election.
+
+**It stays unauthenticated, and that is the point.** The value of publishing a
+nullifier is that a THIRD party can check a receipt somebody shows them: an
+auditor, a journalist, a losing candidate. Folding it into the voter's history,
+which is the obvious simplification, would turn a property of the system into a
+convenience for one person. So the two stay separate, and the seam between them
+is a `?ref=` link: the history offers a copy button and a verify button per row,
+and the verifier accepts the reference in its URL. Signed-in voters also get
+their own receipts listed under the search box as shortcuts, because nobody
+memorises a nullifier, but the page works identically with no session.
+
+Reachability was the other half of the same mistake. The only links were in the
+voter profile and the post-vote confirmation, so the one audience it exists for
+could not find it. It is now in the public top nav and the footer, and the title
+says "Verify a vote" rather than "Verify your vote", which is what it actually
+does.
+
+Two things fixed on the way:
+
+- **The history's nullifier was truncated to 16 hex characters.** Not a privacy
+  measure, since the full value is already public in the event; it just meant
+  the CSV export and the on-screen receipt gave the voter a string that could
+  not be looked up.
+- **Every history row opened the results page**, so a vote in an election still
+  running led to a screen whose only content was "no results yet". The
+  destination now comes from `hasPublishedResults`, the shared predicate, rather
+  than from a list of phases: `closed` is necessary but not sufficient, because
+  an election can be closed with its tally unpublished.
+
+## What a green tick on the requirements list is claiming
+
+Three rows, and each was saying something slightly different from what was known.
+
+**The level row was promising.** It went green on `commitment !== null`, which
+proves this browser holds a Votain identity, not that the voter meets THIS
+election's bar. Once the personhood level started being enforced, that put a
+green tick in front of device-level voters looking at an Orb election, who were
+then refused at enrollment with `orb_required`. It now asks
+`personhoodSatisfied(required, held)`, where `held` comes from the session's own
+level, reported by `GET /api/me` and parked in localStorage by `AuthProvider`.
+That cache is a display hint and never a boundary, exactly like the
+`votain_voter_logged_in` flag beside it: the binding check reads the level out
+of the signed credential, server side, at the moment it is asked to sign.
+
+**The attribute rows were understating.** They were hardcoded to `unknown`
+forever. Before enrollment that is exactly right, and must stay: the proof runs
+on the voter's phone and never reaches this browser, so a green tick would be an
+invention. After enrollment the chain knows, because the contract refuses
+`enrollAttested` without a signature the attester only produces once a document
+proof has cleared that exact policy. Membership IS the evidence, so enrollment
+turns every row green.
+
+One nuance worth keeping: the inference holds relative to the attester the
+ELECTION declared, which is not always ours. That is still the party the
+election chose to trust, and the policy hash still fixes the rules it was gated
+on, but it is not our signature in every case.
+
+## Telling the voter why a transaction failed
+
+`ElectionDetail` caught a failed enrollment, logged it, and set a boolean.
+`TransactionPendingModal` had taken an `errorMessage` prop the whole time and
+nobody passed it, so every failure read as "transaction failed". The create
+wizard had the same omission; the vote path kept the message but showed it raw
+and in English. All three go through `relayErrorMessage` now, which names seven
+reverts in all thirteen locales and falls back to the raw text, because an
+unrecognised failure is more useful verbatim than flattened.
+
+The reason it stayed hidden so long is worth knowing. `isTankEmpty` looked for
+the text "insufficientbalance", and that text never appears. Measured against a
+local chain with a drained tank, ethers raises:
+
+```
+execution reverted (unknown custom error) (action="estimateGas", data="0xf4d678b8", revert=null)
+```
+
+Gas estimation fails at the PROVIDER, which has no ABI, so declaring the custom
+errors on the contract does not give this one a name either. The selector in
+`error.data` is all that survives. `revertNameOf` reads it against a table whose
+every entry a test recomputes from its signature, and also scans the message
+text, which is the Amoy path: there the relay runs on the server and the browser
+receives a string rather than an error object.
 
 ## Switching between the two views of an election
 
@@ -688,6 +828,48 @@ computes the hash at creation and the backend recomputes it at enrollment, in
 processes that never talk to each other about it. Any drift surfaces as a policy
 that "does not match its published hash", which is exactly the alarm it should
 raise, and both copies are one small deliberately boring function.
+
+## Shared pieces added along the way
+
+Four modules exist because the same need turned up in more than one screen, and
+a second copy of any of them would have been a second thing to drift.
+
+- **`lib/ballotNames.ts`** decides when two ballot options are the same option:
+  NFC, collapsed whitespace, lowercase, accents left alone. Used by the wizard,
+  by `createElection`, and by `fetchElection`, which is the only one of the three
+  that cannot be bypassed.
+- **`lib/voterSession.ts`** parks what `GET /api/me` says about the voter's own
+  World ID level. A display hint, never a boundary: the binding check reads the
+  level out of the signed credential, server side.
+- **`lib/phase.ts`** gained `endsSoon` and `ENDS_SOON_MS`. The rule lived twice,
+  once in the elections page and once as a bare `3600_000` inside `Countdown`.
+  They agreed by luck.
+- **`components/ui/ExpandableText.tsx`** keeps the first lines of a long
+  description and hides the rest. It MEASURES rather than counting characters:
+  whether text overflows four lines depends on the font, the language and the
+  window, so a character threshold would offer "show more" on text that was
+  already whole.
+
+`lib/deployments.ts` also gained `explorerTxUrl` and `explorerAddressUrl`.
+Five screens hardcoded `amoy.polygonscan.com`, which is right on exactly one of
+the networks this app runs against; on the local chain a voter got a confident
+"View on PolygonScan" button leading to an explorer that had never heard of their
+transaction. They return `null` where a chain has no explorer, and the callers
+render nothing rather than a dead link.
+
+## Long text, and text that cannot wrap
+
+A title is up to 100 characters and a description up to 2000, and nothing forces
+either to contain a space. One unbroken token cannot wrap by default, so it
+pushed the page wider than the viewport and left a horizontal scrollbar under
+everything. `break-words` on all five views that show a title or a description,
+plus `min-w-0` inside the flex row on the receipt card: a flex item will not
+shrink below its content, so wrapping alone does nothing until the item is
+allowed to be narrower than the word.
+
+The organizer view never rendered the description at all. It went from the title
+straight to the counters, so the one person able to correct a description was the
+only one never shown it.
 
 ## Extra env (Phase B)
 

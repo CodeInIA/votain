@@ -40,6 +40,19 @@ const { ethers } = await network.connect();
  */
 const LIVE_ONLY = process.env.SEED_LIVE_ONLY === "1";
 
+/**
+ * Build only the elections whose name contains one of these, comma separated.
+ *
+ * The seed is not idempotent: running it again against a chain that already has
+ * it produces a second copy of all twenty. That makes adding one election to an
+ * already-seeded local chain awkward enough that the alternative is throwing the
+ * chain away, which also throws away every voter registration on it.
+ */
+const ONLY = (process.env.SEED_ONLY ?? "")
+  .split(",")
+  .map(part => part.trim().toLowerCase())
+  .filter(Boolean);
+
 const HOUR = 3600;
 const DAY = 24 * HOUR;
 const COUNTER_BASE = 1_000_000n;
@@ -104,8 +117,16 @@ interface Spec {
   enrollTo: number;
   voteFrom: number;
   voteTo: number;
-  /// Which option each seeded voter picks. Length = number of voters.
+  /// Which option each seeded voter picks. Length = number of voters who VOTE.
   ballots?: number[];
+  /**
+   * How many voters enrol, when that is more than the number who vote.
+   *
+   * Without it the seed can only produce elections at 100% turnout, because it
+   * enrols exactly the voters it is about to make vote. Every partially voted
+   * election, which is what a live one looks like, was unrepresentable.
+   */
+  enrollCount?: number;
   /// One voter changes their mind: [voterIndex, replacementOption].
   revote?: [number, number];
   /// What to do once voting closes.
@@ -122,6 +143,9 @@ interface Spec {
 }
 
 interface EligibilityPolicy {
+  /** How distinct a human the election insists a voter is. Absent means
+   *  `document` when attributes are named, `device` when nothing is. */
+  personhood?: "device" | "document" | "orb";
   minAge?: number;
   allowedCountries?: string[];
   blockedCountries?: string[];
@@ -141,6 +165,9 @@ function canonicalPolicy(policy: EligibilityPolicy): EligibilityPolicy {
   if (policy.minAge !== undefined) ordered.minAge = policy.minAge;
   if (policy.allowedCountries?.length) ordered.allowedCountries = [...policy.allowedCountries].sort();
   if (policy.blockedCountries?.length) ordered.blockedCountries = [...policy.blockedCountries].sort();
+  // Last, matching backend and frontend: policies written before this field
+  // existed have to keep serialising to the bytes their hash commits to.
+  if (policy.personhood) ordered.personhood = policy.personhood;
   return ordered;
 }
 
@@ -151,6 +178,7 @@ function canonicalPolicyJson(policy: EligibilityPolicy): string {
 const ENROLL_ATTESTATION_TYPES = {
   EnrollAttestation: [
     { name: "identityCommitment", type: "uint256" },
+    { name: "personhoodNullifier", type: "uint256" },
     { name: "deadline", type: "uint256" },
   ],
 } as const;
@@ -216,18 +244,46 @@ async function main(): Promise<void> {
     // created live, voted on, and only then advanced past their voteEnd so the
     // tally can be published. Those jumps accumulate to roughly two days and
     // never come back, since a chain clock only moves forward.
+    if (ONLY.length > 0 && !ONLY.some(part => raw.name.toLowerCase().includes(part))) {
+      return;
+    }
+
     if (LIVE_ONLY && (raw.finish || raw.cancelImmediately)) {
       console.log(`SKIP ${raw.name}  (live-only seed)`);
       return;
     }
 
     // Casting a ballot needs the vote window open, so the clock is advanced to
-    // reach it. With the finished elections gone that is the only thing left
-    // moving it, and an hour of it puts every date the organizer picks an hour
-    // out of reach for no benefit. Compressing the window keeps the election
-    // ACTIVE with real ballots in it at a couple of minutes of drift.
-    const spec: Spec =
-      LIVE_ONLY && raw.ballots ? { ...raw, enrollTo: 120, voteFrom: 120 } : raw;
+    // reach it, and a chain clock only moves forward. Two of these specs open
+    // voting three days out, which cost three days of drift each and put every
+    // date an organizer would pick six days out of reach.
+    //
+    // Compressed for ANY spec that casts a ballot, not only under LIVE_ONLY. An
+    // election that already has votes in it necessarily had its window open, so
+    // how long ago that happened is not visible anywhere: it is still ACTIVE and
+    // still ends when `voteTo` says, which is left alone.
+    let spec: Spec = raw.ballots ? { ...raw, enrollTo: 120, voteFrom: 120 } : raw;
+
+    // A FINISHED election is compressed always, and this is what makes seeding
+    // every phase compatible with a chain clock that still matches the wall.
+    //
+    // Publishing a tally means advancing past `voteTo`, and a chain clock only
+    // moves forward, so each of these specs used to cost its whole window: at
+    // three hours apiece across seven of them, roughly two days of drift that
+    // never came back. The window of an election that is already closed carries
+    // no information, though. Nobody can see it, nothing in the app reads it,
+    // and the tally is identical either way. Seconds do the same job as hours.
+    //
+    // Sized by the work that happens INSIDE each window, not by the wall clock.
+    // Every transaction mines a block, and a block is stamped at least a second
+    // after its parent, so enrolling five voters consumes five seconds of chain
+    // time however fast the machine is. Two earlier attempts at this were too
+    // tight and every enrollment reverted with `EnrollmentNotOpen`. The
+    // advances below also step 60 seconds into each window, which sets the
+    // floor.
+    if (spec.finish) {
+      spec = { ...spec, enrollFrom: -30, enrollTo: 60, voteFrom: 60, voteTo: 150 };
+    }
 
     const organizer = signers[spec.organizerAccount ?? 0];
     step(`${spec.name}: generating Paillier key`);
@@ -301,9 +357,13 @@ async function main(): Promise<void> {
     }
 
     // Enrolment, relayed exactly as the app does it.
-    step(`  enrolling ${spec.ballots.length} voters and casting ballots`);
+    // Everyone enrolled is a member of the Semaphore group and so of the merkle
+    // tree the proofs are built against; only the first `ballots.length` of
+    // them go on to cast one.
+    const enrolling = Math.max(spec.enrollCount ?? spec.ballots.length, spec.ballots.length);
+    step(`  enrolling ${enrolling} voters, ${spec.ballots.length} casting ballots`);
     await advanceTo(created + spec.enrollFrom + 60);
-    const participants = voters.slice(0, spec.ballots.length);
+    const participants = voters.slice(0, enrolling);
     for (const v of participants) {
       if (!spec.eligibility) {
         await (await paymaster.relayEnroll(address, v.commitment)).wait();
@@ -314,13 +374,25 @@ async function main(): Promise<void> {
       // one, but it holds the key the election trusts, so it can sign the same
       // attestation the relay would have signed afterwards.
       const deadline = (await chainNow()) + 900;
+      // Stands in for the nullifier a document proof would yield: distinct per
+      // seeded voter, so each enrolls once and the contract's reuse check sees
+      // the same shape it will see in production.
+      const personhoodNullifier =
+        BigInt(ethers.keccak256(ethers.toUtf8Bytes(`seed-personhood-${address}-${v.commitment}`))) >> 8n;
+
       const signature = await (attesterWallet as Wallet).signTypedData(
         { name: "VotainElection", version: "1", chainId, verifyingContract: address },
         ENROLL_ATTESTATION_TYPES as unknown as Record<string, Array<{ name: string; type: string }>>,
-        { identityCommitment: v.commitment, deadline },
+        { identityCommitment: v.commitment, personhoodNullifier, deadline },
       );
       await (
-        await paymaster.relayEnrollAttested(address, v.commitment, deadline, signature)
+        await paymaster.relayEnrollAttested(
+          address,
+          v.commitment,
+          personhoodNullifier,
+          deadline,
+          signature,
+        )
       ).wait();
     }
 
@@ -684,6 +756,31 @@ async function main(): Promise<void> {
     tags: ["restricted", "test-me"],
   });
 
+  // Personhood without attributes: the voter scans a document and nothing about
+  // it is checked or revealed, the scan being there only to make two
+  // enrollments behind one document impossible. Nothing else in this seed
+  // covers a policy whose only rule is the level itself.
+  await build({
+    name: "Neighbourhood Budget - One Person One Vote",
+    organizerName: "Asociacion Vecinal",
+    description:
+      "No age or nationality rule. Voters prove they hold a real identity document, which is what stops one person enrolling twice behind two World ID accounts.",
+    votingType: VotingType.SIMPLE_PLURALITY,
+    thresholdValue: 0n,
+    candidates: [
+      { name: "Repave the square" },
+      { name: "New lighting" },
+      { name: "Playground" },
+    ],
+    enrollFrom: -HOUR,
+    enrollTo: 3 * DAY,
+    voteFrom: 3 * DAY,
+    voteTo: 6 * DAY,
+    ballots: [0, 2],
+    eligibility: { personhood: "document" },
+    tags: ["restricted", "test-me"],
+  });
+
   await build({
     name: "Youth Assembly - Age Restricted Ballot",
     organizerName: "Consejo de la Juventud",
@@ -698,6 +795,75 @@ async function main(): Promise<void> {
     voteTo: 8 * DAY,
     eligibility: { minAge: 18 },
     tags: ["restricted", "age-only"],
+  });
+
+  // Four live elections whose only purpose is to span the participation bar,
+  // from a quarter to full. Everything else in this seed is either untouched or
+  // fully voted, so the bar had exactly two appearances to be judged by.
+  for (const turnout of [
+    { name: "Colegio de Arquitectos - Quarter Turnout", enrolled: 4, voted: 1 },
+    { name: "Federacion Deportiva - Half Turnout", enrolled: 4, voted: 2 },
+    { name: "Camara de Comercio - Two Thirds Turnout", enrolled: 6, voted: 4 },
+    { name: "Circulo de Bellas Artes - Full Turnout", enrolled: 3, voted: 3 },
+  ]) {
+    await build({
+      name: turnout.name,
+      organizerName: "Votain Demo",
+      description: `Open for voting with ${turnout.voted} of ${turnout.enrolled} enrolled voters having cast a ballot, to show the participation bar part way along.`,
+      votingType: VotingType.SIMPLE_PLURALITY,
+      thresholdValue: 0n,
+      candidates: [{ name: "Option A" }, { name: "Option B" }],
+      enrollFrom: -HOUR,
+      enrollTo: 120,
+      voteFrom: 120,
+      voteTo: 9 * DAY,
+      enrollCount: turnout.enrolled,
+      ballots: Array.from({ length: turnout.voted }, (_, i) => i % 2),
+      tags: ["turnout-demo"],
+    });
+  }
+
+  // The highest bar, and the one nothing else in this seed reaches. `orb` means
+  // a document AND an Orb-verified World ID: the document nullifier is still
+  // what the contract deduplicates on, and the Orb is checked against the level
+  // recorded in the voter's own credential at sign-in.
+  await build({
+    name: "Colegio de Medicos - Orb Verified Board Election",
+    organizerName: "Colegio Oficial de Medicos",
+    description:
+      "Enrollment is open and demands the strongest personhood available: an identity document plus an Orb-verified World ID. Nothing about age or nationality is asked.",
+    votingType: VotingType.SIMPLE_PLURALITY,
+    thresholdValue: 0n,
+    candidates: [
+      { name: "Dra. Elena Ruiz" },
+      { name: "Dr. Marc Soler" },
+      { name: "Dra. Nuria Vidal" },
+    ],
+    enrollFrom: -HOUR,
+    enrollTo: 5 * DAY,
+    voteFrom: 5 * DAY,
+    voteTo: 9 * DAY,
+    eligibility: { personhood: "orb" },
+    tags: ["restricted", "orb"],
+  });
+
+  // The same level with an attribute rule on top, which is the combination that
+  // asks the most of a voter: an Orb, a document, and a predicate proved from it.
+  await build({
+    name: "Consejo General - Orb and Age Restricted",
+    organizerName: "Consejo General del Poder Ciudadano",
+    description:
+      "Open for enrollment. Demands an Orb-verified World ID and an identity document proving the voter is over 18, which is the strictest combination the platform can express.",
+    votingType: VotingType.ABSOLUTE_MAJORITY,
+    thresholdValue: 0n,
+    candidates: [{ name: "Approve" }, { name: "Reject" }],
+    enrollFrom: -HOUR,
+    enrollTo: 6 * DAY,
+    voteFrom: 6 * DAY,
+    voteTo: 10 * DAY,
+    organizerAccount: 2,
+    eligibility: { personhood: "orb", minAge: 18 },
+    tags: ["restricted", "orb", "age"],
   });
 
   await build({

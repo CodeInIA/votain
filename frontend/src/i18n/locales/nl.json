@@ -75,7 +75,9 @@
     "all": "Alles",
     "yes": "Ja",
     "no": "Nee",
-    "clear": "Wissen"
+    "clear": "Wissen",
+    "show_more": "Meer tonen",
+    "show_less": "Minder tonen"
   },
   "nav": {
     "discover": "Ontdekken",
@@ -87,7 +89,8 @@
     "verified_voter": "Geverifieerde kiezer",
     "dashboard": "Dashboard",
     "members": "Leden",
-    "gas": "Gas"
+    "gas": "Gas",
+    "verify": "Stem verifiëren"
   },
   "phase": {
     "enrolling": "Inschrijving",
@@ -170,7 +173,8 @@
     "starts_in": "Begint over",
     "verified_on_chain": "Geverifieerd op de blockchain",
     "view_as_voter": "Bekijk als kiezer",
-    "view_as_organizer": "Bekijk als organisator"
+    "view_as_organizer": "Bekijk als organisator",
+    "turnout_detail": "{{voted}} van {{total}} ingeschreven kiezers hebben gestemd"
   },
   "how": {
     "title": "Hoe Votain werkt",
@@ -198,10 +202,10 @@
     "not_available": "Resultaten nog niet beschikbaar."
   },
   "verify_receipt": {
-    "title": "Verifieer je stem",
-    "subtitle": "Voer je referentienummer of nullifier in om te bevestigen dat je stem is geregistreerd.",
+    "title": "Een stem verifiëren",
+    "subtitle": "Voer een referentienummer of nullifier in om te bevestigen dat een stem op de chain is vastgelegd.",
     "placeholder": "Referentienummer of nullifier…",
-    "hint": "Je referentienummer werd getoond nadat je had gestemd.",
+    "hint": "Het referentienummer verschijnt na het stemmen, en opnieuw in de geschiedenis.",
     "found": "Stem geregistreerd",
     "not_found": "Niet gevonden",
     "not_found_desc": "Geen overeenkomende stem gevonden. Controleer je referentienummer.",
@@ -210,7 +214,11 @@
     "vote_recorded": "On-chain geregistreerd",
     "reference": "Referentie",
     "nullifier": "Nullifier",
-    "date": "Datum"
+    "date": "Datum",
+    "ballots": "Uitgebrachte stemmen",
+    "choice_never_shown": "De chain legt vast DAT er gestemd is en wanneer, nooit wat er gestemd werd. Niemand kan de keuze uit een bewijs lezen, wij ook niet.",
+    "your_receipts": "Jouw bewijzen",
+    "unlock_hint": "Deze browser kent nog geen stem. Als je vanaf een ander apparaat hebt gestemd, vindt één passkey-tik ze en onthoudt ze hier."
   },
   "voter_elections": {
     "title": "Mijn Verkiezingen",
@@ -232,7 +240,8 @@
     "desc": "Je stem is geregistreerd op de blockchain. Gebruik je referentienummer om het op elk moment te verifiëren.",
     "reference": "Referentienummer",
     "view_tx": "Bekijk op PolygonScan",
-    "back_elections": "Terug naar verkiezingen"
+    "back_elections": "Terug naar verkiezingen",
+    "check_receipt": "Mijn bewijs controleren"
   },
   "change_vote": {
     "title": "Je stem wijzigen",
@@ -247,7 +256,10 @@
     "title": "Stemgeschiedenis",
     "subtitle": "Alle verkiezingen waaraan je hebt deelgenomen",
     "export": "CSV exporteren",
-    "empty": "Je hebt nog niet gestemd in een verkiezing."
+    "empty": "Je hebt nog niet gestemd in een verkiezing.",
+    "verify": "Dit bewijs verifiëren",
+    "see_all": "Al mijn stemmen tonen",
+    "partial_view": "Getoond worden de stemmen die deze browser kent: die hier zijn uitgebracht, plus wat een eerdere ontgrendeling vond. Ontgrendel om te zoeken naar stemmen van een ander apparaat."
   },
   "reverify": {
     "title": "Herstel je stemidentiteit",
@@ -321,8 +333,6 @@
     "candidate_desc": "Korte beschrijving",
     "add_candidate": "Kandidaat toevoegen",
     "blank_vote_note": "Een blanco stemoptie wordt altijd automatisch toegevoegd.",
-    "require_orb": "Orb-verificatie vereisen",
-    "require_orb_desc": "Kiezers moeten zich in persoon verifiëren bij een World ID-Orb, niet alleen op hun apparaat. Wordt kiezers getoond als toegangsvoorwaarde.",
     "privacy_quorum": "Privacyquorum",
     "quorum_hint": "Minimum stemmen vereist voordat resultaten worden onthuld.",
     "deposit_hint": "Optioneel. Vult je gedeelde gasvoorraad aan, die de transactiekosten van de kiezers van AL je verkiezingen betaalt.",
@@ -357,7 +367,15 @@
     "nationality_reveal_note": "Alleen bepaalde landen toestaan dwingt de kiezer zijn nationaliteit prijs te geven, omdat het bewijssysteem enkel uitsluitingen kan uitdrukken. Landen blokkeren niet: dat antwoordt ja of nee zonder het land te noemen.",
     "countries_allowed": "Toegestane landen",
     "countries_blocked": "Geblokkeerde landen",
-    "country_picker_hint": "Zoek en kies landen. Maximaal {{max}}."
+    "country_picker_hint": "Zoek en kies landen. Maximaal {{max}}.",
+    "personhood": "Bewijs dat je een persoon bent",
+    "personhood_desc": "Hoe zeker deze verkiezing moet weten dat twee inschrijvingen twee verschillende mensen zijn.",
+    "personhood_device": "Een World ID-account",
+    "personhood_device_desc": "Eén account, één stem. Snel, en net zoveel waard als een account: wie er een tweede heeft, schrijft zich twee keer in.",
+    "personhood_document": "Een identiteitsdocument (aanbevolen)",
+    "personhood_document_desc": "De kiezer bewijst een paspoort of identiteitskaart op de eigen telefoon. Er wordt niets over het document prijsgegeven, en een tweede inschrijving met hetzelfde document wordt geweigerd.",
+    "personhood_orb": "Een identiteitsdocument en een World ID Orb",
+    "personhood_orb_desc": "De hoogste en tegelijk smalste lat: Orb-verificatie is niet beschikbaar in landen waar de Orbs zijn weggehaald, en die kiezers kunnen zich niet inschrijven."
   },
   "election_mgmt": {
     "actions": "Acties",
@@ -462,7 +480,14 @@
     "not_found": "Pagina niet gevonden",
     "not_found_desc": "De pagina die je zoekt bestaat niet of is verplaatst.",
     "go_home": "Naar home",
-    "generic_title": "Er ging iets mis"
+    "generic_title": "Er ging iets mis",
+    "gas_tank_empty": "De gasvoorraad van de organisator is leeg, dus deze verkiezing kan de kosten van je inschrijving niet betalen. Het ligt niet aan jou: vraag om bij te vullen en probeer het opnieuw.",
+    "enrollment_closed": "De inschrijving voor deze verkiezing is gesloten.",
+    "already_enrolled": "Deze identiteit is al ingeschreven voor deze verkiezing.",
+    "personhood_used": "Dit identiteitsdocument is al gebruikt om je in te schrijven voor deze verkiezing.",
+    "not_platform_verified": "Je account is niet geverifieerd op het platform.",
+    "attestation_required": "Deze verkiezing vereist een geschiktheidscontrole voordat je je kunt inschrijven.",
+    "attestation_expired": "Je goedkeuring is verlopen. Verifieer jezelf opnieuw."
   },
   "demo": {
     "banner": "Demogegevens: geen contracten uitgerold. Niets hiervan staat on-chain."
@@ -487,7 +512,8 @@
     "min_age_range": "De minimumleeftijd moet tussen {{min}} en {{max}} liggen",
     "country_list_empty": "Voeg minstens één landcode toe",
     "country_list_long": "Maximaal {{max}} landen",
-    "eligibility_empty": "Stel een leeftijds- of nationaliteitsregel in, of zet de beperking uit"
+    "eligibility_empty": "Stel een leeftijds- of nationaliteitsregel in, of zet de beperking uit",
+    "candidate_blank_clash": "Die naam is al de blanco-stemoptie, die op elk stembiljet staat"
   },
   "devices": {
     "title": "Mijn apparaten",
@@ -601,7 +627,15 @@
     "mobile_return_hint": "Self brengt je hierna terug naar deze pagina.",
     "requirements_unknown": "De deelnamevoorwaarden van deze verkiezing konden niet worden gecontroleerd. Probeer het opnieuw.",
     "world_id_orb": "World ID geverifieerd met Orb",
-    "world_id_device": "World ID geverifieerd (apparaat volstaat)"
+    "world_id_device": "World ID geverifieerd (apparaat volstaat)",
+    "personhood_document": "Identiteitsdocument vereist",
+    "personhood_orb": "Identiteitsdocument en World ID Orb vereist",
+    "personhood_document_short": "Document",
+    "personhood_orb_short": "Orb",
+    "personhood_document_hint": "Je bewijst je paspoort of identiteitskaart vanaf je telefoon.",
+    "personhood_orb_hint": "Je bewijst een identiteitsdocument vanaf je telefoon, en je World ID moet met een Orb geverifieerd zijn.",
+    "error_orb_required": "Deze verkiezing accepteert alleen kiezers met een Orb-geverifieerde World ID. Log uit en log opnieuw in met een Orb-geverifieerde World ID.",
+    "error_session_expired": "De verificatie duurde te lang en is verlopen. Begin opnieuw."
   },
   "country_picker": {
     "placeholder": "Zoek een land…",

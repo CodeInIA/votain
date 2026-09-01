@@ -75,7 +75,9 @@
     "all": "すべて",
     "yes": "賛成",
     "no": "反対",
-    "clear": "消去"
+    "clear": "消去",
+    "show_more": "もっと見る",
+    "show_less": "折りたたむ"
   },
   "nav": {
     "discover": "探す",
@@ -87,7 +89,8 @@
     "verified_voter": "確認済み投票者",
     "dashboard": "ダッシュボード",
     "members": "メンバー",
-    "gas": "Gas"
+    "gas": "Gas",
+    "verify": "投票を確認"
   },
   "phase": {
     "enrolling": "登録中",
@@ -169,7 +172,8 @@
     "starts_in": "開始まで",
     "verified_on_chain": "ブロックチェーンで検証済み",
     "view_as_voter": "投票者として表示",
-    "view_as_organizer": "主催者として表示"
+    "view_as_organizer": "主催者として表示",
+    "turnout_detail": "登録者 {{total}} 人のうち {{voted}} 人が投票しました"
   },
   "how": {
     "title": "Votainの仕組み",
@@ -197,10 +201,10 @@
     "not_available": "結果はまだ利用できません。"
   },
   "verify_receipt": {
-    "title": "投票を確認",
-    "subtitle": "参照番号またはnullifierを入力して、投票が記録されたことを確認してください。",
-    "placeholder": "参照番号またはnullifier…",
-    "hint": "参照番号は投票後に表示されました。",
+    "title": "投票を確認する",
+    "subtitle": "受付番号またはヌリファイアを入力すると、その投票がチェーンに記録されたか確認できます。",
+    "placeholder": "受付番号またはヌリファイア…",
+    "hint": "受付番号は投票後に表示され、投票履歴にも残ります。",
     "found": "投票記録済み",
     "not_found": "見つかりません",
     "not_found_desc": "一致する投票が見つかりませんでした。参照番号を確認してください。",
@@ -209,7 +213,11 @@
     "vote_recorded": "チェーンに記録済み",
     "reference": "参照",
     "nullifier": "Nullifier",
-    "date": "日付"
+    "date": "日付",
+    "ballots": "投じられた票",
+    "choice_never_shown": "チェーンに残るのは投票が行われた事実と日時だけで、内容は残りません。受領証から選択を読み取れる人はいません。私たちも同じです。",
+    "your_receipts": "あなたの受領証",
+    "unlock_hint": "このブラウザはまだどの票も把握していません。別の端末から投票した場合は、パスキーの操作一度でそれらを見つけ、ここに記憶します。"
   },
   "voter_elections": {
     "title": "マイ選挙",
@@ -230,7 +238,8 @@
     "desc": "あなたの投票はブロックチェーンに記録されました。参照番号を使っていつでも確認できます。",
     "reference": "参照番号",
     "view_tx": "PolygonScanで表示",
-    "back_elections": "選挙一覧に戻る"
+    "back_elections": "選挙一覧に戻る",
+    "check_receipt": "受領証を確認する"
   },
   "change_vote": {
     "title": "投票を変更",
@@ -245,7 +254,10 @@
     "title": "投票履歴",
     "subtitle": "参加したすべての選挙",
     "export": "CSVエクスポート",
-    "empty": "まだ投票していません。"
+    "empty": "まだ投票していません。",
+    "verify": "この受領証を確認",
+    "see_all": "すべての投票を表示",
+    "partial_view": "このブラウザが把握している票を表示しています。ここから投じた票と、前回のロック解除で見つかった票です。他の端末から投じた票を探すにはロックを解除してください。"
   },
   "reverify": {
     "title": "投票用 ID を復旧する",
@@ -319,8 +331,6 @@
     "candidate_desc": "簡単な説明",
     "add_candidate": "候補者を追加",
     "blank_vote_note": "白票オプションは常に自動的に含まれます。",
-    "require_orb": "Orb確認を要求",
-    "require_orb_desc": "有権者は端末だけでなく、World ID の Orb で対面の確認を受ける必要があります。参加条件として有権者に表示されます。",
     "privacy_quorum": "プライバシー定足数",
     "quorum_hint": "結果を公開するために必要な最低投票数。",
     "deposit_hint": "任意です。共有ガス残高に加算され、あなたのすべての選挙の投票者の手数料に使われます。",
@@ -355,7 +365,15 @@
     "nationality_reveal_note": "特定の国のみを許可すると、有権者は国籍を開示することになります。証明の仕組みが除外しか表現できないためです。国を除外する場合はそうなりません。国名を明かさずに可否だけを答えます。",
     "countries_allowed": "許可する国",
     "countries_blocked": "除外する国",
-    "country_picker_hint": "国を検索して選択します。最大 {{max}} か国。"
+    "country_picker_hint": "国を検索して選択します。最大 {{max}} か国。",
+    "personhood": "本人であることの証明",
+    "personhood_desc": "2件の登録が別々の人物であることを、この選挙がどこまで確かめる必要があるか。",
+    "personhood_device": "World ID アカウント",
+    "personhood_device_desc": "1アカウント1票。手軽ですが、価値はアカウント1つ分です。2つ目を持つ人は2回登録できます。",
+    "personhood_document": "本人確認書類（推奨）",
+    "personhood_document_desc": "有権者が自分の端末でパスポートまたは身分証明書を証明します。書類の内容は一切開示されず、同じ書類による2回目の登録は拒否されます。",
+    "personhood_orb": "本人確認書類と World ID Orb",
+    "personhood_orb_desc": "最も高く、最も狭い基準です。Orb が撤収された国では検証を受けられず、その有権者は登録できません。"
   },
   "election_mgmt": {
     "actions": "アクション",
@@ -458,7 +476,14 @@
     "not_found": "ページが見つかりません",
     "not_found_desc": "お探しのページは存在しないか、移動されました。",
     "go_home": "ホームへ",
-    "generic_title": "問題が発生しました"
+    "generic_title": "問題が発生しました",
+    "gas_tank_empty": "主催者のガス残高が尽きているため、この選挙はあなたの登録手数料を負担できません。あなたに問題はありません。補充を依頼してから、もう一度お試しください。",
+    "enrollment_closed": "この選挙の登録は締め切られています。",
+    "already_enrolled": "この識別子はすでにこの選挙に登録されています。",
+    "personhood_used": "この本人確認書類はすでにこの選挙の登録に使用されています。",
+    "not_platform_verified": "あなたのアカウントはプラットフォームで確認されていません。",
+    "attestation_required": "この選挙では、登録の前に資格確認が必要です。",
+    "attestation_expired": "資格の承認の有効期限が切れました。もう一度確認を行ってください。"
   },
   "demo": {
     "banner": "デモデータ：コントラクト未デプロイ。ここにあるものはオンチェーンではありません。"
@@ -483,7 +508,8 @@
     "min_age_range": "最低年齢は {{min}} 以上 {{max}} 以下にしてください",
     "country_list_empty": "国コードを少なくとも1つ追加してください",
     "country_list_long": "国は最大 {{max}} 件までです",
-    "eligibility_empty": "年齢または国籍の条件を設定するか、制限をオフにしてください"
+    "eligibility_empty": "年齢または国籍の条件を設定するか、制限をオフにしてください",
+    "candidate_blank_clash": "その名前は、すべての投票用紙に含まれる白票の選択肢とすでに同じです"
   },
   "devices": {
     "title": "マイデバイス",
@@ -597,7 +623,15 @@
     "mobile_return_hint": "完了すると Self がここに戻します。",
     "requirements_unknown": "この選挙の参加条件を確認できませんでした。もう一度お試しください。",
     "world_id_orb": "World ID を Orb で確認済み",
-    "world_id_device": "World ID 確認済み（端末のみで可）"
+    "world_id_device": "World ID 確認済み（端末のみで可）",
+    "personhood_document": "本人確認書類が必要",
+    "personhood_orb": "本人確認書類と World ID Orb が必要",
+    "personhood_document_short": "書類",
+    "personhood_orb_short": "Orb",
+    "personhood_document_hint": "端末からパスポートまたは身分証明書を証明します。",
+    "personhood_orb_hint": "端末から本人確認書類を証明し、World ID が Orb で検証済みである必要があります。",
+    "error_orb_required": "この選挙は World ID が Orb で認証された有権者のみを受け付けます。サインアウトし、Orb 認証済みの World ID でサインインし直してください。",
+    "error_session_expired": "確認に時間がかかりすぎ、有効期限が切れました。もう一度やり直してください。"
   },
   "country_picker": {
     "placeholder": "国を検索…",

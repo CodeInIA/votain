@@ -71,6 +71,31 @@ The domain separator is built by hand rather than inherited from OpenZeppelin's
 need a Cancun target, and retargeting the whole codebase to get a domain
 separator would be a deployment decision taken for a formatting convenience.
 
+### The personhood nullifier, and why `enrolledHumans` was not enough
+
+`enrolledHumans` deduplicates on the World ID nullifier. That means one HUMAN
+only while sign-in demands an Orb. It no longer does: Orbs were withdrawn from
+Spain and World ID's document credential is not issued there yet, so sign-in
+accepts whatever a voter has and that nullifier now identifies an ACCOUNT.
+Somebody with two of them holds two.
+
+A gated election therefore carries a second nullifier through
+`enrollAttested(commitment, personhoodNullifier, deadline, signature)`, recorded
+in `usedPersonhoodNullifiers`. It comes from a document read by the voter's own
+phone, so one person yields one value however many accounts they hold, and it is
+scoped to the election, so it says nothing about that voter anywhere else.
+
+Four properties the contract enforces rather than trusts:
+
+- **Zero is refused.** `MissingPersonhoodNullifier`. Otherwise a relay bug, or a
+  relay under pressure, could enroll everyone under "none available".
+- **Reuse is refused.** `PersonhoodNullifierUsed`, checked before `_enroll`, so
+  a second account belonging to the same person is turned away.
+- **The signature covers it.** It is in the EIP-712 typehash, so a relay cannot
+  present a different nullifier than the attester approved.
+- **It is stored, not merely checked.** The relay has no durable memory, and a
+  restart must not reopen a closed door.
+
 ### The optimizer now runs in the default profile too
 
 `ElectionFactory` embeds `ElectionV4`'s creation code. Unoptimized it sits past
@@ -107,13 +132,28 @@ and those jumps add up to roughly two days. A chain clock only goes forward, so 
 stays ahead of the wall clock and the create wizard, which validates against
 `block.timestamp`, refuses every date an organizer would naturally pick.
 
-Set `SEED_LIVE_ONLY=1` to seed only the elections still running, which leaves the clock
-about three minutes ahead. The cost is having no closed, tallying or cancelled elections
-to look at. Resyncing afterwards is impossible: restart the node and redeploy.
+Most of that drift is gone. The window of an election that is already closed carries no
+information, so those specs are compressed to seconds, and the two live elections that
+opened their vote window three days out are compressed the same way. A full seed now lands
+roughly an hour ahead of the wall clock rather than a week, with every phase present.
+
+The remaining hour is the floor: the advances step 60 seconds into each window to land
+safely inside it, and every transaction mines a block at least a second after its parent,
+so enrolling five voters spends five seconds of chain time however fast the machine is.
+
+`SEED_LIVE_ONLY=1` still skips the finished elections entirely, for a clock within minutes
+of the wall at the cost of having nothing closed, tallying or cancelled to look at.
+`SEED_ONLY` builds only the elections whose name contains one of a comma-separated list,
+which is how a new election is added to a chain that is already seeded: the seed is not
+idempotent, so running it again produces a second copy of everything, and the alternative
+is destroying the chain along with every registration on it.
+
+Resyncing a drifted clock afterwards is impossible: restart the node and redeploy.
 
 ```bash
-SEED_LIVE_ONLY=1 npm run seed:local          # bash
-$env:SEED_LIVE_ONLY=1; npm run seed:local    # PowerShell
+SEED_LIVE_ONLY=1 npm run seed:local                      # bash
+$env:SEED_LIVE_ONLY=1; npm run seed:local                # PowerShell
+SEED_ONLY="Orb Verified Board" npm run seed:local        # just one election
 ```
 
 The deploy script writes `deployments/<network>.json` AND mirrors it into

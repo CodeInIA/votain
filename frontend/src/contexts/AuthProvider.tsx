@@ -1,6 +1,7 @@
 import { useState, useEffect, type ReactNode } from 'react';
 import { hasPrfCredential } from '../lib/passkeyPrf';
 import { clearIdentity } from '../lib/semaphore';
+import { storeVoterPersonhood, clearVoterPersonhood } from '../lib/voterSession';
 import { forgetOrganizerAddress } from '../hooks/useOrganizerWallet';
 import { setOrganizerName } from '../lib/organizer';
 import { AuthContext } from './AuthContext';
@@ -16,7 +17,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // The organizer session is authenticated by their PASSKEY, not by the wallet:
   // the wallet only authorises signing and is summoned lazily when something
   // must be signed. So a stored session is only honoured while a passkey
-  // credential still exists on this device — evaluated up-front to avoid a
+  // credential still exists on this device, evaluated up-front to avoid a
   // flash of logged-in UI.
   //
   // This flag is a UI convenience, never a security boundary: every write is
@@ -51,17 +52,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetch(`${BACKEND_URL}/api/me`, { credentials: 'include', signal: controller.signal })
       .then(async res => {
         if (res.status === 401) {
-          // Definitive "not authenticated" — clear any (possibly spoofed) flag.
+          // Definitive "not authenticated": clear any (possibly spoofed) flag.
           localStorage.removeItem(VOTER_KEY);
           localStorage.removeItem('voter_nullifier');
+          clearVoterPersonhood();
           setVoterLoggedInState(false);
           return null;
         }
-        return res.ok ? (await res.json() as { authenticated?: boolean; nullifier?: string }) : null;
+        return res.ok
+          ? (await res.json() as { authenticated?: boolean; nullifier?: string; personhood?: string })
+          : null;
       })
       .then(data => {
         if (data?.authenticated) {
           if (data.nullifier) localStorage.setItem('voter_nullifier', data.nullifier);
+          // Written on every reconcile, cleared when absent: a voter who signs
+          // in again with a stronger credential must not keep the old answer,
+          // and one whose credential predates the claim must not keep a level
+          // it never carried.
+          storeVoterPersonhood(data.personhood);
           setVoterLoggedIn(true);
         }
       })
@@ -92,6 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const voterSignOut = () => {
     localStorage.removeItem(VOTER_KEY);
     localStorage.removeItem('voter_nullifier');
+    clearVoterPersonhood();
     clearIdentity();
     setVoterLoggedInState(false);
     // Clear the httpOnly VC cookie so /api/me does not restore the session.

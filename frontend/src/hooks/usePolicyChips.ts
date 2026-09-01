@@ -13,12 +13,12 @@
  */
 import { useTranslation } from 'react-i18next';
 import { countryOption } from '../lib/countries';
-import type { EligibilityPolicy } from '../lib/eligibility';
+import { effectivePersonhood, hasAttributeRules, type EligibilityPolicy } from '../lib/eligibility';
 
 /** Beyond this the flags stop being readable and become a smear. */
 const MAX_FLAGS = 3;
 
-export type PolicyChipKind = 'age' | 'allowed' | 'blocked';
+export type PolicyChipKind = 'document' | 'orb' | 'age' | 'allowed' | 'blocked';
 
 export interface PolicyChip {
   kind: PolicyChipKind;
@@ -49,6 +49,22 @@ export function usePolicyChips(policy: EligibilityPolicy | null | undefined): Po
     options(codes).map(c => `${c.flag} ${c.name}`).join(', ');
 
   const chips: PolicyChip[] = [];
+
+  // First, because it decides what counts as a voter at all, where age and
+  // nationality only narrow a field. Shown only when it TELLS the reader
+  // something: `device` is the absence of a requirement, and "document" next to
+  // "18+" is redundant, since proving an age already means scanning one. That
+  // leaves `orb`, which always adds a bar, and `document` standing alone, which
+  // is the whole requirement and would otherwise leave the card blank.
+  const personhood = effectivePersonhood(policy);
+  const attributeRules = hasAttributeRules(policy);
+  if (personhood === 'orb' || (personhood === 'document' && !attributeRules)) {
+    chips.push({
+      kind: personhood,
+      label: t(`eligibility.personhood_${personhood}_short`),
+      title: t(`eligibility.personhood_${personhood}_hint`),
+    });
+  }
 
   if (policy.minAge !== undefined) {
     chips.push({

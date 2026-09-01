@@ -22,6 +22,8 @@ import { hasPublishedResults } from '../../data/seed';
 import { useAuth } from '../../contexts/AuthContext';
 import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
 import { PULSE_PHASES } from '../../lib/phase';
+import { explorerAddressUrl } from '../../lib/deployments';
+import { ExpandableText } from '../../components/ui/ExpandableText';
 
 export default function ElectionPreview() {
   const { id } = useParams<{ id: string }>();
@@ -76,7 +78,7 @@ export default function ElectionPreview() {
   );
 
   /**
-   * The footer CTA depends on the election's phase and — for the live phases —
+   * The footer CTA depends on the election's phase and, for the live phases,
    * on what this voter can actually do next. A terminal phase offers the same
    * thing to everyone, so those are resolved before the auth check.
    */
@@ -97,7 +99,7 @@ export default function ElectionPreview() {
         return infoPanel(t('election.cta_tallying'));
     }
 
-    // Live phases (enrolling / active) — these need a verified identity.
+    // Live phases (enrolling / active): these need a verified identity.
     if (!voterLoggedIn) {
       return (
         <div className="bg-surface-low/30 backdrop-blur-xl rounded-3xl border border-white/5 p-5 flex flex-col sm:flex-row items-center gap-4">
@@ -122,7 +124,7 @@ export default function ElectionPreview() {
     // active
     if (election.hasVoted) return ctaButton(t('election.change_vote'), voterPage);
     if (election.isEnrolled) return ctaButton(t('election.vote_now'), voterPage);
-    // Enrollment closed before this voter joined — they cannot vote here.
+    // Enrollment closed before this voter joined, so they cannot vote here.
     return infoPanel(t('election.cta_not_enrolled'));
   };
 
@@ -146,9 +148,9 @@ export default function ElectionPreview() {
                 full sentences are further down the page; this row is for
                 things you can read at a glance. */}
             <EligibilityChips policy={election?.eligibilityPolicy} />
-            <BlockchainBadge href={`https://amoy.polygonscan.com/address/${election.contractAddress}`} />
+            <BlockchainBadge href={explorerAddressUrl(election.contractAddress) ?? undefined} />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white mb-2">
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white mb-2 break-words">
             {election.title}
           </h1>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -187,7 +189,7 @@ export default function ElectionPreview() {
         {/* Description */}
         <Card className="p-5 mb-4">
           <h2 className="text-sm font-semibold text-on-surface mb-2">{t('election.about')}</h2>
-          <p className="text-sm text-on-surface-variant leading-relaxed">{election.description}</p>
+          <ExpandableText text={election.description} />
           <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-white/5 text-xs text-on-surface-meta">
             <span className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5" />{election.totalEnrolled.toLocaleString()} {t('election.enrolled')}</span>
             <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" />{election.voteEnd.toLocaleDateString()}</span>

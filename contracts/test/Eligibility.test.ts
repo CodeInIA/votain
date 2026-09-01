@@ -39,6 +39,17 @@ function nextCommitment(): { nullifier: bigint; commitment: bigint } {
   return { nullifier: commitmentSeq * 13n, commitment: commitmentSeq };
 }
 
+/**
+ * Stands in for the per-election nullifier a document proof yields. Distinct
+ * from the World ID one on purpose: the whole point is that they are different
+ * facts about the voter, and only this one survives a second account.
+ */
+let personhoodSeq = 900_000n;
+function nextPersonhood(): bigint {
+  personhoodSeq += 1n;
+  return personhoodSeq * 31n;
+}
+
 /// Election that declares an attribute policy attested by `attester`.
 async function gatedElection(overrides = {}): Promise<any> {
   const now = await networkHelpers.time.latest();
@@ -106,6 +117,7 @@ describe("ElectionV4, attested enrollment", () => {
   it("lets a valid attestation enroll, and emits the same event as an open election", async () => {
     const election = await gatedElection();
     const { nullifier, commitment } = nextCommitment();
+    const personhood = nextPersonhood();
     await platformRegister(nullifier, commitment);
 
     const deadline = await futureDeadline();
@@ -114,10 +126,11 @@ describe("ElectionV4, attested enrollment", () => {
       await election.getAddress(),
       chainId,
       commitment,
+      personhood,
       deadline,
     );
 
-    await expect(election.enrollAttested(commitment, deadline, sig)).to.emit(
+    await expect(election.enrollAttested(commitment, personhood, deadline, sig)).to.emit(
       election,
       "MemberEnrolled",
     );
@@ -132,6 +145,7 @@ describe("ElectionV4, attested enrollment", () => {
   it("closes the bypass: plain enroll is refused once a policy is declared", async () => {
     const election = await gatedElection();
     const { nullifier, commitment } = nextCommitment();
+    const personhood = nextPersonhood();
     await platformRegister(nullifier, commitment);
 
     // The whole point of the attester. Before enroll() started checking this,
@@ -146,6 +160,7 @@ describe("ElectionV4, attested enrollment", () => {
   it("refuses an attestation on an election that declares no policy", async () => {
     const election = await openElection();
     const { nullifier, commitment } = nextCommitment();
+    const personhood = nextPersonhood();
     await platformRegister(nullifier, commitment);
 
     const deadline = await futureDeadline();
@@ -154,17 +169,19 @@ describe("ElectionV4, attested enrollment", () => {
       await election.getAddress(),
       chainId,
       commitment,
+      personhood,
       deadline,
     );
 
     await expect(
-      election.enrollAttested(commitment, deadline, sig),
+      election.enrollAttested(commitment, personhood, deadline, sig),
     ).to.be.revertedWithCustomError(election, "UnexpectedAttestation");
   });
 
   it("rejects a signature from anyone other than the declared attester", async () => {
     const election = await gatedElection();
     const { nullifier, commitment } = nextCommitment();
+    const personhood = nextPersonhood();
     await platformRegister(nullifier, commitment);
 
     const deadline = await futureDeadline();
@@ -173,17 +190,19 @@ describe("ElectionV4, attested enrollment", () => {
       await election.getAddress(),
       chainId,
       commitment,
+      personhood,
       deadline,
     );
 
     await expect(
-      election.enrollAttested(commitment, deadline, sig),
+      election.enrollAttested(commitment, personhood, deadline, sig),
     ).to.be.revertedWithCustomError(election, "BadAttestation");
   });
 
   it("rejects an expired attestation", async () => {
     const election = await gatedElection();
     const { nullifier, commitment } = nextCommitment();
+    const personhood = nextPersonhood();
     await platformRegister(nullifier, commitment);
 
     const deadline = (await networkHelpers.time.latest()) + 60;
@@ -192,13 +211,14 @@ describe("ElectionV4, attested enrollment", () => {
       await election.getAddress(),
       chainId,
       commitment,
+      personhood,
       deadline,
     );
 
     await networkHelpers.time.increaseTo(deadline + 1);
 
     await expect(
-      election.enrollAttested(commitment, deadline, sig),
+      election.enrollAttested(commitment, personhood, deadline, sig),
     ).to.be.revertedWithCustomError(election, "AttestationExpired");
   });
 
@@ -208,6 +228,7 @@ describe("ElectionV4, attested enrollment", () => {
     const swapped = nextCommitment();
     await platformRegister(signed.nullifier, signed.commitment);
     await platformRegister(swapped.nullifier, swapped.commitment);
+    const personhood = nextPersonhood();
 
     const deadline = await futureDeadline();
     const sig = await signEnrollAttestation(
@@ -215,24 +236,26 @@ describe("ElectionV4, attested enrollment", () => {
       await election.getAddress(),
       chainId,
       signed.commitment,
+      personhood,
       deadline,
     );
 
     // Recovers to some other address, so it fails as a bad signature rather
     // than silently enrolling a commitment the attester never approved.
     await expect(
-      election.enrollAttested(swapped.commitment, deadline, sig),
+      election.enrollAttested(swapped.commitment, personhood, deadline, sig),
     ).to.be.revertedWithCustomError(election, "BadAttestation");
   });
 
   it("rejects malformed signature bytes instead of reverting inside ECDSA", async () => {
     const election = await gatedElection();
     const { nullifier, commitment } = nextCommitment();
+    const personhood = nextPersonhood();
     await platformRegister(nullifier, commitment);
     const deadline = await futureDeadline();
 
     await expect(
-      election.enrollAttested(commitment, deadline, "0xdeadbeef"),
+      election.enrollAttested(commitment, personhood, deadline, "0xdeadbeef"),
     ).to.be.revertedWithCustomError(election, "BadAttestation");
   });
 
@@ -240,6 +263,7 @@ describe("ElectionV4, attested enrollment", () => {
     const a = await gatedElection();
     const b = await gatedElection();
     const { nullifier, commitment } = nextCommitment();
+    const personhood = nextPersonhood();
     await platformRegister(nullifier, commitment);
 
     const deadline = await futureDeadline();
@@ -248,20 +272,22 @@ describe("ElectionV4, attested enrollment", () => {
       await a.getAddress(),
       chainId,
       commitment,
+      personhood,
       deadline,
     );
 
     // The EIP-712 domain binds the attestation to one verifying contract.
     await expect(
-      b.enrollAttested(commitment, deadline, sigForA),
+      b.enrollAttested(commitment, personhood, deadline, sigForA),
     ).to.be.revertedWithCustomError(b, "BadAttestation");
 
-    await expect(a.enrollAttested(commitment, deadline, sigForA)).to.emit(a, "MemberEnrolled");
+    await expect(a.enrollAttested(commitment, personhood, deadline, sigForA)).to.emit(a, "MemberEnrolled");
   });
 
   it("still deduplicates by human, so one attestation cannot buy two leaves", async () => {
     const election = await gatedElection();
     const { nullifier, commitment } = nextCommitment();
+    const personhood = nextPersonhood();
     await platformRegister(nullifier, commitment);
 
     const deadline = await futureDeadline();
@@ -270,18 +296,128 @@ describe("ElectionV4, attested enrollment", () => {
       await election.getAddress(),
       chainId,
       commitment,
+      personhood,
       deadline,
     );
 
-    await (await election.enrollAttested(commitment, deadline, sig)).wait();
+    await (await election.enrollAttested(commitment, personhood, deadline, sig)).wait();
+    // Trips on the personhood nullifier rather than on AlreadyEnrolled, because
+    // that check comes first. Either way the second leaf is refused.
     await expect(
-      election.enrollAttested(commitment, deadline, sig),
-    ).to.be.revertedWithCustomError(election, "AlreadyEnrolled");
+      election.enrollAttested(commitment, personhood, deadline, sig),
+    ).to.be.revertedWithCustomError(election, "PersonhoodNullifierUsed");
+  });
+
+  /**
+   * The reason the nullifier exists at all.
+   *
+   * `enrolledHumans` deduplicates on the World ID nullifier, so it only stops a
+   * second enrollment by the same ACCOUNT. Someone holding two accounts passes
+   * it twice. The personhood nullifier comes from a document instead, so both
+   * attempts produce the same value and the second is refused.
+   */
+  it("refuses a second account belonging to the same person", async () => {
+    const election = await gatedElection();
+    const first = nextCommitment();
+    const second = nextCommitment();
+    await platformRegister(first.nullifier, first.commitment);
+    await platformRegister(second.nullifier, second.commitment);
+
+    // One person, one document, therefore one personhood nullifier, presented
+    // through two entirely separate World ID identities.
+    const personhood = nextPersonhood();
+    const deadline = await futureDeadline();
+    const address = await election.getAddress();
+
+    const firstSig = await signEnrollAttestation(
+      attester, address, chainId, first.commitment, personhood, deadline,
+    );
+    await (
+      await election.enrollAttested(first.commitment, personhood, deadline, firstSig)
+    ).wait();
+
+    const secondSig = await signEnrollAttestation(
+      attester, address, chainId, second.commitment, personhood, deadline,
+    );
+    await expect(
+      election.enrollAttested(second.commitment, personhood, deadline, secondSig),
+    ).to.be.revertedWithCustomError(election, "PersonhoodNullifierUsed");
+
+    expect(await election.memberCount()).to.equal(1n);
+  });
+
+  it("lets two different people enroll", async () => {
+    const election = await gatedElection();
+    const address = await election.getAddress();
+    const deadline = await futureDeadline();
+
+    for (let i = 0; i < 2; i++) {
+      const { nullifier, commitment } = nextCommitment();
+      const personhood = nextPersonhood();
+      await platformRegister(nullifier, commitment);
+      const sig = await signEnrollAttestation(
+        attester, address, chainId, commitment, personhood, deadline,
+      );
+      await (await election.enrollAttested(commitment, personhood, deadline, sig)).wait();
+    }
+
+    expect(await election.memberCount()).to.equal(2n);
+  });
+
+  it("refuses a zero nullifier, so 'none available' cannot enroll everyone", async () => {
+    const election = await gatedElection();
+    const { nullifier, commitment } = nextCommitment();
+    await platformRegister(nullifier, commitment);
+
+    const deadline = await futureDeadline();
+    const sig = await signEnrollAttestation(
+      attester, await election.getAddress(), chainId, commitment, 0n, deadline,
+    );
+
+    await expect(
+      election.enrollAttested(commitment, 0n, deadline, sig),
+    ).to.be.revertedWithCustomError(election, "MissingPersonhoodNullifier");
+  });
+
+  it("covers the nullifier with the signature, so it cannot be swapped in transit", async () => {
+    const election = await gatedElection();
+    const { nullifier, commitment } = nextCommitment();
+    await platformRegister(nullifier, commitment);
+
+    const deadline = await futureDeadline();
+    const signed = nextPersonhood();
+    const sig = await signEnrollAttestation(
+      attester, await election.getAddress(), chainId, commitment, signed, deadline,
+    );
+
+    // A relay presenting a different nullifier than the attester approved would
+    // otherwise be able to spend somebody else's document, or a fresh one.
+    await expect(
+      election.enrollAttested(commitment, nextPersonhood(), deadline, sig),
+    ).to.be.revertedWithCustomError(election, "BadAttestation");
+  });
+
+  it("records the nullifier publicly, so the refusal is auditable", async () => {
+    const election = await gatedElection();
+    const { nullifier, commitment } = nextCommitment();
+    const personhood = nextPersonhood();
+    await platformRegister(nullifier, commitment);
+
+    expect(await election.usedPersonhoodNullifiers(personhood)).to.equal(false);
+
+    const deadline = await futureDeadline();
+    const sig = await signEnrollAttestation(
+      attester, await election.getAddress(), chainId, commitment, personhood, deadline,
+    );
+    await (await election.enrollAttested(commitment, personhood, deadline, sig)).wait();
+
+    expect(await election.usedPersonhoodNullifiers(personhood)).to.equal(true);
   });
 
   it("still requires platform verification: an attestation is not a substitute", async () => {
     const election = await gatedElection();
     const { commitment } = nextCommitment(); // deliberately never registered
+    const personhood = nextPersonhood();
 
     const deadline = await futureDeadline();
     const sig = await signEnrollAttestation(
@@ -289,12 +425,13 @@ describe("ElectionV4, attested enrollment", () => {
       await election.getAddress(),
       chainId,
       commitment,
+      personhood,
       deadline,
     );
 
     // Attribute eligibility is additive. It never replaces proof of personhood.
     await expect(
-      election.enrollAttested(commitment, deadline, sig),
+      election.enrollAttested(commitment, personhood, deadline, sig),
     ).to.be.revertedWithCustomError(election, "NotPlatformVerified");
   });
 
@@ -302,6 +439,7 @@ describe("ElectionV4, attested enrollment", () => {
     const now = await networkHelpers.time.latest();
     const election = await gatedElection({ enrollStart: now + 500, enrollEnd: now + 1000 });
     const { nullifier, commitment } = nextCommitment();
+    const personhood = nextPersonhood();
     await platformRegister(nullifier, commitment);
 
     const deadline = now + 400;
@@ -310,25 +448,28 @@ describe("ElectionV4, attested enrollment", () => {
       await election.getAddress(),
       chainId,
       commitment,
+      personhood,
       deadline,
     );
 
     await expect(
-      election.enrollAttested(commitment, deadline, sig),
+      election.enrollAttested(commitment, personhood, deadline, sig),
     ).to.be.revertedWithCustomError(election, "EnrollmentNotOpen");
   });
 
   it("exposes the digest it verifies, so a signer can be checked off chain", async () => {
     const election = await gatedElection();
     const { commitment } = nextCommitment();
+    const personhood = nextPersonhood();
     const deadline = await futureDeadline();
 
-    const digest = await election.enrollmentDigest(commitment, deadline);
+    const digest = await election.enrollmentDigest(commitment, personhood, deadline);
     const sig = await signEnrollAttestation(
       attester,
       await election.getAddress(),
       chainId,
       commitment,
+      personhood,
       deadline,
     );
 
@@ -360,6 +501,8 @@ describe("ElectionPaymaster, attested relaying", () => {
     const electionAddress: string = created!.args[0];
 
     const { nullifier, commitment } = nextCommitment();
+
+    const personhood = nextPersonhood();
     await platformRegister(nullifier, commitment);
 
     const deadline = await futureDeadline();
@@ -368,6 +511,7 @@ describe("ElectionPaymaster, attested relaying", () => {
       electionAddress,
       chainId,
       commitment,
+      personhood,
       deadline,
     );
 
@@ -375,7 +519,7 @@ describe("ElectionPaymaster, attested relaying", () => {
     await (
       await stack.paymaster
         .connect(outsider)
-        .relayEnrollAttested(electionAddress, commitment, deadline, sig)
+        .relayEnrollAttested(electionAddress, commitment, personhood, deadline, sig)
     ).wait();
     const after = await stack.paymaster.gasBalance(organizer.address);
 
@@ -407,6 +551,8 @@ describe("ElectionPaymaster, attested relaying", () => {
     const electionAddress: string = created!.args[0];
 
     const { nullifier, commitment } = nextCommitment();
+
+    const personhood = nextPersonhood();
     await platformRegister(nullifier, commitment);
 
     const deadline = await futureDeadline();
@@ -415,6 +561,7 @@ describe("ElectionPaymaster, attested relaying", () => {
       electionAddress,
       chainId,
       commitment,
+      personhood,
       deadline,
     );
 
@@ -425,7 +572,7 @@ describe("ElectionPaymaster, attested relaying", () => {
     // matcher resolves custom errors against the contract it was handed.
     let threw = false;
     try {
-      await stack.paymaster.relayEnrollAttested(electionAddress, commitment, deadline, badSig);
+      await stack.paymaster.relayEnrollAttested(electionAddress, commitment, personhood, deadline, badSig);
     } catch (error: unknown) {
       threw = true;
       expect(String(error)).to.contain("BadAttestation");

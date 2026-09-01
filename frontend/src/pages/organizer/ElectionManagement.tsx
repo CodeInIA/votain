@@ -5,10 +5,12 @@ import { XCircle, Clock, BarChart3, Users, KeyRound } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Badge } from '../../components/ui/Badge';
 import { EligibilityChips } from '../../components/ui/EligibilityChips';
+import { ExpandableText } from '../../components/ui/ExpandableText';
 import { Button } from '../../components/ui/Button';
 import { BackButton } from '../../components/ui/BackButton';
 import { ViewAsSwitch } from '../../components/ui/ViewAsSwitch';
 import { voterViewHref } from '../../lib/electionViews';
+import { PERSONHOOD_LABEL_KEY } from '../../lib/chainElections';
 import { DomainBadge } from '../../components/ui/DomainBadge';
 import { Card } from '../../components/ui/Card';
 import { Modal } from '../../components/ui/Modal';
@@ -26,6 +28,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { cancelElection, closeVotingEarly, closeEnrollmentEarly, markVoided, publishResults } from '../../lib/organizer';
 import { computeTally, hasTallyKey, resolveTallyKey, importTallyKey, MissingTallyKeyError, type TallyResult } from '../../lib/tally';
 import { nextBoundary, PULSE_PHASES } from '../../lib/phase';
+import { explorerAddressUrl } from '../../lib/deployments';
 
 export default function ElectionManagement() {
   const { id } = useParams<{ id: string }>();
@@ -66,7 +69,7 @@ export default function ElectionManagement() {
 
   // Runs a lifecycle tx (live) or shows the "integration pending" toast (seed).
   // `successLabel` states what happened ("Voting closed"), not what was asked
-  // ("Close voting now?") — the confirmation modal already asked the question.
+  // ("Close voting now?"): the confirmation modal already asked the question.
   const runAction = async (
     successLabel: string,
     fn: (signer: Awaited<ReturnType<typeof wallet.getSigner>>, address: string) => Promise<string>,
@@ -134,7 +137,7 @@ export default function ElectionManagement() {
 
   // Optional backup: download the decryption key so the tally can still be run
   // from a device without the passkey (e.g. the offline CLI, or a hardware key
-  // that does not sync). The key is sensitive — this is an explicit action.
+  // that does not sync). The key is sensitive, so this is an explicit action.
   const handleExportKey = async () => {
     setBusy(true);
     setTallyError(null);
@@ -166,7 +169,7 @@ export default function ElectionManagement() {
     try {
       await importTallyKey(election.contractAddress, await file.text());
       toast({ title: t('election_mgmt.key_imported'), variant: 'success' });
-      setTallyModal(true); // key is now present — let them compute the tally
+      setTallyModal(true); // key is now present, so let them compute the tally
     } catch (err) {
       setTallyError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -216,9 +219,13 @@ export default function ElectionManagement() {
                 full sentences are further down the page; this row is for
                 things you can read at a glance. */}
             <EligibilityChips policy={election?.eligibilityPolicy} />
-            <BlockchainBadge href={`https://amoy.polygonscan.com/address/${election.contractAddress}`} />
+            <BlockchainBadge href={explorerAddressUrl(election.contractAddress) ?? undefined} />
           </div>
-          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white leading-tight">{election.title}</h1>
+          {/* `break-words`: a title is up to 100 characters and nothing forces
+              them to contain a space. One long token cannot wrap by default, so
+              it pushed the page wider than the viewport and left a horizontal
+              scrollbar under everything. */}
+          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white leading-tight break-words">{election.title}</h1>
           {/* The organizer sees exactly what a voter sees, lapsed state included.
               They are the only one who can republish the TXT record if it has
               stopped verifying, so hiding it here would hide it from the one
@@ -234,12 +241,22 @@ export default function ElectionManagement() {
           )}
         </div>
 
+        {/* The organizer wrote this and could not read it back: this view went
+            from the title straight to the counters, so the one person able to
+            correct a description was the only one never shown it. */}
+        {election.description && (
+          <Card className="p-5 mb-5">
+            <h2 className="text-sm font-semibold text-on-surface mb-2">{t('election.about')}</h2>
+            <ExpandableText text={election.description} />
+          </Card>
+        )}
+
         {/* Stats cards */}
         <div className="grid grid-cols-3 gap-3 mb-5">
           {[
             { icon: Users,    value: election.totalEnrolled, labelKey: 'election.enrolled' },
             { icon: BarChart3, value: election.castVotes,    labelKey: 'election.votes_cast' },
-            { icon: Clock,    value: `${election.totalEnrolled > 0 ? Math.round((election.castVotes / election.totalEnrolled) * 100) : 0}%`, labelKey: 'election.participation' },
+            { icon: Clock,    value: `${election.totalEnrolled > 0 ? Math.min(100, Math.round((election.castVotes / election.totalEnrolled) * 100)) : 0}%`, labelKey: 'election.participation' },
           ].map((s, i) => {
             const Icon = s.icon;
             return (
@@ -285,9 +302,7 @@ export default function ElectionManagement() {
             {t('election_mgmt.entry_requirements')}
           </h2>
           <EligibilityRow
-            label={election.requiresOrb
-              ? t('eligibility.world_id_orb')
-              : t('eligibility.world_id_device')}
+            label={t(PERSONHOOD_LABEL_KEY[election.personhood ?? 'device'])}
             status="unknown"
           />
           {policyRequirements.map(requirement => (
@@ -395,7 +410,7 @@ export default function ElectionManagement() {
         {/* Tallying phase: decrypt in the browser with the organizer's Paillier
             key (which never leaves the device), review the counts, then sign the
             publishing transaction. If the privacy quorum was not met the tally
-            must not be published — the election is voided instead. */}
+            must not be published: the election is voided instead. */}
         <Modal open={tallyModal} onClose={closeTallyModal}
           title={t('election_mgmt.tally_title')} description={t('election_mgmt.tally_desc')}>
           <div className="flex flex-col gap-3 mt-2">

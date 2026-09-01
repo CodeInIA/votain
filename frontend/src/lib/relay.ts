@@ -17,6 +17,7 @@
  * contract, a censored voter can always submit their own transaction.
  */
 import { chainInfo, addresses } from "./deployments";
+import i18n from "../i18n/config";
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL as string | undefined;
 
@@ -78,8 +79,9 @@ async function localRelay(functionName: string, args: unknown[]): Promise<{ txHa
     requirePaymaster(),
     [
       "function relayEnroll(address election, uint256 identityCommitment)",
-      "function relayEnrollAttested(address election, uint256 identityCommitment, uint256 deadline, bytes signature)",
+      "function relayEnrollAttested(address election, uint256 identityCommitment, uint256 personhoodNullifier, uint256 deadline, bytes signature)",
       "function relayVote(address election, bytes voteCiphertext, uint256 nullifier, uint256 merkleRoot, uint256 merkleDepth, uint256[2] pA, uint256[2][2] pB, uint256[2] pC)",
+      ...RELAY_ERROR_ABI,
     ],
     new Wallet(LOCAL_RELAY_KEY, provider),
   );
@@ -111,10 +113,121 @@ export class GasTankEmptyError extends Error {
   }
 }
 
+/**
+ * The custom errors a relayed call can revert with.
+ *
+ * These let ethers name a revert it decodes through the contract interface, so
+ * `error.revert.name` is populated where it can be. They are NOT what fixes the
+ * gas tank case, and it is worth being exact about why: a relayed enrollment
+ * fails during GAS ESTIMATION, which happens at the provider, and the provider
+ * has no ABI. Measured against the local chain, that error arrives with
+ * `revert: null` and the message `execution reverted (unknown custom error)`
+ * no matter what is declared here. The four-byte selector in `error.data` is
+ * the only thing that survives, which is what `SELECTOR_NAMES` reads.
+ */
+const RELAY_ERROR_ABI = [
+  "error InsufficientBalance()",
+  "error EnrollmentNotOpen()",
+  "error AlreadyEnrolled()",
+  "error NotPlatformVerified()",
+  "error PersonhoodNullifierUsed()",
+  "error MissingPersonhoodNullifier()",
+  "error AttestationRequired()",
+  "error UnexpectedAttestation()",
+  "error AttestationExpired()",
+  "error BadAttestation()",
+  "error UnknownElection()",
+  "error VotingNotOpen()",
+  "error UnknownOrExpiredRoot()",
+  "error InvalidProof()",
+  "error WrongPhase()",
+];
+
+/**
+ * Selector to name, for the case where the fragments above did not get used:
+ * a stale ABI, a revert bubbling through a contract this file does not model,
+ * or an ethers version that words its message differently. `relayErrors.test.ts`
+ * recomputes every one of these from its signature, so a wrong constant fails
+ * the suite rather than silently going back to "transaction failed".
+ */
+const SELECTOR_NAMES: Record<string, string> = {
+  "0xf4d678b8": "InsufficientBalance",
+  "0x87ee6831": "EnrollmentNotOpen",
+  "0x6d6d97d9": "AlreadyEnrolled",
+  "0x0f488f5c": "NotPlatformVerified",
+  "0xa837452e": "PersonhoodNullifierUsed",
+  "0xf5a55ba8": "MissingPersonhoodNullifier",
+  "0xe40b6d2e": "AttestationRequired",
+  "0x7a651f34": "UnexpectedAttestation",
+  "0x716dcc39": "AttestationExpired",
+  "0x342bd384": "BadAttestation",
+};
+
+/** What the chain actually refused with, by whichever route the error kept it. */
+export function revertNameOf(error: unknown): string | null {
+  const decoded = (error as { revert?: { name?: string } } | null)?.revert?.name;
+  if (typeof decoded === "string" && decoded) return decoded;
+
+  const data = (error as { data?: unknown } | null)?.data;
+  if (typeof data === "string" && data.length >= 10) {
+    const name = SELECTOR_NAMES[data.slice(0, 10).toLowerCase()];
+    if (name) return name;
+  }
+
+  // Last resort, the text. This is the case that matters on Amoy: the relay
+  // runs on the server, and what crosses the wire is the composed message, not
+  // the error object. That message still carries the selector inside it, as
+  // `data="0x..."`, so both the name and the selector are worth looking for.
+  const message = error instanceof Error ? error.message : String(error);
+  const named = Object.values(SELECTOR_NAMES).find(name => message.includes(name));
+  if (named) return named;
+
+  const lower = message.toLowerCase();
+  const bySelector = Object.keys(SELECTOR_NAMES).find(selector => lower.includes(selector));
+  return bySelector ? SELECTOR_NAMES[bySelector] : null;
+}
+
 function isTankEmpty(error: unknown): boolean {
+  if (revertNameOf(error) === "InsufficientBalance") return true;
+  // Not a custom error at all: the relayer account itself is out of funds, or a
+  // node phrased it in prose.
   const message = (error instanceof Error ? error.message : String(error)).toLowerCase();
   return message.includes("insufficientbalance") || message.includes("insufficient balance");
 }
+
+/** One sentence per revert a voter can actually run into. */
+const ERROR_MESSAGE_KEY: Record<string, string> = {
+  EnrollmentNotOpen: "errors.enrollment_closed",
+  AlreadyEnrolled: "errors.already_enrolled",
+  PersonhoodNullifierUsed: "errors.personhood_used",
+  NotPlatformVerified: "errors.not_platform_verified",
+  AttestationRequired: "errors.attestation_required",
+  AttestationExpired: "errors.attestation_expired",
+};
+
+/**
+ * A relay failure written for the person looking at it.
+ *
+ * Every one of these was reaching the UI as a generic "transaction failed",
+ * because the pages caught the error, logged it, and set a boolean. A voter
+ * turned away by an empty gas tank has done nothing wrong and can do nothing
+ * about it except tell the organizer, and that is precisely the sentence they
+ * were not being shown.
+ *
+ * Falls back to the raw message rather than to a generic one: an unrecognised
+ * failure is more useful reported verbatim than flattened into "something went
+ * wrong".
+ */
+export function relayErrorMessage(error: unknown): string {
+  if (error instanceof GasTankEmptyError) return i18n.t("errors.gas_tank_empty");
+  if (isTankEmpty(error)) return i18n.t("errors.gas_tank_empty");
+
+  const key = ERROR_MESSAGE_KEY[revertNameOf(error) ?? ""];
+  if (key) return i18n.t(key);
+
+  return error instanceof Error ? error.message : String(error);
+}
+
 
 function requirePaymaster(): string {
   if (!addresses.paymaster) throw new Error("ElectionPaymaster address not configured");
@@ -156,6 +269,12 @@ export async function ensureLocalRegistration(commitment: bigint): Promise<void>
  * them, so passing this is what decides which one gets called.
  */
 export interface EnrollAttestationInput {
+  /**
+   * The document nullifier for this election, decimal. The contract records it
+   * and refuses a second enrollment carrying the same one, which is what stops
+   * a voter with two World ID accounts from joining twice.
+   */
+  personhoodNullifier: string;
   deadline: number;
   signature: string;
 }
@@ -170,6 +289,7 @@ export async function relayEnroll(
       ? localRelay("relayEnrollAttested", [
           election,
           identityCommitment,
+          BigInt(attestation.personhoodNullifier),
           BigInt(attestation.deadline),
           attestation.signature,
         ])

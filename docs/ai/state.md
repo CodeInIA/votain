@@ -1288,6 +1288,197 @@ Unchanged on purpose: the approach stays Orb-minimum, one identity one vote. The
 wider question of what a Spanish voter does when Orbs are unavailable is still
 open (see the entry above on the World ID level shown per election).
 
+## Personhood moved from World ID to the document (2026-08-30)
+
+The platform demanded Orb at sign-in, which excluded exactly the people it is
+for. Orbs were withdrawn from Spain, World ID's NFC credential still reads
+"coming soon" there, Selfie Check is beta and access-gated with no uniqueness
+guarantee, and `deviceLegacy` is deprecated. A Spanish voter could not sign in at
+all unless they had been Orb-verified before the withdrawal.
+
+Sign-in now accepts whatever credential the voter holds. Legacy presets return
+the HIGHEST one they have, so an Orb holder still signs in as one and the backend
+records that; `verifyWorldIdProof` takes the minimum as an argument, ranking
+`any` < `document` < `orb`, and an election that wants Orb asks at enrollment.
+
+That moves the weight. `enrolledHumans` deduplicates on the World ID nullifier,
+which now identifies an ACCOUNT, so a person with two of them could have enrolled
+twice. `ElectionV4` therefore records a second nullifier, supplied by the
+attester and derived from a document, in `usedPersonhoodNullifiers`. Zero is
+refused, reuse is refused, and the EIP-712 signature covers it so a relay cannot
+swap it in transit.
+
+The earlier decision NOT to store the Self nullifier is reversed here, and the
+reason it was made is worth keeping: it was safe only while World ID deduplicated
+humans. Once sign-in stopped proving personhood, the Self nullifier became the
+only thing standing between one-person-one-vote and one-account-one-vote. The
+per-election scope chosen back then turns out to be exactly right for this: the
+same document yields the same value inside one election and an uncorrelated one
+in every other.
+
+What is honestly weaker: an election declaring no policy has no document
+nullifier, so it inherits account-level resistance only. That is the price of
+letting Spanish voters in at all, and the create wizard should default to asking
+for a document. Recorded rather than hidden.
+
+Verified: contracts 89 passing including 6 new on the nullifier, backend 89,
+frontend 56, and `scripts/e2e-eligibility.ts` at 22 passed against a real node,
+where section 7 enrolls one person twice through two separate World ID accounts
+and watches the second be refused.
+
+## The personhood level became a policy field (2026-09-01)
+
+Closes the gap the entry above left open. An election that declared no attribute
+policy inherited account-level resistance only, and the level it wanted lived in
+a top-level `requireOrb` flag in the metadata, OUTSIDE the bytes
+`eligibilityPolicyHash` commits to. Anyone able to rewrite the metadata could
+turn that flag off and nothing would notice, so it was a claim, not a rule.
+
+`personhood` is now a field of the policy itself: `device`, `document` or `orb`,
+inside the hash. The backend reads it back from the chain and refuses to sign
+against a policy that does not match its published hash, which is what makes the
+level enforceable rather than decorative.
+
+- It is appended LAST in the canonical JSON and only when stated, so every
+  election deployed before the field existed still serialises to exactly the
+  bytes its hash was taken over. Pinned by a test on both sides.
+- `effectivePersonhood` reads an attribute policy as `document` whether it says
+  so or not, because the scan it already costs is the scan that produces the
+  nullifier the contract deduplicates on. Nothing about existing elections
+  changes.
+- A policy holding only `personhood: "document"` is not empty. It needs an
+  attester, a non-zero hash and a Self scan, with no attribute disclosed at all:
+  the scan is there purely to make two enrollments behind one document
+  impossible. The wizard now defaults to it.
+- `orb` means document AND Orb, not either. The document nullifier stays the
+  on-chain value because Self scopes it per election; a World ID nullifier is
+  scoped per application and would be identical across elections, re-linking the
+  enrollments this design works to keep apart.
+
+The Orb check reads the level recorded in the SD-JWT at sign-in rather than a
+proof presented at enrollment, and that IS the binding: the session is keyed by
+the nullifier that credential was issued against. A proof accepted at enrollment
+time would only prove that somebody, somewhere, has an Orb. A credential issued
+before the claim existed carries no level and is treated as unmet.
+
+### A level that was claimed, not proved
+
+Found while wiring the above. `verifyWorldIdProof` returned
+`level: payloadLevel(payload)`, the level of what was SENT. The verify API
+answers "at least one of these verified", so a payload declaring an Orb
+credential next to a real device one earns its 200 from the device proof, and
+the session would have recorded Orb on the strength of an entry nothing checked.
+Harmless while the level was only displayed; not harmless the moment it gates an
+election. It now reads the entries that actually verified, and where the API
+itemises nothing it records the LOWEST declared level: understating costs a
+voter one more verification, overstating hands them an election.
+
+## The gas tank failure that could not be read (2026-09-01)
+
+Reported from testing: when an organizer runs out of gas, a voter trying to
+enroll gets an error that does not say why. Two faults, and the first one is not
+the one it looks like.
+
+`isTankEmpty` matched the text "insufficientbalance" in the error message. It
+never matched. Measured against the local chain by draining a tank and relaying
+an enrollment, what ethers actually raises is:
+
+```
+execution reverted (unknown custom error) (action="estimateGas", data="0xf4d678b8",
+reason=null, invocation=null, revert=null, code=CALL_EXCEPTION)
+```
+
+The relay ABI declared functions and no errors, so the selector had no name. But
+declaring them does not fix this case either, which is the part worth writing
+down: the call fails during GAS ESTIMATION, which happens at the provider, and
+the provider has no ABI. `revert` is null regardless. The only thing that
+survives is the four-byte selector in `error.data`, so `revertNameOf` reads that,
+against a hand-written table pinned by a test that recomputes every selector from
+its signature. It also scans the message text, which is the Amoy case: there the
+relay runs on the server and the browser receives the composed string, selector
+included, rather than an error object.
+
+The second fault was the plain one. `ElectionDetail` caught the error, logged it,
+and called `setTxState('failed')`, discarding the message; `TransactionPendingModal`
+had accepted an `errorMessage` prop the whole time and nobody passed it. Same
+omission in the create wizard. The vote path did surface the message, but raw and
+in English only, so all three now go through `relayErrorMessage`, which names
+seven reverts in all thirteen locales and falls back to the raw text rather than
+to "something went wrong".
+
+Also fixed while confirming this: `scripts/e2e-eligibility.ts` computed its
+attestation deadlines from the LATEST BLOCK, while Hardhat stamps the next block
+with `max(parent + 1, wall clock)`. Against a node last used two days earlier
+every deadline was born expired, and the run died in section 4 on
+`AttestationExpired` before reaching anything under test.
+
+## An attestation deadline measured by the wrong clock (2026-09-02)
+
+Reported from testing: enrollment in one election failed with
+`AttestationExpired` and kept failing, however many times it was retried.
+
+`signEnrollAttestation` computed `deadline = now + 15 min` from the SERVER's
+wall clock. `ElectionV4.enrollAttested` compares that deadline against
+`block.timestamp`. Where the two clocks agree, which is any network minting
+blocks every couple of seconds, nothing shows. The local chain had been advanced
+a week past a run of finished elections, so every attestation was born seven days
+expired and no retry could produce a valid one.
+
+`attestationBaseTime()` takes the LATER of the two clocks. Not the chain alone:
+an idle node's last block can be hours old, and measuring from it would hand the
+voter a deadline short by exactly that gap. Taking the later one can only move
+the deadline outwards, so the voter always has the full window measured from
+whichever clock is furthest along, and on Amoy it picks the wall clock and
+behaves exactly as before at the cost of one block read.
+
+This is the fourth appearance of the same confusion in one session: the e2e
+script signing deadlines against a stale block, the countdowns disagreeing with
+the phase, the create wizard refusing reachable dates, and now this. The lesson
+worth keeping is that a contract judges in chain time, so anything it will judge
+has to be measured there.
+
+### The seed stopped dragging the clock
+
+The drift itself was avoidable. Publishing a tally means advancing past
+`voteTo`, and a chain clock only moves forward, so each finished election cost
+its whole window: three hours apiece, plus two live elections opening their vote
+window three days out. Six days of drift that never came back.
+
+The window of an election that is already closed carries no information: nobody
+can see it, nothing reads it, and the tally is identical either way. Both are
+compressed now, and a full seed lands within about an hour of the wall clock
+instead of a week. `SEED_ONLY` was added alongside, because the seed is not
+idempotent and adding one election to a seeded chain otherwise meant destroying
+the chain and every registration on it.
+
+## What the app knows versus what it says (2026-09-02)
+
+A cluster of small fixes with one shape: the interface asserting something
+weaker, or plainly different, from what it had in hand.
+
+- **The vote history said "you have not voted in any elections".** In PRF mode
+  nothing is stored at rest, so after a reload the Semaphore secret is gone until
+  a passkey tap re-derives it, and the lookup returned nothing. The page reported
+  that absence as a fact about the voter, contradicting receipts the chain was
+  holding. It now reads the per-election nullifiers `rememberVote` already wrote
+  when the ballot was cast, which are public and need no secret, and an unlock
+  widens the answer to ballots cast on other devices rather than enabling it at
+  all. The unlock also writes down what it finds, so it is needed once rather
+  than once per reload.
+- **The public verifier searched the demo seed data.** It never touched the
+  chain, so against a real deployment it found nothing and always would. It also
+  lived behind a link in the voter profile, which put the app's one public
+  verification tool in front of the only audience that did not need it.
+- **A drained gas tank read as "transaction failed".** The reason was in the
+  response the whole time as a four-byte selector, and nothing on the client
+  could name it.
+- **An empty participation bar** was drawn for elections nobody had joined, and
+  the same ratio could report 200% turnout, because the chain counts ballots and
+  a re-vote is a second ballot.
+
+Each was a case of the UI having the information and not saying it. Worth
+noticing as a pattern rather than four separate bugs.
+
 ## Next: Phase C, Decentralized deployments
 ### H10: Frontend on IPFS via Fleek CD
 ### H11: Backend on Phala TEE

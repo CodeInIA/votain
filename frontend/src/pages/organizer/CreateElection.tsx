@@ -12,23 +12,29 @@ import { DatePicker } from '../../components/ui/DatePicker';
 import { SelectMenu } from '../../components/ui/SelectMenu';
 import { CountryPicker } from '../../components/ui/CountryPicker';
 import { Switch } from '../../components/ui/Switch';
+import { RadioGroup } from '../../components/ui/RadioCard';
 import { Modal } from '../../components/ui/Modal';
 import { TransactionPendingModal, type TxState } from '../../components/ui/TransactionPendingModal';
 import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
 import { getGasBalance } from '../../lib/organizer';
+import { relayErrorMessage } from '../../lib/relay';
+import { hasDuplicateNames, collidesWithBlankVote } from '../../lib/ballotNames';
 import { fetchOrganizerDomains } from '../../lib/organizerDomains';
 import { isChainConfigured, chainInfo } from '../../lib/deployments';
 import { getReadProvider } from '../../lib/contracts';
 import { createElection, getOrganizerName, type VOTING_TYPE_ENUM } from '../../lib/organizer';
 import {
   fetchAttester,
+  hasAttributeRules,
   isEmptyPolicy,
   normaliseCountries,
   requiresNationalityReveal,
   MAX_COUNTRY_LIST,
   MIN_AGE_FLOOR,
   MAX_AGE_CEILING,
+  PERSONHOOD_LEVELS,
   type EligibilityPolicy,
+  type PersonhoodLevel,
 } from '../../lib/eligibility';
 
 interface Candidate { name: string; description: string }
@@ -47,7 +53,8 @@ interface FormState {
   voteStart: string;
   voteEnd: string;
   candidates: Candidate[];
-  requireOrb: boolean;
+  /** How distinct a human the election insists each voter is. */
+  personhood: PersonhoodLevel;
   privacyQuorum: string;
   depositAmount: string;
   /** Attribute restrictions. Off by default: an open election is the norm. */
@@ -65,7 +72,10 @@ const INITIAL: FormState = {
   separateEnrollment: true,
   enrollStart: '', enrollEnd: '', voteStart: '', voteEnd: '',
   candidates: [{ name: '', description: '' }, { name: '', description: '' }],
-  requireOrb: false, privacyQuorum: '10', depositAmount: '0.05',
+  // Document by default. An election whose only bar is a World ID account is
+  // one account one vote, and accounts are not people; the organizer can still
+  // choose that, but not by not noticing the question.
+  personhood: 'document', privacyQuorum: '10', depositAmount: '0.05',
   eligibilityEnabled: false, minAge: '', countryMode: 'none', countries: [],
 };
 
@@ -76,9 +86,15 @@ const INITIAL: FormState = {
  * sentinel is produced by exactly one code path.
  */
 function policyFromForm(form: FormState): EligibilityPolicy {
-  if (!form.eligibilityEnabled) return {};
-
   const policy: EligibilityPolicy = {};
+
+  // Independent of the attribute toggle: an election can demand a real document
+  // without caring how old its holder is or where they are from. Omitted at
+  // `device` so an unrestricted election still hashes to the zero sentinel.
+  if (form.personhood !== 'device') policy.personhood = form.personhood;
+
+  if (!form.eligibilityEnabled) return policy;
+
   const age = Number(form.minAge);
   if (form.minAge.trim() !== '' && Number.isInteger(age)) policy.minAge = age;
 
@@ -251,8 +267,14 @@ function validateStep(
       e.candidates = t('validation.candidate_too_short', { min: LIMITS.candidateName.min });
     } else if (names.some(n => chars(n) > LIMITS.candidateName.max)) {
       e.candidates = t('validation.candidate_too_long', { max: LIMITS.candidateName.max });
-    } else if (new Set(names.map(n => n.toLowerCase())).size !== names.length) {
+    } else if (hasDuplicateNames(names)) {
       e.candidates = t('validation.candidates_unique');
+    } else if (names.some(n => collidesWithBlankVote(n, t('election.blank_vote')))) {
+      // Every ballot gets a blank option appended when it is READ, so nothing
+      // here ever compared against it and a candidate could be given its exact
+      // name. The organizer sees one language, so this refuses the collision in
+      // theirs; a reader in another language is covered on the read side.
+      e.candidates = t('validation.candidate_blank_clash');
     }
   }
 
@@ -278,13 +300,20 @@ function validateStep(
       }
 
       // A restriction that restricts nothing is a configuration the organizer
-      // almost certainly did not mean, and it would deploy a gated election
-      // that every voter still has to scan a passport for.
-      if (isEmptyPolicy(policyFromForm(form)) && !e.minAge && !e.countries) {
+      // almost certainly did not mean. Asked of the ATTRIBUTE rules only: the
+      // personhood level is a separate answer, and since it now defaults to
+      // `document` the whole policy is never empty, which would have retired
+      // this check without anyone noticing.
+      if (!hasAttributeRules(policyFromForm(form)) && !e.minAge && !e.countries) {
         e.eligibility = t('validation.eligibility_empty');
-      } else if (!attesterAvailable) {
-        e.eligibility = t('create.eligibility_unavailable');
       }
+    }
+
+    // Every level above `device` enrolls through the attested entry point, and
+    // that path needs an attester whether or not any attribute is checked.
+    // Blocking, not a warning: without one the contract refuses every voter.
+    if (!isEmptyPolicy(policyFromForm(form)) && !attesterAvailable && !e.eligibility) {
+      e.eligibility = t('create.eligibility_unavailable');
     }
   }
 
@@ -318,6 +347,7 @@ export default function CreateElection() {
   const [form, setForm]       = useState<FormState>(INITIAL);
   const [deployModal, setDeployModal] = useState(false);
   const [txState, setTxState] = useState<TxState>('idle');
+  const [txError, setTxError] = useState<string | null>(null);
   // Errors are only surfaced after the user tries to advance, so the form does
   // not shout at them while it is still empty.
   const [showErrors, setShowErrors] = useState(false);
@@ -568,7 +598,6 @@ export default function CreateElection() {
         voteStart: new Date(form.voteStart),
         voteEnd: new Date(form.voteEnd),
         depositMatic: form.depositAmount,
-        requireOrb: form.requireOrb,
         eligibility: policyFromForm(form),
         eligibilityAttester: attester?.address,
       });
@@ -579,6 +608,7 @@ export default function CreateElection() {
       setTimeout(() => navigate(`/organizer/election/${address}`, { replace: true }), 1800);
     } catch (e) {
       console.error('Deploy failed:', e);
+      setTxError(relayErrorMessage(e));
       setTxState('failed');
     }
   };
@@ -716,7 +746,23 @@ export default function CreateElection() {
         {step === 3 && (
           <div className="flex flex-col gap-4">
             <Card className="p-5 flex flex-col gap-4">
-              <Switch label={t('create.require_orb')} description={t('create.require_orb_desc')} checked={form.requireOrb} onChange={v => set('requireOrb', v)} />
+              {/* The one question every election answers, restricted or not:
+                  how sure does it need to be that two enrollments are two
+                  people. The attribute rules below are separate, and optional. */}
+              <div className="flex flex-col gap-2">
+                <p className="text-sm font-medium text-on-surface">{t('create.personhood')}</p>
+                <p className="text-xs text-on-surface-meta">{t('create.personhood_desc')}</p>
+                <RadioGroup
+                  className="mt-1"
+                  value={form.personhood}
+                  onChange={v => set('personhood', v as PersonhoodLevel)}
+                  options={PERSONHOOD_LEVELS.map(level => ({
+                    value: level,
+                    label: t(`create.personhood_${level}`),
+                    description: t(`create.personhood_${level}_desc`),
+                  }))}
+                />
+              </div>
 
               {/* Attribute eligibility. Off by default, and deliberately the
                   only place in the wizard that can make enrollment harder:
@@ -884,7 +930,8 @@ export default function CreateElection() {
 
         <TransactionPendingModal
           state={txState}
-          onClose={() => setTxState('idle')}
+          errorMessage={txError ?? undefined}
+          onClose={() => { setTxState('idle'); setTxError(null); }}
         />
       </div>
     </PageLayout>

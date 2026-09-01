@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { countryOption } from '../lib/countries';
-import type { EligibilityPolicy } from '../lib/eligibility';
+import { effectivePersonhood, type EligibilityPolicy } from '../lib/eligibility';
 
 /**
  * An election's attribute restrictions, written out for a reader.
@@ -26,6 +26,13 @@ export function usePolicyRequirements(policy: EligibilityPolicy | null | undefin
       .join(', ');
 
   const requirements: string[] = [];
+
+  // Stated first and in full: it is the requirement that decides what has to
+  // happen before any of the others can even be checked.
+  const personhood = effectivePersonhood(policy);
+  if (personhood !== 'device') {
+    requirements.push(t(`eligibility.personhood_${personhood}_hint`));
+  }
 
   if (policy.minAge !== undefined) {
     requirements.push(t('eligibility.req_min_age', { age: policy.minAge }));

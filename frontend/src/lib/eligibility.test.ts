@@ -1,12 +1,19 @@
 import { describe, it, expect } from 'vitest';
 import { keccak256, toUtf8Bytes } from 'ethers';
 
+import type { EligibilityPolicy, PersonhoodLevel } from './eligibility';
 import {
   canonicalPolicyJson,
   policyHash,
   isEmptyPolicy,
   normaliseCountries,
   requiresNationalityReveal,
+  effectivePersonhood,
+  hasAttributeRules,
+  asPersonhoodLevel,
+  personhoodSatisfied,
+  eligibilityErrorKey,
+  eligibilityErrorIsRetryable,
   ZERO_HASH,
 } from './eligibility';
 import {
@@ -54,6 +61,34 @@ describe('policy canonicalisation', () => {
 
   it('sorts and deduplicates country codes, so picking order cannot change the hash', () => {
     expect(normaliseCountries(['fra', 'esp', 'ESP'])).toEqual(['ESP', 'FRA']);
+  });
+
+  it('serialises the personhood level exactly as the backend suite pins it', () => {
+    // Both sides append it last and only when stated, which is what keeps every
+    // election published before the field existed hashing to its own value.
+    expect(canonicalPolicyJson({ minAge: 18, personhood: 'orb' })).toBe(
+      '{"minAge":18,"personhood":"orb"}',
+    );
+    expect(canonicalPolicyJson({ minAge: 18, allowedCountries: ['ESP'] })).toBe(PINNED_CANONICAL);
+  });
+
+  it('reads an attribute policy as document level, stated or not', () => {
+    expect(effectivePersonhood({ minAge: 18 })).toBe('document');
+    expect(effectivePersonhood({})).toBe('device');
+    expect(effectivePersonhood({ personhood: 'orb', minAge: 18 })).toBe('orb');
+    expect(effectivePersonhood({ personhood: 'device', minAge: 18 })).toBe('device');
+  });
+
+  it('treats a level with no attribute rules as a real policy', async () => {
+    const policy = { personhood: 'document' } as const;
+    expect(hasAttributeRules(policy)).toBe(false);
+    // It still needs an attester and a non-zero hash: reading it as empty would
+    // deploy an election that asks for a document and lets anyone in.
+    expect(isEmptyPolicy(policy)).toBe(false);
+    expect(await policyHash(policy)).not.toBe(ZERO_HASH);
+    // And `device` alone is still nothing at all.
+    expect(isEmptyPolicy({ personhood: 'device' })).toBe(true);
+    expect(await policyHash({ personhood: 'device' })).toBe(ZERO_HASH);
   });
 
   it('only an allowlist costs the voter a nationality reveal', () => {
@@ -179,5 +214,176 @@ describe('eligibility filtering', () => {
     expect(matchesEligibilityFilter(policy, { minAgeFrom: 18, nationality: 'ESP' })).toBe(true);
     expect(matchesEligibilityFilter(policy, { minAgeFrom: 18, nationality: 'FRA' })).toBe(false);
     expect(matchesEligibilityFilter(policy, { minAgeFrom: 21, nationality: 'ESP' })).toBe(false);
+  });
+});
+
+describe('does this voter reach the bar', () => {
+  /**
+   * Drives a green tick on the election page. Getting it wrong upwards promises
+   * a voter an enrollment the backend will refuse; getting it wrong downwards
+   * only sends them to check their World ID again.
+   */
+
+  it('reads the two vocabularies as one', () => {
+    // The backend calls the floor `any`, a policy calls it `device`.
+    expect(asPersonhoodLevel('any')).toBe('device');
+    expect(asPersonhoodLevel('device')).toBe('device');
+    expect(asPersonhoodLevel('document')).toBe('document');
+    expect(asPersonhoodLevel('orb')).toBe('orb');
+  });
+
+  it('refuses to invent a level out of nothing', () => {
+    expect(asPersonhoodLevel(null)).toBe(null);
+    expect(asPersonhoodLevel(undefined)).toBe(null);
+    expect(asPersonhoodLevel('selfie')).toBe(null);
+  });
+
+  it('lets anyone signed in past a device-level election', () => {
+    expect(personhoodSatisfied('device', 'device')).toBe(true);
+    // Even with nothing known: the bar is being signed in, and they are.
+    expect(personhoodSatisfied('device', null)).toBe(true);
+  });
+
+  it('treats an unknown level as unproved, never as a low one that passes', () => {
+    // A credential issued before the level was recorded, or a backend that
+    // could not be reached. Neither is evidence.
+    expect(personhoodSatisfied('document', null)).toBe(false);
+    expect(personhoodSatisfied('orb', null)).toBe(false);
+  });
+
+  it('lets a stronger credential satisfy a weaker demand, and not the reverse', () => {
+    expect(personhoodSatisfied('document', 'orb')).toBe(true);
+    expect(personhoodSatisfied('orb', 'document')).toBe(false);
+    expect(personhoodSatisfied('document', 'device')).toBe(false);
+    expect(personhoodSatisfied('orb', 'orb')).toBe(true);
+  });
+});
+
+describe('what the voter is told when eligibility refuses them', () => {
+  it('names the refusal it can do something about', () => {
+    // The card printed one generic line and dropped the reason, so a voter
+    // refused for want of an Orb was told nothing they could act on.
+    expect(eligibilityErrorKey('orb_required')).toBe('eligibility.error_orb_required');
+  });
+
+  it('recognises an expired session by either name it arrives under', () => {
+    // The polling loop normalises a vanished session to 'expired'; the endpoint
+    // itself says 'session expired'.
+    expect(eligibilityErrorKey('expired')).toBe('eligibility.error_session_expired');
+    expect(eligibilityErrorKey('session expired')).toBe('eligibility.error_session_expired');
+  });
+
+  it('keeps the generic line for anything it does not recognise', () => {
+    // An internal failure is not made clearer by being shown raw to a voter,
+    // and matching prose loosely would start misreading it the day it is
+    // reworded.
+    expect(eligibilityErrorKey('could not sign attestation')).toBe('eligibility.error');
+    expect(eligibilityErrorKey(null)).toBe('eligibility.error');
+    expect(eligibilityErrorKey('orb')).toBe('eligibility.error');
+  });
+
+  it('offers a retry only where one could work', () => {
+    expect(eligibilityErrorIsRetryable('orb_required')).toBe(false);
+    expect(eligibilityErrorIsRetryable('expired')).toBe(true);
+    expect(eligibilityErrorIsRetryable(null)).toBe(true);
+  });
+});
+
+describe('filtering by the level a card shows', () => {
+  /**
+   * The control mirrors the chip on the election card, so the two have to agree
+   * about what a level means. Matched exactly and not "at least": picking
+   * Document must not return the Orb elections, because the card in front of
+   * the reader says Orb.
+   */
+  const keeps = (policy: EligibilityPolicy | undefined, levels: PersonhoodLevel[]) =>
+    matchesEligibilityFilter(policy, { personhood: levels });
+
+  it('finds the elections whose badge is the one that was picked', () => {
+    expect(keeps({ personhood: 'document' }, ['document'])).toBe(true);
+    expect(keeps({ personhood: 'orb' }, ['orb'])).toBe(true);
+  });
+
+  it('does not let a stronger level answer for a weaker one', () => {
+    expect(keeps({ personhood: 'orb' }, ['document'])).toBe(false);
+    expect(keeps({ personhood: 'document' }, ['orb'])).toBe(false);
+  });
+
+  it('reads an attribute policy as the document level it implicitly is', () => {
+    // No `personhood` field, but a card shows it at document level, so the
+    // filter has to find it there too.
+    expect(keeps({ minAge: 18 }, ['document'])).toBe(true);
+  });
+
+  it('takes both levels at once, like the chips', () => {
+    expect(keeps({ personhood: 'orb' }, ['document', 'orb'])).toBe(true);
+    expect(keeps({ minAge: 18 }, ['document', 'orb'])).toBe(true);
+  });
+
+  it('drops an unrestricted election when a level is demanded', () => {
+    expect(keeps(undefined, ['document'])).toBe(false);
+    expect(keeps({}, ['orb'])).toBe(false);
+  });
+
+  it('keeps everything when no level is picked', () => {
+    expect(keeps(undefined, [])).toBe(true);
+    expect(matchesEligibilityFilter(undefined, {})).toBe(true);
+  });
+
+  it('counts as an active filter, so the panel can say so', () => {
+    expect(isEligibilityFilterActive({ personhood: ['orb'] })).toBe(true);
+    expect(isEligibilityFilterActive({ personhood: [] })).toBe(false);
+  });
+});
+
+describe('how the four eligibility filters combine', () => {
+  /**
+   * Two different questions, and they get two different answers.
+   *
+   * ACROSS the dimensions it is AND: level, age and nationality each narrow the
+   * list further, because they ask about independent properties and someone
+   * setting all three means all three.
+   *
+   * WITHIN the level chips it is OR, like the phase chips above them. It has to
+   * be: an election has exactly ONE personhood level, so an AND between Document
+   * and Orb would be unsatisfiable by construction and the second click would
+   * always empty the list.
+   */
+
+  const spanish18Orb: EligibilityPolicy = {
+    personhood: 'orb',
+    minAge: 18,
+    allowedCountries: ['ESP'],
+  };
+
+  it('requires every dimension at once', () => {
+    expect(
+      matchesEligibilityFilter(spanish18Orb, {
+        personhood: ['orb'],
+        minAgeFrom: 18,
+        nationality: 'ESP',
+      }),
+    ).toBe(true);
+  });
+
+  it('drops the election when any single dimension disagrees', () => {
+    // The level is wrong, the rest match.
+    expect(
+      matchesEligibilityFilter(spanish18Orb, { personhood: ['document'], minAgeFrom: 18, nationality: 'ESP' }),
+    ).toBe(false);
+    // The age is wrong.
+    expect(
+      matchesEligibilityFilter(spanish18Orb, { personhood: ['orb'], minAgeFrom: 21, nationality: 'ESP' }),
+    ).toBe(false);
+    // The nationality is wrong: this election admits Spain and nowhere else.
+    expect(
+      matchesEligibilityFilter(spanish18Orb, { personhood: ['orb'], minAgeFrom: 18, nationality: 'FRA' }),
+    ).toBe(false);
+  });
+
+  it('treats the two level chips as alternatives, not as a conjunction', () => {
+    const both: PersonhoodLevel[] = ['document', 'orb'];
+    expect(matchesEligibilityFilter({ personhood: 'orb' }, { personhood: both })).toBe(true);
+    expect(matchesEligibilityFilter({ personhood: 'document' }, { personhood: both })).toBe(true);
   });
 });

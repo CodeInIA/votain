@@ -18,6 +18,7 @@ import {
   ZERO_HASH,
   type EligibilityPolicy,
 } from "./eligibility";
+import { hasDuplicateNames } from "./ballotNames";
 
 const PRIVKEY_STORAGE_PREFIX = "votain_paillier_sk_";
 const ORGANIZER_NAME_KEY = "votain_organizer_name";
@@ -91,14 +92,6 @@ export interface CreateElectionInput {
   voteStart: Date;
   voteEnd: Date;
   depositMatic: string; // decimal string
-  /**
-   * Whether this election asks for Orb verification rather than accepting a
-   * device-level World ID. Declared, not enforced here: sign-in currently
-   * requests Orb for everyone, so voters always exceed a device-level
-   * declaration. Recording it is what lets the requirement be shown honestly
-   * and what a per-election check would read when sign-in learns to vary.
-   */
-  requireOrb?: boolean;
   tags?: string[];
   /**
    * Attribute restrictions on who may enroll. Omitted or empty leaves the
@@ -158,6 +151,14 @@ export async function createElection(
   //    rest and the key can be re-derived on any device the passkey syncs to.
   //    Fallback (no PRF passkey): a random key that must be stored/exported,
   //    since it could never be reproduced.
+  // Refused here and not only in the wizard, because this is the last code the
+  // app runs before a transaction exists and the wizard is one caller of it.
+  // It is NOT a defence against a transaction built by hand, which never comes
+  // through this file; that case is handled where the election is read.
+  if (hasDuplicateNames(input.candidates.map(c => c.name))) {
+    throw new Error("two candidates would appear on the ballot as the same option");
+  }
+
   const keyNonce = newKeyNonce();
   const derived = await deriveElectionKeys(keyNonce);
   const keyDerivable = derived !== null;
@@ -176,7 +177,10 @@ export async function createElection(
     candidates: input.candidates,
     privacyQuorum: input.privacyQuorum,
     ...(keyDerivable ? { keyNonce } : {}),
-    requireOrb: input.requireOrb ?? false,
+    // The personhood level travels inside `eligibility`, where the on-chain
+    // policy hash covers it. The old top-level `requireOrb` flag sat outside
+    // that hash, so it claimed a bar nothing could hold the election to; it is
+    // still read for elections that predate the move, and written by nothing.
     ...(gated ? { eligibility: input.eligibility } : {}),
     tags: input.tags ?? [],
   };

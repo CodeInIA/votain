@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { getElection as getSeedElection } from '../../data/seed';
 import { castVote } from '../../lib/voting';
+import { relayErrorMessage } from '../../lib/relay';
 
 type StepStatus = 'pending' | 'active' | 'done';
 
@@ -81,7 +82,10 @@ export default function ZkProofGeneration() {
         });
       } catch (e) {
         console.error('Vote failed:', e);
-        setError(e instanceof Error ? e.message : String(e));
+        // Named rather than raw: the commonest failure here is an organizer's
+        // drained gas tank, which is not the voter's doing and not something a
+        // revert string explains.
+        setError(relayErrorMessage(e));
       }
     })();
   }, [id, navigate, location.state]);

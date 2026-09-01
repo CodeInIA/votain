@@ -65,7 +65,8 @@
     "verified_voter": "Verified Voter",
     "dashboard": "Dashboard",
     "members": "Members",
-    "gas": "Gas"
+    "gas": "Gas",
+    "verify": "Verify a vote"
   },
   "phase": {
     "enrolling": "Enrolling",
@@ -114,7 +115,9 @@
     "all": "All",
     "yes": "Yes",
     "no": "No",
-    "clear": "Clear"
+    "clear": "Clear",
+    "show_more": "Show more",
+    "show_less": "Show less"
   },
   "discover": {
     "title": "Elections",
@@ -170,7 +173,8 @@
     "starts_in": "Starts in",
     "verified_on_chain": "Verified on blockchain",
     "view_as_voter": "View as voter",
-    "view_as_organizer": "View as organizer"
+    "view_as_organizer": "View as organizer",
+    "turnout_detail": "{{voted}} of {{total}} enrolled voters have voted"
   },
   "how": {
     "title": "How Votain works",
@@ -198,10 +202,10 @@
     "not_available": "Results not yet available."
   },
   "verify_receipt": {
-    "title": "Verify your vote",
-    "subtitle": "Enter your reference number or nullifier to confirm your vote was recorded.",
+    "title": "Verify a vote",
+    "subtitle": "Enter a reference number or nullifier to confirm a ballot was recorded on-chain.",
     "placeholder": "Reference number or nullifier…",
-    "hint": "Your reference number was shown after you voted.",
+    "hint": "A reference number is shown after voting, and again in the voter history.",
     "found": "Vote recorded",
     "not_found": "Not found",
     "not_found_desc": "No matching vote was found. Check your reference number and try again.",
@@ -210,7 +214,11 @@
     "vote_recorded": "Recorded on-chain",
     "reference": "Reference",
     "nullifier": "Nullifier",
-    "date": "Date"
+    "date": "Date",
+    "ballots": "Ballots cast",
+    "choice_never_shown": "The chain records that a ballot was cast and when, never what it said. Nobody can read a choice from a receipt, including us.",
+    "your_receipts": "Your receipts",
+    "unlock_hint": "This browser knows of no ballot yet. If you voted from another device, one passkey tap will find those and remember them here."
   },
   "voter_elections": {
     "title": "My Elections",
@@ -232,7 +240,8 @@
     "desc": "Your vote has been recorded on the blockchain. Use your reference number to verify it anytime.",
     "reference": "Reference number",
     "view_tx": "View on PolygonScan",
-    "back_elections": "Back to elections"
+    "back_elections": "Back to elections",
+    "check_receipt": "Check my receipt"
   },
   "change_vote": {
     "title": "Change your vote",
@@ -247,7 +256,10 @@
     "title": "Vote history",
     "subtitle": "All elections you have participated in",
     "export": "Export CSV",
-    "empty": "You haven't voted in any elections yet."
+    "empty": "You haven't voted in any elections yet.",
+    "verify": "Verify this receipt",
+    "see_all": "See all my votes",
+    "partial_view": "Showing the ballots this browser knows about: the ones cast here, plus any found by a previous unlock. Unlock to check for ballots cast on another device since."
   },
   "reverify": {
     "title": "Recover your voting identity",
@@ -321,8 +333,6 @@
     "candidate_desc": "Short description",
     "add_candidate": "Add candidate",
     "blank_vote_note": "A blank vote option is always included automatically.",
-    "require_orb": "Require Orb verification",
-    "require_orb_desc": "Voters must verify at a World ID Orb, in person, rather than on their device alone. Shown to voters as an entry requirement.",
     "privacy_quorum": "Privacy quorum",
     "quorum_hint": "Minimum votes required before results are revealed.",
     "deposit_hint": "Optional. Tops up your shared gas tank, which pays transaction fees for the voters of ALL your elections.",
@@ -357,7 +367,15 @@
     "nationality_reveal_note": "Allowing only certain countries makes voters disclose their nationality, because the proof system can only express exclusions. Blocking countries does not: it answers yes or no without naming the country.",
     "countries_allowed": "Allowed countries",
     "countries_blocked": "Blocked countries",
-    "country_picker_hint": "Search and pick countries. Up to {{max}}."
+    "country_picker_hint": "Search and pick countries. Up to {{max}}.",
+    "personhood": "Proof of personhood",
+    "personhood_desc": "How sure this election needs to be that two enrolments are two different people.",
+    "personhood_device": "A World ID account",
+    "personhood_device_desc": "One account, one vote. Quick, and worth what an account is worth: a voter with a second account can enrol twice.",
+    "personhood_document": "An identity document (recommended)",
+    "personhood_document_desc": "The voter proves a passport or national ID card on their own phone. Nothing about the document is revealed, and a second enrolment behind the same one is refused.",
+    "personhood_orb": "An identity document and a World ID Orb",
+    "personhood_orb_desc": "The strongest bar, and the narrowest: Orb verification is unavailable in countries where the Orbs were withdrawn, and those voters will not be able to enrol."
   },
   "election_mgmt": {
     "actions": "Actions",
@@ -462,7 +480,14 @@
     "not_found": "Page not found",
     "not_found_desc": "The page you're looking for doesn't exist or has been moved.",
     "go_home": "Go home",
-    "generic_title": "Something went wrong"
+    "generic_title": "Something went wrong",
+    "gas_tank_empty": "The organizer's gas tank is empty, so this election cannot cover the fee for your enrollment. Nothing is wrong on your side: ask the organizer to top it up and try again.",
+    "enrollment_closed": "Enrollment is closed for this election.",
+    "already_enrolled": "This identity is already enrolled in this election.",
+    "personhood_used": "This identity document has already been used to enroll in this election.",
+    "not_platform_verified": "Your account is not verified on the platform.",
+    "attestation_required": "This election requires an eligibility check before you can enroll.",
+    "attestation_expired": "Your eligibility approval expired. Please verify again."
   },
   "demo": {
     "banner": "Demo data: no contracts deployed. Nothing here is on-chain."
@@ -487,7 +512,8 @@
     "min_age_range": "Minimum age must be between {{min}} and {{max}}",
     "country_list_empty": "Add at least one country code",
     "country_list_long": "At most {{max}} countries",
-    "eligibility_empty": "Set an age or a nationality rule, or turn the restriction off"
+    "eligibility_empty": "Set an age or a nationality rule, or turn the restriction off",
+    "candidate_blank_clash": "That name is already the blank vote option, which every ballot includes"
   },
   "devices": {
     "title": "My devices",
@@ -601,7 +627,15 @@
     "mobile_return_hint": "Self will bring you back here when it finishes.",
     "requirements_unknown": "This election could not be checked for entry requirements. Try again.",
     "world_id_orb": "World ID verified with Orb",
-    "world_id_device": "World ID verified (device is enough)"
+    "world_id_device": "World ID verified (device is enough)",
+    "personhood_document": "Identity document required",
+    "personhood_orb": "Identity document and World ID Orb required",
+    "personhood_document_short": "Document",
+    "personhood_orb_short": "Orb",
+    "personhood_document_hint": "You will prove a passport or national identity document from your phone.",
+    "personhood_orb_hint": "You will prove an identity document from your phone, and your World ID must be Orb verified.",
+    "error_orb_required": "This election only accepts voters whose World ID is Orb verified. Sign out and sign in again with an Orb verified World ID.",
+    "error_session_expired": "The verification took too long and expired. Start it again."
   },
   "country_picker": {
     "placeholder": "Search for a country…",

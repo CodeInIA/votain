@@ -107,7 +107,7 @@ describe("ElectionPaymaster, relaying", () => {
     const { nullifier, commitment } = nextMember();
     await (await stack.registry.registerMember(nullifier, commitment)).wait();
 
-    const tankBefore = await stack.paymaster.gasBalance(organizer.address);
+    const tankBefore: bigint = await stack.paymaster.gasBalance(organizer.address);
     const relayerBefore = await ethers.provider.getBalance(relayer.address);
 
     const tx = await stack.paymaster
@@ -119,7 +119,7 @@ describe("ElectionPaymaster, relaying", () => {
     expect(await election.hasMember(commitment)).to.equal(true);
 
     // The organizer paid, and the relayer is left roughly whole.
-    const tankAfter = await stack.paymaster.gasBalance(organizer.address);
+    const tankAfter: bigint = await stack.paymaster.gasBalance(organizer.address);
     const charged = tankBefore - tankAfter;
     expect(charged).to.be.greaterThan(0n);
 
@@ -183,15 +183,15 @@ describe("ElectionPaymaster, relaying", () => {
     const encode = (commitment: bigint): string =>
       stack.paymaster.interface.encodeFunctionData("relayEnroll", [address, commitment]);
 
-    const honestBefore = await stack.paymaster.gasBalance(organizer.address);
+    const honestBefore: bigint = await stack.paymaster.gasBalance(organizer.address);
     await (await relayer.sendTransaction({ to: await stack.paymaster.getAddress(), data: encode(a.commitment) })).wait();
-    const honestCharge = honestBefore - (await stack.paymaster.gasBalance(organizer.address));
+    const honestCharge: bigint = honestBefore - (await stack.paymaster.gasBalance(organizer.address));
 
     // Same call, plus 20 KB of trailing zero bytes the decoder never reads.
     const padded = encode(b.commitment) + "00".repeat(20_000);
-    const paddedBefore = await stack.paymaster.gasBalance(organizer.address);
+    const paddedBefore: bigint = await stack.paymaster.gasBalance(organizer.address);
     await (await relayer.sendTransaction({ to: await stack.paymaster.getAddress(), data: padded })).wait();
-    const paddedCharge = paddedBefore - (await stack.paymaster.gasBalance(organizer.address));
+    const paddedCharge: bigint = paddedBefore - (await stack.paymaster.gasBalance(organizer.address));
 
     // The padding must buy the attacker nothing. Allow only execution noise.
     expect(paddedCharge).to.be.lessThan((honestCharge * 110n) / 100n);
@@ -205,11 +205,11 @@ describe("ElectionPaymaster, relaying", () => {
 
     // Ceiling of 1 gas: the charge collapses to the price of a single unit.
     await (await stack.paymaster.connect(owner).setRelayParams(200_000_000_000n, 32_000n, 16n, 1n)).wait();
-    const before = await stack.paymaster.gasBalance(organizer.address);
+    const before: bigint = await stack.paymaster.gasBalance(organizer.address);
     const tx = await stack.paymaster.connect(relayer).relayEnroll(await election.getAddress(), commitment);
     const receipt = await tx.wait();
 
-    const charged = before - (await stack.paymaster.gasBalance(organizer.address));
+    const charged: bigint = before - (await stack.paymaster.gasBalance(organizer.address));
     expect(charged).to.equal(BigInt(receipt!.gasPrice));
 
     await (await stack.paymaster.connect(owner).setRelayParams(200_000_000_000n, 32_000n, 16n, 2_000_000n)).wait();
@@ -223,7 +223,7 @@ describe("ElectionPaymaster, relaying", () => {
 
   it("pays nothing when the underlying call reverts", async () => {
     const { commitment } = nextMember(); // never registered on the platform
-    const tankBefore = await stack.paymaster.gasBalance(organizer.address);
+    const tankBefore: bigint = await stack.paymaster.gasBalance(organizer.address);
 
     await expect(
       stack.paymaster.connect(relayer).relayEnroll(await election.getAddress(), commitment),
@@ -239,13 +239,13 @@ describe("ElectionPaymaster, relaying", () => {
     // 1 gwei cap while submitting far above it.
     await (await stack.paymaster.connect(owner).setRelayParams(1_000_000_000n, 32_000n, 16n, 2_000_000n)).wait();
 
-    const tankBefore = await stack.paymaster.gasBalance(organizer.address);
+    const tankBefore: bigint = await stack.paymaster.gasBalance(organizer.address);
     const tx = await stack.paymaster
       .connect(relayer)
       .relayEnroll(await election.getAddress(), commitment, { gasPrice: 50_000_000_000n });
     const receipt = await tx.wait();
 
-    const charged = tankBefore - (await stack.paymaster.gasBalance(organizer.address));
+    const charged: bigint = tankBefore - (await stack.paymaster.gasBalance(organizer.address));
     const uncapped = BigInt(receipt!.gasUsed) * 50_000_000_000n;
     expect(charged).to.be.lessThan(uncapped / 10n);
 

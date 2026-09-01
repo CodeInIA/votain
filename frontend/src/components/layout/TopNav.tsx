@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Compass, Vote, Clock, User, LayoutDashboard, Users, Zap } from 'lucide-react';
+import { Compass, Vote, Clock, User, LayoutDashboard, Users, Zap, ShieldCheck } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
@@ -24,8 +24,12 @@ const ORGANIZER_ITEMS: NavItem[] = [
   { to: '/organizer/gas',       labelKey: 'nav.gas',       icon: <Zap             className="w-4 h-4" /> },
 ];
 
+// The verifier belongs here and not only in the voter's profile. It takes no
+// session and checks anyone's receipt, so reaching it required being the one
+// person who least needed it.
 const PUBLIC_ITEMS: NavItem[] = [
-  { to: '/discover', labelKey: 'nav.discover', icon: <Compass className="w-4 h-4" /> },
+  { to: '/discover',       labelKey: 'nav.discover', icon: <Compass     className="w-4 h-4" /> },
+  { to: '/verify-receipt', labelKey: 'nav.verify',   icon: <ShieldCheck className="w-4 h-4" /> },
 ];
 
 // No props: the nav is fully determined by auth state (which role is signed in),
@@ -59,7 +63,7 @@ export function TopNav() {
         <img src="/votain-wordmark.svg" alt="" className="h-4 object-contain translate-y-0.5" />
       </button>
 
-      {/* Nav links — desktop only */}
+      {/* Nav links, desktop only */}
       <div className="hidden md:flex items-center gap-1 flex-1">
         {items.map(item => (
           <NavLink

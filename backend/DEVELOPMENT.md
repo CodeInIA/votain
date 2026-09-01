@@ -189,6 +189,51 @@ identifier sits in `userContextData` itself: 32 bytes of destination chain id,
 which belong to a circuit version and can move under an SDK upgrade, out of our
 code entirely.
 
+**Sign-in takes any credential; elections ask for more.**
+`verifyWorldIdProof(payload, minimum)` ranks credentials as `any` < `document` <
+`orb` and defaults to `any`. Demanding personhood at the door would lock out
+every voter in a country with no Orbs and no document credential yet, so it is
+demanded at enrollment instead, where a refusal costs one election rather than
+the whole account. Selfie Check ranks at the floor on purpose: World ID documents
+it as carrying no one-person-one-account guarantee, so for personhood it is worth
+exactly what a device is.
+
+What sign-in no longer establishes is that the account is a person. That comes
+from the document nullifier `verifyProof` returns and the contract records; see
+`usedPersonhoodNullifiers` in the contracts guide.
+
+**The level a session records is the level that was PROVED.** The verify API
+answers "at least one of these verified", so a payload declaring an Orb
+credential alongside a real device one earns its 200 from the device proof.
+Reading the level off the declaration would record that session as Orb verified
+on the strength of an entry nothing checked, which matters now that the level
+gates elections: `verifiedLevel` reads the entries the API says succeeded, and
+where the API itemises nothing it records the LOWEST declared level. Understating
+costs a voter one more verification; overstating hands them an election they were
+never entitled to enter. `payloadLevel` still reports the claim, and is only what
+the pre-call refusal reads.
+
+**The election's level comes from the chain, never from the caller.**
+`effectivePersonhood(policy)` on the policy `readElectionEligibility` returns,
+which is refused outright unless it matches the hash published on chain. Only
+`orb` needs an answer beyond the Self scan, and that answer is the `personhood`
+claim in the voter's own SD-JWT: the session is keyed by the nullifier that
+credential was issued against, so the claim is bound to the holder. A proof
+presented at enrollment instead would prove only that somebody has an Orb. A
+credential issued before the claim existed carries no level and is treated as
+unmet, which sends the voter through sign-in again rather than waving them
+through.
+
+**Attestation deadlines are measured in CHAIN time.** `ElectionV4` compares the
+deadline it is given against `block.timestamp`, so `attestationBaseTime()` takes
+the later of this server's clock and the latest block's. Measuring from the wall
+clock alone is correct only while the two agree: on a local chain advanced past a
+run of finished elections, every attestation was born a week expired and no retry
+could produce a valid one. Taking the chain alone would be wrong the other way,
+since an idle node's last block can be hours old. The later of the two can only
+move the deadline outwards, and on a network minting blocks every few seconds it
+picks the wall clock and changes nothing.
+
 **`SELF_MOCK` picks one world or the other.** With `1` the verifier checks the
 staging identity trees and only mock documents pass; with `0` it checks
 production and only real ones do. Nothing accepts both, and the rejection does

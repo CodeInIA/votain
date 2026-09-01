@@ -91,7 +91,17 @@ async function main() {
     tags: ["e2e"],
   };
 
-  const now = (await ethers.provider.getBlock("latest"))!.timestamp;
+  /**
+   * The time the NEXT block will carry, not the time the last one did.
+   *
+   * On an idle local node those are not close. Hardhat stamps a new block with
+   * `max(parentTimestamp + 1, wall clock)`, so against a node last used two days
+   * ago every deadline computed from the latest block is already two days stale,
+   * and the first attested enrollment reverts with `AttestationExpired` before
+   * anything under test has been reached.
+   */
+  const latestBlock = (await ethers.provider.getBlock("latest"))!.timestamp;
+  const now = Math.max(latestBlock, Math.floor(Date.now() / 1000));
   const factory = await ethers.getContractAt("ElectionFactory", ElectionFactory);
 
   const cfg = {
@@ -171,16 +181,32 @@ async function main() {
   const types = {
     EnrollAttestation: [
       { name: "identityCommitment", type: "uint256" },
+      { name: "personhoodNullifier", type: "uint256" },
       { name: "deadline", type: "uint256" },
     ],
   };
-  const deadline = now + 900;
-  const signature = await attester.signTypedData(domain, types, {
-    identityCommitment: commitment,
-    deadline,
-  });
 
-  const digest = await election.enrollmentDigest(commitment, deadline);
+  /**
+   * Stands in for the nullifier a document proof yields for this election.
+   * Distinct per person, identical for the same person however many World ID
+   * accounts they hold, which is the property the contract now relies on.
+   */
+  let personhoodSeq = 0n;
+  const nextPersonhood = (): bigint => {
+    personhoodSeq += 1n;
+    return BigInt(ethers.keccak256(ethers.toUtf8Bytes(`personhood-${personhoodSeq}`))) >> 8n;
+  };
+  const sign = (commitment: bigint, personhood: bigint, dl: number, target = address) =>
+    attester.signTypedData(
+      { ...domain, verifyingContract: target },
+      types,
+      { identityCommitment: commitment, personhoodNullifier: personhood, deadline: dl },
+    );
+  const deadline = now + 900;
+  const personhood = nextPersonhood();
+  const signature = await sign(commitment, personhood, deadline);
+
+  const digest = await election.enrollmentDigest(commitment, personhood, deadline);
   check(
     "the contract recovers the attester from its own digest",
     ethers.recoverAddress(digest, signature) === attester.address,
@@ -190,7 +216,7 @@ async function main() {
   const paymaster = await ethers.getContractAt("ElectionPaymaster", ElectionPaymaster);
   const tankBefore = await paymaster.gasBalance(organizer.address);
   await (
-    await paymaster.connect(voter).relayEnrollAttested(address, commitment, deadline, signature)
+    await paymaster.connect(voter).relayEnrollAttested(address, commitment, personhood, deadline, signature)
   ).wait();
   const tankAfter = await paymaster.gasBalance(organizer.address);
 
@@ -206,51 +232,53 @@ async function main() {
   const otherHuman = BigInt(ethers.hexlify(ethers.randomBytes(30)));
   await (await registry.connect(deployer).registerMember(otherHuman, other)).wait();
 
-  const forged = await outsider.signTypedData(domain, types, {
-    identityCommitment: other,
-    deadline,
-  });
+  const forgedPersonhood = nextPersonhood();
+  const forged = await outsider.signTypedData(
+    domain,
+    types,
+    { identityCommitment: other, personhoodNullifier: forgedPersonhood, deadline },
+  );
   await expectRevert(
     "a signature from anyone else is rejected",
-    election.connect(voter).enrollAttested(other, deadline, forged),
+    election.connect(voter).enrollAttested(other, forgedPersonhood, deadline, forged),
     "BadAttestation",
   );
 
   const stale = now - 60;
-  const staleSig = await attester.signTypedData(domain, types, {
-    identityCommitment: other,
-    deadline: stale,
-  });
+  const stalePersonhood = nextPersonhood();
+  const staleSig = await sign(other, stalePersonhood, stale);
   await expectRevert(
     "an expired attestation is rejected",
-    election.connect(voter).enrollAttested(other, stale, staleSig),
+    election.connect(voter).enrollAttested(other, stalePersonhood, stale, staleSig),
     "AttestationExpired",
   );
 
+  // Fresh nullifier, so what fails is the signature over the wrong commitment
+  // rather than the reuse guard.
+  const swapPersonhood = nextPersonhood();
   await expectRevert(
     "a swapped commitment is rejected",
-    election.connect(voter).enrollAttested(other, deadline, signature),
+    election
+      .connect(voter)
+      .enrollAttested(other, swapPersonhood, deadline, await sign(commitment, swapPersonhood, deadline)),
     "BadAttestation",
   );
 
-  const secondSig = await attester.signTypedData(domain, types, {
-    identityCommitment: commitment,
-    deadline,
-  });
+  // Trips on the nullifier rather than on AlreadyEnrolled, because that check
+  // comes first now. Either way the second leaf is refused.
+  const secondSig = await sign(commitment, personhood, deadline);
   await expectRevert(
-    "the same human cannot enroll twice",
-    election.connect(voter).enrollAttested(commitment, deadline, secondSig),
-    "AlreadyEnrolled",
+    "the same attestation cannot be replayed",
+    election.connect(voter).enrollAttested(commitment, personhood, deadline, secondSig),
+    "PersonhoodNullifierUsed",
   );
 
   const unregistered = BigInt(ethers.hexlify(ethers.randomBytes(30)));
-  const unregSig = await attester.signTypedData(domain, types, {
-    identityCommitment: unregistered,
-    deadline,
-  });
+  const unregPersonhood = nextPersonhood();
+  const unregSig = await sign(unregistered, unregPersonhood, deadline);
   await expectRevert(
     "an attestation does not replace World ID verification",
-    election.connect(voter).enrollAttested(unregistered, deadline, unregSig),
+    election.connect(voter).enrollAttested(unregistered, unregPersonhood, deadline, unregSig),
     "NotPlatformVerified",
   );
   console.log();
@@ -285,16 +313,56 @@ async function main() {
   check("plain enroll() still works when no policy is declared", await openElection.hasMember(other));
 
   const strayDeadline = now + 900;
-  const straySig = await attester.signTypedData(
-    { ...domain, verifyingContract: openAddress },
-    types,
-    { identityCommitment: commitment, deadline: strayDeadline },
-  );
+  const strayPersonhood = nextPersonhood();
+  const straySig = await sign(commitment, strayPersonhood, strayDeadline, openAddress);
   await expectRevert(
     "an attestation is refused where no policy exists",
-    openElection.connect(voter).enrollAttested(commitment, strayDeadline, straySig),
+    openElection
+      .connect(voter)
+      .enrollAttested(commitment, strayPersonhood, strayDeadline, straySig),
     "UnexpectedAttestation",
   );
+  console.log();
+
+  // ── 7. The reason the personhood nullifier exists ──────────────────
+  // `enrolledHumans` only stops a second enrollment by the same ACCOUNT, and
+  // sign-in no longer proves personhood, so somebody with two World ID accounts
+  // would otherwise join twice. The document nullifier is the same for both.
+  console.log("7. One person, two accounts");
+  const twinA = BigInt(ethers.hexlify(ethers.randomBytes(30)));
+  const twinB = BigInt(ethers.hexlify(ethers.randomBytes(30)));
+  await (
+    await registry.connect(deployer).registerMember(BigInt(ethers.hexlify(ethers.randomBytes(30))), twinA)
+  ).wait();
+  await (
+    await registry.connect(deployer).registerMember(BigInt(ethers.hexlify(ethers.randomBytes(30))), twinB)
+  ).wait();
+
+  const sharedDocument = nextPersonhood();
+  const before = await election.memberCount();
+
+  await (
+    await election
+      .connect(voter)
+      .enrollAttested(twinA, sharedDocument, deadline, await sign(twinA, sharedDocument, deadline))
+  ).wait();
+  check("the first account enrolls", (await election.memberCount()) === before + 1n);
+
+  await expectRevert(
+    "the second account, same document, is refused",
+    election
+      .connect(voter)
+      .enrollAttested(twinB, sharedDocument, deadline, await sign(twinB, sharedDocument, deadline)),
+    "PersonhoodNullifierUsed",
+  );
+  check("no second leaf was added", (await election.memberCount()) === before + 1n);
+
+  await expectRevert(
+    "a zero nullifier cannot stand in for a missing proof",
+    election.connect(voter).enrollAttested(twinB, 0n, deadline, await sign(twinB, 0n, deadline)),
+    "MissingPersonhoodNullifier",
+  );
+  check("the used nullifier is publicly recorded", await election.usedPersonhoodNullifiers(sharedDocument));
   console.log();
 
   console.log(`RESULT  ${passed} passed, ${failed} failed`);

@@ -23,6 +23,12 @@ router.get('/me', async (req: Request, res: Response) => {
   return res.status(200).json({
     authenticated: true,
     nullifier: session.nullifier,
+    // The level this session was signed in with. Not sensitive: it is the
+    // holder's own credential, told to the holder. The browser needs it to stop
+    // showing a green tick against a requirement the enrollment will refuse.
+    // Absent on credentials issued before the claim existed, and the caller has
+    // to read that absence as "unproved" rather than as the lowest level.
+    personhood: session.personhood,
   });
 });
 
@@ -99,6 +105,11 @@ router.post('/verify-human', async (req: Request, res: Response) => {
       iat: now,
       exp: now + 7 * 24 * 60 * 60,
       vct: 'votain:voter-credential:v1',
+      // Recorded now so an election that demands an Orb can be answered without
+      // sending the voter through World ID a second time. Sign-in itself still
+      // accepts any credential: Orbs were withdrawn from Spain, and gating the
+      // front door on one would lock out the voters this project is for.
+      personhood: verified.level,
       // Selective-disclosure identity attributes. Demo issuer values until
       // World ID Credentials selective disclosure is wired (see docs).
       country: process.env.DEMO_VC_COUNTRY ?? 'ES',

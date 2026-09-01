@@ -23,8 +23,30 @@ import { Contract, JsonRpcProvider, Wallet, isAddress } from 'ethers';
 
 const PAYMASTER_ABI = [
   'function relayEnroll(address election, uint256 identityCommitment)',
-  'function relayEnrollAttested(address election, uint256 identityCommitment, uint256 deadline, bytes signature)',
+  'function relayEnrollAttested(address election, uint256 identityCommitment, uint256 personhoodNullifier, uint256 deadline, bytes signature)',
   'function relayVote(address election, bytes voteCiphertext, uint256 nullifier, uint256 merkleRoot, uint256 merkleDepth, uint256[2] pA, uint256[2][2] pB, uint256[2] pC)',
+  // Declared so a revert this contract interface decodes arrives with a NAME
+  // rather than a bare four-byte selector, since the message built from it is
+  // what this server hands the browser. It does not cover every case: a failure
+  // during gas estimation is raised by the provider, which has no ABI, and
+  // reaches the caller as `unknown custom error` with the selector in `data`.
+  // The browser reads that selector itself; see `revertNameOf` in
+  // frontend/src/lib/relay.ts.
+  'error InsufficientBalance()',
+  'error EnrollmentNotOpen()',
+  'error AlreadyEnrolled()',
+  'error NotPlatformVerified()',
+  'error PersonhoodNullifierUsed()',
+  'error MissingPersonhoodNullifier()',
+  'error AttestationRequired()',
+  'error UnexpectedAttestation()',
+  'error AttestationExpired()',
+  'error BadAttestation()',
+  'error UnknownElection()',
+  'error VotingNotOpen()',
+  'error UnknownOrExpiredRoot()',
+  'error InvalidProof()',
+  'error WrongPhase()',
   'function organizerOf(address election) view returns (address)',
   'function gasBalance(address organizer) view returns (uint256)',
 ];
@@ -93,6 +115,7 @@ export async function relayEnroll(election: string, commitment: string): Promise
 export async function relayEnrollAttested(
   election: string,
   commitment: string,
+  personhoodNullifier: string,
   deadline: number,
   signature: string,
 ): Promise<RelayResult> {
@@ -101,7 +124,13 @@ export async function relayEnrollAttested(
   try {
     requireElection(election);
     const paymaster = getPaymaster();
-    const args = [election, BigInt(commitment), BigInt(deadline), signature] as const;
+    const args = [
+      election,
+      BigInt(commitment),
+      BigInt(personhoodNullifier),
+      BigInt(deadline),
+      signature,
+    ] as const;
     // Same reason as relayEnroll: a reverting call still costs the relayer its
     // gas, and an expired or malformed attestation reverts.
     await paymaster.relayEnrollAttested.staticCall(...args);

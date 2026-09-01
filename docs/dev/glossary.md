@@ -36,7 +36,9 @@
 
 ## Identity and Credentials
 
-**World ID**: Worldcoin's proof-of-humanity system. Two levels: `Orb` (ocular biometrics, stronger) and `Device` (device-only). Issues a `nullifier_hash` unique per user and app.
+**World ID**: Worldcoin's proof-of-humanity system. Two levels: `Orb` (ocular biometrics, stronger) and `Device` (device-only). Issues a `nullifier_hash` unique per user and app. Votain accepts any level at sign-in, because Orbs were withdrawn from Spain; see **Personhood level**.
+
+**Personhood level**: how distinct a human an election insists each voter is, stored as `personhood` inside the eligibility policy and therefore covered by the on-chain `eligibilityPolicyHash`. `device` is a World ID account and nothing more; `document` requires a passport or national ID proved through Self, whose per-election nullifier the contract records so one document cannot enroll twice; `orb` requires both. Absent on an election that names attribute rules, where it means `document`.
 
 **SD-JWT (Selective Disclosure JWT)**: JWT extension where the issuer includes attributes that the holder can selectively disclose. In Votain: the backend issues an SD-JWT with `nullifier_hash`, `verification_level`, etc.
 

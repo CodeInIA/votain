@@ -1,18 +1,25 @@
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Users, Calendar, ChevronRight } from 'lucide-react';
+import { Users, Calendar, ChevronRight, Clock } from 'lucide-react';
 import { Badge } from './Badge';
 import { DomainBadge } from './DomainBadge';
 import { EligibilityChips } from './EligibilityChips';
 import { Countdown } from './Countdown';
 import { Button } from './Button';
 import { cn } from '../../lib/utils';
-import { nextBoundary } from '../../lib/phase';
+import { endsSoon, nextBoundary } from '../../lib/phase';
 import type { Election, ElectionPhase } from '../../data/seed';
 
 function phaseVariant(phase: ElectionPhase) {
   return phase as Parameters<typeof Badge>[0]['variant'];
 }
+
+/**
+ * Phases where "you are enrolled" is news the voter can still use. Voting is
+ * covered by the button, and a closed or tallying election is not something
+ * being enrolled in changes, so a badge there would be decoration.
+ */
+const ENROLLED_PHASES: ElectionPhase[] = ['enrolling', 'pending_vote'];
 
 interface ElectionCardProps {
   election: Election;
@@ -26,9 +33,28 @@ export function ElectionCard({ election, voterView = false, className }: Electio
   // Each waiting/live phase counts down to its own next boundary.
   const deadline = nextBoundary(election)?.deadline;
   const isLive = election.phase === 'active' || election.phase === 'enrolling';
+  // Only ever said to the person it is a deadline FOR, which is what the
+  // predicate already encodes; `voterView` keeps it off the public listing,
+  // where it would be somebody else's clock.
+  const urgent = voterView && endsSoon(election);
+  /**
+   * Turnout, as closely as the chain can tell it.
+   *
+   * `castVotes` counts BALLOTS, and a voter changing their mind casts a second
+   * one, so the raw ratio passes 100%: a card showing one enrolled voter who
+   * had voted twice read "200% voted". The chain keeps no count of distinct
+   * voters, only a per-nullifier nonce, so recovering the exact figure would
+   * mean reading every VoteCast event of every election in the list. Capped
+   * instead, which is right whenever the re-voters had already been counted and
+   * an over-estimate otherwise. Never absurd, which the raw number was.
+   */
   const pct = election.totalEnrolled > 0
-    ? Math.round((election.castVotes / election.totalEnrolled) * 100)
+    ? Math.min(100, Math.round((election.castVotes / election.totalEnrolled) * 100))
     : 0;
+  const turnoutLabel = t('election.turnout_detail', {
+    voted: Math.min(election.castVotes, election.totalEnrolled),
+    total: election.totalEnrolled,
+  });
 
   const href = voterView
     ? `/voter/election/${election.id}`
@@ -53,11 +79,27 @@ export function ElectionCard({ election, voterView = false, className }: Electio
             <p className="text-xs text-on-surface-meta truncate">{election.organizer}</p>
             <DomainBadge domain={election.organizerDomain} organizerAddress={election.organizerAddress} />
           </div>
-          <h3 className="text-sm sm:text-base font-semibold text-on-surface leading-tight line-clamp-2">
+          {/* `line-clamp` hides whatever overflows the box, and at
+              `leading-tight` the box is shorter than the type: the tails of
+              g, p and @ fell outside it and were cut off. Roomier leading
+              plus a hair of padding keeps two lines and the descenders. */}
+          <h3 className="text-sm sm:text-base font-semibold text-on-surface leading-snug pb-0.5 line-clamp-2 break-words">
             {election.title}
           </h3>
         </div>
         <div className="flex flex-col items-end gap-2 shrink-0 mt-0.5">
+          {/* Stacked here rather than pinned over the card's top edge, which is
+              where it used to live: half outside the border, in the same corner
+              and the same green as the phase pill below it, so the two read as
+              one control that had come apart. Red because that is what this
+              page already calls urgent, in the header count and in the
+              countdown that turns the same colour on the same hour. */}
+          {urgent && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-error/10 ring-1 ring-error/25 text-error text-[10px] font-semibold tracking-wide uppercase whitespace-nowrap">
+              <Clock className="w-3 h-3 shrink-0" />
+              {t('voter_elections.ends_soon')}
+            </span>
+          )}
           <Badge variant={phaseVariant(election.phase)} dot={isLive}>
             {t(`phase.${election.phase}`)}
           </Badge>
@@ -70,7 +112,7 @@ export function ElectionCard({ election, voterView = false, className }: Electio
       </div>
 
       {/* Description */}
-      <p className="text-xs text-on-surface-variant leading-relaxed line-clamp-2">
+      <p className="text-xs text-on-surface-variant leading-relaxed line-clamp-2 break-words">
         {election.description}
       </p>
 
@@ -101,9 +143,25 @@ export function ElectionCard({ election, voterView = false, className }: Electio
         </div>
       )}
 
-      {/* Participation bar for active elections */}
-      {election.phase === 'active' && (
-        <div className="h-1 rounded-full bg-surface-high overflow-hidden">
+      {/* Participation, while there is participation to show. An election with
+          nobody enrolled yet drew an empty grey track: it depicted nothing the
+          "0% voted" line beside it did not already say, and an unfilled bar
+          reads as a component that failed to load rather than as a zero. */}
+      {election.phase === 'active' && election.totalEnrolled > 0 && (
+        <div
+          role="progressbar"
+          aria-valuenow={pct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          // Named, because an unlabelled 1px bar announces nothing to a screen
+          // reader and, to everyone else, means whatever they infer from the
+          // number it happens to sit under. The label also carries the
+          // denominator the percentage hides: "100% voted" is a very different
+          // fact at one enrolled voter than at two hundred.
+          aria-label={turnoutLabel}
+          title={turnoutLabel}
+          className="h-1 rounded-full bg-surface-high overflow-hidden"
+        >
           <div
             className="h-full rounded-full bg-primary/60 transition-all duration-700"
             style={{ width: `${pct}%` }}
@@ -125,6 +183,15 @@ export function ElectionCard({ election, voterView = false, className }: Electio
         )}
         {voterView && election.hasVoted && (
           <Badge variant="voted" dot>{t('phase.voted')}</Badge>
+        )}
+        {/* Enrolled, and nothing else on this card says so. While voting is open
+            the button above already implies it, and after enrollment matters the
+            fact is history, so this covers the two phases in between: the voter
+            is in, and has nothing to do yet. Without it a card they had already
+            joined looked exactly like one they had not, and the only way to find
+            out was to open it. */}
+        {voterView && election.isEnrolled && !election.hasVoted && ENROLLED_PHASES.includes(election.phase) && (
+          <Badge variant="enrolled" dot>{t('election.already_enrolled')}</Badge>
         )}
         {!voterView && !election.hasVoted && (
           <span className="text-xs text-on-surface-meta">{election.candidates.length - 1} {t('election.candidates')}</span>

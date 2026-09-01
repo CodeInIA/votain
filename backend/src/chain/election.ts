@@ -85,6 +85,37 @@ export async function readElectionEligibility(
   };
 }
 
+/**
+ * The time the CHAIN believes it is, which is the only clock that matters.
+ *
+ * `ElectionV4.enrollAttested` refuses an attestation when
+ * `block.timestamp > deadline`, and this server was computing that deadline
+ * from its own wall clock. On a network whose blocks arrive every couple of
+ * seconds the two agree closely enough that nothing shows. On any chain that
+ * drifts, they do not: a local node whose clock was advanced past finished
+ * elections ran a week ahead, so every attestation was born expired and no
+ * amount of retrying could produce a valid one.
+ *
+ * Never cached. A stale answer here is the whole failure being described.
+ */
+export async function getChainTime(): Promise<number> {
+  const block = await getProvider().getBlock('latest');
+  if (!block) throw new Error('could not read the latest block');
+  return Number(block.timestamp);
+}
+
+/**
+ * The base an attestation deadline is measured from: whichever clock is
+ * further ahead.
+ *
+ * Taking the chain alone would be wrong in the other direction, on an idle node
+ * whose last block is hours old: the deadline would be short by exactly that
+ * gap. The later of the two satisfies both readings.
+ */
+export async function attestationBaseTime(): Promise<number> {
+  return Math.max(Math.floor(Date.now() / 1000), await getChainTime());
+}
+
 /** Chain id the attester must sign against, read once and cached. */
 let cachedChainId: bigint | null = null;
 

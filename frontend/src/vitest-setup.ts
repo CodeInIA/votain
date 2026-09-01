@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 
-// Mocks fundamentales de API del navegador no soportadas por JSDOM de forma nativa
+// Browser APIs jsdom does not implement, stubbed so components can mount.
 vi.stubGlobal('ResizeObserver', class {
   observe() {}
   unobserve() {}
@@ -32,8 +32,12 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 });
 
-// Mock Global de traducciones para todos los tests
+// One translation mock for every test: `t` returns the key, so assertions read
+// as keys and a wording change never breaks a test.
 vi.mock('react-i18next', () => ({
+  // The real plugin, minimally: without it, importing src/i18n/config throws,
+  // so no test could touch a module that reads translations outside a component.
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string) => key,
     i18n: { 

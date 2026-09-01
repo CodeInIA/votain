@@ -23,7 +23,34 @@
  */
 import { keccak256, toUtf8Bytes } from 'ethers';
 
+/**
+ * How strongly the election insists the enrolling voter is a distinct human.
+ *
+ *  - `device`   a World ID account, and nothing more. One account, one vote.
+ *               Cheap, and worth exactly what an account is worth: someone with
+ *               two phones has two.
+ *  - `document` a government document proved through Self. The nullifier it
+ *               yields is recorded on chain, so a second enrollment behind the
+ *               same document is refused however many World ID accounts back it.
+ *  - `orb`      the above, plus a fresh World ID Orb proof at enrollment.
+ *
+ * `orb` is `document` AND an Orb, not `document` OR an Orb. The document
+ * nullifier stays the value written on chain because Self scopes it per
+ * election, so the same voter enrolling in two elections produces two unrelated
+ * values. A World ID nullifier is scoped per application and would be the same
+ * in both, quietly re-linking the enrollments this design works to keep apart.
+ */
+export type PersonhoodLevel = 'device' | 'document' | 'orb';
+
+export const PERSONHOOD_LEVELS: readonly PersonhoodLevel[] = ['device', 'document', 'orb'] as const;
+
 export interface EligibilityPolicy {
+  /**
+   * Omitted on elections created before this field existed, and on those whose
+   * organizer accepted the default. Read it through `effectivePersonhood`
+   * rather than directly.
+   */
+  personhood?: PersonhoodLevel;
   /** Minimum age in years. Proved as a predicate: the birth date is never revealed. */
   minAge?: number;
   /** ISO 3166-1 alpha-3 codes. A voter's nationality must be one of these. */
@@ -47,13 +74,37 @@ export const MAX_COUNTRY_LIST = 40;
 export const MIN_AGE_FLOOR = 10;
 export const MAX_AGE_CEILING = 99;
 
-export function isEmptyPolicy(policy: EligibilityPolicy | null | undefined): boolean {
-  if (!policy) return true;
+/** Whether the policy asks the voter to prove anything ABOUT themselves. */
+export function hasAttributeRules(policy: EligibilityPolicy | null | undefined): boolean {
+  if (!policy) return false;
   return (
-    policy.minAge === undefined &&
-    (policy.allowedCountries?.length ?? 0) === 0 &&
-    (policy.blockedCountries?.length ?? 0) === 0
+    policy.minAge !== undefined ||
+    (policy.allowedCountries?.length ?? 0) > 0 ||
+    (policy.blockedCountries?.length ?? 0) > 0
   );
+}
+
+/**
+ * The level actually in force.
+ *
+ * An attribute policy already requires a document scan to satisfy, and the scan
+ * already yields the nullifier the contract deduplicates on, so an election
+ * that names attributes is at `document` whether or not it says so. Elections
+ * deployed before this field existed therefore keep the level they always had,
+ * and their published hashes keep verifying.
+ */
+export function effectivePersonhood(policy: EligibilityPolicy | null | undefined): PersonhoodLevel {
+  if (policy?.personhood) return policy.personhood;
+  return hasAttributeRules(policy) ? 'document' : 'device';
+}
+
+/**
+ * Nothing to enforce off chain: no attributes, and personhood no stronger than
+ * the World ID account the voter signed in with. Such an election needs no
+ * attester and no scan, and its hash is zero.
+ */
+export function isEmptyPolicy(policy: EligibilityPolicy | null | undefined): boolean {
+  return !hasAttributeRules(policy) && effectivePersonhood(policy) === 'device';
 }
 
 function normaliseCountries(list: unknown, field: string): string[] | undefined {
@@ -87,6 +138,14 @@ export function parsePolicy(raw: unknown): EligibilityPolicy {
 
   const input = raw as Record<string, unknown>;
   const policy: EligibilityPolicy = {};
+
+  if (input.personhood !== undefined && input.personhood !== null) {
+    const level = input.personhood;
+    if (typeof level !== 'string' || !PERSONHOOD_LEVELS.includes(level as PersonhoodLevel)) {
+      throw new Error(`personhood must be one of ${PERSONHOOD_LEVELS.join(', ')}`);
+    }
+    policy.personhood = level as PersonhoodLevel;
+  }
 
   if (input.minAge !== undefined && input.minAge !== null) {
     const age = Number(input.minAge);
@@ -123,6 +182,9 @@ export function canonicalPolicyJson(policy: EligibilityPolicy): string {
   if (policy.minAge !== undefined) ordered.minAge = policy.minAge;
   if (policy.allowedCountries?.length) ordered.allowedCountries = policy.allowedCountries;
   if (policy.blockedCountries?.length) ordered.blockedCountries = policy.blockedCountries;
+  // Last, and only when stated. Elections that predate this field must keep
+  // hashing to the value their metadata was published with.
+  if (policy.personhood) ordered.personhood = policy.personhood;
   return JSON.stringify(ordered);
 }
 

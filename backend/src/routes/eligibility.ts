@@ -22,8 +22,18 @@
 import { Router, Request, Response } from 'express';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { verifySession } from '../auth/session.js';
-import { readElectionEligibility, getChainId, isChainConfigured } from '../chain/election.js';
-import { isEmptyPolicy } from '../eligibility/policy.js';
+import {
+  readElectionEligibility,
+  getChainId,
+  attestationBaseTime,
+  isChainConfigured,
+} from '../chain/election.js';
+import {
+  effectivePersonhood,
+  isEmptyPolicy,
+  type EligibilityPolicy,
+} from '../eligibility/policy.js';
+import type { CredentialLevel } from '../auth/worldId.js';
 import {
   isSelfConfigured,
   isMockMode,
@@ -48,6 +58,35 @@ import {
 } from '../eligibility/sessions.js';
 
 const router = Router();
+
+/**
+ * Whether the session clears the election's personhood bar.
+ *
+ * Only `orb` can fail here. `device` asks nothing beyond being signed in, and
+ * `document` is proved by the Self scan this whole flow exists to run, so the
+ * one level that needs a separate answer is the one World ID alone can give.
+ *
+ * The level is read from the credential issued at sign-in rather than from a
+ * proof presented now, and that is the binding: the nullifier the session is
+ * keyed by IS the World ID nullifier that credential was issued against. A
+ * proof accepted at this point would prove that SOMEBODY has an Orb, with
+ * nothing tying that somebody to the voter holding the cookie.
+ *
+ * An older credential carries no level at all. Treated as unmet, so the voter
+ * signs in again and gets one, rather than being waved through on the strength
+ * of a claim that was never made.
+ *
+ * The two vocabularies do not quite line up: a credential level is
+ * `any | document | orb` and a policy level is `device | document | orb`. Only
+ * `orb` is compared here, and it is spelled the same in both, but anything that
+ * later wants to RANK one against the other has to map them first.
+ */
+function meetsPersonhood(
+  policy: EligibilityPolicy,
+  session: { personhood?: CredentialLevel },
+): boolean {
+  return effectivePersonhood(policy) !== 'orb' || session.personhood === 'orb';
+}
 
 const eligibilityLimiter = rateLimit({
   windowMs: 60_000,
@@ -141,6 +180,13 @@ router.post('/eligibility/:election/session', eligibilityLimiter, async (req: Re
   // election that named a different attester is not ours to gate.
   if (eligibility.attester.toLowerCase() !== attesterAddress().toLowerCase()) {
     return res.status(400).json({ error: 'this election names a different attester' });
+  }
+
+  // Before the scan, not after it. The attestation route checks this again and
+  // is the one that counts; refusing here only saves the voter from getting
+  // their passport out for an election that was never going to accept them.
+  if (!meetsPersonhood(eligibility.policy, voter)) {
+    return res.status(403).json({ error: 'orb_required' });
   }
 
   const session = createSession(election, voter.nullifier);
@@ -290,7 +336,7 @@ router.post('/eligibility/verify', verifyCallbackLimiter, async (req: Request, r
     return verdictResponse(res, { status: 'error', reason: verdict.reason as string });
   }
 
-  markSession(sessionId, 'passed');
+  markSession(sessionId, 'passed', undefined, verdict.personhoodNullifier);
   return verdictResponse(res, { status: 'success' });
 });
 
@@ -340,19 +386,46 @@ router.post('/eligibility/:election/attestation', eligibilityLimiter, async (req
     return res.status(409).json({ error: 'session has not passed verification', reason: session.reason });
   }
 
+  // A passed session always carries one; the adapter refuses a proof without it.
+  // Checked anyway because the contract rejects a zero and the voter would only
+  // see an unexplained revert.
+  const personhoodNullifier = session.personhoodNullifier;
+  if (!personhoodNullifier) {
+    console.error('Passed session carried no personhood nullifier');
+    return res.status(500).json({ error: 'could not sign attestation' });
+  }
+
   // Consumed BEFORE the awaits below, not after them. Two concurrent claims with
   // the same session id and different commitments would otherwise both pass the
   // status check and both walk away with a signature, which is the exact thing
   // one-attestation-per-scan exists to prevent. The cost of being wrong the
   // other way is a voter who re-scans.
+  //
+  // Nothing awaited may move above this line. The personhood re-read below sits
+  // under it for exactly that reason: it would have reopened the window it is
+  // written beneath.
   consumeSession(sessionId);
 
   try {
-    const chainId = await getChainId();
+    // Read again at signing time, from the chain, and let this one be the
+    // answer. The check at session creation ran against a policy read minutes
+    // earlier and, more to the point, against a cookie the voter has had every
+    // chance to swap since. This is the last moment before a signature exists.
+    const { policy } = await readElectionEligibility(String(req.params.election));
+    if (!meetsPersonhood(policy, voter)) {
+      return res.status(403).json({ error: 'orb_required' });
+    }
+
+    // Measured from the chain's clock, not this server's. The contract compares
+    // the deadline against `block.timestamp`, so a deadline computed here from
+    // `Date.now()` is only valid while the two agree.
+    const [chainId, now] = await Promise.all([getChainId(), attestationBaseTime()]);
     const attestation = await signEnrollAttestation(
       String(req.params.election),
       chainId,
       identityCommitment,
+      personhoodNullifier,
+      now,
     );
     return res.status(200).json(attestation);
   } catch (error: unknown) {

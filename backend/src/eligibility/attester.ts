@@ -33,6 +33,7 @@ export const ATTESTATION_TTL_SECONDS = 15 * 60;
 const EIP712_TYPES = {
   EnrollAttestation: [
     { name: 'identityCommitment', type: 'uint256' },
+    { name: 'personhoodNullifier', type: 'uint256' },
     { name: 'deadline', type: 'uint256' },
   ],
 } as const;
@@ -53,6 +54,8 @@ export function attesterAddress(): string {
 }
 
 export interface EnrollAttestation {
+  /** Decimal string, as the contract and the relay both expect it. */
+  personhoodNullifier: string;
   deadline: number;
   signature: string;
 }
@@ -65,10 +68,18 @@ export async function signEnrollAttestation(
   electionAddress: string,
   chainId: bigint,
   identityCommitment: string,
+  personhoodNullifier: string,
   nowSeconds: number = Math.floor(Date.now() / 1000),
 ): Promise<EnrollAttestation> {
   const wallet = getAttesterWallet();
   const deadline = nowSeconds + ATTESTATION_TTL_SECONDS;
+
+  // Zero is what the contract reads as "no personhood proof", and it refuses it.
+  // Catching it here means the failure names the cause instead of surfacing as
+  // a revert the voter cannot interpret.
+  if (!personhoodNullifier || BigInt(personhoodNullifier) === 0n) {
+    throw new Error('refusing to sign an attestation with no personhood nullifier');
+  }
 
   const signature = await wallet.signTypedData(
     {
@@ -78,8 +89,12 @@ export async function signEnrollAttestation(
       verifyingContract: electionAddress,
     },
     EIP712_TYPES as unknown as Record<string, Array<{ name: string; type: string }>>,
-    { identityCommitment: BigInt(identityCommitment), deadline },
+    {
+      identityCommitment: BigInt(identityCommitment),
+      personhoodNullifier: BigInt(personhoodNullifier),
+      deadline,
+    },
   );
 
-  return { deadline, signature };
+  return { personhoodNullifier, deadline, signature };
 }

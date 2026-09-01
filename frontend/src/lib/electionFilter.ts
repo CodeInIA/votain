@@ -9,6 +9,7 @@
  */
 import { matchesEligibilityFilter, isEligibilityFilterActive, type EligibilityFilter } from './eligibilityFilter';
 import { type Election, type ElectionPhase } from '../data/seed';
+import { isEmptyPolicy } from './eligibility';
 
 /** Phases worth offering as a chip. Draft and terminal states are not useful filters. */
 export const PHASE_FILTERS: ElectionPhase[] = ['enrolling', 'active', 'tallying', 'closed'];
@@ -52,15 +53,15 @@ export function isAnyFilterActive(filter: ElectionFilterState): boolean {
   );
 }
 
-/** An election restricts enrolment when it names any attribute rule at all. */
+/**
+ * An election restricts enrolment when it asks anything of the voter beyond
+ * being signed in. Through the shared predicate rather than a second copy of
+ * the rule: demanding a document is a restriction even with no attribute rules
+ * attached, and a filter that disagreed with the badge on the same card would
+ * hide elections it was visibly labelling as restricted.
+ */
 function isRestricted(election: Election): boolean {
-  const policy = election.eligibilityPolicy;
-  if (!policy) return false;
-  return (
-    policy.minAge !== undefined ||
-    (policy.allowedCountries?.length ?? 0) > 0 ||
-    (policy.blockedCountries?.length ?? 0) > 0
-  );
+  return !isEmptyPolicy(election.eligibilityPolicy);
 }
 
 /**

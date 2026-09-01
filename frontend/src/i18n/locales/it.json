@@ -75,7 +75,9 @@
     "all": "Tutti",
     "yes": "Sì",
     "no": "No",
-    "clear": "Cancella"
+    "clear": "Cancella",
+    "show_more": "Mostra di più",
+    "show_less": "Mostra meno"
   },
   "nav": {
     "discover": "Scopri",
@@ -87,7 +89,8 @@
     "verified_voter": "Elettore verificato",
     "dashboard": "Cruscotto",
     "members": "Membri",
-    "gas": "Gas"
+    "gas": "Gas",
+    "verify": "Verifica un voto"
   },
   "phase": {
     "enrolling": "Iscrizione",
@@ -171,7 +174,8 @@
     "starts_in": "Inizia tra",
     "verified_on_chain": "Verificato sulla blockchain",
     "view_as_voter": "Vedi come elettore",
-    "view_as_organizer": "Vedi come organizzatore"
+    "view_as_organizer": "Vedi come organizzatore",
+    "turnout_detail": "Hanno votato {{voted}} iscritti su {{total}}"
   },
   "how": {
     "title": "Come funziona Votain",
@@ -199,10 +203,10 @@
     "not_available": "Risultati non ancora disponibili."
   },
   "verify_receipt": {
-    "title": "Verifica il tuo voto",
-    "subtitle": "Inserisci il tuo numero di riferimento o nullifier per confermare che il tuo voto è stato registrato.",
-    "placeholder": "Numero di riferimento o nullifier…",
-    "hint": "Il tuo numero di riferimento è stato mostrato dopo la votazione.",
+    "title": "Verifica un voto",
+    "subtitle": "Inserisci un numero di riferimento o un nullificatore per confermare che una scheda è stata registrata sulla catena.",
+    "placeholder": "Numero di riferimento o nullificatore…",
+    "hint": "Il numero di riferimento appare dopo il voto e di nuovo nella cronologia.",
     "found": "Voto registrato",
     "not_found": "Non trovato",
     "not_found_desc": "Nessun voto corrispondente trovato. Controlla il tuo numero di riferimento.",
@@ -211,7 +215,11 @@
     "vote_recorded": "Registrato on-chain",
     "reference": "Riferimento",
     "nullifier": "Nullifier",
-    "date": "Data"
+    "date": "Data",
+    "ballots": "Schede depositate",
+    "choice_never_shown": "La catena registra che una scheda è stata depositata e quando, mai cosa diceva. Nessuno può leggere la scelta da una ricevuta, noi compresi.",
+    "your_receipts": "Le tue ricevute",
+    "unlock_hint": "Questo browser non conosce ancora alcun voto. Se hai votato da un altro dispositivo, un tocco della passkey li trova e li ricorda qui."
   },
   "voter_elections": {
     "title": "Le mie Elezioni",
@@ -234,7 +242,8 @@
     "desc": "Il tuo voto è stato registrato sulla blockchain. Usa il tuo numero di riferimento per verificarlo in qualsiasi momento.",
     "reference": "Numero di riferimento",
     "view_tx": "Vedi su PolygonScan",
-    "back_elections": "Torna alle elezioni"
+    "back_elections": "Torna alle elezioni",
+    "check_receipt": "Verifica la mia ricevuta"
   },
   "change_vote": {
     "title": "Cambia il tuo voto",
@@ -249,7 +258,10 @@
     "title": "Cronologia voti",
     "subtitle": "Tutte le elezioni a cui hai partecipato",
     "export": "Esporta CSV",
-    "empty": "Non hai ancora votato in nessuna elezione."
+    "empty": "Non hai ancora votato in nessuna elezione.",
+    "verify": "Verifica questa ricevuta",
+    "see_all": "Vedi tutti i miei voti",
+    "partial_view": "Sono mostrati i voti che questo browser conosce: quelli espressi qui, più quelli trovati da uno sblocco precedente. Sblocca per cercare quelli espressi da un altro dispositivo."
   },
   "reverify": {
     "title": "Recupera la tua identità di voto",
@@ -323,8 +335,6 @@
     "candidate_desc": "Breve descrizione",
     "add_candidate": "Aggiungi candidato",
     "blank_vote_note": "Un'opzione di voto in bianco è sempre inclusa automaticamente.",
-    "require_orb": "Richiedi verifica Orb",
-    "require_orb_desc": "Gli elettori dovranno verificarsi a un Orb di World ID, di persona, e non solo dal proprio dispositivo. Mostrato agli elettori come requisito di accesso.",
     "privacy_quorum": "Quorum di privacy",
     "quorum_hint": "Voti minimi richiesti prima di rivelare i risultati.",
     "deposit_hint": "Facoltativo. Ricarica il tuo serbatoio di gas condiviso, che paga le commissioni degli elettori di TUTTE le tue elezioni.",
@@ -359,7 +369,15 @@
     "nationality_reveal_note": "Consentire solo alcuni paesi costringe l'elettore a rivelare la propria cittadinanza, perché il sistema di prove sa esprimere solo esclusioni. Bloccare paesi no: risponde sì o no senza nominare il paese.",
     "countries_allowed": "Paesi ammessi",
     "countries_blocked": "Paesi bloccati",
-    "country_picker_hint": "Cerca e seleziona i paesi. Fino a {{max}}."
+    "country_picker_hint": "Cerca e seleziona i paesi. Fino a {{max}}.",
+    "personhood": "Prova di essere una persona",
+    "personhood_desc": "Quanta certezza serve a questa elezione che due iscrizioni siano due persone diverse.",
+    "personhood_device": "Un account World ID",
+    "personhood_device_desc": "Un account, un voto. Veloce, e vale quanto vale un account: chi ne ha un secondo può iscriversi due volte.",
+    "personhood_document": "Un documento d'identità (consigliato)",
+    "personhood_document_desc": "L'elettore dimostra il passaporto o la carta d'identità dal proprio telefono. Del documento non si rivela nulla, e una seconda iscrizione con lo stesso viene rifiutata.",
+    "personhood_orb": "Un documento d'identità e un Orb World ID",
+    "personhood_orb_desc": "L'asticella più alta e più stretta: la verifica con Orb non è disponibile nei paesi da cui sono stati ritirati, e quegli elettori non potranno iscriversi."
   },
   "election_mgmt": {
     "actions": "Azioni",
@@ -466,7 +484,14 @@
     "not_found": "Pagina non trovata",
     "not_found_desc": "La pagina che stai cercando non esiste o è stata spostata.",
     "go_home": "Vai alla home",
-    "generic_title": "Qualcosa è andato storto"
+    "generic_title": "Qualcosa è andato storto",
+    "gas_tank_empty": "Il serbatoio di gas dell'organizzatore è vuoto, quindi questa elezione non può coprire la commissione della tua iscrizione. Non dipende da te: chiedi di ricaricarlo e riprova.",
+    "enrollment_closed": "Le iscrizioni a questa elezione sono chiuse.",
+    "already_enrolled": "Questa identità è già iscritta a questa elezione.",
+    "personhood_used": "Questo documento d'identità è già stato usato per iscriversi a questa elezione.",
+    "not_platform_verified": "Il tuo account non è verificato sulla piattaforma.",
+    "attestation_required": "Questa elezione richiede un controllo di idoneità prima dell'iscrizione.",
+    "attestation_expired": "La tua approvazione di idoneità è scaduta. Verificati di nuovo."
   },
   "demo": {
     "banner": "Dati dimostrativi: nessun contratto distribuito. Niente qui è on-chain."
@@ -491,7 +516,8 @@
     "min_age_range": "L'età minima deve essere compresa tra {{min}} e {{max}}",
     "country_list_empty": "Aggiungi almeno un codice paese",
     "country_list_long": "Al massimo {{max}} paesi",
-    "eligibility_empty": "Imposta una regola di età o di cittadinanza, oppure disattiva la restrizione"
+    "eligibility_empty": "Imposta una regola di età o di cittadinanza, oppure disattiva la restrizione",
+    "candidate_blank_clash": "Quel nome è già l'opzione di voto in bianco, presente su ogni scheda"
   },
   "devices": {
     "title": "I miei dispositivi",
@@ -605,7 +631,15 @@
     "mobile_return_hint": "Self ti riporterà qui al termine.",
     "requirements_unknown": "Non è stato possibile verificare i requisiti di questa elezione. Riprova.",
     "world_id_orb": "World ID verificato con Orb",
-    "world_id_device": "World ID verificato (basta il dispositivo)"
+    "world_id_device": "World ID verificato (basta il dispositivo)",
+    "personhood_document": "Richiede un documento d'identità",
+    "personhood_orb": "Richiede un documento d'identità e un Orb World ID",
+    "personhood_document_short": "Documento",
+    "personhood_orb_short": "Orb",
+    "personhood_document_hint": "Dimostrerai il passaporto o la carta d'identità dal telefono.",
+    "personhood_orb_hint": "Dimostrerai un documento d'identità dal telefono, e il tuo World ID deve essere verificato con Orb.",
+    "error_orb_required": "Questa elezione accetta solo elettori il cui World ID è verificato con Orb. Esci e rientra con un World ID verificato con Orb.",
+    "error_session_expired": "La verifica ha impiegato troppo tempo ed è scaduta. Riavviala."
   },
   "country_picker": {
     "placeholder": "Cerca un paese…",

@@ -115,6 +115,32 @@ export const chainInfo = {
   explorer: KNOWN_CHAINS[CHAIN_ID]?.explorer,
 };
 
+/**
+ * Links into whatever block explorer THIS chain has, or none.
+ *
+ * Five screens hardcoded `amoy.polygonscan.com`, which is right on exactly one
+ * of the networks this app can run against. On the local chain the voter got a
+ * confident "View on PolygonScan" button leading to a testnet explorer that has
+ * never heard of their transaction, which is worse than no button: it looks
+ * like the vote failed to register.
+ *
+ * `null` means this chain has no explorer, and callers are expected to render
+ * nothing rather than a dead link.
+ */
+function explorerUrl(path: string): string | null {
+  const base = chainInfo.explorer;
+  if (!base) return null;
+  return `${base.replace(/\/$/, "")}/${path}`;
+}
+
+export function explorerTxUrl(txHash: string | undefined | null): string | null {
+  return txHash ? explorerUrl(`tx/${txHash}`) : null;
+}
+
+export function explorerAddressUrl(address: string | undefined | null): string | null {
+  return address ? explorerUrl(`address/${address}`) : null;
+}
+
 /** True when the dApp has a factory address to talk to. */
 export function isChainConfigured(): boolean {
   return Boolean(addresses.electionFactory);

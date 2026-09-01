@@ -75,7 +75,9 @@
     "all": "Alle",
     "yes": "Ja",
     "no": "Nein",
-    "clear": "Löschen"
+    "clear": "Löschen",
+    "show_more": "Mehr anzeigen",
+    "show_less": "Weniger anzeigen"
   },
   "nav": {
     "discover": "Entdecken",
@@ -87,7 +89,8 @@
     "verified_voter": "Verifizierter Wähler",
     "dashboard": "Dashboard",
     "members": "Mitglieder",
-    "gas": "Gas"
+    "gas": "Gas",
+    "verify": "Stimme prüfen"
   },
   "phase": {
     "enrolling": "Anmeldung",
@@ -170,7 +173,8 @@
     "starts_in": "Beginnt in",
     "verified_on_chain": "Auf der Blockchain verifiziert",
     "view_as_voter": "Als Wähler ansehen",
-    "view_as_organizer": "Als Veranstalter ansehen"
+    "view_as_organizer": "Als Veranstalter ansehen",
+    "turnout_detail": "{{voted}} von {{total}} angemeldeten Wählenden haben gewählt"
   },
   "how": {
     "title": "Wie Votain funktioniert",
@@ -198,10 +202,10 @@
     "not_available": "Ergebnisse noch nicht verfügbar."
   },
   "verify_receipt": {
-    "title": "Ihre Stimme verifizieren",
-    "subtitle": "Geben Sie Ihre Referenznummer oder Ihren Nullifier ein, um zu bestätigen, dass Ihre Stimme erfasst wurde.",
+    "title": "Eine Stimme prüfen",
+    "subtitle": "Geben Sie eine Referenznummer oder einen Nullifier ein, um zu bestätigen, dass eine Stimme auf der Chain erfasst wurde.",
     "placeholder": "Referenznummer oder Nullifier…",
-    "hint": "Ihre Referenznummer wurde nach der Abstimmung angezeigt.",
+    "hint": "Die Referenznummer erscheint nach der Stimmabgabe und noch einmal im Verlauf.",
     "found": "Stimme erfasst",
     "not_found": "Nicht gefunden",
     "not_found_desc": "Keine übereinstimmende Stimme gefunden. Überprüfen Sie Ihre Referenznummer.",
@@ -210,7 +214,11 @@
     "vote_recorded": "Auf der Kette erfasst",
     "reference": "Referenz",
     "nullifier": "Nullifier",
-    "date": "Datum"
+    "date": "Datum",
+    "ballots": "Abgegebene Stimmen",
+    "choice_never_shown": "Die Chain hält fest, DASS eine Stimme abgegeben wurde und wann, nie was darin stand. Aus einer Quittung kann niemand die Wahl ablesen, wir auch nicht.",
+    "your_receipts": "Ihre Quittungen",
+    "unlock_hint": "Dieser Browser kennt noch keine Stimme. Falls Sie von einem anderen Gerät gewählt haben, findet eine Passkey-Bestätigung sie und merkt sie sich hier."
   },
   "voter_elections": {
     "title": "Meine Wahlen",
@@ -232,7 +240,8 @@
     "desc": "Ihre Stimme wurde auf der Blockchain erfasst. Verwenden Sie Ihre Referenznummer, um sie jederzeit zu verifizieren.",
     "reference": "Referenznummer",
     "view_tx": "Auf PolygonScan anzeigen",
-    "back_elections": "Zurück zu den Wahlen"
+    "back_elections": "Zurück zu den Wahlen",
+    "check_receipt": "Meine Quittung prüfen"
   },
   "change_vote": {
     "title": "Ihre Stimme ändern",
@@ -247,7 +256,10 @@
     "title": "Abstimmungsverlauf",
     "subtitle": "Alle Wahlen, an denen Sie teilgenommen haben",
     "export": "CSV exportieren",
-    "empty": "Sie haben noch bei keiner Wahl abgestimmt."
+    "empty": "Sie haben noch bei keiner Wahl abgestimmt.",
+    "verify": "Diese Quittung prüfen",
+    "see_all": "Alle meine Stimmen anzeigen",
+    "partial_view": "Angezeigt werden die Stimmen, die dieser Browser kennt: die hier abgegebenen und alle, die ein früheres Entsperren gefunden hat. Entsperren Sie, um nach Stimmen von anderen Geräten zu suchen."
   },
   "reverify": {
     "title": "Wahlidentität wiederherstellen",
@@ -321,8 +333,6 @@
     "candidate_desc": "Kurze Beschreibung",
     "add_candidate": "Kandidaten hinzufügen",
     "blank_vote_note": "Eine Leerstimmoption wird immer automatisch hinzugefügt.",
-    "require_orb": "Orb-Verifizierung erforderlich",
-    "require_orb_desc": "Wählende müssen sich persönlich an einem World-ID-Orb verifizieren, nicht nur auf ihrem Gerät. Wird Wählenden als Zugangsvoraussetzung angezeigt.",
     "privacy_quorum": "Datenschutz-Quorum",
     "quorum_hint": "Mindestanzahl Stimmen, bevor Ergebnisse angezeigt werden.",
     "deposit_hint": "Optional. Füllt Ihren gemeinsamen Gas-Vorrat auf, der die Gebühren der Wählenden ALLER Ihrer Wahlen bezahlt.",
@@ -357,7 +367,15 @@
     "nationality_reveal_note": "Nur bestimmte Länder zuzulassen zwingt Wählende, ihre Staatsangehörigkeit offenzulegen, denn das Beweissystem kennt nur Ausschlüsse. Länder zu sperren nicht: es antwortet mit ja oder nein, ohne das Land zu nennen.",
     "countries_allowed": "Zugelassene Länder",
     "countries_blocked": "Gesperrte Länder",
-    "country_picker_hint": "Länder suchen und auswählen. Höchstens {{max}}."
+    "country_picker_hint": "Länder suchen und auswählen. Höchstens {{max}}.",
+    "personhood": "Nachweis, eine Person zu sein",
+    "personhood_desc": "Wie sicher diese Wahl sein muss, dass zwei Anmeldungen zwei verschiedene Menschen sind.",
+    "personhood_device": "Ein World-ID-Konto",
+    "personhood_device_desc": "Ein Konto, eine Stimme. Schnell, und so viel wert wie ein Konto: wer ein zweites hat, meldet sich zweimal an.",
+    "personhood_document": "Ein Ausweisdokument (empfohlen)",
+    "personhood_document_desc": "Die wählende Person weist Reisepass oder Personalausweis auf dem eigenen Telefon nach. Vom Dokument wird nichts offengelegt, und eine zweite Anmeldung mit demselben wird abgelehnt.",
+    "personhood_orb": "Ein Ausweisdokument und ein World ID Orb",
+    "personhood_orb_desc": "Die höchste und zugleich engste Hürde: die Orb-Verifizierung ist in Ländern, aus denen die Orbs abgezogen wurden, nicht verfügbar, und diese Wählenden können sich nicht anmelden."
   },
   "election_mgmt": {
     "actions": "Aktionen",
@@ -462,7 +480,14 @@
     "not_found": "Seite nicht gefunden",
     "not_found_desc": "Die gesuchte Seite existiert nicht oder wurde verschoben.",
     "go_home": "Zur Startseite",
-    "generic_title": "Etwas ist schiefgelaufen"
+    "generic_title": "Etwas ist schiefgelaufen",
+    "gas_tank_empty": "Der Gas-Vorrat der organisierenden Person ist leer, daher kann diese Wahl die Gebühr für Ihre Anmeldung nicht tragen. Es liegt nicht an Ihnen: Bitten Sie um eine Aufladung und versuchen Sie es erneut.",
+    "enrollment_closed": "Die Anmeldung für diese Wahl ist geschlossen.",
+    "already_enrolled": "Diese Identität ist bereits für diese Wahl angemeldet.",
+    "personhood_used": "Dieses Ausweisdokument wurde bereits für die Anmeldung zu dieser Wahl verwendet.",
+    "not_platform_verified": "Ihr Konto ist auf der Plattform nicht verifiziert.",
+    "attestation_required": "Für diese Wahl ist vor der Anmeldung eine Berechtigungsprüfung erforderlich.",
+    "attestation_expired": "Ihre Berechtigungsfreigabe ist abgelaufen. Bitte verifizieren Sie sich erneut."
   },
   "demo": {
     "banner": "Demo-Daten: keine Verträge bereitgestellt. Nichts hiervon ist on-chain."
@@ -487,7 +512,8 @@
     "min_age_range": "Das Mindestalter muss zwischen {{min}} und {{max}} liegen",
     "country_list_empty": "Fügen Sie mindestens einen Ländercode hinzu",
     "country_list_long": "Höchstens {{max}} Länder",
-    "eligibility_empty": "Legen Sie eine Alters- oder Staatsangehörigkeitsregel fest, oder schalten Sie die Einschränkung ab"
+    "eligibility_empty": "Legen Sie eine Alters- oder Staatsangehörigkeitsregel fest, oder schalten Sie die Einschränkung ab",
+    "candidate_blank_clash": "Dieser Name gehört bereits der Enthaltungsoption, die jeder Stimmzettel enthält"
   },
   "devices": {
     "title": "Meine Geräte",
@@ -601,7 +627,15 @@
     "mobile_return_hint": "Self bringt Sie danach hierher zurück.",
     "requirements_unknown": "Die Teilnahmebedingungen dieser Wahl konnten nicht geprüft werden. Bitte erneut versuchen.",
     "world_id_orb": "World ID mit Orb verifiziert",
-    "world_id_device": "World ID verifiziert (Gerät genügt)"
+    "world_id_device": "World ID verifiziert (Gerät genügt)",
+    "personhood_document": "Ausweisdokument erforderlich",
+    "personhood_orb": "Ausweisdokument und World ID Orb erforderlich",
+    "personhood_document_short": "Dokument",
+    "personhood_orb_short": "Orb",
+    "personhood_document_hint": "Sie weisen Reisepass oder Personalausweis über Ihr Telefon nach.",
+    "personhood_orb_hint": "Sie weisen ein Ausweisdokument über Ihr Telefon nach, und Ihre World ID muss per Orb verifiziert sein.",
+    "error_orb_required": "Diese Wahl akzeptiert nur Wählende, deren World ID per Orb verifiziert ist. Melden Sie sich ab und mit einer Orb-verifizierten World ID wieder an.",
+    "error_session_expired": "Die Verifizierung hat zu lange gedauert und ist abgelaufen. Starten Sie sie erneut."
   },
   "country_picker": {
     "placeholder": "Land suchen…",

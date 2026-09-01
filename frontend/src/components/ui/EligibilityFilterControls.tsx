@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Search, X } from 'lucide-react';
+import { Search, X, IdCard, ScanFace } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { searchCountries, countryOption } from '../../lib/countries';
 import type { EligibilityFilter } from '../../lib/eligibilityFilter';
@@ -62,8 +62,53 @@ export function EligibilityFilterControls({ value, onChange, className }: Props)
     />
   );
 
+  /**
+   * The personhood levels, as the same two shapes the cards carry.
+   *
+   * Deliberately the same icon, the same wording and the same colour as the
+   * chip on the election card: someone who saw "Orb" on a card and wants more
+   * of those should recognise the control that finds them without reading it.
+   * `device` is not offered, because on a card it is the ABSENCE of a chip and
+   * a filter for "elections with no personhood requirement" is what the
+   * unrestricted toggle beside it already means.
+   */
+  const levelToggle = (level: 'document' | 'orb', Icon: typeof IdCard) => {
+    const selectedLevels = value.personhood ?? [];
+    const on = selectedLevels.includes(level);
+    return (
+      <button
+        key={level}
+        type="button"
+        aria-pressed={on}
+        onClick={() =>
+          onChange({
+            ...value,
+            personhood: on
+              ? selectedLevels.filter(l => l !== level)
+              : [...selectedLevels, level],
+          })
+        }
+        className={cn(
+          'inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border text-xs font-semibold',
+          'transition-colors cursor-pointer whitespace-nowrap',
+          on
+            ? 'bg-primary/15 border-primary/40 text-on-surface'
+            : 'bg-surface-high/40 border-outline-variant/10 text-on-surface-variant hover:border-outline-variant/30',
+        )}
+      >
+        <Icon className={cn('w-3.5 h-3.5 shrink-0', on ? 'text-primary' : 'text-on-surface-meta')} strokeWidth={2.5} />
+        {t(`eligibility.personhood_${level}_short`)}
+      </button>
+    );
+  };
+
   return (
     <div className={cn('flex flex-wrap items-center gap-3', className)}>
+      <div className="flex items-center gap-2">
+        {levelToggle('document', IdCard)}
+        {levelToggle('orb', ScanFace)}
+      </div>
+
       <div className="flex items-center gap-2">
         <span className="text-xs text-on-surface-meta">{t('discover.min_age')}</span>
         {ageField(t('discover.age_from'), value.minAgeFrom, next => ({ ...value, minAgeFrom: next }))}

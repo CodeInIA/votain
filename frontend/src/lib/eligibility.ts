@@ -17,7 +17,17 @@
  * deliberately boring serialiser rather than trusting a shared endpoint.
  */
 
+/**
+ * How strongly the election insists the enrolling voter is a distinct human.
+ * Mirrors `backend/src/eligibility/policy.ts`; see there for why `orb` means
+ * document AND Orb rather than either one.
+ */
+export type PersonhoodLevel = "device" | "document" | "orb";
+
+export const PERSONHOOD_LEVELS: readonly PersonhoodLevel[] = ["device", "document", "orb"] as const;
+
 export interface EligibilityPolicy {
+  personhood?: PersonhoodLevel;
   minAge?: number;
   allowedCountries?: string[];
   blockedCountries?: string[];
@@ -30,13 +40,62 @@ export const MAX_AGE_CEILING = 99;
 
 export const ZERO_HASH = `0x${"00".repeat(32)}`;
 
-export function isEmptyPolicy(policy: EligibilityPolicy | null | undefined): boolean {
-  if (!policy) return true;
+/** Whether the policy asks the voter to prove anything ABOUT themselves. */
+export function hasAttributeRules(policy: EligibilityPolicy | null | undefined): boolean {
+  if (!policy) return false;
   return (
-    policy.minAge === undefined &&
-    (policy.allowedCountries?.length ?? 0) === 0 &&
-    (policy.blockedCountries?.length ?? 0) === 0
+    policy.minAge !== undefined ||
+    (policy.allowedCountries?.length ?? 0) > 0 ||
+    (policy.blockedCountries?.length ?? 0) > 0
   );
+}
+
+/**
+ * The level actually in force. An attribute policy already costs a document
+ * scan, so it sits at `document` whether or not it says so, which is what keeps
+ * elections deployed before this field existed hashing to the same value.
+ */
+export function effectivePersonhood(policy: EligibilityPolicy | null | undefined): PersonhoodLevel {
+  if (policy?.personhood) return policy.personhood;
+  return hasAttributeRules(policy) ? "document" : "device";
+}
+
+const PERSONHOOD_RANK: Record<PersonhoodLevel, number> = { device: 0, document: 1, orb: 2 };
+
+/**
+ * Translates a World ID credential level into the vocabulary a policy speaks.
+ *
+ * The two lists differ by one word: the backend calls the floor `any` and a
+ * policy calls it `device`. They mean the same thing, an account and nothing
+ * more, and this is the single place that says so, rather than every caller
+ * comparing strings and getting it right most of the time.
+ */
+export function asPersonhoodLevel(credentialLevel: string | null | undefined): PersonhoodLevel | null {
+  if (credentialLevel === "any" || credentialLevel === "device") return "device";
+  if (credentialLevel === "document" || credentialLevel === "orb") return credentialLevel;
+  return null;
+}
+
+/**
+ * Whether a credential reaches the bar an election sets.
+ *
+ * `null` held means UNPROVED, and unproved never satisfies anything above
+ * `device`: a credential issued before the level was recorded, or a backend
+ * that could not be reached, must not be read as a low level that happens to
+ * pass, nor as a high one.
+ */
+export function personhoodSatisfied(
+  required: PersonhoodLevel,
+  held: PersonhoodLevel | null,
+): boolean {
+  if (required === "device") return true;
+  if (held === null) return false;
+  return PERSONHOOD_RANK[held] >= PERSONHOOD_RANK[required];
+}
+
+/** Nothing to enforce off chain: no attributes, no personhood beyond the account. */
+export function isEmptyPolicy(policy: EligibilityPolicy | null | undefined): boolean {
+  return !hasAttributeRules(policy) && effectivePersonhood(policy) === "device";
 }
 
 /** Uppercased, deduplicated and sorted, so ordering cannot change the hash. */
@@ -52,6 +111,9 @@ export function canonicalPolicyJson(policy: EligibilityPolicy): string {
   if (policy.minAge !== undefined) ordered.minAge = policy.minAge;
   if (policy.allowedCountries?.length) ordered.allowedCountries = policy.allowedCountries;
   if (policy.blockedCountries?.length) ordered.blockedCountries = policy.blockedCountries;
+  // Last, and only when stated, so policies written before this field existed
+  // still serialise to the exact bytes their published hash commits to.
+  if (policy.personhood) ordered.personhood = policy.personhood;
   return JSON.stringify(ordered);
 }
 
@@ -97,6 +159,39 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
   if (!response.ok) throw new Error((body.error as string) ?? `request failed (${response.status})`);
   return body as T;
+}
+
+/**
+ * Turns a refusal from the eligibility endpoints into something to read.
+ *
+ * `request` throws the backend's `error` field verbatim, and the check card
+ * threw all of it away and printed one generic line, so a voter refused for a
+ * reason they could act on was told nothing they could act on. Matched exactly,
+ * never by substring: these are codes the server chose, and guessing at prose
+ * would start misreading messages the day one of them is reworded.
+ *
+ * Anything unrecognised keeps the generic line. An internal failure is not made
+ * clearer by being shown raw to a voter.
+ */
+export function eligibilityErrorKey(reason: string | null | undefined): string {
+  switch (reason) {
+    case "orb_required":
+      return "eligibility.error_orb_required";
+    // The polling loop normalises a vanished session to this before the message
+    // reaches here.
+    case "expired":
+    case "session expired":
+      return "eligibility.error_session_expired";
+    default:
+      return "eligibility.error";
+  }
+}
+
+/** Whether trying the same thing again could possibly work. */
+export function eligibilityErrorIsRetryable(reason: string | null | undefined): boolean {
+  // An Orb is not something a retry acquires. Offering the button would send
+  // the voter round a loop that refuses them identically every time.
+  return reason !== "orb_required";
 }
 
 export interface ElectionEligibility {
@@ -164,6 +259,8 @@ export async function pollEligibilitySession(
 }
 
 export interface EnrollAttestation {
+  /** Decimal string; the contract and the relay both expect it that way. */
+  personhoodNullifier: string;
   deadline: number;
   signature: string;
 }

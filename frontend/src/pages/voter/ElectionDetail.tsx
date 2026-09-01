@@ -6,6 +6,7 @@ import { PageLayout } from '../../components/layout/PageLayout';
 import { DomainBadge } from '../../components/ui/DomainBadge';
 import { Badge } from '../../components/ui/Badge';
 import { EligibilityChips } from '../../components/ui/EligibilityChips';
+import { ExpandableText } from '../../components/ui/ExpandableText';
 import { Button } from '../../components/ui/Button';
 import { BackButton } from '../../components/ui/BackButton';
 import { useAuth } from '../../contexts/AuthContext';
@@ -26,7 +27,8 @@ import { ResultBarChart } from '../../components/ui/BarChart';
 import { hasPublishedResults } from '../../data/seed';
 import { enrollInElection } from '../../lib/voting';
 import { EligibilityCheck } from '../../components/voter/EligibilityCheck';
-import type { EnrollAttestationInput } from '../../lib/relay';
+import { relayErrorMessage, type EnrollAttestationInput } from '../../lib/relay';
+import { isEmptyPolicy } from '../../lib/eligibility';
 import { getOrCreateIdentity, getStoredCommitment } from '../../lib/semaphore';
 import { nextBoundary, PULSE_PHASES } from '../../lib/phase';
 
@@ -49,6 +51,7 @@ export default function ElectionDetail() {
   const [showGasWarning] = useState(false);
   const [referenceCopied, setReferenceCopied] = useState(false);
   const [txState, setTxState] = useState<TxState>('idle');
+  const [txError, setTxError] = useState<string | null>(null);
 
   // The policy travels with the election, verified against the contract's hash
   // in `chainElections`. It used to be a separate request to the backend, which
@@ -56,6 +59,10 @@ export default function ElectionDetail() {
   // from data the page already had to load removes both.
   const [showEligibility, setShowEligibility] = useState(false);
   const eligibilityPolicy = election?.eligibilityPolicy ?? null;
+  // Truthiness is not the question: a policy object can exist and demand
+  // nothing, and a policy that demands only a document has no attributes to
+  // show but still has to go through the scan.
+  const isGated = !isEmptyPolicy(eligibilityPolicy);
   const policyRequirements = usePolicyRequirements(eligibilityPolicy);
 
   // In PRF mode the identity isn't cached across sessions, so enrollment status
@@ -128,7 +135,7 @@ export default function ElectionDetail() {
       // The attribute check takes over the footer while it runs: the voter has
       // a phone to pick up, and leaving the enrol button live underneath it
       // would invite a second attempt that the contract would reject anyway.
-      if (showEligibility && eligibilityPolicy) {
+      if (showEligibility && isGated && eligibilityPolicy) {
         return (
           <EligibilityCheck
             election={election.contractAddress}
@@ -155,7 +162,7 @@ export default function ElectionDetail() {
             </Button>
             {/* Said before the tap, not after: a voter without a passport to
                 hand should find that out here rather than mid-flow. */}
-            {eligibilityPolicy && (
+            {isGated && (
               <p className="text-xs text-on-surface-meta text-center">
                 {t('eligibility.restricted_hint')}
               </p>
@@ -182,13 +189,14 @@ export default function ElectionDetail() {
 
   // Copies the FULL reference, never the shortened form on screen.
   const copyReference = async () => {
-    if (!election?.referenceNumber) return;
-    await navigator.clipboard.writeText(election.referenceNumber);
+    if (!election?.voteNullifier) return;
+    await navigator.clipboard.writeText(election.voteNullifier);
     setReferenceCopied(true);
     setTimeout(() => setReferenceCopied(false), 2000);
   };
 
   const submitEnrollment = async (attestation?: EnrollAttestationInput) => {
+    setTxError(null);
     setTxState('pending');
     try {
       await enrollInElection(election.contractAddress, attestation);
@@ -196,6 +204,10 @@ export default function ElectionDetail() {
       void refresh();
     } catch (e) {
       console.error('Enroll failed:', e);
+      // The reason used to stop here, at the console. A voter turned away by an
+      // organizer's empty gas tank saw "transaction failed" and had no way to
+      // know it was not their fault, nor that the fix is somebody else's.
+      setTxError(relayErrorMessage(e));
       setTxState('failed');
     }
   };
@@ -210,7 +222,7 @@ export default function ElectionDetail() {
 
     // A restricted election cannot be enrolled in directly: the contract
     // refuses the plain entry point, so the attribute check has to come first.
-    if (eligibilityPolicy) {
+    if (isGated) {
       setShowEligibility(true);
       return;
     }
@@ -252,7 +264,7 @@ export default function ElectionDetail() {
                 things you can read at a glance. */}
             <EligibilityChips policy={eligibilityPolicy} />
           </div>
-          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white leading-tight">
+          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white leading-tight break-words">
             {election.title}
           </h1>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
@@ -298,7 +310,7 @@ export default function ElectionDetail() {
             just a bare title. */}
         <Card className="p-5 mb-4">
           <h2 className="text-sm font-semibold text-on-surface mb-2">{t('election.about')}</h2>
-          <p className="text-sm text-on-surface-variant leading-relaxed">{election.description}</p>
+          <ExpandableText text={election.description} />
           <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-white/5 text-xs text-on-surface-meta">
             <span className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5" />{election.totalEnrolled.toLocaleString()} {t('election.enrolled')}</span>
             <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" />{election.voteEnd.toLocaleDateString()}</span>
@@ -316,10 +328,22 @@ export default function ElectionDetail() {
                 conditions, not hidden until the voter presses enrol. Someone
                 without a passport to hand should be able to see that this
                 election is not for them without starting a flow to find out.
-                Status is `unknown` on purpose: nothing is known about whether
-                this voter meets them until they verify. */}
+
+                `unknown` until enrolled, and MET after. Not a guess either way:
+                the proof happens on the voter's phone and never reaches this
+                browser, so before enrollment nothing here knows their age or
+                nationality and a green tick would be an invention. Afterwards
+                the chain knows: the contract refuses `enrollAttested` without a
+                signature the attester only produces once a document proof has
+                cleared this exact policy, so membership IS the evidence that
+                every line below was satisfied. Leaving them grey for the rest of
+                the election said less than the page actually knew. */}
             {policyRequirements.map(requirement => (
-              <EligibilityRow key={requirement} label={requirement} status="unknown" />
+              <EligibilityRow
+                key={requirement}
+                label={requirement}
+                status={election.isEnrolled ? 'met' : 'unknown'}
+              />
             ))}
           </Card>
         )}
@@ -393,7 +417,7 @@ export default function ElectionDetail() {
             <div className="flex items-center gap-2 mb-3">
               <p className="text-xs text-on-surface-meta min-w-0">
                 {t('election.reference')}:{' '}
-                <span className="font-mono">{shortenReference(election.referenceNumber ?? '')}</span>
+                <span className="font-mono">{shortenReference(election.voteNullifier ?? '')}</span>
               </p>
               <button
                 type="button"
@@ -422,7 +446,8 @@ export default function ElectionDetail() {
 
       <TransactionPendingModal
         state={txState}
-        onClose={() => setTxState('idle')}
+        errorMessage={txError ?? undefined}
+        onClose={() => { setTxState('idle'); setTxError(null); }}
       />
     </PageLayout>
   );

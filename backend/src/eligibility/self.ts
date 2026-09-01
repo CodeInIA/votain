@@ -270,6 +270,17 @@ export interface SelfVerdict {
   ok: boolean;
   /** Session id the proof was generated for, taken from the proof itself. */
   userIdentifier?: string;
+  /**
+   * The document's nullifier for THIS election, as a decimal string.
+   *
+   * Derived from the document and the election's scope, so the same person
+   * presenting the same passport twice yields the same value here and a
+   * different, uncorrelated one in any other election. The contract records it
+   * to refuse a second enrollment, which is the only thing standing between
+   * one-person-one-vote and one-account-one-vote once sign-in stops proving
+   * personhood on its own.
+   */
+  personhoodNullifier?: string;
   reason?: string;
   /** Diagnostic detail for the log. Never sent to the voter. */
   detail?: string;
@@ -355,5 +366,13 @@ export async function verifyProof(
   });
   if (!attributes.ok) return { ok: false, userIdentifier, reason: attributes.reason };
 
-  return { ok: true, userIdentifier };
+  // Refused rather than enrolled without one: the contract will reject a zero
+  // anyway, and failing here says why.
+  const personhoodNullifier = disclosed?.nullifier;
+  if (!personhoodNullifier) {
+    console.error('Self proof verified but carried no nullifier');
+    return { ok: false, userIdentifier, reason: 'proof_invalid', detail: 'no nullifier' };
+  }
+
+  return { ok: true, userIdentifier, personhoodNullifier };
 }

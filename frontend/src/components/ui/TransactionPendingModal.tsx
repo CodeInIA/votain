@@ -7,6 +7,7 @@ import { Button } from './Button';
 import { buttonVariants } from './button-variants';
 import { Spinner } from './Spinner';
 import { cn } from '../../lib/utils';
+import { explorerTxUrl } from '../../lib/deployments';
 
 export type TxState = 'idle' | 'pending' | 'success' | 'failed';
 
@@ -63,7 +64,7 @@ export function TransactionPendingModal({
   ];
 
   const polygonScanUrl = txHash
-    ? `https://amoy.polygonscan.com/tx/${txHash}`
+    ? explorerTxUrl(txHash)
     : null;
 
   return createPortal(

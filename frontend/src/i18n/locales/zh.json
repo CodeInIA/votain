@@ -75,7 +75,9 @@
     "all": "全部",
     "yes": "同意",
     "no": "反对",
-    "clear": "清除"
+    "clear": "清除",
+    "show_more": "展开",
+    "show_less": "收起"
   },
   "nav": {
     "discover": "发现",
@@ -87,7 +89,8 @@
     "verified_voter": "已验证选民",
     "dashboard": "仪表板",
     "members": "成员",
-    "gas": "Gas"
+    "gas": "Gas",
+    "verify": "验证投票"
   },
   "phase": {
     "enrolling": "报名中",
@@ -169,7 +172,8 @@
     "starts_in": "开始于",
     "verified_on_chain": "已在区块链上验证",
     "view_as_voter": "以选民身份查看",
-    "view_as_organizer": "以组织者身份查看"
+    "view_as_organizer": "以组织者身份查看",
+    "turnout_detail": "{{total}} 位登记选民中已有 {{voted}} 位投票"
   },
   "how": {
     "title": "Votain 工作原理",
@@ -197,10 +201,10 @@
     "not_available": "结果尚未公布。"
   },
   "verify_receipt": {
-    "title": "验证您的投票",
-    "subtitle": "输入您的参考编号或 nullifier 以确认您的投票已被记录。",
-    "placeholder": "参考编号或 nullifier…",
-    "hint": "您的参考编号在投票后显示。",
+    "title": "验证一笔投票",
+    "subtitle": "输入受理号或 nullifier，确认某张选票已记录在链上。",
+    "placeholder": "受理号或 nullifier…",
+    "hint": "受理号在投票后显示，也会出现在投票记录中。",
     "found": "投票已记录",
     "not_found": "未找到",
     "not_found_desc": "未找到匹配的投票。请检查您的参考编号。",
@@ -209,7 +213,11 @@
     "vote_recorded": "已记录在链上",
     "reference": "参考编号",
     "nullifier": "Nullifier",
-    "date": "日期"
+    "date": "日期",
+    "ballots": "已投票次数",
+    "choice_never_shown": "链上记录的是投票发生的事实与时间，而不是内容。没有人能从回执读出选择，我们也不能。",
+    "your_receipts": "你的回执",
+    "unlock_hint": "此浏览器尚不知道任何投票。如果你在其他设备上投过票，一次通行密钥操作即可找到并记在这里。"
   },
   "voter_elections": {
     "title": "我的选举",
@@ -230,7 +238,8 @@
     "desc": "您的投票已记录在区块链上。随时使用您的参考编号进行验证。",
     "reference": "参考编号",
     "view_tx": "在 PolygonScan 上查看",
-    "back_elections": "返回选举列表"
+    "back_elections": "返回选举列表",
+    "check_receipt": "查看我的回执"
   },
   "change_vote": {
     "title": "更改您的投票",
@@ -245,7 +254,10 @@
     "title": "投票历史",
     "subtitle": "您参与的所有选举",
     "export": "导出 CSV",
-    "empty": "您尚未参与任何选举投票。"
+    "empty": "您尚未参与任何选举投票。",
+    "verify": "验证此回执",
+    "see_all": "查看我的全部投票",
+    "partial_view": "显示此浏览器已知的投票：在这里投出的，以及上次解锁时找到的。若要查找在其他设备上投出的票，请解锁。"
   },
   "reverify": {
     "title": "恢复您的投票身份",
@@ -319,8 +331,6 @@
     "candidate_desc": "简短描述",
     "add_candidate": "添加候选人",
     "blank_vote_note": "始终自动包含空白票选项。",
-    "require_orb": "需要 Orb 验证",
-    "require_orb_desc": "选民必须亲自到 World ID 的 Orb 完成验证，仅用设备验证不够。会作为参加条件向选民显示。",
     "privacy_quorum": "隐私法定人数",
     "quorum_hint": "公布结果前所需的最低票数。",
     "deposit_hint": "可选。为你的共享 gas 储备充值，它支付你所有选举中选民的交易费用。",
@@ -355,7 +365,15 @@
     "nationality_reveal_note": "仅允许特定国家会迫使选民披露国籍，因为证明系统只能表达排除。屏蔽国家则不会：它只回答是或否，不会说出国家名。",
     "countries_allowed": "允许的国家",
     "countries_blocked": "屏蔽的国家",
-    "country_picker_hint": "搜索并选择国家。最多 {{max}} 个。"
+    "country_picker_hint": "搜索并选择国家。最多 {{max}} 个。",
+    "personhood": "真人证明",
+    "personhood_desc": "这次选举需要多确定两次登记来自两个不同的人。",
+    "personhood_device": "一个 World ID 账户",
+    "personhood_device_desc": "一个账户一票。快，但只值一个账户：拥有第二个账户的人可以登记两次。",
+    "personhood_document": "一份身份证件（推荐）",
+    "personhood_document_desc": "选民在自己的手机上证明护照或身份证。证件内容不会被披露，用同一份证件的第二次登记会被拒绝。",
+    "personhood_orb": "身份证件加 World ID Orb",
+    "personhood_orb_desc": "门槛最高，覆盖最窄：在 Orb 已撤出的国家无法完成验证，那里的选民将无法登记。"
   },
   "election_mgmt": {
     "actions": "操作",
@@ -458,7 +476,14 @@
     "not_found": "页面未找到",
     "not_found_desc": "您访问的页面不存在或已移动。",
     "go_home": "返回首页",
-    "generic_title": "出了点问题"
+    "generic_title": "出了点问题",
+    "gas_tank_empty": "组织者的 gas 余额已用尽，因此本次选举无法支付你的登记费用。这不是你的问题：请让组织者充值后再试。",
+    "enrollment_closed": "本次选举的登记已关闭。",
+    "already_enrolled": "该身份已登记参加本次选举。",
+    "personhood_used": "该身份证件已用于登记本次选举。",
+    "not_platform_verified": "你的账户尚未在平台上完成验证。",
+    "attestation_required": "本次选举要求在登记前完成资格核验。",
+    "attestation_expired": "你的资格核验已过期，请重新验证。"
   },
   "demo": {
     "banner": "演示数据：未部署合约。此处内容均不在链上。"
@@ -483,7 +508,8 @@
     "min_age_range": "最低年龄必须在 {{min}} 到 {{max}} 之间",
     "country_list_empty": "请至少添加一个国家代码",
     "country_list_long": "最多 {{max}} 个国家",
-    "eligibility_empty": "请设置年龄或国籍规则，或关闭该限制"
+    "eligibility_empty": "请设置年龄或国籍规则，或关闭该限制",
+    "candidate_blank_clash": "该名称与每张选票都包含的空白票选项重复"
   },
   "devices": {
     "title": "我的设备",
@@ -597,7 +623,15 @@
     "mobile_return_hint": "完成后 Self 会把你带回这里。",
     "requirements_unknown": "无法查询本次选举的参加条件。请重试。",
     "world_id_orb": "已通过 Orb 验证 World ID",
-    "world_id_device": "已验证 World ID（设备验证即可）"
+    "world_id_device": "已验证 World ID（设备验证即可）",
+    "personhood_document": "需要身份证件",
+    "personhood_orb": "需要身份证件和 World ID Orb",
+    "personhood_document_short": "证件",
+    "personhood_orb_short": "Orb",
+    "personhood_document_hint": "你将在手机上证明护照或身份证。",
+    "personhood_orb_hint": "你将在手机上证明身份证件，并且你的 World ID 必须通过 Orb 验证。",
+    "error_orb_required": "本次选举只接受 World ID 已通过 Orb 验证的选民。请退出后用已通过 Orb 验证的 World ID 重新登录。",
+    "error_session_expired": "验证耗时过长已过期，请重新开始。"
   },
   "country_picker": {
     "placeholder": "搜索国家…",

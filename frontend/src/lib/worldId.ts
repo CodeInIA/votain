@@ -10,8 +10,12 @@
  * values (merkle root, nullifier hash, the proof, verification level), so this
  * never yields anything that could serve as the voter's Semaphore secret; see
  * `identityVault.ts` for where that actually comes from.
+ *
+ * WHAT SIGNING IN NO LONGER CLAIMS. It establishes an account, not a person.
+ * Personhood comes from the document proof an election asks for, recorded on
+ * chain as `usedPersonhoodNullifiers`; see `lib/eligibility.ts`.
  */
-import { IDKit, orbLegacy, type IDKitResult } from "@worldcoin/idkit-core";
+import { IDKit, deviceLegacy, type IDKitResult } from "@worldcoin/idkit-core";
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL as string | undefined;
 
@@ -65,7 +69,19 @@ export async function requestWorldIdProof(
     },
     allow_legacy_proofs: true,
     environment: "production",
-  }).preset(orbLegacy({}));
+    // WHATEVER THE VOTER HAS, rather than Orb. Orbs were withdrawn from Spain
+    // and World ID's document credential is still marked "coming soon" there,
+    // so demanding personhood at sign-in would lock out the voters this exists
+    // for. Legacy presets return the HIGHEST credential a user holds, so an Orb
+    // holder still signs in as one and the backend records that; an election
+    // that wants Orb asks for it at enrollment, where a refusal costs one
+    // election rather than the whole account.
+    //
+    // `deviceLegacy` is deprecated in favour of Selfie Check, which is in beta,
+    // access-gated, and documented as carrying no one-person-one-account
+    // guarantee. It buys nothing here, so the deprecated preset stays until the
+    // document credential ships.
+  }).preset(deviceLegacy({}));
 
   opts.onConnectorUri?.(request.connectorURI);
 

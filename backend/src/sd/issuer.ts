@@ -14,6 +14,7 @@ import {
   type DisclosureFrame,
 } from '@sd-jwt/core';
 import { getIssuerKeyPair, issueSigner } from '../utils/keys.js';
+import type { CredentialLevel } from '../auth/worldId.js';
 
 const { privateKey, publicKey } = getIssuerKeyPair();
 
@@ -24,6 +25,16 @@ export type VotainCredentialPayload = JwtPayload & {
   exp: number;
   vct: string;
   cnf?: Record<string, unknown>;
+  /**
+   * The World ID credential level this session was established with.
+   *
+   * NOT selectively disclosed: this server reads it on every gated enrollment,
+   * so hiding it behind a digest would only mean asking the holder to reveal it
+   * back to us each time. Absent on credentials issued before the field
+   * existed, which is why callers must treat undefined as "unknown", never as
+   * "orb".
+   */
+  personhood?: CredentialLevel;
   country?: string;
   ageOver18?: boolean;
   region?: string;

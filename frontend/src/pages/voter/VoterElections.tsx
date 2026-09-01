@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Bell } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { ElectionCard } from '../../components/ui/ElectionCard';
-import { Badge } from '../../components/ui/Badge';
+import { endsSoon } from '../../lib/phase';
 import { Spinner } from '../../components/ui/Spinner';
 import { useElections } from '../../hooks/useElections';
 import type { ElectionPhase } from '../../data/seed';
@@ -21,11 +21,9 @@ export default function VoterElections() {
   const [tab, setTab] = useState<'all' | ElectionPhase>('all');
   const { elections, loading } = useElections();
 
-  // Snapshot the clock once at mount so render stays pure (the "ends soon"
-  // badge doesn't need second-by-second accuracy — Countdown handles ticking).
+  // Snapshot the clock once at mount so render stays pure (the count doesn't
+  // need second-by-second accuracy; Countdown handles the ticking).
   const [now] = useState(() => Date.now());
-  const endsSoon = (e: (typeof elections)[number]) =>
-    e.phase === 'active' && !e.hasVoted && (e.voteEnd.getTime() - now) < 3_600_000;
 
   const myElections = elections.filter(e => e.isEnrolled || e.hasVoted);
   const filtered = tab === 'all' ? myElections : myElections.filter(e => {
@@ -33,7 +31,7 @@ export default function VoterElections() {
     return e.phase === tab;
   });
 
-  const urgentCount = myElections.filter(endsSoon).length;
+  const urgentCount = myElections.filter(e => endsSoon(e, now)).length;
 
   return (
     <PageLayout role="voter" showNav>
@@ -82,16 +80,7 @@ export default function VoterElections() {
         ) : (
           <div className="flex flex-col gap-3">
             {filtered.map(e => (
-              <div key={e.id} className="relative">
-                {endsSoon(e) && (
-                  <div className="absolute -top-1.5 right-3 z-10">
-                    <Badge variant="active" dot className="text-[10px] px-2 py-0.5">
-                      {t('voter_elections.ends_soon')}
-                    </Badge>
-                  </div>
-                )}
-                <ElectionCard election={e} voterView />
-              </div>
+              <ElectionCard key={e.id} election={e} voterView />
             ))}
           </div>
         )}

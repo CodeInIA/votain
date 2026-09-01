@@ -6,6 +6,7 @@
  */
 import { getElection, getFactory } from "./contracts";
 import { queryLogsFrom } from "./logs";
+import { withDistinctNames } from "./ballotNames";
 // The i18n singleton rather than the hook: this is a data layer, not a
 // component. The labels below were hardcoded English and rendered that way in
 // all thirteen locales. The tradeoff is that a language change does not
@@ -14,7 +15,22 @@ import { queryLogsFrom } from "./logs";
 import i18n from "../i18n/config";
 import { getStoredCommitment, getStoredVoteNullifier } from "./semaphore";
 import type { Candidate, Election, ElectionPhase, VotingType } from "../data/seed";
-import { policyHash, type EligibilityPolicy } from "./eligibility";
+import { getVoterPersonhood } from "./voterSession";
+import {
+  asPersonhoodLevel,
+  effectivePersonhood,
+  personhoodSatisfied,
+  policyHash,
+  type EligibilityPolicy,
+  type PersonhoodLevel,
+} from "./eligibility";
+
+/** One label per level, so the three names live in one place. */
+export const PERSONHOOD_LABEL_KEY: Record<PersonhoodLevel, string> = {
+  device: "eligibility.world_id_device",
+  document: "eligibility.personhood_document",
+  orb: "eligibility.personhood_orb",
+};
 
 // Index order MUST match ElectionV4's Phase enum exactly.
 const PHASE_MAP: ElectionPhase[] = [
@@ -35,8 +51,13 @@ interface ElectionMetadata {
   privacyQuorum?: number;
   keyNonce?: string;
   eligibility?: EligibilityPolicy;
-  /** Absent on elections created before the field existed: those predate any
-   *  choice, and sign-in demanded Orb of everyone then as it does now. */
+  /**
+   * Legacy. Superseded by `eligibility.personhood`, which is covered by the
+   * on-chain policy hash where this flag never was: anyone able to rewrite the
+   * metadata could turn this one off and nothing would notice. Still read, so
+   * elections created before the move keep displaying the bar they were sold
+   * with, and still written by nothing.
+   */
   requireOrb?: boolean;
   tags?: string[];
 }
@@ -110,6 +131,20 @@ export async function fetchElection(address: string): Promise<Election> {
     }
   }
 
+  // What this voter's own World ID session reached, as last reconciled against
+  // `/api/me`. A hint for display only: the binding check is the backend's, on
+  // the signed credential, at the moment it is asked to sign an attestation.
+  const heldLevel = asPersonhoodLevel(getVoterPersonhood());
+
+  // The policy wins when it states a level, because that statement is inside
+  // the bytes the on-chain hash commits to. `requireOrb` is only consulted for
+  // elections deployed before the field existed, which have no policy to ask.
+  const personhood: PersonhoodLevel = eligibilityPolicy?.personhood
+    ? eligibilityPolicy.personhood
+    : meta.requireOrb
+      ? "orb"
+      : effectivePersonhood(eligibilityPolicy);
+
   const candidates: Candidate[] = (meta.candidates ?? []).map((cand, i) => ({
     id: `option-${i}`,
     name: cand.name,
@@ -138,6 +173,19 @@ export async function fetchElection(address: string): Promise<Election> {
         if (i < Number(numOptions) && counts[i] === max) cand.isTie = true;
       });
     }
+  }
+
+  // The uncircumventable half of the uniqueness rule. Everything upstream runs
+  // in the organizer's browser and can be skipped by building the creation
+  // transaction by hand, but no election reaches a voter except through this
+  // function. Applied AFTER the blank option is appended and after the results
+  // are attached, in the reader's own language, so it catches the collision
+  // that actually happens on screen rather than the one the organizer was
+  // shown, and so it cannot drop a field written onto the originals. Returns
+  // the list untouched when nothing collides, which is every normal election.
+  const ballot = withDistinctNames(candidates);
+  if (ballot !== candidates) {
+    console.warn(`Election ${address}: ballot options share a name; positions appended`);
   }
 
   // Voter-specific view state. The PUBLIC commitment is enough for the enrolled
@@ -173,19 +221,30 @@ export async function fetchElection(address: string): Promise<Election> {
     enrollEnd: toDate(enrollEnd),
     voteStart: toDate(voteStart),
     voteEnd: toDate(voteEnd),
-    candidates,
+    candidates: ballot,
     eligibility: [
-      // Which World ID the election asks for, not just that it asks for one.
-      // "Orb" and "device" are different bars, and a voter with only a device
-      // verification needs to know before they try.
+      // The bar this election actually sets, not just that it sets one. A voter
+      // who can only reach the lowest of the three needs to know that before
+      // they get their passport out.
       {
         id: "platform",
-        label: meta.requireOrb ? i18n.t("eligibility.world_id_orb") : i18n.t("eligibility.world_id_device"),
-        status: commitment !== null ? "met" : "unknown",
+        label: i18n.t(PERSONHOOD_LABEL_KEY[personhood]),
+        // A stored commitment proves this browser has a Votain identity, which
+        // is not the same as meeting THIS election's bar, and reading it as
+        // such put a green tick in front of voters the enrollment then refused
+        // with `orb_required`. Enrollment settles it: the contract will not
+        // take a member the level was not met for. Before that, the session's
+        // own level answers, and an unknown level stays unknown.
+        status: isEnrolled
+          ? "met"
+          : commitment !== null && personhoodSatisfied(personhood, heldLevel)
+            ? "met"
+            : "unknown",
       },
       { id: "enrolled", label: i18n.t("eligibility.enrolled"), status: isEnrolled ? "met" : "not-met" },
     ],
-    requiresOrb: meta.requireOrb ?? false,
+    personhood,
+    requiresOrb: personhood === "orb",
     totalEnrolled: Number(memberCount),
     castVotes: Number(voteCount),
     ipfsCid,
@@ -195,8 +254,9 @@ export async function fetchElection(address: string): Promise<Election> {
     keyNonce: meta.keyNonce,
     isEnrolled,
     hasVoted,
-    // The vote's anonymous on-chain identifier (nullifier), shown as the receipt.
-    referenceNumber: hasVoted && votedNullifier !== null ? "0x" + votedNullifier.toString(16) : undefined,
+    // The vote's anonymous on-chain identifier, shown to the voter as their own
+    // receipt. Distinct from the transaction hash the history calls a reference.
+    voteNullifier: hasVoted && votedNullifier !== null ? "0x" + votedNullifier.toString(16) : undefined,
     tags: meta.tags,
   };
 }

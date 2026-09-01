@@ -29,6 +29,8 @@ import {
   pollEligibilitySession,
   claimAttestation,
   requiresNationalityReveal,
+  eligibilityErrorKey,
+  eligibilityErrorIsRetryable,
   type EligibilityChallenge,
   type EligibilityPolicy,
 } from '../../lib/eligibility';
@@ -268,11 +270,15 @@ export function EligibilityCheck({ election, policy, onVerified, onCancel }: Pro
                 ? t(`eligibility.failed_${reason ?? 'unknown'}`, {
                     defaultValue: t('eligibility.failed_unknown'),
                   })
-                : t('eligibility.error')}
+                : t(eligibilityErrorKey(reason))}
             </p>
           </div>
           <div className="flex gap-3">
-            <Button variant="primary" onClick={() => void start()}>{t('common.retry')}</Button>
+            {/* Offered only when it could work. A voter refused for want of an
+                Orb gets the same refusal however many times they press it. */}
+            {(stage === 'failed' || eligibilityErrorIsRetryable(reason)) && (
+              <Button variant="primary" onClick={() => void start()}>{t('common.retry')}</Button>
+            )}
             <Button variant="ghost" onClick={onCancel}>{t('common.cancel')}</Button>
           </div>
         </div>

@@ -47,9 +47,10 @@ router.post('/relay/enroll', relayLimiter, async (req: Request, res: Response) =
   const session = await verifySession(req.cookies?.voter_vc);
   if (!session) return res.status(401).json({ error: 'Not authenticated' });
 
-  const { election, identityCommitment, deadline, signature } = req.body as {
+  const { election, identityCommitment, personhoodNullifier, deadline, signature } = req.body as {
     election?: string;
     identityCommitment?: string;
+    personhoodNullifier?: string;
     deadline?: number;
     signature?: string;
   };
@@ -63,10 +64,20 @@ router.post('/relay/enroll', relayLimiter, async (req: Request, res: Response) =
   // An attestation turns this into the gated entry point. The contract decides
   // which one an election accepts, so passing the wrong one reverts rather than
   // enrolling on weaker terms.
-  const result =
-    deadline !== undefined && signature
-      ? await relayEnrollAttested(election, identityCommitment, deadline, signature)
-      : await relayEnroll(election, identityCommitment);
+  const attested = deadline !== undefined && signature;
+  if (attested && !/^\d+$/.test(personhoodNullifier ?? '')) {
+    return res.status(400).json({ error: 'personhoodNullifier must be a decimal string' });
+  }
+
+  const result = attested
+    ? await relayEnrollAttested(
+        election,
+        identityCommitment,
+        personhoodNullifier as string,
+        deadline as number,
+        signature as string,
+      )
+    : await relayEnroll(election, identityCommitment);
 
   if (!result.relayed) return res.status(400).json({ error: result.error });
   return res.status(200).json({ txHash: result.txHash });
