@@ -12,6 +12,7 @@ import {
   hasAttributeRules,
   asPersonhoodLevel,
   personhoodSatisfied,
+  isCoherentPolicy,
   eligibilityErrorKey,
   eligibilityErrorIsRetryable,
   ZERO_HASH,
@@ -385,5 +386,33 @@ describe('how the four eligibility filters combine', () => {
     const both: PersonhoodLevel[] = ['document', 'orb'];
     expect(matchesEligibilityFilter({ personhood: 'orb' }, { personhood: both })).toBe(true);
     expect(matchesEligibilityFilter({ personhood: 'document' }, { personhood: both })).toBe(true);
+  });
+});
+
+describe('a level that can actually check what it claims', () => {
+  /**
+   * `ElectionV4` refuses to deploy a DEVICE election that names an attester,
+   * and an attribute policy needs one. So "device plus 18+" is not merely
+   * discouraged in the wizard, it cannot exist on chain. This is the same rule
+   * said early enough for the form to hide the control rather than let an
+   * organizer fill it in and be refused at deploy time.
+   */
+  it('rejects a device-level policy that names attributes', () => {
+    expect(isCoherentPolicy({ personhood: 'device', minAge: 18 })).toBe(false);
+    expect(isCoherentPolicy({ personhood: 'device', allowedCountries: ['ESP'] })).toBe(false);
+    expect(isCoherentPolicy({ personhood: 'device', blockedCountries: ['PRK'] })).toBe(false);
+  });
+
+  it('accepts device on its own, which is the absence of a requirement', () => {
+    expect(isCoherentPolicy({ personhood: 'device' })).toBe(true);
+    expect(isCoherentPolicy({})).toBe(true);
+    expect(isCoherentPolicy(null)).toBe(true);
+  });
+
+  it('accepts attributes at any level that can read them', () => {
+    expect(isCoherentPolicy({ personhood: 'document', minAge: 18 })).toBe(true);
+    expect(isCoherentPolicy({ personhood: 'orb', allowedCountries: ['ESP'] })).toBe(true);
+    // Unstated means document once attributes are named, so this is coherent too.
+    expect(isCoherentPolicy({ minAge: 18 })).toBe(true);
   });
 });

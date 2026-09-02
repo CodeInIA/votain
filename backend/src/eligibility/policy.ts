@@ -170,6 +170,14 @@ export function parsePolicy(raw: unknown): EligibilityPolicy {
   if (allowed) policy.allowedCountries = allowed;
   if (blocked) policy.blockedCountries = blocked;
 
+  // Age and nationality are read from a document, so a policy whose bar is a
+  // World ID account cannot check either. `ElectionV4` refuses to deploy the
+  // pair; refusing it here means an election that somehow carries it is
+  // reported as malformed rather than silently gating on rules nothing proves.
+  if (policy.personhood === 'device' && hasAttributeRules(policy)) {
+    throw new Error('personhood "device" cannot carry age or nationality rules');
+  }
+
   return policy;
 }
 

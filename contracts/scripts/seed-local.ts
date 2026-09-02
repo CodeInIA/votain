@@ -100,6 +100,7 @@ async function main() {
       }),
       eligibilityAttester: "0x0000000000000000000000000000000000000000",
       eligibilityPolicyHash: "0x" + "00".repeat(32),
+    personhood: 0,
     };
 
     const tx = await factory.createElection(cfg, { value: ethers.parseEther("1") });

@@ -829,6 +829,42 @@ processes that never talk to each other about it. Any drift surfaces as a policy
 that "does not match its published hash", which is exactly the alarm it should
 raise, and both copies are one small deliberately boring function.
 
+## Attribute rules only exist above the device level
+
+The wizard used to offer the age and nationality switch at every personhood
+level, including "World ID account only". That combination cannot be satisfied
+by anybody: those attributes come from a document, and at the device level there
+is no document to read them from. An organizer who set it got an election nobody
+could enroll in, and found out from their voters.
+
+The switch now renders only when the level is `document` or `orb`, and dropping
+back to `device` clears what was already filled in (`eligibilityEnabled`,
+`minAge`, `countryMode`, `countries`) rather than leaving it staged to be
+serialised later.
+
+Hiding a control is a courtesy, not a rule, so the same statement is made twice
+more below the UI:
+
+- `isCoherentPolicy(policy)` in `lib/eligibility.ts` is the predicate, false for
+  a `device` policy carrying attribute rules. `createElection` checks it before
+  building the config, so a caller that skips the wizard gets a message naming
+  both fields instead of the contract's `InvalidConfig`, which names neither.
+- `parsePolicy` in the backend throws on it, and `ElectionV4`'s constructor
+  reverts `InvalidConfig`. The contract is the one that actually binds, since
+  the other two run where an organizer could go around them.
+
+## The organizer sees the ballot they published
+
+`ElectionManagement` showed the title, the dates, the requirements and the
+controls, but never the candidates. The one person who cannot check their own
+ballot before voters see it was the organizer, and metadata is written once at
+deployment, so a wrong option list is not something a later edit can fix.
+
+The card renders above the actions, guarded by `election.candidates.length > 0`
+so an election whose metadata carries none does not show an empty box. Names and
+descriptions use `break-words`, because an option can be a single long token and
+the card is the narrowest column on the page.
+
 ## Shared pieces added along the way
 
 Four modules exist because the same need turned up in more than one screen, and

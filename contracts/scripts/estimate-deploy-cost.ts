@@ -178,6 +178,7 @@ async function main(): Promise<void> {
     metadataJson: JSON.stringify({ description: "x".repeat(400), candidates: ["A", "B", "C"] }),
     eligibilityAttester: "0x0000000000000000000000000000000000000000",
     eligibilityPolicyHash: "0x" + "00".repeat(32),
+    personhood: 0,
   };
   steps.push({
     label: "factory.createElection (per election)",

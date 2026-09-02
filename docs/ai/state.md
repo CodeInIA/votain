@@ -1555,6 +1555,48 @@ the local setup, where the browser registered commitments directly through
 The route reports an unconfigured chain as 503 with `vault_unavailable` now,
 because an incomplete deployment is not a server error.
 
+## The contract got an opinion about the personhood level (2026-09-02)
+
+The entry above put `personhood` inside the policy, where the hash covers it.
+That made the level tamper evident to anyone holding the policy JSON, and left
+the chain itself unable to say anything about it, since a contract cannot parse
+that JSON.
+
+An organizer could still deploy an election asking for "World ID account only"
+AND an age or nationality rule. Nobody can satisfy that: attributes come from a
+document, and at the device level there is no document to read. The wizard
+offered the combination, the deployment accepted it, and the organizer learned
+about it from voters who could not enroll.
+
+`Config` now carries the level as an enum and the constructor refuses the two
+incoherent shapes:
+
+```solidity
+if ((cfg.personhood == PersonhoodLevel.DEVICE) != (cfg.eligibilityAttester == address(0))) {
+    revert InvalidConfig();
+}
+```
+
+The contradiction is catchable without reading the policy, because both halves
+are already in the config. Above `DEVICE` the level is proved by an attestation,
+so no attester means a level nothing enforces. At `DEVICE` there is no document,
+so an attester means rules no voter can ever meet.
+
+Three statements of the same rule, in the order they stop being avoidable: the
+wizard hides the switch below `document` and clears the fields when the level
+drops; `parsePolicy` throws in the backend; the constructor reverts. Only the
+last one runs where an organizer cannot go around it, which is why the request
+was to make it a contract rule rather than a form validation.
+
+Probed live against the deployed factory: `DEVICE` with an attester, `DOCUMENT`
+without one and `ORB` without one all revert `InvalidConfig`; the three coherent
+shapes deploy. Reseeding put 26 elections on chain, 18 `DEVICE`, 6 `DOCUMENT`
+and 2 `ORB`, with no configuration violating the invariant.
+
+The same session added the candidate list to the organizer's own view of an
+election. Ballot options live in metadata written once at deployment, so the
+person who cannot review theirs before voters see it was the one who wrote it.
+
 ## Next: Phase C, Decentralized deployments
 ### H10: Frontend on IPFS via Fleek CD
 ### H11: Backend on Phala TEE

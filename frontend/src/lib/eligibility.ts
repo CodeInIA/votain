@@ -93,6 +93,19 @@ export function personhoodSatisfied(
   return PERSONHOOD_RANK[held] >= PERSONHOOD_RANK[required];
 }
 
+/**
+ * Whether this policy is one the chain would accept.
+ *
+ * Age and nationality are proved from a document, so an election whose bar is a
+ * World ID account cannot check either: there is no document to read them from.
+ * `ElectionV4` refuses to deploy the pair, since a DEVICE election may name no
+ * attester and an attribute policy needs one, and this is the same rule said
+ * early enough for the wizard to act on it.
+ */
+export function isCoherentPolicy(policy: EligibilityPolicy | null | undefined): boolean {
+  return !(policy?.personhood === "device" && hasAttributeRules(policy));
+}
+
 /** Nothing to enforce off chain: no attributes, no personhood beyond the account. */
 export function isEmptyPolicy(policy: EligibilityPolicy | null | undefined): boolean {
   return !hasAttributeRules(policy) && effectivePersonhood(policy) === "device";

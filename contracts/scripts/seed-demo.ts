@@ -160,6 +160,18 @@ interface EligibilityPolicy {
  * the frontend correctly refused to trust them: every policy naming more than
  * one country was quietly unusable.
  */
+const PERSONHOOD_ENUM = { device: 0, document: 1, orb: 2 } as const;
+
+/** Mirrors `effectivePersonhood`: attributes imply a document even unstated. */
+function effectiveLevel(policy: EligibilityPolicy): "device" | "document" | "orb" {
+  if (policy.personhood) return policy.personhood;
+  const hasAttributes =
+    policy.minAge !== undefined ||
+    (policy.allowedCountries?.length ?? 0) > 0 ||
+    (policy.blockedCountries?.length ?? 0) > 0;
+  return hasAttributes ? "document" : "device";
+}
+
 function canonicalPolicy(policy: EligibilityPolicy): EligibilityPolicy {
   const ordered: EligibilityPolicy = {};
   if (policy.minAge !== undefined) ordered.minAge = policy.minAge;
@@ -328,6 +340,9 @@ async function main(): Promise<void> {
       eligibilityPolicyHash: spec.eligibility
         ? ethers.keccak256(ethers.toUtf8Bytes(canonicalPolicyJson(spec.eligibility)))
         : "0x" + "00".repeat(32),
+      // Mirrors `ElectionV4.PersonhoodLevel`. The constructor refuses a DEVICE
+      // election that names an attester, so this has to agree with the policy.
+      personhood: spec.eligibility ? PERSONHOOD_ENUM[effectiveLevel(spec.eligibility)] : 0,
     };
 
     const receipt = await (

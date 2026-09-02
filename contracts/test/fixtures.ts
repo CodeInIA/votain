@@ -117,6 +117,7 @@ export interface ElectionConfig {
   metadataJson: string;
   eligibilityAttester: string;
   eligibilityPolicyHash: string;
+  personhood: number;
 }
 
 export const VotingType = {
@@ -162,6 +163,7 @@ export function baseConfig(now: number, overrides: Partial<ElectionConfig> = {})
     metadataJson: "{}",
     eligibilityAttester: ZERO_ADDRESS,
     eligibilityPolicyHash: ZERO_HASH,
+    personhood: 0,
     ...overrides,
   };
 }

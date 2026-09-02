@@ -755,7 +755,20 @@ export default function CreateElection() {
                 <RadioGroup
                   className="mt-1"
                   value={form.personhood}
-                  onChange={v => set('personhood', v as PersonhoodLevel)}
+                  onChange={v => {
+                    const level = v as PersonhoodLevel;
+                    // Dropping to `device` takes the attribute rules with it.
+                    // Leaving them set would deploy a policy the contract
+                    // rejects, and hiding them without clearing them would make
+                    // the refusal look like a bug.
+                    setForm(f => ({
+                      ...f,
+                      personhood: level,
+                      ...(level === 'device'
+                        ? { eligibilityEnabled: false, minAge: '', countryMode: 'none' as CountryMode, countries: [] }
+                        : {}),
+                    }));
+                  }}
                   options={PERSONHOOD_LEVELS.map(level => ({
                     value: level,
                     label: t(`create.personhood_${level}`),
@@ -764,9 +777,14 @@ export default function CreateElection() {
                 />
               </div>
 
-              {/* Attribute eligibility. Off by default, and deliberately the
-                  only place in the wizard that can make enrollment harder:
-                  every voter who wants in will have to scan a passport. */}
+              {/* Attribute eligibility, and only where it can be checked.
+                  Age and nationality are read from a document, so a DEVICE
+                  election has nothing to read them from. Hidden rather than
+                  disabled: an organizer who never chose a document should not
+                  have to work out why a control is greyed out, and the choice
+                  above is the thing that unlocks it. `ElectionV4` refuses the
+                  pair outright, so this is a courtesy and not the guard. */}
+              {form.personhood !== 'device' && (
               <div className="flex flex-col gap-4 pt-1">
                 <Switch
                   label={t('create.eligibility_enable')}
@@ -835,6 +853,7 @@ export default function CreateElection() {
                   </div>
                 )}
               </div>
+              )}
               <Input label={t('create.privacy_quorum')} type="number" min="1" max="100" value={form.privacyQuorum} onChange={e => set('privacyQuorum', e.target.value)} hint={t('create.quorum_hint')} error={err('privacyQuorum')} />
               <div className="flex flex-col gap-1.5">
                 <Input label={t('create.deposit_token', { currency: chainInfo.currency })} type="number" step="0.01" min="0" value={form.depositAmount} onChange={e => set('depositAmount', e.target.value)} hint={t('create.deposit_hint')} error={err('depositAmount')} />

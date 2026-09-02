@@ -37,6 +37,21 @@ contract ElectionV4 is ERC2771Context {
     // (enrollment closed, voting not yet open, only reachable when enrollEnd <
     // voteStart) are distinct from ENROLLING so the UI never invites an action
     // the timing checks in enroll()/castVote() would revert.
+    /**
+     * @notice How distinct a human the election insists each voter is.
+     *
+     * DEVICE is a World ID account and nothing more: one account, one vote, and
+     * accounts are not people. DOCUMENT requires a passport or national ID
+     * proved on the voter's own phone, whose per-election nullifier this
+     * contract records so one document cannot enroll twice. ORB requires both.
+     *
+     * On chain and not only inside the hashed policy, because the constructor
+     * enforces a rule with it that the policy alone could never express here:
+     * this contract cannot parse JSON, but it can refuse a configuration whose
+     * level and attester disagree.
+     */
+    enum PersonhoodLevel { DEVICE, DOCUMENT, ORB }
+
     enum Phase { UPCOMING, ENROLLING, PENDING_VOTE, ACTIVE, TALLYING, CLOSED, VOIDED, CANCELLED }
 
     enum Outcome { NONE, WINNER, TIE, APPROVED, REJECTED, THRESHOLD_NOT_MET }
@@ -55,6 +70,7 @@ contract ElectionV4 is ERC2771Context {
         string metadataJson;    // description, candidates, organizer name, tags (IPFS on mainnet)
         address eligibilityAttester;   // address(0) = open election, no attribute policy
         bytes32 eligibilityPolicyHash; // keccak256 of the policy declared in metadataJson
+        PersonhoodLevel personhood;    // how distinct a human each voter must prove to be
     }
 
     // ────────────────────────────────────────────────
@@ -90,6 +106,10 @@ contract ElectionV4 is ERC2771Context {
     /// anyone can recompute it from the metadata and see which policy the
     /// organizer committed to before a single voter enrolled.
     bytes32 public immutable eligibilityPolicyHash;
+
+    /// @notice The personhood bar this election sets, readable without parsing
+    /// the metadata or trusting anything that did.
+    PersonhoodLevel public immutable personhood;
 
     bytes32 private constant ENROLL_TYPEHASH =
         keccak256(
@@ -279,6 +299,21 @@ contract ElectionV4 is ERC2771Context {
             revert InvalidConfig();
         }
 
+        // The level and the attester have to agree, and this is the one place
+        // that can say so.
+        //
+        // Anything above DEVICE is proved by a document, and a document proof
+        // reaches this contract only as an attestation, so it needs an attester.
+        // DEVICE is the reverse: there is no document, therefore no attribute
+        // about the holder of one can be checked, therefore an attester would be
+        // gating enrollment on rules that can never be satisfied. Age and
+        // nationality restrictions are exactly those rules, which is why a
+        // DEVICE election cannot carry them: not by convention in the wizard,
+        // but because this constructor refuses to deploy it.
+        if ((cfg.personhood == PersonhoodLevel.DEVICE) != (cfg.eligibilityAttester == address(0))) {
+            revert InvalidConfig();
+        }
+
         verifier = ISemaphoreVerifier(_verifier);
         registry = IPlatformRegistry(_registry);
         organizer = _organizer;
@@ -296,6 +331,7 @@ contract ElectionV4 is ERC2771Context {
         metadataJson = cfg.metadataJson;
         eligibilityAttester = cfg.eligibilityAttester;
         eligibilityPolicyHash = cfg.eligibilityPolicyHash;
+        personhood = cfg.personhood;
 
         _cachedChainId = block.chainid;
         _cachedDomainSeparator = _buildDomainSeparator();

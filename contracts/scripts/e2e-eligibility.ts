@@ -118,6 +118,7 @@ async function main() {
     metadataJson: JSON.stringify(metadata),
     eligibilityAttester: attester.address,
     eligibilityPolicyHash: policyHash,
+    personhood: 1,
   };
 
   console.log("1. Creating a restricted election");
@@ -292,6 +293,7 @@ async function main() {
     metadataJson: JSON.stringify({ ...metadata, eligibility: undefined }),
     eligibilityAttester: ZERO_ADDRESS,
     eligibilityPolicyHash: ethers.ZeroHash,
+    personhood: 0,
   };
   const openTx = await factory
     .connect(organizer)

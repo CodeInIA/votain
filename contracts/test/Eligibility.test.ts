@@ -61,6 +61,9 @@ async function gatedElection(overrides = {}): Promise<any> {
     baseConfig(now, {
       eligibilityAttester: attester.address,
       eligibilityPolicyHash: POLICY_HASH,
+      // Anything above DEVICE, or the constructor refuses the pair: a gated
+      // election needs an attester, and an attester needs a level to justify it.
+      personhood: 1,
       ...overrides,
     }),
   );
@@ -93,13 +96,88 @@ describe("ElectionV4, eligibility config", () => {
 
     // Rules nothing enforces.
     await expect(
-      deployWith(baseConfig(now, { eligibilityPolicyHash: POLICY_HASH })),
+      deployWith(baseConfig(now, { eligibilityPolicyHash: POLICY_HASH, personhood: 1 })),
     ).to.be.revertedWithCustomError(Election, "InvalidConfig");
 
     // Enforcement of rules nobody can read.
     await expect(
       deployWith(baseConfig(now, { eligibilityAttester: attester.address })),
     ).to.be.revertedWithCustomError(Election, "InvalidConfig");
+  });
+
+  /** The raw constructor, for the configurations the factory would never build. */
+  async function deployRaw(cfg: ReturnType<typeof baseConfig>) {
+    const Election = await ethers.getContractFactory("ElectionV4", {
+      libraries: { PoseidonT3: stack.poseidonAddress },
+    });
+    return Election.deploy(
+      FORWARDER,
+      stack.verifier.getAddress(),
+      stack.registry.getAddress(),
+      organizer.address,
+      cfg,
+    );
+  }
+
+  /**
+   * The rule the wizard also enforces, made impossible to deploy around.
+   *
+   * Age and nationality are proved from a document, so an election that asks
+   * for neither a document nor an Orb cannot check them. Hiding the switch in
+   * the interface is a courtesy; this is the part that holds when somebody
+   * builds the transaction by hand.
+   */
+  it("refuses a DEVICE election that names an attester", async () => {
+    const now = await networkHelpers.time.latest();
+    await expect(
+      deployRaw(
+        baseConfig(now, {
+          eligibilityAttester: attester.address,
+          eligibilityPolicyHash: POLICY_HASH,
+          personhood: 0,
+        }),
+      ),
+    ).to.be.revertedWithCustomError(
+      await ethers.getContractFactory("ElectionV4", {
+        libraries: { PoseidonT3: stack.poseidonAddress },
+      }),
+      "InvalidConfig",
+    );
+  });
+
+  it("refuses a DOCUMENT or ORB election with no attester", async () => {
+    // The mirror image: a document proof reaches this contract only as an
+    // attestation, so a level above DEVICE with nobody to sign one is a
+    // configuration whose voters could never enroll.
+    const now = await networkHelpers.time.latest();
+    const Election = await ethers.getContractFactory("ElectionV4", {
+      libraries: { PoseidonT3: stack.poseidonAddress },
+    });
+    for (const level of [1, 2]) {
+      await expect(
+        deployRaw(baseConfig(now, { personhood: level })),
+      ).to.be.revertedWithCustomError(Election, "InvalidConfig");
+    }
+  });
+
+  it("publishes the level, so nobody has to parse the metadata to read it", async () => {
+    const gated = await gatedElection();
+    expect(await gated.personhood()).to.equal(1n);
+
+    const open = await openElection();
+    expect(await open.personhood()).to.equal(0n);
+  });
+
+  it("accepts an ORB election, which is DOCUMENT plus a World ID check", async () => {
+    const now = await networkHelpers.time.latest();
+    const orb = await deployRaw(
+      baseConfig(now, {
+        eligibilityAttester: attester.address,
+        eligibilityPolicyHash: POLICY_HASH,
+        personhood: 2,
+      }),
+    );
+    expect(await orb.personhood()).to.equal(2n);
   });
 
   it("accepts both set, and both unset", async () => {
@@ -485,6 +563,7 @@ describe("ElectionPaymaster, attested relaying", () => {
         name: "Gated Election",
         eligibilityAttester: attester.address,
         eligibilityPolicyHash: POLICY_HASH,
+        personhood: 1,
       }),
       { value: ethers.parseEther("1") },
     );
@@ -535,6 +614,7 @@ describe("ElectionPaymaster, attested relaying", () => {
         name: "Gated Election Two",
         eligibilityAttester: attester.address,
         eligibilityPolicyHash: POLICY_HASH,
+        personhood: 1,
       }),
       { value: ethers.parseEther("1") },
     );

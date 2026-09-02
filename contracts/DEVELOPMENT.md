@@ -96,6 +96,42 @@ Four properties the contract enforces rather than trusts:
 - **It is stored, not merely checked.** The relay has no durable memory, and a
   restart must not reopen a closed door.
 
+### The personhood level is on chain, so a contradictory election cannot deploy
+
+The level a voter has to reach lives in the eligibility policy, which the chain
+only holds as `eligibilityPolicyHash`. That makes it tamper evident, but only to
+a reader who already has the policy JSON. The contract itself cannot parse it,
+so until now it had no opinion on what the election was asking for.
+
+`Config` carries `personhood` as an enum (`DEVICE`, `DOCUMENT`, `ORB`), stored
+immutably, and the constructor holds it to one rule:
+
+```solidity
+if ((cfg.personhood == PersonhoodLevel.DEVICE) != (cfg.eligibilityAttester == address(0))) {
+    revert InvalidConfig();
+}
+```
+
+Parsing the policy is not needed to catch the contradiction, because both ends
+of it are already in the config:
+
+- **`DOCUMENT` or `ORB` with no attester.** Anything above `DEVICE` is proved by
+  a document, and a document proof reaches this contract only as a signed
+  attestation. With nobody to sign, the level is a claim nothing enforces.
+- **`DEVICE` with an attester.** There is no document, so no attribute about the
+  holder of one can be checked, so the attester would be gating enrollment on
+  rules no voter can ever satisfy. Age and nationality restrictions are exactly
+  those rules. A `DEVICE` election cannot carry them, and not by convention in
+  the wizard: the constructor refuses to deploy it.
+
+The wizard hides the attribute switch below `DOCUMENT` for the same reason, and
+the backend refuses to sign such a policy, but neither is what makes it true.
+Both run on machines an organizer could bypass; this runs where they cannot.
+
+Probed against the deployed factory: `DEVICE` with an attester, `DOCUMENT`
+without one and `ORB` without one all revert `InvalidConfig`, while the three
+coherent shapes deploy.
+
 ### The optimizer now runs in the default profile too
 
 `ElectionFactory` embeds `ElectionV4`'s creation code. Unoptimized it sits past
@@ -108,7 +144,7 @@ will ever run.
 ## Commands
 
 ```bash
-npx hardhat test                    # 84 tests, including the E2E suite
+npx hardhat test                    # 116 tests, including the E2E suite
 
 # Restricted-election walkthrough against a running local node. Covers every leg
 # of the eligibility flow except the Self app reading a passport, which needs a

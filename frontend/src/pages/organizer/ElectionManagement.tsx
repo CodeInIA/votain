@@ -310,6 +310,40 @@ export default function ElectionManagement() {
           ))}
         </Card>
 
+        {/* The ballot itself, which this view never showed.
+            The organizer wrote these options and had no way to read them back:
+            checking that a candidate's name is spelled right is the thing they
+            most need to do before enrollment opens, and it was the one thing
+            only the voter view offered. Numbers are deliberately absent, since
+            the results card below is where a decided election reports them. */}
+        {election.candidates.length > 0 && (
+          <Card className="p-5 mb-5">
+            <h2 className="text-sm font-semibold text-on-surface mb-3">
+              {t('election.candidates')}
+            </h2>
+            <div className="flex flex-col gap-2">
+              {election.candidates.map(candidate => (
+                <div
+                  key={candidate.id}
+                  className="flex items-start gap-3 p-3 rounded-2xl bg-surface-lowest/40 border border-white/5"
+                >
+                  <span className="w-7 h-7 shrink-0 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">
+                    {candidate.name.trim().charAt(0).toUpperCase()}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-on-surface break-words">{candidate.name}</p>
+                    {candidate.description && (
+                      <p className="text-xs text-on-surface-meta mt-0.5 break-words">
+                        {candidate.description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
         {/* Organizer actions */}
         <Card className="p-5 flex flex-col gap-3">
           <h2 className="text-sm font-semibold text-on-surface mb-1">{t('election_mgmt.actions')}</h2>

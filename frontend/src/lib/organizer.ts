@@ -13,12 +13,18 @@ import { queryLogsFrom } from "./logs";
 import { generateElectionKeys, type SerializedKeyPair } from "./paillier";
 import { deriveElectionKeys, newKeyNonce } from "./tallyKey";
 import {
+  effectivePersonhood,
+  isCoherentPolicy,
   isEmptyPolicy,
   policyHash,
   ZERO_HASH,
   type EligibilityPolicy,
+  type PersonhoodLevel,
 } from "./eligibility";
 import { hasDuplicateNames } from "./ballotNames";
+
+/** Mirrors `ElectionV4.PersonhoodLevel`. */
+const PERSONHOOD_ENUM: Record<PersonhoodLevel, number> = { device: 0, document: 1, orb: 2 };
 
 const PRIVKEY_STORAGE_PREFIX = "votain_paillier_sk_";
 const ORGANIZER_NAME_KEY = "votain_organizer_name";
@@ -189,6 +195,17 @@ export async function createElection(
     throw new Error("an election with an eligibility policy needs an attester address");
   }
 
+  // Caught here rather than by the deployment. The wizard cannot produce this
+  // pair, since choosing the account-only level clears the attribute rules,
+  // but a caller that skips the wizard would otherwise reach `ElectionV4` and
+  // get `InvalidConfig`, which names neither field.
+  if (!isCoherentPolicy(input.eligibility)) {
+    throw new Error(
+      "an election that asks only for a World ID account cannot restrict age or nationality: " +
+        "both are read from a document",
+    );
+  }
+
   // 3. Random scope (external nullifier): unique per election
   const scope = BigInt(ethers.hexlify(ethers.randomBytes(31)));
 
@@ -206,6 +223,11 @@ export async function createElection(
     metadataJson: JSON.stringify(metadata),
     eligibilityAttester: gated ? (input.eligibilityAttester as string) : ZERO_ADDRESS,
     eligibilityPolicyHash: gated ? await policyHash(input.eligibility as EligibilityPolicy) : ZERO_HASH,
+    // Declared on chain as well as inside the hashed policy, because the
+    // constructor enforces an invariant with it that the policy alone cannot:
+    // a DEVICE election may carry no attester, and therefore no age or
+    // nationality rule, since neither can be proved without a document.
+    personhood: PERSONHOOD_ENUM[effectivePersonhood(input.eligibility)],
   };
 
   const factory = getFactory(signer);

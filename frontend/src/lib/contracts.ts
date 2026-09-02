@@ -13,7 +13,7 @@ import { addresses, chainInfo } from "./deployments";
 // ────────────────────────────────────────────────
 
 export const ELECTION_FACTORY_ABI = [
-  "function createElection((string name, uint8 votingType, uint256 thresholdValue, uint256 numOptions, uint256 enrollStart, uint256 enrollEnd, uint256 voteStart, uint256 voteEnd, uint256 scope, string paillierPublicKey, string metadataJson, address eligibilityAttester, bytes32 eligibilityPolicyHash) cfg) payable returns (address)",
+  "function createElection((string name, uint8 votingType, uint256 thresholdValue, uint256 numOptions, uint256 enrollStart, uint256 enrollEnd, uint256 voteStart, uint256 voteEnd, uint256 scope, string paillierPublicKey, string metadataJson, address eligibilityAttester, bytes32 eligibilityPolicyHash, uint8 personhood) cfg) payable returns (address)",
   "function electionsCount() view returns (uint256)",
   "function getElections(uint256 offset, uint256 limit) view returns (address[])",
   "event ElectionCreated(address indexed electionAddress, address indexed organizer, string name, uint8 votingType, uint256 scope)",
@@ -51,6 +51,7 @@ export const ELECTION_ABI = [
   "function enrollAttested(uint256 identityCommitment, uint256 deadline, bytes signature)",
   "function eligibilityAttester() view returns (address)",
   "function eligibilityPolicyHash() view returns (bytes32)",
+  "function personhood() view returns (uint8)",
   "function castVote(bytes voteCiphertext, uint256 nullifier, uint256 merkleRoot, uint256 merkleDepth, uint256[2] _pA, uint256[2][2] _pB, uint256[2] _pC)",
   "function cancelElection()",
   "function closeEnrollmentEarly()",
