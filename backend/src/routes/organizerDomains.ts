@@ -20,9 +20,6 @@ import {
   expectedRecord,
   isAddress,
   normalizeDomain,
-  listClaimedDomains,
-  addClaimedDomain,
-  removeClaimedDomain,
   type CheckOutcome,
 } from '../organizer/domains.js';
 
@@ -85,21 +82,7 @@ router.get('/organizer/domain-status', checkLimiter, async (req: Request, res: R
 });
 
 // ────────────────────────────────────────────────
-// GET /organizer/domains: this organizer's domains, each re-checked live
-// ────────────────────────────────────────────────
-router.get('/organizer/domains', checkLimiter, async (req: Request, res: Response) => {
-  const address = typeof req.query.address === 'string' ? req.query.address : '';
-  if (!isAddress(address)) return res.status(400).json({ error: 'A valid address is required' });
-
-  const domains = listClaimedDomains(address);
-  const checked = await Promise.all(
-    domains.map(async domain => ({ domain, ...(await cachedCheck(address, domain)) })),
-  );
-  return res.status(200).json({ domains: checked });
-});
-
-// ────────────────────────────────────────────────
-// POST /organizer/domains: verify and remember
+// POST /organizer/domains: verify, and store nothing
 // ────────────────────────────────────────────────
 router.post('/organizer/domains', checkLimiter, async (req: Request, res: Response) => {
   const pair = readPair(req.body as Record<string, unknown>);
@@ -112,37 +95,27 @@ router.post('/organizer/domains', checkLimiter, async (req: Request, res: Respon
     return res.status(409).json({ domain: pair.domain, ...outcome });
   }
 
-  const domains = addClaimedDomain(pair.address, pair.domain);
-  return res.status(200).json({ domain: pair.domain, status: 'verified', domains });
+  // Verified, and that is the whole answer. The claim itself is recorded by the
+  // organizer's wallet in `OrganizerDomains`, so this server never holds a list
+  // that an auditor would have to trust it about.
+  return res.status(200).json({ domain: pair.domain, status: 'verified' });
 });
 
-// ────────────────────────────────────────────────
-// DELETE /organizer/domains: signature required
-// ────────────────────────────────────────────────
-export function removalMessage(domain: string): string {
-  return `Votain: remove domain ${domain}`;
-}
-
-router.delete('/organizer/domains', (req: Request, res: Response) => {
-  const pair = readPair(req.body as Record<string, unknown>);
-  const signature = typeof (req.body as { signature?: unknown }).signature === 'string'
-    ? (req.body as { signature: string }).signature
-    : '';
-  if (!pair) return res.status(400).json({ error: 'A valid address and domain are required' });
-  if (!signature) return res.status(400).json({ error: 'signature is required' });
-
-  let signer: string;
-  try {
-    signer = verifyMessage(removalMessage(pair.domain), signature);
-  } catch {
-    return res.status(401).json({ error: 'Invalid signature' });
-  }
-  if (signer.toLowerCase() !== pair.address.toLowerCase()) {
-    return res.status(401).json({ error: 'Signature does not match the address' });
-  }
-
-  const domains = removeClaimedDomain(pair.address, pair.domain);
-  return res.status(200).json({ domains });
-});
+/**
+ * The two routes that used to live here are gone with the file they served.
+ *
+ * `GET /organizer/domains` read the claim list off this server's disk; the
+ * browser reads `OrganizerDomains.domainsOf` from the chain instead and then
+ * asks `/organizer/domain-status` about each one, which is the check that
+ * actually decides anything.
+ *
+ * `DELETE /organizer/domains` needed a signed message to prove the caller owned
+ * the address. Releasing a claim is a transaction from that address now, so the
+ * proof is the transaction and there is nothing left for this server to check.
+ *
+ * `POST /organizer/domains` stays because a browser cannot resolve a TXT
+ * record, but it no longer writes anything: it answers whether DNS agrees, and
+ * the organizer's own wallet records the claim.
+ */
 
 export default router;

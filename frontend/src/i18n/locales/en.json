@@ -644,5 +644,14 @@
     "remove": "Remove {{country}}",
     "more_results_other": "and {{count}} more. Keep typing to narrow it down.",
     "more_results_one": "and {{count}} more. Keep typing to narrow it down."
+  },
+  "backup": {
+    "title": "Your identity backup",
+    "desc": "A copy of your sealed voting identity, held by you. It opens only with your passkey, so the file alone gives nobody access. Useful if this server and the blockchain are ever both out of reach.",
+    "export": "Download backup",
+    "import": "Restore from backup",
+    "exported": "Saved as {{filename}}",
+    "imported": "Identity restored on this device",
+    "no_identity": "You have no voting identity to export yet"
   }
 }

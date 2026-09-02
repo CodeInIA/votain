@@ -871,6 +871,34 @@ The organizer view never rendered the description at all. It went from the title
 straight to the counters, so the one person able to correct a description was the
 only one never shown it.
 
+## The voter's own copy of their identity
+
+`lib/identityBackup.ts` and the card in the voter profile. The vault lives on
+chain now, which answers "what if this server disappears"; this answers the one
+the chain does not, namely an RPC nobody can reach or an entry that is gone.
+Same ciphertext, no third party in the path.
+
+It is deliberately NOT presented as a secret to hide, and the copy says so: the
+blob is sealed under a key derived from the passkey's PRF output, so without the
+authenticator it opens nothing. That is exactly why it is safe to save, mail or
+print, and telling voters to guard it like a seed phrase would be both wrong and
+the kind of warning that makes people skip the backup entirely.
+
+Restoring checks the commitment in the file against what the secret actually
+derives to. A backup that opens but yields a different identity belongs to
+another voter or was edited, and enrolling with it would fail much later with an
+error pointing nowhere near the cause.
+
+## Organizer domains are claimed by the organizer
+
+`fetchOrganizerDomains` now reads the claim list from `OrganizerDomains` on
+chain and asks the backend for a live DNS verdict on each one. Two sources on
+purpose: the chain says what to ask about, DNS says what is true, and nothing in
+between is trusted. Adding a domain is a verification call followed by a
+transaction the organizer signs; removing one is just the transaction, so the
+signed-message dance that used to authorise a server-side delete is gone with
+the list it protected.
+
 ## Extra env (Phase B)
 
 ```bash

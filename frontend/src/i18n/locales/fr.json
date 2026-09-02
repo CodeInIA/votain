@@ -649,5 +649,14 @@
     "more_results_one": "et {{count}} de plus. Continuez à taper pour affiner.",
     "more_results_other": "et {{count}} de plus. Continuez à taper pour affiner.",
     "more_results_many": "et {{count}} de plus. Continuez à taper pour affiner."
+  },
+  "backup": {
+    "title": "Sauvegarde de votre identité",
+    "desc": "Une copie de votre identité de vote scellée, entre vos mains. Elle ne s'ouvre qu'avec votre passkey : le fichier seul ne donne accès à personne. Utile si ce serveur et la chaîne deviennent tous deux inaccessibles.",
+    "export": "Télécharger la sauvegarde",
+    "import": "Restaurer depuis une sauvegarde",
+    "exported": "Enregistrée sous {{filename}}",
+    "imported": "Identité restaurée sur cet appareil",
+    "no_identity": "Vous n'avez pas encore d'identité de vote à exporter"
   }
 }

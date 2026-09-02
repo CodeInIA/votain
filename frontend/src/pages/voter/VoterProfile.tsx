@@ -6,6 +6,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { LanguageSelector } from '../../components/ui/LanguageSelector';
 import { MyDevices } from '../../components/voter/MyDevices';
+import { IdentityBackupCard } from '../../components/voter/IdentityBackupCard';
 import { Modal } from '../../components/ui/Modal';
 import { useAuth } from '../../contexts/AuthContext';
 import { useState } from 'react';
@@ -69,6 +70,10 @@ export default function VoterProfile() {
 
         {/* Passkeys that can unlock this voter's identity */}
         <MyDevices />
+
+        {/* The voter's own copy of that identity, for the case where neither
+            this server nor the chain is reachable. */}
+        <IdentityBackupCard />
 
         {/* Language */}
         <Card className="p-5 mb-4">

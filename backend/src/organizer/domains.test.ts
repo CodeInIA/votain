@@ -1,22 +1,8 @@
 import { test, describe, beforeEach, mock } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, rmSync, mkdirSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
 import { promises as dns } from 'node:dns';
 
-// Own store per test file: node:test runs files in parallel (see vault.test.ts).
-const DATA_FILE = join(tmpdir(), 'votain-domains-test.json');
-process.env.ORGANIZER_DOMAINS_FILE = DATA_FILE;
-
-const {
-  checkDomain,
-  expectedRecord,
-  normalizeDomain,
-  listClaimedDomains,
-  addClaimedDomain,
-  removeClaimedDomain,
-} = await import('./domains.js');
+const { checkDomain, expectedRecord, normalizeDomain } = await import('./domains.js');
 
 const ADDRESS = '0xa5216ed9ab68fceb8cd8dbb0a47dc18740e946ce';
 const CHECKSUMMED = '0xa5216eD9AB68FCEb8CD8dBb0A47Dc18740e946Ce';
@@ -35,10 +21,10 @@ function failsWith(code: string): void {
   });
 }
 
+// Nothing to clean between tests any more: this module holds no state, which
+// is the point of the claim list having moved to `OrganizerDomains`.
 beforeEach(() => {
   mock.restoreAll();
-  mkdirSync(dirname(DATA_FILE), { recursive: true });
-  if (existsSync(DATA_FILE)) rmSync(DATA_FILE);
 });
 
 describe('DNS domain check', () => {
@@ -138,21 +124,5 @@ describe('Domain input handling', () => {
       name: '_votain.gob.es',
       value: `v=votain1; address=${ADDRESS}`,
     });
-  });
-});
-
-describe('Claimed domain list', () => {
-  test('stores, deduplicates and removes, keyed case-insensitively', () => {
-    addClaimedDomain(CHECKSUMMED, 'gob.es');
-    addClaimedDomain(ADDRESS, 'gob.es');
-    addClaimedDomain(ADDRESS, 'uni.es');
-    assert.deepEqual(listClaimedDomains(CHECKSUMMED), ['gob.es', 'uni.es']);
-
-    removeClaimedDomain(ADDRESS, 'gob.es');
-    assert.deepEqual(listClaimedDomains(ADDRESS), ['uni.es']);
-  });
-
-  test('an unknown address has no domains', () => {
-    assert.deepEqual(listClaimedDomains(OTHER), []);
   });
 });

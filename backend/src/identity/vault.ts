@@ -1,5 +1,5 @@
 /**
- * Encrypted identity vault — file-backed.
+ * Encrypted identity vault, stored on chain.
  *
  * A voter has exactly ONE Semaphore identity, because two active identities for
  * the same human would yield two independently countable ballots that no
@@ -7,32 +7,32 @@
  * therefore cannot mean "a second identity per passkey": it means the SAME
  * secret, unlockable from each of the voter's passkeys.
  *
- * Each entry stores that secret encrypted under a key derived from one
- * passkey's WebAuthn PRF output. The issuer only ever sees ciphertext: the PRF
- * secret never leaves the authenticator, so this server cannot recover the
- * identity, and therefore cannot compute the voter's per-election Semaphore
- * nullifiers or link them to a ballot.
+ * Each entry holds that secret encrypted under a key derived from one passkey's
+ * WebAuthn PRF output. This server only ever handles ciphertext: the PRF secret
+ * never leaves the authenticator, so it cannot recover the identity, and
+ * therefore cannot compute the voter's per-election Semaphore nullifiers or
+ * link them to a ballot.
+ *
+ * WHY THE CHAIN AND NOT A FILE. Given that, the only property the store has to
+ * provide is AVAILABILITY. It cannot read the blob, and it cannot substitute
+ * one, because a swapped blob decrypts to an identity whose commitment does not
+ * match `commitmentOf` and every enrollment with it fails. Its single remaining
+ * power over a voter was to refuse to hand the blob back, and a file on one
+ * server also meant losing that file locked its owners out of identities the
+ * contract will not let them re-register. `PlatformRegistry` has the
+ * availability the rest of the project already relies on, and it is already the
+ * authority on the commitment, so the ciphertext sits beside it.
+ *
+ * The cost is written where the contract declares it: the ciphertext is public
+ * and permanent, as is the number of passkeys a voter holds and when each was
+ * added. `docs/ai/state.md` carries the reasoning.
+ *
+ * Env:
+ *   CHAIN_RPC_URL           RPC endpoint
+ *   REGISTRY_ADDRESS        PlatformRegistry deployment address
+ *   REGISTRAR_PRIVATE_KEY   key owning PlatformRegistry
  */
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const DEFAULT_DATA_FILE = join(
-  dirname(fileURLToPath(import.meta.url)),
-  '..',
-  '..',
-  'data',
-  'identity-vault.json',
-);
-
-/**
- * Resolved per call rather than at import time so tests can point at their own
- * file. Without it, test files sharing this store race each other: node:test
- * runs them in parallel and each one truncates the other's data mid-run.
- */
-function dataFile(): string {
-  return process.env.IDENTITY_VAULT_FILE ?? DEFAULT_DATA_FILE;
-}
+import { getRegistryReader, getRegistryWriter, isRegistrarConfigured } from '../chain/registrar.js';
 
 export interface VaultEntry {
   /** Base64url WebAuthn credential id. Public. */
@@ -48,23 +48,11 @@ export interface VaultRecord {
   entries: VaultEntry[];
 }
 
-/** World ID nullifier => vault record. */
-type VaultState = Record<string, VaultRecord>;
-
-function load(): VaultState {
-  const file = dataFile();
-  if (!existsSync(file)) return {};
-  return JSON.parse(readFileSync(file, 'utf-8')) as VaultState;
-}
-
-function save(state: VaultState): void {
-  const file = dataFile();
-  mkdirSync(dirname(file), { recursive: true });
-  writeFileSync(file, JSON.stringify(state, null, 2));
-}
-
-export function getVault(nullifier: string): VaultRecord | null {
-  return load()[nullifier] ?? null;
+/** On-chain entry, as the contract returns it. */
+interface ChainEntry {
+  credentialId: string;
+  blob: string;
+  addedAt: bigint;
 }
 
 export class CommitmentMismatchError extends Error {
@@ -74,68 +62,123 @@ export class CommitmentMismatchError extends Error {
   }
 }
 
+export class VaultUnavailableError extends Error {
+  constructor() {
+    super('The identity vault needs a configured chain connection');
+    this.name = 'VaultUnavailableError';
+  }
+}
+
 /**
- * Adds (or replaces) the wrapped secret for one passkey.
+ * Base64url in and out, hex on the chain.
  *
- * The commitment is pinned on the first write and immutable afterwards: letting
- * it change would silently orphan the on-chain registration and, worse, hand
- * one human a second votable identity. Recovery goes through
- * `PlatformRegistry.rotateMember`, which revokes the old commitment on-chain in
- * the same transaction, never through this endpoint.
+ * The browser speaks base64url because that is what WebAuthn hands it and what
+ * `atob` reads; Solidity `bytes` arrive as hex. Converting at this boundary
+ * keeps both sides in the encoding they already use, and keeps the conversion
+ * in one place rather than at every call site.
  */
-export function putVaultEntry(
+export function toHex(base64url: string): string {
+  return `0x${Buffer.from(base64url, 'base64url').toString('hex')}`;
+}
+
+export function fromHex(hex: string): string {
+  return Buffer.from(hex.replace(/^0x/, ''), 'hex').toString('base64url');
+}
+
+function requireChain(): void {
+  if (!isRegistrarConfigured()) throw new VaultUnavailableError();
+}
+
+/**
+ * Reads a human's vault, or null when they have no identity registered.
+ *
+ * A registered human with no entries yet is a real state, not an error: the
+ * commitment is written first and the first blob follows in a second
+ * transaction, so a browser can arrive between the two.
+ */
+export async function getVault(nullifier: string): Promise<VaultRecord | null> {
+  requireChain();
+  const registry = getRegistryReader();
+
+  const commitment: bigint = await registry.commitmentOf(nullifier);
+  if (commitment === 0n) return null;
+
+  const entries: ChainEntry[] = await registry.getVault(nullifier);
+  return {
+    commitment: commitment.toString(),
+    entries: entries.map(e => ({
+      credentialId: fromHex(e.credentialId),
+      blob: fromHex(e.blob),
+      addedAt: new Date(Number(e.addedAt) * 1000).toISOString(),
+    })),
+  };
+}
+
+/**
+ * Adds one passkey's sealed copy.
+ *
+ * The commitment is pinned by the chain, not by this function: `registerMember`
+ * writes it and nothing but `rotateMember` changes it. Passing a different one
+ * is refused here so the caller learns why, instead of writing a blob that
+ * would decrypt to an identity every enrollment then rejects.
+ */
+export async function putVaultEntry(
   nullifier: string,
   commitment: string,
   entry: Omit<VaultEntry, 'addedAt'>,
-): VaultRecord {
-  const state = load();
-  const existing = state[nullifier];
+): Promise<VaultRecord> {
+  requireChain();
 
-  if (existing && existing.commitment !== commitment) {
-    throw new CommitmentMismatchError();
+  const current = await getVault(nullifier);
+  if (current && current.commitment !== commitment) throw new CommitmentMismatchError();
+
+  // Replacing rather than refusing: re-sealing the same passkey is what a voter
+  // does after a recovery on another device, and the contract has no update.
+  if (current?.entries.some(e => e.credentialId === entry.credentialId)) {
+    await removeVaultEntry(nullifier, entry.credentialId);
   }
 
-  const record: VaultRecord = existing ?? { commitment, entries: [] };
-  record.entries = [
-    ...record.entries.filter(e => e.credentialId !== entry.credentialId),
-    { ...entry, addedAt: new Date().toISOString() },
-  ];
+  const registry = getRegistryWriter();
+  const tx = await registry.addVaultEntry(
+    nullifier,
+    toHex(entry.credentialId),
+    toHex(entry.blob),
+  );
+  await tx.wait();
 
-  state[nullifier] = record;
-  save(state);
-  return record;
+  return (await getVault(nullifier)) as VaultRecord;
 }
 
-export function removeVaultEntry(nullifier: string, credentialId: string): VaultRecord | null {
-  const state = load();
-  const record = state[nullifier];
-  if (!record) return null;
-
-  record.entries = record.entries.filter(e => e.credentialId !== credentialId);
-  state[nullifier] = record;
-  save(state);
-  return record;
+export async function removeVaultEntry(
+  nullifier: string,
+  credentialId: string,
+): Promise<VaultRecord | null> {
+  requireChain();
+  const registry = getRegistryWriter();
+  const tx = await registry.removeVaultEntry(nullifier, toHex(credentialId));
+  await tx.wait();
+  return getVault(nullifier);
 }
 
 /**
  * Recovery: discard every stored copy of the old secret and start over.
  *
- * The existing entries wrap a secret nobody can decrypt any more (the passkey
- * that sealed them is gone), so keeping them would only leave a trail of
- * unusable blobs and let a stale one collide with the new commitment. The
- * caller is responsible for having rotated the commitment on chain first.
+ * The existing entries seal a secret nobody can decrypt any more, since the
+ * passkey that sealed them is gone, and its commitment has just been revoked by
+ * `rotateMember`. The caller is responsible for having rotated first.
  */
-export function resetVault(
+export async function resetVault(
   nullifier: string,
   commitment: string,
   entry: Omit<VaultEntry, 'addedAt'>,
-): VaultRecord {
-  const state = load();
-  const record: VaultRecord = {
-    commitment,
-    entries: [{ ...entry, addedAt: new Date().toISOString() }],
-  };
-  state[nullifier] = record;
-  save(state);
+): Promise<VaultRecord> {
+  requireChain();
+
+  const registry = getRegistryWriter();
+  const tx = await registry.resetVault(nullifier, toHex(entry.credentialId), toHex(entry.blob));
+  await tx.wait();
+
+  const record = (await getVault(nullifier)) as VaultRecord;
+  if (record.commitment !== commitment) throw new CommitmentMismatchError();
   return record;
 }

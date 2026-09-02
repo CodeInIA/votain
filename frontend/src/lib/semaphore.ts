@@ -127,6 +127,61 @@ type VaultOutcome =
  *
  * Returns null when this device cannot do PRF at all, so the caller falls back.
  */
+/**
+ * Unlocks an identity from a backup file the voter is holding, with no network
+ * at all.
+ *
+ * The complement to the on-chain vault rather than a replacement for it: that
+ * one answers "what if this server disappears", this one answers "what if I
+ * cannot reach the chain either, or my entry is gone". Same ciphertext, same
+ * passkey, no third party in the path.
+ *
+ * The commitment in the file is checked against what the secret actually
+ * derives to. A backup that opens but yields a different identity is a file
+ * from another voter, or one that was edited, and enrolling with it would fail
+ * later with an error pointing nowhere near the cause.
+ */
+export async function importIdentityFromBackup(
+  entries: Array<{ credentialId: string; blob: string }>,
+  expectedCommitment: string,
+): Promise<Identity> {
+  const known = entries.map(e => e.credentialId);
+  const assertion = await assertPrf(known);
+  if (!assertion) throw new IdentityLockedError();
+
+  const ordered = [
+    ...entries.filter(e => e.credentialId === assertion.credentialId),
+    ...entries.filter(e => e.credentialId !== assertion.credentialId),
+  ];
+
+  for (const entry of ordered) {
+    const secret = await unwrapSecret(assertion.secret, entry.blob);
+    if (!secret) continue;
+
+    const identity = Identity.import(secret);
+    if (identity.commitment.toString() !== expectedCommitment) {
+      throw new BackupMismatchError();
+    }
+
+    localStorage.setItem(IDENTITY_MODE_KEY, "prf");
+    localStorage.removeItem(IDENTITY_STORAGE_KEY);
+    return remember(identity);
+  }
+
+  throw new IdentityLockedError();
+}
+
+/** The backup opened, but the identity inside is not the one it claims. */
+export class BackupMismatchError extends Error {
+  constructor() {
+    super(
+      "This backup opened, but the identity inside does not match the commitment " +
+        "it claims. It may belong to another voter.",
+    );
+    this.name = "BackupMismatchError";
+  }
+}
+
 async function resolveIdentityFromVault(): Promise<VaultOutcome> {
   let vault: VaultState | null;
   try {

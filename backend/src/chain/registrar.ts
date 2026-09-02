@@ -19,6 +19,20 @@ const REGISTRY_ABI = [
   'function commitmentOf(uint256 nullifier) view returns (uint256)',
   'function registeredNullifiers(uint256 nullifier) view returns (bool)',
   'function verifiedMembers(uint256 identityCommitment) view returns (bool)',
+  // The identity vault. See `identity/vault.ts` for why the ciphertext lives on
+  // chain rather than on this server's disk.
+  'function addVaultEntry(uint256 nullifier, bytes credentialId, bytes blob)',
+  'function removeVaultEntry(uint256 nullifier, bytes credentialId)',
+  'function resetVault(uint256 nullifier, bytes credentialId, bytes blob)',
+  'function getVault(uint256 nullifier) view returns ((bytes credentialId, bytes blob, uint64 addedAt)[])',
+  'function vaultEntryCount(uint256 nullifier) view returns (uint256)',
+  // Credential status. The slot is assigned by `registerMember`, so signing in
+  // costs no transaction; only a revocation writes.
+  'function statusIndexOf(uint256 nullifier) view returns (uint256)',
+  'function memberCount() view returns (uint256)',
+  'function revokedStatus(uint256 statusIndex) view returns (bool)',
+  'function revokeStatus(uint256 statusIndex)',
+  'function restoreStatus(uint256 statusIndex)',
 ];
 
 export function isRegistrarConfigured(): boolean {
@@ -28,9 +42,32 @@ export function isRegistrarConfigured(): boolean {
 }
 
 function getRegistry(): Contract {
+  return getRegistryWriter();
+}
+
+/**
+ * The registry, signed by the registrar. Every write goes through this.
+ *
+ * The owner is a WRITER and never a reader: a voter has no wallet, by design,
+ * because a per-voter sending address would publicly link their enrollment to
+ * their ballot, so somebody has to submit on their behalf.
+ */
+export function getRegistryWriter(): Contract {
   const provider = new JsonRpcProvider(process.env.CHAIN_RPC_URL);
   const wallet = new Wallet(process.env.REGISTRAR_PRIVATE_KEY as string, provider);
   return new Contract(process.env.REGISTRY_ADDRESS as string, REGISTRY_ABI, wallet);
+}
+
+/**
+ * The registry, read-only and unsigned.
+ *
+ * Reads need no key, and using the signing wallet for them would make the
+ * registrar look load-bearing where it is not: anyone with an RPC endpoint can
+ * read a voter's vault back, which is the entire point of moving it here.
+ */
+export function getRegistryReader(): Contract {
+  const provider = new JsonRpcProvider(process.env.CHAIN_RPC_URL);
+  return new Contract(process.env.REGISTRY_ADDRESS as string, REGISTRY_ABI, provider);
 }
 
 export interface RegistrationResult {

@@ -8,6 +8,7 @@
  */
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { Signer } from 'ethers';
 import { Globe, Plus, Trash2, Copy, Check, AlertTriangle } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
@@ -18,7 +19,6 @@ import {
   addOrganizerDomain,
   fetchDomainRecord,
   fetchOrganizerDomains,
-  removalMessage,
   removeOrganizerDomain,
   type DomainCheck,
   type DomainRecord,
@@ -26,10 +26,15 @@ import {
 
 export function MyDomains({
   address,
-  signMessage,
+  getSigner,
 }: {
   address?: string;
-  signMessage: (message: string) => Promise<string>;
+  /**
+   * The organizer's wallet. Claims are recorded on chain by them, so the
+   * transaction IS the authorisation: there is no signed message for a server
+   * to check any more, because there is no server holding the list.
+   */
+  getSigner: () => Promise<Signer>;
 }) {
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -83,7 +88,7 @@ export function MyDomains({
     if (!address || !record) return;
     setBusy(true);
     try {
-      const result = await addOrganizerDomain(address, draft.trim());
+      const result = await addOrganizerDomain(await getSigner(), address, draft.trim());
       setOutcome(result);
       if (result.status === 'verified') {
         toast({ title: t('domain.verified'), variant: 'success' });
@@ -107,9 +112,10 @@ export function MyDomains({
     if (!address) return;
     setBusy(true);
     try {
-      // Signed so nobody else can drop a competitor's domain from the list.
-      const signature = await signMessage(removalMessage(domain));
-      await removeOrganizerDomain(address, domain, signature);
+      // The transaction comes from the organizer's own address, and the
+      // contract only ever touches `claims[msg.sender]`, so nobody can drop a
+      // competitor's domain.
+      await removeOrganizerDomain(await getSigner(), domain);
       setReloadToken(n => n + 1);
     } catch (error: unknown) {
       toast({

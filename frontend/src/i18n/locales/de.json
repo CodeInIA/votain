@@ -644,5 +644,14 @@
     "remove": "{{country}} entfernen",
     "more_results_other": "und {{count}} weitere. Tippen Sie weiter, um einzugrenzen.",
     "more_results_one": "und {{count}} weiteres. Tippen Sie weiter, um einzugrenzen."
+  },
+  "backup": {
+    "title": "Sicherung Ihrer Identität",
+    "desc": "Eine Kopie Ihrer versiegelten Wahlidentität, in Ihrer Hand. Sie lässt sich nur mit Ihrem Passkey öffnen, die Datei allein gibt also niemandem Zugang. Nützlich, falls dieser Server und die Chain einmal beide nicht erreichbar sind.",
+    "export": "Sicherung herunterladen",
+    "import": "Aus Sicherung wiederherstellen",
+    "exported": "Gespeichert als {{filename}}",
+    "imported": "Identität auf diesem Gerät wiederhergestellt",
+    "no_identity": "Sie haben noch keine Wahlidentität zum Exportieren"
   }
 }

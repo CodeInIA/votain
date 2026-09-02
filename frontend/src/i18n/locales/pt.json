@@ -649,5 +649,14 @@
     "more_results_one": "e mais {{count}}. Continue a escrever para afinar.",
     "more_results_other": "e mais {{count}}. Continue a escrever para afinar.",
     "more_results_many": "e mais {{count}}. Continue a escrever para afinar."
+  },
+  "backup": {
+    "title": "Cópia da tua identidade",
+    "desc": "Uma cópia da tua identidade de voto selada, nas tuas mãos. Só abre com a tua passkey, por isso o ficheiro sozinho não dá acesso a ninguém. Útil se um dia não conseguires chegar nem a este servidor nem à cadeia.",
+    "export": "Descarregar cópia",
+    "import": "Restaurar a partir de cópia",
+    "exported": "Guardada como {{filename}}",
+    "imported": "Identidade restaurada neste dispositivo",
+    "no_identity": "Ainda não tens uma identidade de voto para exportar"
   }
 }

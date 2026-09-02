@@ -1479,6 +1479,82 @@ weaker, or plainly different, from what it had in hand.
 Each was a case of the UI having the information and not saying it. Worth
 noticing as a pattern rather than four separate bugs.
 
+## The backend stopped storing things (2026-09-02)
+
+Three JSON files lived in `backend/data/`. None of them holds anything the
+server can read or forge, and yet losing one of them could lock a voter out of
+an identity the contracts will not let them register again. That asymmetry is
+what moved them.
+
+### The identity vault
+
+The blob is the Semaphore secret sealed under a key derived from a passkey's
+WebAuthn PRF output. The server cannot open it, so it cannot compute anyone's
+per-election nullifiers or link them to a ballot. It cannot substitute one
+either: a swapped blob decrypts to an identity whose commitment does not match
+`commitmentOf`, and every enrollment with it fails.
+
+So the only power it had was to REFUSE to hand the blob back, and that is
+exactly the power a single file on a single disk exercises by accident.
+`PlatformRegistry` already carries the availability the rest of the project
+leans on and is already the authority on the commitment, so the ciphertext sits
+beside it.
+
+Written where the contract declares it, because it is permanent: the ciphertext
+is public and stays public, whatever breaks AES-GCM in twenty years gets to try,
+and so is the shape of a voter's setup, meaning how many passkeys they hold and
+when each was added. Removing an entry stops it being offered; it does not erase
+it from history.
+
+The complement is a backup file the voter holds themselves, which answers the
+question the chain does not: what if the chain is unreachable, or the entry is
+gone. Same ciphertext, no third party at all. It is deliberately not treated as
+a secret to hide, and the copy says so: without the passkey it opens nothing,
+which is precisely why it is safe to save, mail or print. Telling voters to
+guard it like a seed phrase would be both wrong and the kind of warning that
+makes people skip the backup entirely.
+
+### Organizer domains
+
+The cleanest of the three, because the file never carried the trust. Domain
+control is whatever DNS answers right now, so a reader resolves
+`_votain.<domain>` and checks it names the organizer's address; the stored list
+only ever said which domains to go and ask about.
+
+That is why `OrganizerDomains` needs no owner. Claiming a domain you do not
+control gets you nothing, and the organizer's own wallet is already the address
+the TXT record has to name, so requiring an operator to attest would have added
+a trusted party to a statement nobody has to trust. Two routes disappeared with
+the file: the list read, and a signed-message removal whose whole job was
+proving the caller owned an address that now simply sends the transaction.
+
+### Credential revocation, and the argument against moving it
+
+Worth recording that this one was moved over an objection rather than because it
+was clearly right.
+
+`isRevoked` runs inside `verifySession`, which is every authenticated request in
+the application, so a naive move puts an RPC round trip in the hottest path
+there is. And unlike the vault, losing the file harms nobody: revoked
+credentials become valid again, and the fix is to revoke them again. The issuer
+that signs those credentials is also the party that decides revocations, so
+publishing the list removes no trusted party. It changes where the bytes live,
+not who is trusted.
+
+Two things made it workable. The status slot is assigned once per HUMAN at
+registration, not per credential, because the issuer used to allocate a fresh
+index on every sign-in and on chain that would have been a transaction per
+login. And reads are cached for thirty seconds, bounded and documented, so a
+burst of requests costs one call rather than hundreds.
+
+### What this cost
+
+`REGISTRAR_PRIVATE_KEY` is now required rather than optional. It was empty in
+the local setup, where the browser registered commitments directly through
+`ensureLocalRegistration`, and the vault read returned a 500 until it was set.
+The route reports an unconfigured chain as 503 with `vault_unavailable` now,
+because an incomplete deployment is not a server error.
+
 ## Next: Phase C, Decentralized deployments
 ### H10: Frontend on IPFS via Fleek CD
 ### H11: Backend on Phala TEE

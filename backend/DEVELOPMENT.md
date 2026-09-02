@@ -375,3 +375,36 @@ PUBLIC_URL=http://localhost:3000  # base for credentialStatus URLs
 ## Target deployment
 
 **Phala Network free tier** (Intel TDX TEE with on-chain attestation). Private key is generated inside the enclave and never leaves. Plan B: AWS Nitro Enclaves Free Tier 12 months.
+
+## This server stores nothing
+
+`backend/data/` is gone. Three JSON files lived there, and none of them held
+anything this server could read or forge, yet losing one could lock a voter out
+of an identity the contracts will not let them register again.
+
+| Was | Is now | Why it moved |
+|---|---|---|
+| `identity-vault.json` | `PlatformRegistry.vaults` | The only power the file had was to refuse to hand the ciphertext back, and a single disk exercises that by accident |
+| `organizer-domains.json` | `OrganizerDomains` | The list never carried the trust, DNS does, so the organizer writes their own claims and nobody has to be online |
+| `status-list.json` | `PlatformRegistry.revokedStatus` | Moved on request, over the objection recorded in `docs/ai/state.md` |
+
+Consequences worth knowing before deploying:
+
+- **`REGISTRAR_PRIVATE_KEY` is required, not optional.** The vault is written
+  through it. With it empty the vault routes answer 503 and `vault_unavailable`
+  rather than pretending, because an incomplete deployment is not a server
+  error.
+- **Revocation reads are cached for 30 seconds.** `isRevoked` runs inside
+  `verifySession`, which is every authenticated request; an RPC call there would
+  be paid by every page load to publish a fact that changes a handful of times
+  in a deployment's life. `refreshRevocations()` drops the cache, so a
+  revocation made through this server takes effect at once.
+- **A status slot belongs to a HUMAN, not to a credential.** `registerMember`
+  assigns it. The issuer used to allocate a fresh index on every sign-in, which
+  on chain would have meant a transaction per login.
+
+`npm run e2e:vault` drives the real vault module against a real chain: 23 checks
+covering the round trip, one human keeping one commitment, and recovery leaving
+no blob behind that could open a door the registry has walled up. It needs a
+deployed node and the same env the server reads.
+

@@ -649,5 +649,14 @@
     "more_results_other": "y {{count}} más. Sigue escribiendo para acotar.",
     "more_results_one": "y {{count}} más. Sigue escribiendo para acotar.",
     "more_results_many": "y {{count}} más. Sigue escribiendo para acotar."
+  },
+  "backup": {
+    "title": "Copia de tu identidad",
+    "desc": "Una copia de tu identidad de voto cifrada, en tus manos. Solo se abre con tu passkey, así que el fichero por sí solo no da acceso a nadie. Útil si algún día no puedes llegar ni a este servidor ni a la cadena.",
+    "export": "Descargar copia",
+    "import": "Restaurar desde copia",
+    "exported": "Guardada como {{filename}}",
+    "imported": "Identidad restaurada en este dispositivo",
+    "no_identity": "Aún no tienes una identidad de voto que exportar"
   }
 }

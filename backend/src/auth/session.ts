@@ -52,7 +52,7 @@ export async function verifySession(vc: string | undefined): Promise<Session | n
 
   // A revoked credential must not keep an active session alive.
   const index = payload.credentialStatus?.statusListIndex;
-  if (index !== undefined && isRevoked(Number(index))) return null;
+  if (index !== undefined && (await isRevoked(Number(index)))) return null;
 
   return { nullifier: payload.sub, personhood: payload.personhood, payload };
 }

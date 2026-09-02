@@ -7,11 +7,16 @@
  * published in the DNS of gob.es", and they can check it themselves without
  * trusting this server.
  *
- * DNS is the source of truth, not this file. What is stored here is only the
- * list of domains worth looking up for an address, because a domain cannot be
- * enumerated from an address. Every read re-checks live, so REMOVING THE TXT
- * RECORD IS THE REVOCATION and it takes effect immediately. There is no
- * credential to revoke and no expiry to manage.
+ * DNS is the source of truth, and this module stores nothing. Every check is
+ * live, so REMOVING THE TXT RECORD IS THE REVOCATION and it takes effect
+ * immediately. There is no credential to revoke and no expiry to manage.
+ *
+ * The list of domains worth looking up for an address used to be a JSON file
+ * here. It never carried the trust, only the question, and it lives in the
+ * `OrganizerDomains` contract now: written by the organizer's own wallet, so
+ * an auditor can read what was claimed and when without asking this server,
+ * and nobody has to be online for an organizer to state where they publish.
+ * What stays here is the one thing a browser cannot do for itself.
  *
  * The record lives under an underscore-prefixed subdomain (RFC 8552) rather
  * than the apex, which is crowded with SPF, DMARC and assorted vendor
@@ -19,41 +24,10 @@
  *
  *   _votain.example.org.  IN TXT  "v=votain1; address=0xabc..."
  */
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { promises as dns } from 'node:dns';
-
-const DEFAULT_DATA_FILE = join(
-  dirname(fileURLToPath(import.meta.url)),
-  '..',
-  '..',
-  'data',
-  'organizer-domains.json',
-);
-
-/** Resolved per call so tests can point at their own file (see vault.ts). */
-function dataFile(): string {
-  return process.env.ORGANIZER_DOMAINS_FILE ?? DEFAULT_DATA_FILE;
-}
 
 export const RECORD_PREFIX = '_votain';
 export const RECORD_VERSION = 'votain1';
-
-/** Lowercased address => claimed domains. Not proof of anything on its own. */
-type DomainState = Record<string, string[]>;
-
-function load(): DomainState {
-  const file = dataFile();
-  if (!existsSync(file)) return {};
-  return JSON.parse(readFileSync(file, 'utf-8')) as DomainState;
-}
-
-function save(state: DomainState): void {
-  const file = dataFile();
-  mkdirSync(dirname(file), { recursive: true });
-  writeFileSync(file, JSON.stringify(state, null, 2));
-}
 
 /**
  * Rejects anything that is not plausibly a hostname before it reaches a
@@ -137,31 +111,3 @@ export async function checkDomain(address: string, domain: string): Promise<Chec
   return { status: 'address_mismatch', found };
 }
 
-export function listClaimedDomains(address: string): string[] {
-  return load()[address.toLowerCase()] ?? [];
-}
-
-/**
- * Remembers a domain for this address. Only ever called after a successful
- * check, so the DNS record is what authorises the write: claiming a domain you
- * do not control simply fails before reaching here.
- */
-export function addClaimedDomain(address: string, domain: string): string[] {
-  const state = load();
-  const key = address.toLowerCase();
-  const current = state[key] ?? [];
-  if (!current.includes(domain)) current.push(domain);
-  state[key] = current;
-  save(state);
-  return current;
-}
-
-export function removeClaimedDomain(address: string, domain: string): string[] {
-  const state = load();
-  const key = address.toLowerCase();
-  const remaining = (state[key] ?? []).filter(d => d !== domain);
-  if (remaining.length > 0) state[key] = remaining;
-  else delete state[key];
-  save(state);
-  return remaining;
-}

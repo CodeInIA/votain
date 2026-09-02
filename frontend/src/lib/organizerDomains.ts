@@ -12,6 +12,10 @@
  * organization's own infrastructure never learns who is reading their election.
  */
 
+import { Contract, type Signer } from "ethers";
+import { addresses } from "./deployments";
+import { getReadProvider } from "./contracts";
+
 const BACKEND = import.meta.env.VITE_BACKEND_URL as string | undefined;
 
 function requireBackend(): string {
@@ -52,21 +56,60 @@ export async function fetchDomainRecord(address: string, domain: string): Promis
 }
 
 /** Every domain this organizer has registered, each re-checked live. */
+/**
+ * The domains this organizer claims, each re-checked live.
+ *
+ * The claim list comes from `OrganizerDomains` on chain, and the verdict from
+ * DNS through the backend, because a browser cannot resolve a TXT record. Two
+ * sources on purpose: the chain says what to ask about, DNS says what is true.
+ * Nothing in between is trusted, and neither answer is stored anywhere.
+ */
 export async function fetchOrganizerDomains(address: string): Promise<DomainCheck[]> {
-  const url = new URL(`${requireBackend()}/api/organizer/domains`);
+  const claimed = await fetchClaimedDomains(address);
+  return Promise.all(
+    claimed.map(async domain => ({ ...(await checkOneDomain(address, domain)), domain })),
+  );
+}
+
+/** Just the claims, straight from the contract. */
+export async function fetchClaimedDomains(address: string): Promise<string[]> {
+  if (!addresses.organizerDomains) return [];
+  const { Contract } = await import("ethers");
+  const contract = new Contract(
+    addresses.organizerDomains,
+    ["function domainsOf(address organizer) view returns (string[])"],
+    getReadProvider(),
+  );
+  return (await contract.domainsOf(address)) as string[];
+}
+
+/** The live DNS verdict for one pair. */
+async function checkOneDomain(address: string, domain: string): Promise<DomainCheck> {
+  const url = new URL(`${requireBackend()}/api/organizer/domain-status`);
   url.searchParams.set("address", address);
+  url.searchParams.set("domain", domain);
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`Could not read domains: ${res.status}`);
-  const body = (await res.json()) as { domains: DomainCheck[] };
-  return body.domains;
+  if (!res.ok) return { domain, status: "lookup_failed" };
+  return (await res.json()) as DomainCheck;
 }
 
 /**
- * Verifies and registers a domain. Resolves with the outcome rather than
- * throwing on a failed check: "not published yet" is the expected first answer
- * while DNS propagates, not an error to report as a broken request.
+ * Verifies a domain, then records the claim from the organizer's own wallet.
+ *
+ * Two steps, and only the first needs this project's server: it resolves the
+ * TXT record, which a browser cannot. The claim itself is a transaction the
+ * organizer signs, so nobody has to be online for them to state where they
+ * publish, and an auditor reads it from the chain rather than from us.
+ *
+ * Resolves with the outcome rather than throwing on a failed check: "not
+ * published yet" is the expected first answer while DNS propagates, not an
+ * error to report as a broken request.
  */
-export async function addOrganizerDomain(address: string, domain: string): Promise<DomainCheck> {
+export async function addOrganizerDomain(
+  signer: Signer,
+  address: string,
+  domain: string,
+): Promise<DomainCheck> {
   const res = await fetch(`${requireBackend()}/api/organizer/domains`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -74,38 +117,30 @@ export async function addOrganizerDomain(address: string, domain: string): Promi
   });
   if (res.status === 400) throw new Error("That does not look like a domain name");
   if (!res.ok && res.status !== 409) throw new Error(`Verification failed: ${res.status}`);
-  return (await res.json()) as Promise<DomainCheck>;
+
+  const outcome = (await res.json()) as DomainCheck;
+  if (outcome.status !== "verified") return outcome;
+
+  await (await domainsContract(signer).claim(outcome.domain)).wait();
+  return outcome;
 }
 
-/** The message the organizer signs to authorise a removal. */
-export function removalMessage(domain: string): string {
-  return `Votain: remove domain ${domain}`;
+/** Drops a claim. The transaction is the authorisation; nothing else signs. */
+export async function removeOrganizerDomain(signer: Signer, domain: string): Promise<void> {
+  await (await domainsContract(signer).release(domain)).wait();
 }
 
-export async function removeOrganizerDomain(
-  address: string,
-  domain: string,
-  signature: string,
-): Promise<void> {
-  const res = await fetch(`${requireBackend()}/api/organizer/domains`, {
-    method: "DELETE",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ address, domain, signature }),
-  });
-  if (!res.ok) {
-    const body = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new Error(body.error ?? `Could not remove the domain: ${res.status}`);
+function domainsContract(signer: Signer): Contract {
+  if (!addresses.organizerDomains) {
+    throw new Error("OrganizerDomains address not configured");
   }
+  return new Contract(
+    addresses.organizerDomains,
+    ["function claim(string domain)", "function release(string domain)"],
+    signer,
+  );
 }
 
-/**
- * Checks the domain recorded on an election.
- *
- * An election keeps the domain it was created under, so a verification that
- * lapses later does not rewrite the past: the badge is struck through and the
- * voter sees both what it was and what it is now. A `lookup_failed` must never
- * strike a badge, since it says nothing about the domain.
- */
 export async function checkElectionDomain(
   organizerAddress: string,
   domain: string,

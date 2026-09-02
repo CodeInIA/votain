@@ -56,6 +56,13 @@ async function main() {
   await registry.waitForDeployment();
   console.log("PlatformRegistry:", await registry.getAddress());
 
+  // Self-service and owned by nobody: a domain claim proves nothing on its own,
+  // since a reader resolves the TXT record and checks it names the organizer.
+  const Domains = await ethers.getContractFactory("OrganizerDomains");
+  const domains = await Domains.deploy();
+  await domains.waitForDeployment();
+  console.log("OrganizerDomains:", await domains.getAddress());
+
   const Paymaster = await ethers.getContractFactory("ElectionPaymaster");
   const paymaster = await Paymaster.deploy();
   await paymaster.waitForDeployment();
@@ -107,6 +114,7 @@ async function main() {
     deployer: deployer.address,
     contracts: {
       PlatformRegistry: await registry.getAddress(),
+      OrganizerDomains: await domains.getAddress(),
       ElectionPaymaster: await paymaster.getAddress(),
       [verifierName]: await verifier.getAddress(),
       ElectionFactory: await factory.getAddress(),

@@ -33,9 +33,6 @@ frontend/*.tsbuildinfo
 backend/dist/
 backend/build/
 backend/logs/
-backend/data/status-list.json
-backend/data/identity-vault.json
-backend/data/organizer-domains.json
 
 # ------------- Tally script -------------
 scripts-tally/paillier-key.json

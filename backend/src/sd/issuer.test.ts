@@ -70,15 +70,29 @@ describe('SD-JWT issue → present → verify', () => {
 });
 
 describe('Status List 2021', () => {
-  it('encodes and reads back revocation bits', () => {
-    const encoded = encodedList();
+  // The revocation set lives in `PlatformRegistry` now. With no chain
+  // configured these read as an empty list rather than failing, which is what
+  // an issuer that has revoked nobody should publish anyway, and it keeps the
+  // credential well formed for a verifier that fetches it.
+
+  it('encodes and reads back revocation bits', async () => {
+    const encoded = await encodedList();
     assert.equal(checkBit(encoded, 7), false);
   });
 
-  it('builds a well-formed StatusList2021Credential', () => {
-    const vc = statusListCredential('http://localhost:3000', 'voters-1');
+  it('builds a well-formed StatusList2021Credential', async () => {
+    const vc = await statusListCredential('http://localhost:3000', 'voters-1');
     assert.ok(vc['@context'].includes('https://w3id.org/vc/status-list/2021/v1'));
     assert.equal(vc.credentialSubject.statusPurpose, 'revocation');
     assert.ok(typeof vc.credentialSubject.encodedList === 'string');
+  });
+
+  it('publishes a list a verifier can decode even with nothing revoked', async () => {
+    // An empty bitstring is a real answer: every index reads as valid. A
+    // verifier must not have to tell "nobody revoked" apart from "list missing".
+    const encoded = await encodedList();
+    for (const index of [0, 1, 42, 131_071]) {
+      assert.equal(checkBit(encoded, index), false);
+    }
   });
 });

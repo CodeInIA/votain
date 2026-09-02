@@ -644,5 +644,14 @@
     "remove": "{{country}} verwijderen",
     "more_results_other": "en nog {{count}}. Typ verder om te verfijnen.",
     "more_results_one": "en nog {{count}}. Typ verder om te verfijnen."
+  },
+  "backup": {
+    "title": "Back-up van je identiteit",
+    "desc": "Een kopie van je verzegelde stemidentiteit, in eigen hand. Hij opent alleen met je passkey, dus het bestand alleen geeft niemand toegang. Handig als deze server en de chain ooit allebei onbereikbaar zijn.",
+    "export": "Back-up downloaden",
+    "import": "Herstellen uit back-up",
+    "exported": "Opgeslagen als {{filename}}",
+    "imported": "Identiteit hersteld op dit apparaat",
+    "no_identity": "Je hebt nog geen stemidentiteit om te exporteren"
   }
 }

@@ -16,6 +16,7 @@ import {
   removeVaultEntry,
   resetVault,
   CommitmentMismatchError,
+  VaultUnavailableError,
 } from '../identity/vault.js';
 import { registerOnChain, rotateOnChain, isRegistrarConfigured } from '../chain/registrar.js';
 import { verifySession } from '../auth/session.js';
@@ -45,7 +46,19 @@ router.get('/identity/vault', async (req: Request, res: Response) => {
   const nullifier = await sessionNullifier(req);
   if (!nullifier) return res.status(401).json({ error: 'Not authenticated' });
 
-  const record = getVault(nullifier);
+  // The vault lives in `PlatformRegistry`, so with no chain configured there is
+  // nothing to read and no file to fall back on. Reported as unavailable rather
+  // than as a server error: the deployment is incomplete, not broken, and the
+  // browser can tell a voter to try again instead of showing them a stack.
+  let record;
+  try {
+    record = await getVault(nullifier);
+  } catch (error: unknown) {
+    if (error instanceof VaultUnavailableError) {
+      return res.status(503).json({ error: error.message, code: 'vault_unavailable' });
+    }
+    throw error;
+  }
   return res.status(200).json({
     commitment: record?.commitment ?? null,
     entries: (record?.entries ?? []).map(e => ({
@@ -76,7 +89,7 @@ router.post('/identity/vault', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'commitment must be a decimal string' });
   }
 
-  const isFirstEntry = getVault(nullifier) === null;
+  const isFirstEntry = (await getVault(nullifier)) === null;
 
   // Check the chain BEFORE writing. A human already bound to another commitment
   // would otherwise get an entry the chain will never honour, and every later
@@ -90,7 +103,7 @@ router.post('/identity/vault', async (req: Request, res: Response) => {
       return res.status(502).json({ error: probe.error, code: 'registration_failed' });
     }
 
-    const record = putVaultEntry(nullifier, commitment, { credentialId, blob });
+    const record = await putVaultEntry(nullifier, commitment, { credentialId, blob });
     return res.status(200).json({
       commitment: record.commitment,
       passkeyCount: record.entries.length,
@@ -101,12 +114,15 @@ router.post('/identity/vault', async (req: Request, res: Response) => {
 
   let record;
   try {
-    record = putVaultEntry(nullifier, commitment, { credentialId, blob });
+    record = await putVaultEntry(nullifier, commitment, { credentialId, blob });
   } catch (error: unknown) {
     if (error instanceof CommitmentMismatchError) {
       // The caller is trying to bind a second identity to one human. Recovery
       // must go through PlatformRegistry.rotateMember instead.
       return res.status(409).json({ error: error.message, code: 'commitment_mismatch' });
+    }
+    if (error instanceof VaultUnavailableError) {
+      return res.status(503).json({ error: error.message, code: 'vault_unavailable' });
     }
     throw error;
   }
@@ -127,7 +143,7 @@ router.delete('/identity/vault/:credentialId', async (req: Request, res: Respons
   const nullifier = await sessionNullifier(req);
   if (!nullifier) return res.status(401).json({ error: 'Not authenticated' });
 
-  const record = getVault(nullifier);
+  const record = await getVault(nullifier);
   if (!record) return res.status(404).json({ error: 'No vault for this voter' });
 
   // Removing the last passkey would strand the identity: the secret exists
@@ -140,7 +156,7 @@ router.delete('/identity/vault/:credentialId', async (req: Request, res: Respons
   }
 
   const credentialId = String(req.params.credentialId);
-  const updated = removeVaultEntry(nullifier, credentialId);
+  const updated = await removeVaultEntry(nullifier, credentialId);
   return res.status(200).json({ passkeyCount: updated?.entries.length ?? 0 });
 });
 
@@ -192,7 +208,7 @@ router.post('/identity/recover', recoverLimiter, async (req: Request, res: Respo
 
   // Only once the chain agrees: the old blobs seal a secret that no longer
   // exists, so they are dropped rather than left to rot.
-  const record = resetVault(proof.nullifier, commitment, { credentialId, blob });
+  const record = await resetVault(proof.nullifier, commitment, { credentialId, blob });
 
   return res.status(200).json({
     commitment: record.commitment,

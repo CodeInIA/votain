@@ -156,6 +156,35 @@ $env:SEED_LIVE_ONLY=1; npm run seed:local                # PowerShell
 SEED_ONLY="Orb Verified Board" npm run seed:local        # just one election
 ```
 
+## PlatformRegistry carries the identity vault
+
+The voter's Semaphore secret, sealed once per passkey under a key derived from
+that passkey's WebAuthn PRF output, lives in `vaults` on chain rather than on the
+issuer's disk. The contract cannot read it and neither can anyone else without
+the authenticator, and a substituted blob would decrypt to an identity whose
+commitment does not match `commitmentOf`, so every enrollment with it fails.
+
+Writes are owner-only for the same reason registration is: a voter has no
+wallet, by design, because a per-voter sending address would publicly link their
+enrollment to their ballot. The owner is a WRITER and never a reader, and it is
+the chain that anyone afterwards reads the vault from.
+
+The cost is permanent and stated in the contract: public ciphertext, plus how
+many passkeys a voter holds and when each was added. `removeVaultEntry` stops a
+copy being offered; it does not erase it from history.
+
+`registerMember` also hands out a credential status slot, one per human rather
+than one per credential, so signing in costs no transaction. `revokeStatus` is
+owner-only, since the issuer signs the credentials it withdraws.
+
+## OrganizerDomains needs no owner
+
+A claim proves nothing on its own: domain control is whatever DNS answers right
+now, and a reader resolves `_votain.<domain>` and checks the TXT record names
+the organizer's address. The claim only says which domains to go and ask about,
+so the organizer writes their own with their own wallet. Requiring an operator
+to attest would have added a trusted party to a statement nobody has to trust.
+
 The deploy script writes `deployments/<network>.json` AND mirrors it into
 `frontend/src/lib/deployments/` so the frontend client picks up the addresses automatically.
 

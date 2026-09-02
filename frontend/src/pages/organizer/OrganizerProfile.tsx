@@ -106,13 +106,10 @@ export default function OrganizerProfile() {
         {/* Verified domains: the organizer's public identity, checkable by anyone */}
         <MyDomains
           address={wallet.address}
-          signMessage={async message => {
-            const signer = await wallet.getSigner();
-            return signer.signMessage(message);
-          }}
+          getSigner={() => wallet.getSigner()}
         />
 
-        {/* Passkey — the real credential registered on this device */}
+        {/* Passkey: the real credential registered on this device */}
         <Card className="p-5 mb-4">
           <h2 className="text-sm font-semibold text-on-surface flex items-center gap-2 mb-4">
             <KeyRound className="w-4 h-4 text-primary" />
@@ -145,7 +142,7 @@ export default function OrganizerProfile() {
           )}
         </Card>
 
-        {/* Linked wallet — used only to sign transactions */}
+        {/* Linked wallet, used only to sign transactions */}
         <Card className="p-5 mb-4">
           <h2 className="text-sm font-semibold text-on-surface flex items-center gap-2 mb-3">
             <Wallet className="w-4 h-4 text-primary" />
@@ -169,7 +166,7 @@ export default function OrganizerProfile() {
           </div>
         </Card>
 
-        {/* Legal links — mobile only (desktop sees them in the footer) */}
+        {/* Legal links, mobile only (desktop sees them in the footer) */}
         <Card className="p-2 mb-4 md:hidden">
           <Link to="/how-it-works" className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 transition-colors text-sm text-on-surface-variant hover:text-on-surface">
             <Info className="w-4 h-4 shrink-0" />

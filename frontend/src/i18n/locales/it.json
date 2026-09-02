@@ -649,5 +649,14 @@
     "more_results_other": "e altri {{count}}. Continua a scrivere per restringere.",
     "more_results_one": "e altro {{count}}. Continua a scrivere per restringere.",
     "more_results_many": "e altri {{count}}. Continua a scrivere per restringere."
+  },
+  "backup": {
+    "title": "Copia della tua identità",
+    "desc": "Una copia della tua identità di voto sigillata, nelle tue mani. Si apre solo con la tua passkey, quindi il file da solo non dà accesso a nessuno. Utile se un giorno né questo server né la catena sono raggiungibili.",
+    "export": "Scarica la copia",
+    "import": "Ripristina da una copia",
+    "exported": "Salvata come {{filename}}",
+    "imported": "Identità ripristinata su questo dispositivo",
+    "no_identity": "Non hai ancora un'identità di voto da esportare"
   }
 }

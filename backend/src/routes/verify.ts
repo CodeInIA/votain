@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { signRequest } from '@worldcoin/idkit-core/signing';
 import { sdJwt, SELECTIVE_DISCLOSURE_FRAME, type VotainCredentialPayload } from '../sd/issuer.js';
-import { allocateIndex, DEFAULT_LIST_ID } from '../status/statusList.js';
+import { statusIndexFor, DEFAULT_LIST_ID } from '../status/statusList.js';
 import { verifySession } from '../auth/session.js';
 import { verifyWorldIdProof, type WorldIdPayload } from '../auth/worldId.js';
 
@@ -95,7 +95,11 @@ router.post('/verify-human', async (req: Request, res: Response) => {
     const nullifier_hash = verified.nullifier ?? '';
 
     // Revocation entry for this credential
-    const statusIndex = allocateIndex();
+    // The slot belongs to the HUMAN and is assigned by `registerMember`, so
+    // signing in costs no transaction. Zero until they are registered, which is
+    // the state a first-time voter is in while the vault write is still to come;
+    // the credential then carries no status entry rather than a wrong one.
+    const statusIndex = await statusIndexFor(nullifier_hash);
     const baseUrl = process.env.PUBLIC_URL ?? `http://localhost:${process.env.PORT ?? 3000}`;
 
     const now = Math.floor(Date.now() / 1000);

@@ -14,6 +14,7 @@ export interface Deployment {
   deployedAtBlock?: number;
   contracts: {
     PlatformRegistry?: string;
+    OrganizerDomains?: string;
     ElectionPaymaster?: string;
     ElectionFactory?: string;
     SemaphoreVerifierV4?: string;
@@ -72,6 +73,9 @@ export const addresses = {
   platformRegistry:
     envOverride(import.meta.env.VITE_PLATFORM_REGISTRY_ADDRESS) ??
     manifest?.contracts.PlatformRegistry,
+  organizerDomains:
+    envOverride(import.meta.env.VITE_ORGANIZER_DOMAINS_ADDRESS) ??
+    manifest?.contracts.OrganizerDomains,
   paymaster:
     envOverride(import.meta.env.VITE_PAYMASTER_ADDRESS) ??
     manifest?.contracts.ElectionPaymaster,
