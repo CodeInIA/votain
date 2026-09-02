@@ -137,7 +137,11 @@
     "restricted_only": "Con requisiti",
     "results_count_other": "{{count}} elezioni",
     "results_count_one": "{{count}} elezione",
-    "results_count_many": "{{count}} elezioni"
+    "results_count_many": "{{count}} elezioni",
+    "group_status": "Stato",
+    "group_properties": "Elezione",
+    "group_voting_type": "Si decide per",
+    "group_eligibility": "Ho i requisiti"
   },
   "election": {
     "by": "di",

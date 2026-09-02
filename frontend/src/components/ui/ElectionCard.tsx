@@ -119,26 +119,40 @@ export function ElectionCard({ election, voterView = false, className }: Electio
         {election.description}
       </p>
 
-      {/* Stats row. Wraps, because the rule that decides the election joined a
-          row that was already three items wide on a card two to a screen. */}
-      <div className="flex items-center flex-wrap gap-x-4 gap-y-1.5 text-xs text-on-surface-meta">
+      {/* Stats, on a fixed 2x2 grid rather than a wrapping row.
+          Four facts of very different widths ("Two-thirds majority" beside
+          "0 enrolled") made a flex row break in a different place on every
+          card, and the date, pushed right by `ml-auto`, landed on the first
+          line or the second depending on what was beside it. Nothing was
+          misaligned within a card and the wall of cards still read as ragged.
+
+          Each fact is now pinned to its own cell, so the columns line up across
+          every card in the list and a card without a turnout figure leaves that
+          cell empty instead of reflowing the other three. The first column is
+          the wider one because it carries the rule, whose label is the longest
+          text here in every language. */}
+      <div className="grid grid-cols-[1.35fr_1fr] gap-x-3 gap-y-1.5 text-xs text-on-surface-meta">
         {/* How it is decided, which the card never said: a plurality and a
             two-thirds bar look identical here otherwise, and they are not the
             same question being asked of the voter. */}
-        <span className="flex items-center gap-1.5 min-w-0">
+        <span className="col-start-1 row-start-1 flex items-center gap-1.5 min-w-0">
           <VotingTypeIcon className="w-3.5 h-3.5 shrink-0" />
           <span className="truncate">{t(votingTypeLabelKey(election.votingType))}</span>
         </span>
-        <span className="flex items-center gap-1.5">
-          <Users className="w-3.5 h-3.5" />
-          {election.totalEnrolled.toLocaleString()} {t('election.enrolled')}
+        <span className="col-start-2 row-start-1 flex items-center gap-1.5 min-w-0">
+          <Users className="w-3.5 h-3.5 shrink-0" />
+          <span className="truncate">
+            {election.totalEnrolled.toLocaleString()} {t('election.enrolled')}
+          </span>
         </span>
         {election.phase === 'active' && (
-          <span className="text-on-surface-meta">{pct}% {t('election.voted')}</span>
+          <span className="col-start-1 row-start-2 truncate">
+            {pct}% {t('election.voted')}
+          </span>
         )}
-        <span className="flex items-center gap-1.5 ml-auto">
-          <Calendar className="w-3.5 h-3.5" />
-          {election.voteEnd.toLocaleDateString()}
+        <span className="col-start-2 row-start-2 flex items-center gap-1.5 min-w-0">
+          <Calendar className="w-3.5 h-3.5 shrink-0" />
+          <span className="truncate">{election.voteEnd.toLocaleDateString()}</span>
         </span>
       </div>
 

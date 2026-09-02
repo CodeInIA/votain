@@ -686,6 +686,35 @@ offer the same filters, so all of it lives in one place:
   satisfies trivially, so it matches every value; this asks "which of these have
   requirements at all", which no combination of the inputs can express.
 
+### The filter panel is four bands, not one row
+
+Everything sat in a single wrapping row: phase pills, two property chips, then
+the four voting rules, all the same distance apart. They are four independent
+questions, and running them together made them read as one long list of
+alternatives, so the chips that wrapped onto a second line looked like more of
+whatever the line above was. Each band now carries a caption and a hairline rule
+above it. Nothing about how a filter behaves changed.
+
+The last band is the only one asking about the VOTER rather than the election,
+which is the distinction `restrictedOnly` and the age and nationality inputs
+always had and never showed: "which of these have requirements at all" against
+"would I qualify".
+
+### Card stats are a grid, because four facts of different widths are not a row
+
+`ElectionCard` put the rule, the enrolled count, the turnout and the date in one
+flex row with `flex-wrap` and `ml-auto` on the date. Four values of very
+different widths ("Two-thirds majority" beside "0 enrolled") meant the row broke
+in a different place on every card, and the date landed on the first line or the
+second depending on what sat beside it. Nothing was misaligned within a card and
+the wall of cards still read as ragged.
+
+Each fact now has its own cell in a fixed `grid-cols-[1.35fr_1fr]`, pinned with
+`col-start` and `row-start` so a card with no turnout figure leaves that cell
+empty rather than reflowing the other three. The first column is the wider one
+because it carries the voting rule, the longest label in the group in every
+language.
+
 ### Requirements are shown, not labelled
 
 `EligibilityChips` deliberately does not use `Badge`. Every Badge variant is the

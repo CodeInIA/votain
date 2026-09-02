@@ -137,7 +137,11 @@
     "restricted_only": "Com requisitos",
     "results_count_one": "{{count}} eleição",
     "results_count_other": "{{count}} eleições",
-    "results_count_many": "{{count}} eleições"
+    "results_count_many": "{{count}} eleições",
+    "group_status": "Estado",
+    "group_properties": "Eleição",
+    "group_voting_type": "Decide-se por",
+    "group_eligibility": "Cumpro os requisitos"
   },
   "election": {
     "by": "por",

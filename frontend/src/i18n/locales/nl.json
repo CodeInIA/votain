@@ -136,7 +136,11 @@
     "nationality": "Nationaliteit",
     "restricted_only": "Met voorwaarden",
     "results_count_other": "{{count}} verkiezingen",
-    "results_count_one": "{{count}} verkiezing"
+    "results_count_one": "{{count}} verkiezing",
+    "group_status": "Status",
+    "group_properties": "Verkiezing",
+    "group_voting_type": "Beslist door",
+    "group_eligibility": "Voldoe ik"
   },
   "election": {
     "by": "door",

@@ -136,7 +136,11 @@
     "nationality": "Nationality",
     "restricted_only": "With requirements",
     "results_count_other": "{{count}} elections",
-    "results_count_one": "{{count}} election"
+    "results_count_one": "{{count}} election",
+    "group_status": "Status",
+    "group_properties": "Election",
+    "group_voting_type": "Decided by",
+    "group_eligibility": "Would I qualify"
   },
   "election": {
     "by": "by",

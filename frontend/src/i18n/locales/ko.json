@@ -135,7 +135,11 @@
     "age_to_placeholder": "까지",
     "nationality": "국적",
     "restricted_only": "조건 있음",
-    "results_count_other": "선거 {{count}}개"
+    "results_count_other": "선거 {{count}}개",
+    "group_status": "상태",
+    "group_properties": "선거",
+    "group_voting_type": "결정 방식",
+    "group_eligibility": "자격 여부"
   },
   "election": {
     "by": "주최:",

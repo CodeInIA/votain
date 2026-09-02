@@ -137,7 +137,11 @@
     "restricted_only": "Avec conditions",
     "results_count_one": "{{count}} élection",
     "results_count_other": "{{count}} élections",
-    "results_count_many": "{{count}} élections"
+    "results_count_many": "{{count}} élections",
+    "group_status": "Statut",
+    "group_properties": "Élection",
+    "group_voting_type": "Décidée par",
+    "group_eligibility": "Suis-je éligible"
   },
   "election": {
     "by": "par",

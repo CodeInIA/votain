@@ -135,7 +135,11 @@
     "age_to_placeholder": "上限",
     "nationality": "国籍",
     "restricted_only": "条件あり",
-    "results_count_other": "{{count}}件の選挙"
+    "results_count_other": "{{count}}件の選挙",
+    "group_status": "状態",
+    "group_properties": "選挙",
+    "group_voting_type": "決まり方",
+    "group_eligibility": "参加できるか"
   },
   "election": {
     "by": "主催:",

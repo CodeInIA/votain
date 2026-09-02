@@ -135,7 +135,11 @@
     "age_to_placeholder": "到",
     "nationality": "国籍",
     "restricted_only": "有资格要求",
-    "results_count_other": "{{count}} 个选举"
+    "results_count_other": "{{count}} 个选举",
+    "group_status": "状态",
+    "group_properties": "选举",
+    "group_voting_type": "决出方式",
+    "group_eligibility": "我是否符合"
   },
   "election": {
     "by": "由",

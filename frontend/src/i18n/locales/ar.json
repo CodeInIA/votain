@@ -140,7 +140,11 @@
     "results_count_two": "انتخابان",
     "results_count_few": "{{count}} انتخابات",
     "results_count_many": "{{count}} انتخابًا",
-    "results_count_other": "{{count}} انتخاب"
+    "results_count_other": "{{count}} انتخاب",
+    "group_status": "الحالة",
+    "group_properties": "الانتخاب",
+    "group_voting_type": "يُحسم بـ",
+    "group_eligibility": "هل تنطبق عليّ الشروط"
   },
   "election": {
     "by": "بواسطة",

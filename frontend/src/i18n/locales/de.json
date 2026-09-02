@@ -136,7 +136,11 @@
     "nationality": "Staatsangehörigkeit",
     "restricted_only": "Mit Voraussetzungen",
     "results_count_other": "{{count}} Wahlen",
-    "results_count_one": "{{count}} Wahl"
+    "results_count_one": "{{count}} Wahl",
+    "group_status": "Status",
+    "group_properties": "Wahl",
+    "group_voting_type": "Entschieden durch",
+    "group_eligibility": "Erfülle ich die Kriterien"
   },
   "election": {
     "by": "von",

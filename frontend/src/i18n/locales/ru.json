@@ -138,7 +138,11 @@
     "results_count_many": "{{count}} голосований",
     "results_count_one": "{{count}} голосование",
     "results_count_few": "{{count}} голосования",
-    "results_count_other": "{{count}} голосования"
+    "results_count_other": "{{count}} голосования",
+    "group_status": "Статус",
+    "group_properties": "Голосование",
+    "group_voting_type": "Решается по",
+    "group_eligibility": "Подхожу ли я"
   },
   "election": {
     "by": "организовано",

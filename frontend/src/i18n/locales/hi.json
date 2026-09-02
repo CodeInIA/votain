@@ -136,7 +136,11 @@
     "nationality": "नागरिकता",
     "restricted_only": "शर्तों सहित",
     "results_count_one": "{{count}} चुनाव",
-    "results_count_other": "{{count}} चुनाव"
+    "results_count_other": "{{count}} चुनाव",
+    "group_status": "स्थिति",
+    "group_properties": "चुनाव",
+    "group_voting_type": "किससे तय होता है",
+    "group_eligibility": "क्या मैं पात्र हूँ"
   },
   "election": {
     "by": "द्वारा",
