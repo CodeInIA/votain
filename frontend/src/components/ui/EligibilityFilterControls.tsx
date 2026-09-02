@@ -55,7 +55,7 @@ export function EligibilityFilterControls({ value, onChange, className }: Props)
       value={current ?? ''}
       onChange={e => onChange(apply(numeric(e.target.value)))}
       className={cn(
-        'w-20 h-9 px-3 rounded-xl bg-surface-high/40 border border-outline-variant/10',
+        'flex-1 min-w-0 sm:flex-none sm:w-20 h-9 px-3 rounded-xl bg-surface-high/40 border border-outline-variant/10',
         'text-sm text-on-surface placeholder:text-on-surface-meta',
         'focus:outline-none focus:ring-2 focus:ring-primary',
       )}
@@ -103,22 +103,26 @@ export function EligibilityFilterControls({ value, onChange, className }: Props)
   };
 
   return (
-    <div className={cn('flex flex-wrap items-center gap-3', className)}>
+    <div className={cn('flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center', className)}>
       <div className="flex items-center gap-2">
         {levelToggle('document', IdCard)}
         {levelToggle('orb', ScanFace)}
       </div>
 
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-on-surface-meta">{t('discover.min_age')}</span>
+      {/* One row per group on a phone. Squeezed onto one line, the two age
+          boxes and their two labels left about forty pixels for each number,
+          and the nationality search ended up alone on a line at a third of the
+          width. */}
+      <div className="flex items-center gap-2 w-full sm:w-auto">
+        <span className="text-xs text-on-surface-meta shrink-0">{t('discover.min_age')}</span>
         {ageField(t('discover.age_from'), value.minAgeFrom, next => ({ ...value, minAgeFrom: next }))}
-        <span className="text-xs text-on-surface-meta">{t('discover.age_to')}</span>
+        <span className="text-xs text-on-surface-meta shrink-0">{t('discover.age_to')}</span>
         {ageField(t('discover.age_to_placeholder'), value.minAgeTo, next => ({ ...value, minAgeTo: next }))}
       </div>
 
-      <div className="relative">
+      <div className="relative w-full sm:w-auto">
         {selected ? (
-          <span className="inline-flex items-center gap-2 h-9 pl-3 pr-2 rounded-xl bg-surface-high/60 border border-outline-variant/15">
+          <span className="inline-flex w-full sm:w-auto items-center gap-2 h-9 pl-3 pr-2 rounded-xl bg-surface-high/60 border border-outline-variant/15">
             <span className="text-base leading-none">{selected.flag}</span>
             <span className="text-xs text-on-surface">{selected.name}</span>
             <button
@@ -143,7 +147,7 @@ export function EligibilityFilterControls({ value, onChange, className }: Props)
               onFocus={() => setListOpen(true)}
               onBlur={() => setTimeout(() => setListOpen(false), 150)}
               className={cn(
-                'w-44 h-9 pl-9 pr-3 rounded-xl bg-surface-high/40 border border-outline-variant/10',
+                'w-full sm:w-44 h-9 pl-9 pr-3 rounded-xl bg-surface-high/40 border border-outline-variant/10',
                 'text-sm text-on-surface placeholder:text-on-surface-meta',
                 'focus:outline-none focus:ring-2 focus:ring-primary',
               )}

@@ -700,6 +700,24 @@ which is the distinction `restrictedOnly` and the age and nationality inputs
 always had and never showed: "which of these have requirements at all" against
 "would I qualify".
 
+Two things the bands exposed once they were bands:
+
+- **The eligibility controls did not fit a phone.** Two personhood chips, a
+  label, two age boxes, another label and a country search were one wrapping
+  row, which on a 390px screen left about forty pixels for each number and put
+  the country search alone on a line at a third of its width. Each group is now
+  its own row below `sm:` and they return to one line above it.
+- **Clearing lived only in the empty state.** `Discover` offered it when a
+  filter had hidden everything, which is the one moment the person can already
+  see something is wrong. Two chips and an age bound that merely narrow the list
+  are harder to notice and just as tedious to undo one at a time, so the panel
+  carries the button whenever anything is on. It resets the search box too,
+  since that sits above the bands and narrows the same list.
+
+The results count is spaced off the panel rather than butting against it. It is
+a statement ABOUT the filters, and with no gap it read as one more line of the
+panel, directly under the clear button.
+
 ### Card stats are a grid, because four facts of different widths are not a row
 
 `ElectionCard` put the rule, the enrolled count, the turnout and the date in one

@@ -19,6 +19,7 @@ import { EligibilityFilterControls } from './EligibilityFilterControls';
 import { cn } from '../../lib/utils';
 import { VOTING_TYPE_ICONS, VOTING_TYPES, votingTypeLabelKey } from '../../lib/votingTypes';
 import {
+  EMPTY_FILTERS,
   PHASE_FILTERS,
   isAnyFilterActive,
   type ElectionFilterState,
@@ -217,6 +218,25 @@ export function ElectionFilters({ value, onChange, open, onToggleOpen, searchPla
               onChange={eligibility => set({ eligibility })}
             />
           </FilterGroup>
+          {/* Clearing lives in the panel, not only in the empty state.
+              `Discover` offered it when a filter had hidden everything, which
+              is the one moment the person can already see something is wrong.
+              Two chips and an age bound that merely narrow the list to a few
+              are harder to notice and just as annoying to undo one at a time.
+
+              Resets the search box too: it sits above these bands and narrows
+              the same list, so leaving it behind would clear the filters and
+              still show a filtered list. */}
+          {(isAnyFilterActive(value) || value.query !== '') && (
+            <button
+              type="button"
+              onClick={() => onChange(EMPTY_FILTERS)}
+              className="self-start inline-flex items-center gap-1.5 pt-3 border-t border-white/5 w-full sm:w-auto sm:border-t-0 sm:pt-0 text-xs font-semibold text-primary hover:underline cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5 shrink-0" />
+              {t('common.clear_filters')}
+            </button>
+          )}
         </div>
       )}
     </div>

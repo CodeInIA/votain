@@ -47,7 +47,11 @@ export default function Discover() {
           searchPlaceholder={t('discover.search_placeholder')}
         />
 
-        {/* Results */}
+        {/* Results.
+            Spaced off the filter panel rather than butting against it: the
+            count is a statement ABOUT the filters, and with no gap it read as
+            one more line of the panel, right under the clear button. */}
+        <div className="mt-6">
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-52" />)}
@@ -82,6 +86,7 @@ export default function Discover() {
             </div>
           </>
         )}
+        </div>
       </div>
     </PageLayout>
   );
