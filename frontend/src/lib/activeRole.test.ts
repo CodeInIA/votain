@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import {
   resolveActiveRole,
   homeRouteFor,
+  switchDestination,
   readRolePreference,
   storeRolePreference,
   clearRolePreference,
@@ -94,5 +95,33 @@ describe('where each role goes home', () => {
     expect(homeRouteFor('voter')).toBe('/voter/elections');
     expect(homeRouteFor('organizer')).toBe('/organizer/dashboard');
     expect(homeRouteFor('public')).toBe('/');
+  });
+});
+
+describe('where switching leaves you', () => {
+  it('stays put on a page that reads the same for both roles', () => {
+    // The bug this is for: flipping the switch on Discover threw the person to
+    // a dashboard, losing their place for nothing.
+    for (const page of ['/discover', '/verify-receipt', '/how-it-works', '/election/0xabc']) {
+      expect(switchDestination(page, 'organizer')).toBe(page);
+      expect(switchDestination(page, 'voter')).toBe(page);
+    }
+  });
+
+  it('crosses to the same page on the other side when there is one', () => {
+    expect(switchDestination('/voter/profile', 'organizer')).toBe('/organizer/profile');
+    expect(switchDestination('/organizer/profile', 'voter')).toBe('/voter/profile');
+  });
+
+  it('falls back to the new role home from a page that belongs to the old one', () => {
+    // Voter navigation wrapped around the gas tank is the alternative.
+    expect(switchDestination('/organizer/gas', 'voter')).toBe('/voter/elections');
+    expect(switchDestination('/voter/history', 'organizer')).toBe('/organizer/dashboard');
+  });
+
+  it('does not cross between the two views of one election', () => {
+    // The organizer view only loads for the wallet that owns it, so this would
+    // land on a page that refuses. `ViewAsSwitch` is where that crossing lives.
+    expect(switchDestination('/voter/election/0xabc', 'organizer')).toBe('/organizer/dashboard');
   });
 });

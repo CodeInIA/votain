@@ -68,9 +68,45 @@ export function resolveActiveRole(sessions: RoleSessions, preferred: Role | null
   return 'public';
 }
 
-/** Where each role's navigation goes home to, and where a switch lands. */
+/** Where each role's navigation goes home to. */
 export function homeRouteFor(role: Role): string {
   if (role === 'organizer') return '/organizer/dashboard';
   if (role === 'voter') return '/voter/elections';
   return '/';
+}
+
+/**
+ * Pages that exist for both roles, paired by route.
+ *
+ * Only the pairs where the SAME page is being looked at from the other side.
+ * An election is deliberately absent: `/voter/election/:id` and
+ * `/organizer/election/:id` are two views of one election, but the organizer
+ * one only loads for the wallet that owns it, so sending someone there because
+ * they flipped a switch in the header would land them on a page that refuses.
+ * `ViewAsSwitch`, on the election itself, is where that crossing belongs.
+ */
+const EQUIVALENT: Record<string, Record<Role, string>> = {
+  profile: {
+    voter: '/voter/profile',
+    organizer: '/organizer/profile',
+    public: '/',
+  },
+};
+
+/**
+ * Where switching to `to` should leave the person standing.
+ *
+ * Staying put is the right answer more often than going home. Discover, the
+ * receipt verifier and How it works are the same page for everybody, so
+ * switching role on one of them and being thrown to a dashboard loses the place
+ * for no reason. A page that belongs to one role is either paired with its
+ * counterpart or, failing that, left behind for the new role's home, since the
+ * alternative is voter navigation wrapped around the gas tank.
+ */
+export function switchDestination(pathname: string, to: Role): string {
+  for (const pair of Object.values(EQUIVALENT)) {
+    if (Object.values(pair).includes(pathname)) return pair[to];
+  }
+  const belongsToARole = pathname.startsWith('/voter/') || pathname.startsWith('/organizer/');
+  return belongsToARole ? homeRouteFor(to) : pathname;
 }

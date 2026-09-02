@@ -890,8 +890,15 @@ becomes switchable.
   the top bar, the bottom bar and where a signed-in visitor lands cannot
   disagree about who just arrived.
 - `components/layout/RoleSwitch.tsx` is the control, rendered only when both
-  sessions exist. Switching navigates to that role's home, because the current
-  page usually belongs to the role being left.
+  sessions exist. Where it lands is `switchDestination`, not simply the new
+  role's home: Discover, the receipt verifier and How it works read the same
+  from both sides, so switching there stays put, and the two profiles are paired
+  as the same page seen from the other side. Only a page belonging to the role
+  being left is left behind, since voter navigation wrapped around the gas tank
+  is the alternative. The two views of one election are deliberately NOT paired:
+  the organizer view loads only for the wallet that owns it, so a header switch
+  would land on a page that refuses, and `ViewAsSwitch` already owns that
+  crossing.
 
 **Signing in claims the role; restoring a session does not.** `setVoterLoggedIn`
 is called by the sign-in screens and sets the preference with it, since the role

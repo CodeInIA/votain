@@ -5,18 +5,19 @@
  * is anything to choose. One session resolves to itself and the control would
  * be a switch with nowhere to go.
  *
- * Switching navigates to that role's home rather than staying put, because the
- * current page usually belongs to the role being left: flipping to the voter
- * view while standing on the gas tank would leave voter navigation wrapped
- * around an organizer screen. The routes themselves are unaffected either way,
- * since guards ask the sessions and not this.
+ * Where it leaves you is `switchDestination`, not simply the new role's home.
+ * Discover and the profile look the same from both sides, and being thrown to a
+ * dashboard for flipping a switch on one of them loses the place for nothing.
+ * Only a page that belongs to the role being left is left behind. The routes
+ * themselves are unaffected either way, since guards ask the sessions and not
+ * this.
  */
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { LayoutDashboard, Vote } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../contexts/AuthContext';
-import { homeRouteFor, type Role } from '../../lib/activeRole';
+import { switchDestination, type Role } from '../../lib/activeRole';
 
 const OPTIONS: { role: Role; labelKey: string; icon: typeof Vote }[] = [
   { role: 'voter', labelKey: 'nav.role_voter', icon: Vote },
@@ -26,6 +27,7 @@ const OPTIONS: { role: Role; labelKey: string; icon: typeof Vote }[] = [
 export function RoleSwitch({ className }: { className?: string }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { voterLoggedIn, organizerLoggedIn, activeRole, setActiveRole } = useAuth();
 
   if (!voterLoggedIn || !organizerLoggedIn) return null;
@@ -33,7 +35,7 @@ export function RoleSwitch({ className }: { className?: string }) {
   const switchTo = (role: Role) => {
     if (role === activeRole) return;
     setActiveRole(role);
-    navigate(homeRouteFor(role));
+    navigate(switchDestination(pathname, role));
   };
 
   return (
