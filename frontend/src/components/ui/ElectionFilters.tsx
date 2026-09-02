@@ -17,6 +17,7 @@ import { Button } from './Button';
 import { Input } from './Input';
 import { EligibilityFilterControls } from './EligibilityFilterControls';
 import { cn } from '../../lib/utils';
+import { VOTING_TYPE_ICONS, VOTING_TYPES, votingTypeLabelKey } from '../../lib/votingTypes';
 import {
   PHASE_FILTERS,
   isAnyFilterActive,
@@ -153,6 +154,25 @@ export function ElectionFilters({ value, onChange, open, onToggleOpen, searchPla
           >
             {t('discover.restricted_only')}
           </FilterToggle>
+
+          {/* How the election is decided, one chip per rule. Chips rather than
+              a select because they belong to the same question as the two
+              above them, and the icons are the ones the cards and the election
+              views already use, so the chip and the card read as one label.
+
+              Single choice: the four rules are alternatives, so picking one
+              clears the last, and picking the active one clears it. Same
+              behaviour as the phase pills. */}
+          {VOTING_TYPES.map(type => (
+            <FilterToggle
+              key={type}
+              active={value.votingType === type}
+              onClick={() => set({ votingType: value.votingType === type ? null : type })}
+              icon={VOTING_TYPE_ICONS[type]}
+            >
+              {t(votingTypeLabelKey(type))}
+            </FilterToggle>
+          ))}
 
           {/* Age and nationality sit on their own line: they are inputs rather
               than chips, and cramming them into the chip row made both harder

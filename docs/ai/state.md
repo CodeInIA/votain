@@ -1597,6 +1597,83 @@ The same session added the candidate list to the organizer's own view of an
 election. Ballot options live in metadata written once at deployment, so the
 person who cannot review theirs before voters see it was the one who wrote it.
 
+## The navigation learned to hold both roles (2026-09-02)
+
+The two sessions were independent from the start, and the navigation was not. A
+person signed in as both an organizer and a voter got the organizer bars, and
+every voter route disappeared from the chrome: `TopNav` and `BottomTabNav` both
+resolved `organizerLoggedIn ? ORGANIZER : voterLoggedIn ? VOTER : PUBLIC`. The
+routes still answered. Nothing linked to them.
+
+That limitation had already spread. The How it works page hid its invitation to
+register from organizers, with a comment explaining that offering it would hand
+someone a session the app then hides. Fixing the chrome is what let that comment
+be deleted rather than reworded.
+
+Merging the two navigations was rejected. One bar carrying Dashboard, Members,
+Gas, My elections and History says nothing about which role the person is acting
+in, and the two roles are shown deliberately different things about the same
+election. The role stays singular and gains a switch, which is also what the
+user asked for.
+
+`lib/activeRole.ts` holds the rule, and two properties are worth recording:
+
+- The preference only counts while BOTH sessions are live. A stale one cannot
+  strand a person in navigation for a role they no longer hold, which removes
+  the whole class of bugs where signing out leaves the app dressed wrong.
+- With both live and nothing chosen it answers `organizer`, which is what the
+  old expression returned. The change moves nobody's navigation on its own.
+
+The subtle part was WHO gets to claim the role. Signing in does, because the
+role just entered is the one meant to be used. Restoring a session from the
+cookie does not: `/api/me` runs on every load, so sharing one setter would have
+let each reload hand the navigation back to the voter and quietly undo an
+organizer's choice. `setVoterLoggedIn` and `rememberVoterSession` are the two
+halves of that split. Verified in the browser: choose organizer, reload with a
+live voter cookie, and the choice survives.
+
+None of it is an authorisation decision. Guards keep asking the sessions, so the
+stored role is exactly as forgeable and exactly as harmless as the flags beside
+it.
+
+### And the rule an election is decided by
+
+Shown for the first time, in the same session. The voting type was picked in the
+wizard, written to the contract and then invisible everywhere: no view of an
+election named it. A voter could not tell whether their ballot fed a plurality,
+a two-thirds bar or a count of confirmations.
+
+`VotingRule` now renders it in the voter, public and organizer views from the
+wizard's own descriptions. Witness threshold needed its number to say anything
+at all, so `thresholdValue` joins the election model, read from the contract and
+kept distinct from `privacyQuorum`, which is a different number that happens to
+sit beside it.
+
+### What holding both roles turned out to require
+
+The switch alone was not the whole change. Three things followed from it, and
+each was invisible while the navigation could only wear one role at a time:
+
+- **Nobody could find the other role.** A voter had no way to learn they were
+  allowed to organize without going back to the landing page. `OtherRoleCard`
+  makes the offer on each profile and hides once that session exists.
+- **"Sign out" stopped having one meaning.** With two sessions open, an
+  organizer handing the laptop over is asking something different from one who
+  has finished organizing. `SignOutActions` gives each role its own exit,
+  clearing only that role's browser data, and keeps the joint one. Signing out
+  of one lands the person on the remaining role's home, since the landing page
+  would read as having ended both.
+- **The rule an election is decided by needed an icon.** Putting the type on the
+  cards and in a filter meant the same rule appears in four places, so
+  `lib/votingTypes.ts` owns the order and one icon per rule and everything reads
+  from it. `SelectMenuOption` gained an optional icon so the wizard's own list
+  shows the same glyphs the cards do.
+
+Verified in the browser: three sign out buttons appear only with both sessions,
+signing out of the organizer left the voter cookie and nullifier untouched and
+landed on the voter's elections, and the witness threshold filter narrowed 26
+elections to exactly the 3 on chain.
+
 ## Next: Phase C, Decentralized deployments
 ### H10: Frontend on IPFS via Fleek CD
 ### H11: Backend on Phala TEE

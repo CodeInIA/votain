@@ -865,6 +865,104 @@ so an election whose metadata carries none does not show an empty box. Names and
 descriptions use `break-words`, because an option can be a single long token and
 the card is the narrowest column on the page.
 
+## One person, two sessions, one navigation
+
+`AuthProvider` always kept the voter cookie and the organizer flag independent,
+so nothing stopped one person holding both. The chrome could not say so. Both
+bars resolved `organizerLoggedIn ? ORGANIZER : voterLoggedIn ? VOTER : PUBLIC`,
+which means the moment an organizer also signed in as a voter the organizer nav
+won outright and every voter route vanished from the navigation. The routes kept
+working; there was simply no link left to them.
+
+Merging the two navigations was the alternative and would have been worse. A
+single bar carrying Dashboard, Members, Gas, My elections and History says
+nothing about which hat the person is wearing, and the two roles deliberately
+see different things about the same election. So the role stays singular and
+becomes switchable.
+
+- `lib/activeRole.ts` owns the rule. `resolveActiveRole(sessions, preferred)`
+  consults the preference only when BOTH sessions are live, which is the only
+  case with a choice in it. With one session the answer is that session, so a
+  preference left behind by a signed-out role cannot strand anybody. With both
+  and nothing chosen it answers `organizer`, which is what the old expression
+  returned: the change is additive and nobody's navigation moves on its own.
+- `TopNav`, `BottomTabNav` and the landing redirect all read `activeRole`, so
+  the top bar, the bottom bar and where a signed-in visitor lands cannot
+  disagree about who just arrived.
+- `components/layout/RoleSwitch.tsx` is the control, rendered only when both
+  sessions exist. Switching navigates to that role's home, because the current
+  page usually belongs to the role being left.
+
+**Signing in claims the role; restoring a session does not.** `setVoterLoggedIn`
+is called by the sign-in screens and sets the preference with it, since the role
+you just entered is the one you meant to use. The `/api/me` reconcile calls
+`rememberVoterSession` instead, which restores the session and leaves the
+preference alone. Sharing one function would have let every page load hand the
+navigation back to the voter, and a preference that does not survive a reload is
+not a preference.
+
+**It decides chrome, never access.** Route guards keep asking the sessions
+themselves, so switching to the voter view costs an organizer nothing, and
+editing `votain_active_role` by hand buys an attacker nothing: the cookie and
+`onlyOrganizer` are what actually gate anything.
+
+The visible knock-on is on How it works, whose invitation to register was hidden
+from organizers. That was never about the roles excluding each other, only about
+the session being hidden the moment it was created. It is offered now.
+
+## How an election is decided, said on the election
+
+The voting rule was chosen in the wizard, written to the contract, and never
+shown again. No view of an election named it, so a voter could not tell whether
+their ballot fed a plurality, a two-thirds bar or a count of confirmations, and
+the organizer could not check that what they deployed carries the rule they
+picked.
+
+`components/ui/VotingRule.tsx` renders it for the voter, public and organizer
+views, since the rule belongs to the election rather than to who is looking.
+It reuses the wizard's own `voting_type.*_desc` strings so the two descriptions
+cannot drift.
+
+Witness threshold is the one whose description is incomplete without its number:
+"at least N confirmations" is not a rule until N has a value. `thresholdValue`
+therefore joins the election model, read straight from the contract, and
+`election.witness_rule` states it with a count. Note it is NOT `privacyQuorum`,
+which sits beside it in `chainElections.ts`: one is how many yes votes approve
+the motion, the other how many ballots must exist before any result may be
+revealed.
+
+### Finding the other role, and leaving it
+
+Two consequences of the roles becoming simultaneous, both on the profiles:
+
+- `components/ui/OtherRoleCard.tsx` offers the session the person does not hold,
+  and disappears once they do, since the header switch serves them from then on.
+  Until the chrome could hold both, there was nowhere honest to make that offer.
+- `components/ui/SignOutActions.tsx` replaces the single sign out button on both
+  profiles. With one session it is exactly what it was. With two, "sign out"
+  stops having one meaning, so each role gets its own exit and the joint one
+  stays for when the answer really is everything. Each exit clears only its own
+  data (`voterSignOut` takes the voting identity and this device's vote records,
+  `organizerSignOut` the remembered wallet and display name; neither touches the
+  Paillier keys, which decrypt elections already on chain) and lands the person
+  on the remaining role's home rather than the landing page, which would read as
+  having signed them out of that one too.
+
+### One icon per rule, everywhere the rule appears
+
+`lib/votingTypes.ts` owns the order and the icons: a trophy for the option that
+simply wins, a dashed circle for the bar at 50%, scales for the two-thirds
+supermajority, and a checked person for a count of confirmations, the only rule
+about WHO confirms rather than about proportions. The wizard, the cards, the
+filter chips and `VotingRule` all read it, so an icon learned in one place means
+the same thing in the others. `SelectMenuOption` gained an optional icon for the
+wizard's own list, shown on the trigger as well as in it.
+
+The filter is a single choice, like the phase pills: the four rules are
+alternatives, so picking one clears the last. It goes through
+`ElectionFilterState` like every other filter, which is what makes it count
+towards the dot on the collapsed bar.
+
 ## Shared pieces added along the way
 
 Four modules exist because the same need turned up in more than one screen, and

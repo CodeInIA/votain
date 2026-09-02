@@ -29,10 +29,12 @@ const PUBLIC_TABS: Tab[] = [
 
 export function BottomTabNav() {
   const { t } = useTranslation();
-  const { voterLoggedIn, organizerLoggedIn } = useAuth();
-  const tabs = organizerLoggedIn ? ORGANIZER_TABS :
-               voterLoggedIn     ? VOTER_TABS :
-                                   PUBLIC_TABS;
+  const { activeRole } = useAuth();
+  // Same source as `TopNav`, so the bar at the top and the bar at the bottom
+  // can never disagree about which role is on screen.
+  const tabs = activeRole === 'organizer' ? ORGANIZER_TABS :
+               activeRole === 'voter'     ? VOTER_TABS :
+                                             PUBLIC_TABS;
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 z-40 flex md:hidden bg-surface/80 backdrop-blur-xl border-t border-white/5 safe-area-pb"

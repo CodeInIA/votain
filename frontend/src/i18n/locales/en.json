@@ -66,7 +66,10 @@
     "dashboard": "Dashboard",
     "members": "Members",
     "gas": "Gas",
-    "verify": "Verify a vote"
+    "verify": "Verify a vote",
+    "role_voter": "Voter",
+    "role_organizer": "Organizer",
+    "role_switch": "Switch role"
   },
   "phase": {
     "enrolling": "Enrolling",
@@ -174,7 +177,10 @@
     "verified_on_chain": "Verified on blockchain",
     "view_as_voter": "View as voter",
     "view_as_organizer": "View as organizer",
-    "turnout_detail": "{{voted}} of {{total}} enrolled voters have voted"
+    "turnout_detail": "{{voted}} of {{total}} enrolled voters have voted",
+    "witness_rule_one": "Approved with at least {{count}} yes vote",
+    "witness_rule_other": "Approved with at least {{count}} yes votes",
+    "voting_rule": "How it is decided"
   },
   "how": {
     "title": "How Votain works",
@@ -463,7 +469,19 @@
     "forget_passkey_title": "Forget this passkey?",
     "forget_passkey_desc": "This signs you out on this device and forgets the passkey here. The passkey itself stays in your authenticator, so you can sign back in with it and your elections' tally key can still be derived from it.",
     "forget_passkey_confirm": "Forget",
-    "passkey_forgotten": "Passkey forgotten on this device"
+    "passkey_forgotten": "Passkey forgotten on this device",
+    "also_organizer_title": "Do you want to create elections too?",
+    "also_organizer_desc": "Sign in as an organizer with a passkey and run your own elections. Your voter session stays exactly as it is, and the header lets you switch between the two.",
+    "also_organizer_cta": "Sign in as an organizer",
+    "also_voter_title": "Do you want to vote too?",
+    "also_voter_desc": "Register as a voter with World ID to enrol in elections and cast a ballot. Your organizer session stays exactly as it is, and the header lets you switch between the two.",
+    "also_voter_cta": "Register as a voter",
+    "sign_out_voter": "Sign out as a voter",
+    "sign_out_organizer": "Sign out as an organizer",
+    "sign_out_both": "Sign out of both",
+    "sign_out_voter_desc": "Your voting identity and the votes recorded on this device are deleted from this browser. Your organizer session is untouched.",
+    "sign_out_organizer_desc": "The wallet and display name remembered on this device are cleared. The keys that decrypt your elections stay, so published results remain readable. Your voter session is untouched.",
+    "sign_out_both_desc": "Both sessions end and you return to the home screen."
   },
   "tx": {
     "title_pending": "Transaction in progress",

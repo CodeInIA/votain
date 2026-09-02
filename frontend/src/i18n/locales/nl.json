@@ -90,7 +90,10 @@
     "dashboard": "Dashboard",
     "members": "Leden",
     "gas": "Gas",
-    "verify": "Stem verifiëren"
+    "verify": "Stem verifiëren",
+    "role_voter": "Kiezer",
+    "role_organizer": "Organisator",
+    "role_switch": "Rol wisselen"
   },
   "phase": {
     "enrolling": "Inschrijving",
@@ -174,7 +177,10 @@
     "verified_on_chain": "Geverifieerd op de blockchain",
     "view_as_voter": "Bekijk als kiezer",
     "view_as_organizer": "Bekijk als organisator",
-    "turnout_detail": "{{voted}} van {{total}} ingeschreven kiezers hebben gestemd"
+    "turnout_detail": "{{voted}} van {{total}} ingeschreven kiezers hebben gestemd",
+    "witness_rule_one": "Aangenomen met minstens {{count}} ja-stem",
+    "witness_rule_other": "Aangenomen met minstens {{count}} ja-stemmen",
+    "voting_rule": "Hoe er wordt beslist"
   },
   "how": {
     "title": "Hoe Votain werkt",
@@ -463,7 +469,19 @@
     "forget_passkey_title": "Deze passkey vergeten?",
     "forget_passkey_desc": "Hiermee wordt u op dit apparaat afgemeld en wordt de passkey hier vergeten. De passkey zelf blijft in uw authenticator, dus u kunt er weer mee inloggen en de telsleutel van uw verkiezingen kan er nog steeds uit worden afgeleid.",
     "forget_passkey_confirm": "Vergeten",
-    "passkey_forgotten": "Passkey vergeten op dit apparaat"
+    "passkey_forgotten": "Passkey vergeten op dit apparaat",
+    "also_organizer_title": "Wil je ook verkiezingen maken?",
+    "also_organizer_desc": "Meld je met een passkey aan als organisator en beheer je eigen verkiezingen. Je kiezerssessie blijft precies zoals hij is, en in de koptekst wissel je tussen beide.",
+    "also_organizer_cta": "Aanmelden als organisator",
+    "also_voter_title": "Wil je ook stemmen?",
+    "also_voter_desc": "Registreer je met World ID als kiezer om deel te nemen aan verkiezingen en te stemmen. Je organisatorsessie blijft precies zoals hij is, en in de koptekst wissel je tussen beide.",
+    "also_voter_cta": "Registreren als kiezer",
+    "sign_out_voter": "Afmelden als kiezer",
+    "sign_out_organizer": "Afmelden als organisator",
+    "sign_out_both": "Van beide afmelden",
+    "sign_out_voter_desc": "Je stemidentiteit en de op dit apparaat vastgelegde stemmen worden uit deze browser verwijderd. Je organisatorsessie blijft ongemoeid.",
+    "sign_out_organizer_desc": "De op dit apparaat onthouden wallet en weergavenaam worden gewist. De sleutels die je verkiezingen ontsleutelen blijven staan, dus gepubliceerde uitslagen blijven leesbaar. Je kiezerssessie blijft ongemoeid.",
+    "sign_out_both_desc": "Beide sessies eindigen en je keert terug naar het startscherm."
   },
   "tx": {
     "title_pending": "Transactie bezig",

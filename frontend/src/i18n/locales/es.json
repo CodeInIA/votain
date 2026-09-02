@@ -90,7 +90,10 @@
     "dashboard": "Panel",
     "members": "Miembros",
     "gas": "Gas",
-    "verify": "Verificar un voto"
+    "verify": "Verificar un voto",
+    "role_voter": "Votante",
+    "role_organizer": "Organizador",
+    "role_switch": "Cambiar de rol"
   },
   "phase": {
     "enrolling": "Inscripción",
@@ -175,7 +178,11 @@
     "verified_on_chain": "Verificado en la cadena",
     "view_as_voter": "Ver como votante",
     "view_as_organizer": "Ver como organizador",
-    "turnout_detail": "Han votado {{voted}} de {{total}} inscritos"
+    "turnout_detail": "Han votado {{voted}} de {{total}} inscritos",
+    "witness_rule_one": "Se aprueba con al menos {{count}} voto a favor",
+    "witness_rule_many": "Se aprueba con al menos {{count}} votos a favor",
+    "witness_rule_other": "Se aprueba con al menos {{count}} votos a favor",
+    "voting_rule": "Cómo se decide"
   },
   "how": {
     "title": "Cómo funciona Votain",
@@ -467,7 +474,19 @@
     "forget_passkey_title": "¿Olvidar esta passkey?",
     "forget_passkey_desc": "Cierra la sesión en este dispositivo y olvida aquí la passkey. La passkey sigue en tu autenticador, así que puedes volver a entrar con ella y la clave de recuento de tus elecciones se sigue pudiendo derivar de ella.",
     "forget_passkey_confirm": "Olvidar",
-    "passkey_forgotten": "Passkey olvidada en este dispositivo"
+    "passkey_forgotten": "Passkey olvidada en este dispositivo",
+    "also_organizer_title": "¿Quieres crear elecciones también?",
+    "also_organizer_desc": "Inicia sesión como organizador con una passkey y gestiona tus propias elecciones. Tu sesión de votante se queda tal cual, y desde la cabecera puedes cambiar entre las dos.",
+    "also_organizer_cta": "Iniciar sesión como organizador",
+    "also_voter_title": "¿Quieres votar también?",
+    "also_voter_desc": "Regístrate como votante con World ID para inscribirte en elecciones y votar. Tu sesión de organizador se queda tal cual, y desde la cabecera puedes cambiar entre las dos.",
+    "also_voter_cta": "Registrarme como votante",
+    "sign_out_voter": "Cerrar sesión como votante",
+    "sign_out_organizer": "Cerrar sesión como organizador",
+    "sign_out_both": "Cerrar ambas sesiones",
+    "sign_out_voter_desc": "Se borran de este navegador tu identidad de voto y los votos registrados en este dispositivo. Tu sesión de organizador no se toca.",
+    "sign_out_organizer_desc": "Se borran la cartera y el nombre guardados en este dispositivo. Las claves que descifran tus elecciones se conservan, así que los resultados publicados siguen siendo legibles. Tu sesión de votante no se toca.",
+    "sign_out_both_desc": "Se cierran las dos sesiones y vuelves a la pantalla de inicio."
   },
   "tx": {
     "title_pending": "Transacción en progreso",

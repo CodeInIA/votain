@@ -24,6 +24,7 @@ import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
 import { PULSE_PHASES } from '../../lib/phase';
 import { explorerAddressUrl } from '../../lib/deployments';
 import { ExpandableText } from '../../components/ui/ExpandableText';
+import { VotingRule } from '../../components/ui/VotingRule';
 
 export default function ElectionPreview() {
   const { id } = useParams<{ id: string }>();
@@ -190,6 +191,9 @@ export default function ElectionPreview() {
         <Card className="p-5 mb-4">
           <h2 className="text-sm font-semibold text-on-surface mb-2">{t('election.about')}</h2>
           <ExpandableText text={election.description} />
+          <div className="mt-4 pt-4 border-t border-white/5">
+            <VotingRule type={election.votingType} thresholdValue={election.thresholdValue} />
+          </div>
           <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-white/5 text-xs text-on-surface-meta">
             <span className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5" />{election.totalEnrolled.toLocaleString()} {t('election.enrolled')}</span>
             <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" />{election.voteEnd.toLocaleDateString()}</span>

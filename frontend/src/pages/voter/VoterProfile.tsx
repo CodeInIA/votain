@@ -1,28 +1,20 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ShieldCheck, LogOut, SearchCheck, RefreshCw, Info, FileText, Shield } from 'lucide-react';
+import { ShieldCheck, SearchCheck, RefreshCw, Info, FileText, Shield } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { LanguageSelector } from '../../components/ui/LanguageSelector';
 import { MyDevices } from '../../components/voter/MyDevices';
 import { IdentityBackupCard } from '../../components/voter/IdentityBackupCard';
-import { Modal } from '../../components/ui/Modal';
-import { useAuth } from '../../contexts/AuthContext';
-import { useState } from 'react';
+import { OtherRoleCard } from '../../components/ui/OtherRoleCard';
+import { SignOutActions } from '../../components/ui/SignOutActions';
 
 export default function VoterProfile() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { voterSignOut } = useAuth();
-  const [signOutModal, setSignOutModal] = useState(false);
 
   const nullifier = localStorage.getItem('voter_nullifier');
-
-  const handleSignOut = () => {
-    voterSignOut();
-    navigate('/', { replace: true });
-  };
 
   return (
     <PageLayout role="voter" showNav>
@@ -75,6 +67,11 @@ export default function VoterProfile() {
             this server nor the chain is reachable. */}
         <IdentityBackupCard />
 
+        {/* The other half of what this person may be. Both sessions can be
+            held at once and the header switches between them, so the profile
+            is where that gets said. */}
+        <OtherRoleCard role="organizer" />
+
         {/* Language */}
         <Card className="p-5 mb-4">
           <div className="flex items-center justify-between">
@@ -99,35 +96,8 @@ export default function VoterProfile() {
           </Link>
         </Card>
 
-        {/* Sign out */}
-        <Button
-          variant="default"
-          className="w-full rounded-2xl gap-2 border-error/30 text-error hover:bg-error/10"
-          onClick={() => setSignOutModal(true)}
-        >
-          <LogOut className="w-4 h-4" />
-          {t('profile.sign_out')}
-        </Button>
-
-        <Modal
-          open={signOutModal}
-          onClose={() => setSignOutModal(false)}
-          title={t('profile.sign_out_title')}
-          description={t('profile.sign_out_desc')}
-        >
-          <div className="flex gap-3 mt-2">
-            <Button variant="ghost" className="flex-1" onClick={() => setSignOutModal(false)}>
-              {t('common.cancel')}
-            </Button>
-            <Button
-              variant="default"
-              className="flex-1 border-error/30 text-error hover:bg-error/10"
-              onClick={handleSignOut}
-            >
-              {t('profile.sign_out_confirm')}
-            </Button>
-          </div>
-        </Modal>
+        {/* Sign out, of this role or of both when both are held. */}
+        <SignOutActions role="voter" />
       </div>
     </PageLayout>
   );

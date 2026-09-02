@@ -88,6 +88,12 @@ export interface Election {
   /** Attribute restrictions on enrolment, verified against the contract's hash. */
   eligibilityPolicy?: EligibilityPolicy;
   votingType: VotingType;
+  /**
+   * Yes votes needed to approve, and only meaningful for `witness_threshold`.
+   * Distinct from `privacyQuorum`, which is how many ballots must exist before
+   * a result may be revealed at all.
+   */
+  thresholdValue?: number;
   privacyQuorum: number;
   /** Public per-election salt for deriving the tally key from the organizer's
    *  passkey. Present only on elections whose key is re-derivable (not stored). */

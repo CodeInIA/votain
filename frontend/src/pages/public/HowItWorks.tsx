@@ -16,7 +16,7 @@ const STEPS = [
 export default function HowItWorks() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { voterLoggedIn, organizerLoggedIn } = useAuth();
+  const { voterLoggedIn } = useAuth();
 
   return (
     <PageLayout role="public" showNav showFooter>
@@ -79,17 +79,12 @@ export default function HowItWorks() {
               reads as the page not knowing who it is talking to. Signed-in
               voters get the same swap the landing page makes.
 
-              Organizers are sent nowhere either, and the reason is the chrome
-              rather than the roles. `AuthProvider` keeps the two sessions
-              independent, so in principle an organizer could hold a voter
-              session as well, but `TopNav` and `BottomTabNav` both resolve
-              `organizerLoggedIn ? ORGANIZER : voterLoggedIn ? VOTER : PUBLIC`:
-              once both are set, the organizer nav wins outright and every
-              voter route disappears from the chrome. Sending an organizer to
-              register would hand them a session the app then hides. Until the
-              navigation can represent a person holding both, this button must
-              not pretend that it can. */}
-          {!voterLoggedIn && !organizerLoggedIn && (
+              Organizers ARE invited, which they were not while the navigation
+              could only wear one role: both bars resolved organizer first, so
+              accepting the invitation handed them a voter session the app then
+              hid. `RoleSwitch` is what changed that, and this is the visible
+              consequence of it. */}
+          {!voterLoggedIn && (
             <Button
               variant="ghost"
               size="lg"

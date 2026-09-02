@@ -6,6 +6,7 @@ import { PageLayout } from '../../components/layout/PageLayout';
 import { Badge } from '../../components/ui/Badge';
 import { EligibilityChips } from '../../components/ui/EligibilityChips';
 import { ExpandableText } from '../../components/ui/ExpandableText';
+import { VotingRule } from '../../components/ui/VotingRule';
 import { Button } from '../../components/ui/Button';
 import { BackButton } from '../../components/ui/BackButton';
 import { ViewAsSwitch } from '../../components/ui/ViewAsSwitch';
@@ -241,6 +242,15 @@ export default function ElectionManagement() {
           )}
         </div>
 
+        {/* How the election is decided, which no view of an election showed.
+            Its own card rather than a line in the description card below,
+            because that card is conditional on there being a description and
+            the rule is not optional: it is what the ballot means. */}
+        <Card className="p-5 mb-5">
+          <h2 className="text-sm font-semibold text-on-surface mb-3">{t('election.voting_rule')}</h2>
+          <VotingRule type={election.votingType} thresholdValue={election.thresholdValue} />
+        </Card>
+
         {/* The organizer wrote this and could not read it back: this view went
             from the title straight to the counters, so the one person able to
             correct a description was the only one never shown it. */}
@@ -322,13 +332,16 @@ export default function ElectionManagement() {
               {t('election.candidates')}
             </h2>
             <div className="flex flex-col gap-2">
-              {election.candidates.map(candidate => (
+              {election.candidates.map((candidate, index) => (
                 <div
                   key={candidate.id}
                   className="flex items-start gap-3 p-3 rounded-2xl bg-surface-lowest/40 border border-white/5"
                 >
+                  {/* The position on the ballot, not an initial: a yes/no
+                      motion would show two identical letters, and the order is
+                      what the voter sees. */}
                   <span className="w-7 h-7 shrink-0 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">
-                    {candidate.name.trim().charAt(0).toUpperCase()}
+                    {index + 1}
                   </span>
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-on-surface break-words">{candidate.name}</p>

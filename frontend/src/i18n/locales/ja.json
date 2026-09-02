@@ -90,7 +90,10 @@
     "dashboard": "ダッシュボード",
     "members": "メンバー",
     "gas": "Gas",
-    "verify": "投票を確認"
+    "verify": "投票を確認",
+    "role_voter": "投票者",
+    "role_organizer": "主催者",
+    "role_switch": "役割を切り替える"
   },
   "phase": {
     "enrolling": "登録中",
@@ -173,7 +176,9 @@
     "verified_on_chain": "ブロックチェーンで検証済み",
     "view_as_voter": "投票者として表示",
     "view_as_organizer": "主催者として表示",
-    "turnout_detail": "登録者 {{total}} 人のうち {{voted}} 人が投票しました"
+    "turnout_detail": "登録者 {{total}} 人のうち {{voted}} 人が投票しました",
+    "witness_rule_other": "賛成 {{count}} 票以上で可決",
+    "voting_rule": "決まり方"
   },
   "how": {
     "title": "Votainの仕組み",
@@ -459,7 +464,19 @@
     "forget_passkey_title": "このパスキーを忘れますか？",
     "forget_passkey_desc": "この端末からサインアウトし、ここでのパスキーを忘れます。パスキー自体は認証器に残るため、再度サインインでき、主催した選挙の集計鍵もそこから導出できます。",
     "forget_passkey_confirm": "忘れる",
-    "passkey_forgotten": "この端末でパスキーを忘れました"
+    "passkey_forgotten": "この端末でパスキーを忘れました",
+    "also_organizer_title": "選挙の作成もしますか？",
+    "also_organizer_desc": "パスキーで主催者としてサインインすれば、自分の選挙を運営できます。投票者としてのセッションはそのまま残り、ヘッダーで切り替えられます。",
+    "also_organizer_cta": "主催者としてサインイン",
+    "also_voter_title": "投票もしますか？",
+    "also_voter_desc": "World ID で投票者として登録すると、選挙に参加して投票できます。主催者としてのセッションはそのまま残り、ヘッダーで切り替えられます。",
+    "also_voter_cta": "投票者として登録",
+    "sign_out_voter": "投票者としてサインアウト",
+    "sign_out_organizer": "主催者としてサインアウト",
+    "sign_out_both": "両方からサインアウト",
+    "sign_out_voter_desc": "投票用の識別情報と、この端末に記録された投票がこのブラウザーから削除されます。主催者としてのセッションはそのままです。",
+    "sign_out_organizer_desc": "この端末に記憶されたウォレットと表示名を消去します。選挙を復号する鍵は残るため、公開済みの結果は引き続き読めます。投票者としてのセッションはそのままです。",
+    "sign_out_both_desc": "両方のセッションが終了し、ホーム画面に戻ります。"
   },
   "tx": {
     "title_pending": "トランザクション処理中",

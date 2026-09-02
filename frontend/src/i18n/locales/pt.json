@@ -90,7 +90,10 @@
     "dashboard": "Painel",
     "members": "Membros",
     "gas": "Gas",
-    "verify": "Verificar um voto"
+    "verify": "Verificar um voto",
+    "role_voter": "Eleitor",
+    "role_organizer": "Organizador",
+    "role_switch": "Mudar de papel"
   },
   "phase": {
     "enrolling": "Inscrição",
@@ -175,7 +178,11 @@
     "verified_on_chain": "Verificado na blockchain",
     "view_as_voter": "Ver como eleitor",
     "view_as_organizer": "Ver como organizador",
-    "turnout_detail": "Votaram {{voted}} de {{total}} inscritos"
+    "turnout_detail": "Votaram {{voted}} de {{total}} inscritos",
+    "witness_rule_one": "Aprovado com pelo menos {{count}} voto a favor",
+    "witness_rule_many": "Aprovado com pelo menos {{count}} votos a favor",
+    "witness_rule_other": "Aprovado com pelo menos {{count}} votos a favor",
+    "voting_rule": "Como se decide"
   },
   "how": {
     "title": "Como o Votain funciona",
@@ -467,7 +474,19 @@
     "forget_passkey_title": "Esquecer esta passkey?",
     "forget_passkey_desc": "Termina a sessão neste dispositivo e esquece aqui a passkey. A passkey continua no seu autenticador, por isso pode voltar a entrar com ela e a chave de contagem das suas eleições continua a poder ser derivada dela.",
     "forget_passkey_confirm": "Esquecer",
-    "passkey_forgotten": "Passkey esquecida neste dispositivo"
+    "passkey_forgotten": "Passkey esquecida neste dispositivo",
+    "also_organizer_title": "Também queres criar eleições?",
+    "also_organizer_desc": "Inicia sessão como organizador com uma passkey e gere as tuas eleições. A tua sessão de eleitor fica na mesma, e no cabeçalho podes alternar entre as duas.",
+    "also_organizer_cta": "Iniciar sessão como organizador",
+    "also_voter_title": "Também queres votar?",
+    "also_voter_desc": "Regista-te como eleitor com World ID para te inscreveres em eleições e votar. A tua sessão de organizador fica na mesma, e no cabeçalho podes alternar entre as duas.",
+    "also_voter_cta": "Registar-me como eleitor",
+    "sign_out_voter": "Terminar sessão como eleitor",
+    "sign_out_organizer": "Terminar sessão como organizador",
+    "sign_out_both": "Terminar as duas sessões",
+    "sign_out_voter_desc": "A tua identidade de voto e os votos registados neste dispositivo são apagados deste navegador. A tua sessão de organizador fica intacta.",
+    "sign_out_organizer_desc": "A carteira e o nome guardados neste dispositivo são apagados. As chaves que decifram as tuas eleições ficam, por isso os resultados publicados continuam legíveis. A tua sessão de eleitor fica intacta.",
+    "sign_out_both_desc": "As duas sessões terminam e voltas ao ecrã inicial."
   },
   "tx": {
     "title_pending": "Transação em andamento",

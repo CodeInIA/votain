@@ -6,19 +6,20 @@ import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
 import { Button } from '../components/ui/Button';
 import { useAuth } from '../contexts/AuthContext';
+import { homeRouteFor } from '../lib/activeRole';
 
 export default function Landing() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { voterLoggedIn, organizerLoggedIn } = useAuth();
+  const { voterLoggedIn, activeRole } = useAuth();
 
+  // Sends a signed-in person to whichever role they are wearing. Deciding it
+  // here as well would let the landing page and the navigation disagree about
+  // who just arrived, which is how someone ends up on a voter screen wrapped in
+  // organizer navigation.
   useEffect(() => {
-    if (voterLoggedIn) {
-      navigate('/voter/elections', { replace: true });
-    } else if (organizerLoggedIn) {
-      navigate('/organizer/dashboard', { replace: true });
-    }
-  }, [navigate, voterLoggedIn, organizerLoggedIn]);
+    if (activeRole !== 'public') navigate(homeRouteFor(activeRole), { replace: true });
+  }, [navigate, activeRole]);
 
   return (
     <div className="relative h-dvh w-full bg-background text-on-surface font-body selection:bg-primary selection:text-white overflow-hidden flex flex-col">

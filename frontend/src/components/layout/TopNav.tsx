@@ -4,6 +4,8 @@ import { Compass, Vote, Clock, User, LayoutDashboard, Users, Zap, ShieldCheck } 
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
+import { homeRouteFor } from '../../lib/activeRole';
+import { RoleSwitch } from './RoleSwitch';
 
 interface NavItem {
   to: string;
@@ -32,20 +34,19 @@ const PUBLIC_ITEMS: NavItem[] = [
   { to: '/verify-receipt', labelKey: 'nav.verify',   icon: <ShieldCheck className="w-4 h-4" /> },
 ];
 
-// No props: the nav is fully determined by auth state (which role is signed in),
-// so the page's role hint is not needed here.
+// No props: the nav is fully determined by auth state, so the page's role hint
+// is not needed here. Which role that is comes from `activeRole` rather than
+// from the flags directly, because someone holding both sessions gets to say.
 export function TopNav() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { voterLoggedIn, organizerLoggedIn } = useAuth();
+  const { activeRole } = useAuth();
 
-  const items = organizerLoggedIn ? ORGANIZER_ITEMS :
-                voterLoggedIn     ? VOTER_ITEMS :
-                                    PUBLIC_ITEMS;
+  const items = activeRole === 'organizer' ? ORGANIZER_ITEMS :
+                activeRole === 'voter'     ? VOTER_ITEMS :
+                                              PUBLIC_ITEMS;
 
-  const homeRoute = organizerLoggedIn ? '/organizer/dashboard' :
-                    voterLoggedIn     ? '/voter/elections' :
-                                        '/';
+  const homeRoute = homeRouteFor(activeRole);
 
   return (
     <nav
@@ -84,7 +85,8 @@ export function TopNav() {
 
       {/* Right actions */}
       <div className="flex items-center gap-3 shrink-0 ml-auto">
-        {organizerLoggedIn ? (
+        <RoleSwitch />
+        {activeRole === 'organizer' ? (
           <button
             type="button"
             data-nav-href="/organizer/profile"
@@ -94,7 +96,7 @@ export function TopNav() {
           >
             <User className="w-4 h-4 text-primary" />
           </button>
-        ) : voterLoggedIn ? (
+        ) : activeRole === 'voter' ? (
           <button
             type="button"
             onClick={() => navigate('/voter/profile')}

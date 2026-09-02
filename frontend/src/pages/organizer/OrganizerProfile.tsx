@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { KeyRound, Trash2, LogOut, User, Wallet, Info, FileText, Shield } from 'lucide-react';
+import { KeyRound, Trash2, User, Wallet, Info, FileText, Shield } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Card } from '../../components/ui/Card';
+import { OtherRoleCard } from '../../components/ui/OtherRoleCard';
 import { Button } from '../../components/ui/Button';
 import { BackButton } from '../../components/ui/BackButton';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
+import { SignOutActions } from '../../components/ui/SignOutActions';
 import { LanguageSelector } from '../../components/ui/LanguageSelector';
 import { useToast } from '../../components/ui/useToast';
 import { useAuth } from '../../contexts/AuthContext';
@@ -29,7 +31,6 @@ export default function OrganizerProfile() {
   // The single passkey actually registered on this device (null if none).
   const [passkey, setPasskey] = useState(() => getPasskeyInfo());
   const [deleteModal, setDeleteModal] = useState(false);
-  const [signOutModal, setSignOutModal] = useState(false);
 
   const saveName = () => {
     const next = nameInput.trim() || displayName;
@@ -54,13 +55,6 @@ export default function OrganizerProfile() {
     organizerSignOut();
     toast({ title: t('profile.passkey_forgotten'), variant: 'info' });
     setTimeout(() => navigate('/organizer/auth', { replace: true }), 600);
-  };
-
-  const signOut = () => {
-    setSignOutModal(false);
-    organizerSignOut();
-    toast({ title: t('profile.signed_out'), variant: 'info' });
-    setTimeout(() => navigate('/', { replace: true }), 500);
   };
 
   return (
@@ -159,6 +153,11 @@ export default function OrganizerProfile() {
         </Card>
 
         {/* Language */}
+        {/* Same offer as the voter profile makes, the other way round.
+            An organizer is a person who may also want to vote, and until the
+            header could switch roles there was nowhere to say so. */}
+        <OtherRoleCard role="voter" />
+
         <Card className="p-5 mb-4">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-on-surface">{t('landing.footer.language')}</p>
@@ -182,16 +181,9 @@ export default function OrganizerProfile() {
           </Link>
         </Card>
 
-        {/* Sign out */}
+        {/* Sign out, of this role or of both when both are held. */}
         <Card className="p-5">
-          <Button
-            variant="default"
-            className="w-full rounded-2xl gap-2 border-error/30 text-error hover:bg-error/10"
-            onClick={() => setSignOutModal(true)}
-          >
-            <LogOut className="w-4 h-4" />
-            {t('profile.sign_out')}
-          </Button>
+          <SignOutActions role="organizer" />
         </Card>
 
         {/* Forget passkey modal */}
@@ -213,24 +205,6 @@ export default function OrganizerProfile() {
           </div>
         </Modal>
 
-        {/* Sign out modal */}
-        <Modal
-          open={signOutModal}
-          onClose={() => setSignOutModal(false)}
-          title={t('profile.sign_out_title')}
-          description={t('profile.sign_out_desc')}
-        >
-          <div className="flex gap-3 mt-2">
-            <Button variant="ghost" className="flex-1" onClick={() => setSignOutModal(false)}>{t('common.cancel')}</Button>
-            <Button
-              variant="default"
-              className="flex-1 border-error/30 text-error hover:bg-error/10"
-              onClick={signOut}
-            >
-              {t('profile.sign_out_confirm')}
-            </Button>
-          </div>
-        </Modal>
       </div>
     </PageLayout>
   );

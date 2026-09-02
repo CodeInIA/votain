@@ -90,7 +90,10 @@
     "dashboard": "대시보드",
     "members": "멤버",
     "gas": "Gas",
-    "verify": "투표 확인"
+    "verify": "투표 확인",
+    "role_voter": "유권자",
+    "role_organizer": "주최자",
+    "role_switch": "역할 전환"
   },
   "phase": {
     "enrolling": "등록 중",
@@ -173,7 +176,9 @@
     "verified_on_chain": "블록체인에서 검증됨",
     "view_as_voter": "유권자로 보기",
     "view_as_organizer": "주최자로 보기",
-    "turnout_detail": "등록 유권자 {{total}}명 중 {{voted}}명이 투표했습니다"
+    "turnout_detail": "등록 유권자 {{total}}명 중 {{voted}}명이 투표했습니다",
+    "witness_rule_other": "찬성 {{count}}표 이상이면 가결",
+    "voting_rule": "결정 방식"
   },
   "how": {
     "title": "Votain 작동 방식",
@@ -459,7 +464,19 @@
     "forget_passkey_title": "이 패스키를 잊을까요?",
     "forget_passkey_desc": "이 기기에서 로그아웃하고 여기에 저장된 패스키를 잊습니다. 패스키 자체는 인증기에 남아 있으므로 다시 로그인할 수 있고, 주최한 선거의 집계 키도 그것에서 다시 유도할 수 있습니다.",
     "forget_passkey_confirm": "잊기",
-    "passkey_forgotten": "이 기기에서 패스키를 잊었습니다"
+    "passkey_forgotten": "이 기기에서 패스키를 잊었습니다",
+    "also_organizer_title": "선거도 만들고 싶으신가요?",
+    "also_organizer_desc": "패스키로 주최자로 로그인해 직접 선거를 운영하세요. 유권자 세션은 그대로 유지되며, 헤더에서 둘 사이를 전환할 수 있습니다.",
+    "also_organizer_cta": "주최자로 로그인",
+    "also_voter_title": "투표도 하고 싶으신가요?",
+    "also_voter_desc": "World ID로 유권자 등록을 하면 선거에 참여해 투표할 수 있습니다. 주최자 세션은 그대로 유지되며, 헤더에서 둘 사이를 전환할 수 있습니다.",
+    "also_voter_cta": "유권자로 등록",
+    "sign_out_voter": "유권자로 로그아웃",
+    "sign_out_organizer": "주최자로 로그아웃",
+    "sign_out_both": "둘 다 로그아웃",
+    "sign_out_voter_desc": "투표 신원과 이 기기에 기록된 투표가 이 브라우저에서 삭제됩니다. 주최자 세션은 그대로 유지됩니다.",
+    "sign_out_organizer_desc": "이 기기에 저장된 지갑과 표시 이름을 지웁니다. 선거를 복호화하는 키는 남으므로 공개된 결과는 계속 읽을 수 있습니다. 유권자 세션은 그대로 유지됩니다.",
+    "sign_out_both_desc": "두 세션이 모두 종료되고 홈 화면으로 돌아갑니다."
   },
   "tx": {
     "title_pending": "트랜잭션 진행 중",

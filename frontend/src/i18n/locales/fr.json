@@ -90,7 +90,10 @@
     "dashboard": "Tableau de bord",
     "members": "Membres",
     "gas": "Gas",
-    "verify": "Vérifier un vote"
+    "verify": "Vérifier un vote",
+    "role_voter": "Électeur",
+    "role_organizer": "Organisateur",
+    "role_switch": "Changer de rôle"
   },
   "phase": {
     "enrolling": "Inscription",
@@ -175,7 +178,11 @@
     "verified_on_chain": "Vérifié sur la blockchain",
     "view_as_voter": "Voir comme électeur",
     "view_as_organizer": "Voir comme organisateur",
-    "turnout_detail": "{{voted}} inscrits sur {{total}} ont voté"
+    "turnout_detail": "{{voted}} inscrits sur {{total}} ont voté",
+    "witness_rule_one": "Approuvé avec au moins {{count}} vote pour",
+    "witness_rule_many": "Approuvé avec au moins {{count}} votes pour",
+    "witness_rule_other": "Approuvé avec au moins {{count}} votes pour",
+    "voting_rule": "Comment le résultat est décidé"
   },
   "how": {
     "title": "Comment fonctionne Votain",
@@ -467,7 +474,19 @@
     "forget_passkey_title": "Oublier cette clé d'accès ?",
     "forget_passkey_desc": "Vous serez déconnecté sur cet appareil, qui oubliera la clé d'accès. Celle-ci reste dans votre authentificateur : vous pourrez vous reconnecter avec elle et la clé de dépouillement de vos élections pourra toujours en être dérivée.",
     "forget_passkey_confirm": "Oublier",
-    "passkey_forgotten": "Clé d'accès oubliée sur cet appareil"
+    "passkey_forgotten": "Clé d'accès oubliée sur cet appareil",
+    "also_organizer_title": "Vous voulez aussi créer des élections ?",
+    "also_organizer_desc": "Connectez-vous comme organisateur avec une passkey et gérez vos propres élections. Votre session d'électeur reste inchangée, et l'en-tête permet de passer de l'une à l'autre.",
+    "also_organizer_cta": "Se connecter comme organisateur",
+    "also_voter_title": "Vous voulez aussi voter ?",
+    "also_voter_desc": "Inscrivez-vous comme électeur avec World ID pour rejoindre des élections et voter. Votre session d'organisateur reste inchangée, et l'en-tête permet de passer de l'une à l'autre.",
+    "also_voter_cta": "S'inscrire comme électeur",
+    "sign_out_voter": "Se déconnecter en tant qu'électeur",
+    "sign_out_organizer": "Se déconnecter en tant qu'organisateur",
+    "sign_out_both": "Fermer les deux sessions",
+    "sign_out_voter_desc": "Votre identité de vote et les votes enregistrés sur cet appareil sont supprimés de ce navigateur. Votre session d’organisateur reste intacte.",
+    "sign_out_organizer_desc": "Le portefeuille et le nom mémorisés sur cet appareil sont effacés. Les clés qui déchiffrent vos élections sont conservées, donc les résultats publiés restent lisibles. Votre session d’électeur reste intacte.",
+    "sign_out_both_desc": "Les deux sessions se terminent et vous revenez à l'écran d'accueil."
   },
   "tx": {
     "title_pending": "Transaction en cours",

@@ -19,6 +19,12 @@ import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
 import { getGasBalance } from '../../lib/organizer';
 import { relayErrorMessage } from '../../lib/relay';
 import { hasDuplicateNames, collidesWithBlankVote } from '../../lib/ballotNames';
+import {
+  VOTING_TYPES,
+  VOTING_TYPE_ICONS,
+  votingTypeDescriptionKey,
+  votingTypeLabelKey,
+} from '../../lib/votingTypes';
 import { fetchOrganizerDomains } from '../../lib/organizerDomains';
 import { isChainConfigured, chainInfo } from '../../lib/deployments';
 import { getReadProvider } from '../../lib/contracts';
@@ -633,12 +639,15 @@ export default function CreateElection() {
               label={t('create.voting_type')}
               value={form.votingType}
               onChange={v => set('votingType', v as keyof typeof VOTING_TYPE_ENUM)}
-              options={[
-                { value: 'simple_plurality',  label: t('voting_type.simple_plurality'),  description: t('voting_type.simple_plurality_desc') },
-                { value: 'absolute_majority', label: t('voting_type.absolute_majority'), description: t('voting_type.absolute_majority_desc') },
-                { value: 'two_thirds',        label: t('voting_type.two_thirds'),        description: t('voting_type.two_thirds_desc') },
-                { value: 'witness_threshold', label: t('voting_type.witness_threshold'), description: t('voting_type.witness_threshold_desc') },
-              ]}
+              // Built from the shared list so the wizard cannot offer a rule
+              // the filter bar and the cards do not know about, and each option
+              // carries the icon those two label it with.
+              options={VOTING_TYPES.map(type => ({
+                value: type,
+                label: t(votingTypeLabelKey(type)),
+                description: t(votingTypeDescriptionKey(type)),
+                icon: VOTING_TYPE_ICONS[type],
+              }))}
             />
             {form.votingType === 'witness_threshold' && (
               <Input

@@ -90,7 +90,10 @@
     "dashboard": "Dashboard",
     "members": "Mitglieder",
     "gas": "Gas",
-    "verify": "Stimme prüfen"
+    "verify": "Stimme prüfen",
+    "role_voter": "Wähler",
+    "role_organizer": "Veranstalter",
+    "role_switch": "Rolle wechseln"
   },
   "phase": {
     "enrolling": "Anmeldung",
@@ -174,7 +177,10 @@
     "verified_on_chain": "Auf der Blockchain verifiziert",
     "view_as_voter": "Als Wähler ansehen",
     "view_as_organizer": "Als Veranstalter ansehen",
-    "turnout_detail": "{{voted}} von {{total}} angemeldeten Wählenden haben gewählt"
+    "turnout_detail": "{{voted}} von {{total}} angemeldeten Wählenden haben gewählt",
+    "witness_rule_one": "Angenommen mit mindestens {{count}} Ja-Stimme",
+    "witness_rule_other": "Angenommen mit mindestens {{count}} Ja-Stimmen",
+    "voting_rule": "Wie entschieden wird"
   },
   "how": {
     "title": "Wie Votain funktioniert",
@@ -463,7 +469,19 @@
     "forget_passkey_title": "Diesen Passkey vergessen?",
     "forget_passkey_desc": "Sie werden auf diesem Gerät abgemeldet und der Passkey wird hier vergessen. Der Passkey selbst bleibt in Ihrem Authentifikator: Sie können sich damit wieder anmelden, und der Auszählungsschlüssel Ihrer Wahlen lässt sich weiterhin daraus ableiten.",
     "forget_passkey_confirm": "Vergessen",
-    "passkey_forgotten": "Passkey auf diesem Gerät vergessen"
+    "passkey_forgotten": "Passkey auf diesem Gerät vergessen",
+    "also_organizer_title": "Möchten Sie auch Wahlen erstellen?",
+    "also_organizer_desc": "Melden Sie sich mit einem Passkey als Veranstalter an und führen Sie eigene Wahlen durch. Ihre Wählersitzung bleibt unverändert, und in der Kopfzeile wechseln Sie zwischen beiden.",
+    "also_organizer_cta": "Als Veranstalter anmelden",
+    "also_voter_title": "Möchten Sie auch wählen?",
+    "also_voter_desc": "Registrieren Sie sich mit World ID als Wähler, um an Wahlen teilzunehmen und abzustimmen. Ihre Veranstaltersitzung bleibt unverändert, und in der Kopfzeile wechseln Sie zwischen beiden.",
+    "also_voter_cta": "Als Wähler registrieren",
+    "sign_out_voter": "Als Wähler abmelden",
+    "sign_out_organizer": "Als Veranstalter abmelden",
+    "sign_out_both": "Von beiden abmelden",
+    "sign_out_voter_desc": "Ihre Wahlidentität und die auf diesem Gerät erfassten Stimmen werden aus diesem Browser gelöscht. Ihre Veranstaltersitzung bleibt unberührt.",
+    "sign_out_organizer_desc": "Die auf diesem Gerät gemerkte Wallet und der Anzeigename werden gelöscht. Die Schlüssel, die Ihre Wahlen entschlüsseln, bleiben erhalten, veröffentlichte Ergebnisse bleiben also lesbar. Ihre Wählersitzung bleibt unberührt.",
+    "sign_out_both_desc": "Beide Sitzungen enden und Sie kehren zur Startseite zurück."
   },
   "tx": {
     "title_pending": "Transaktion läuft",

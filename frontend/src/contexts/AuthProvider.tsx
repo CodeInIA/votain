@@ -2,6 +2,13 @@ import { useState, useEffect, type ReactNode } from 'react';
 import { hasPrfCredential } from '../lib/passkeyPrf';
 import { clearIdentity } from '../lib/semaphore';
 import { storeVoterPersonhood, clearVoterPersonhood } from '../lib/voterSession';
+import {
+  clearRolePreference,
+  readRolePreference,
+  resolveActiveRole,
+  storeRolePreference,
+  type Role,
+} from '../lib/activeRole';
 import { forgetOrganizerAddress } from '../hooks/useOrganizerWallet';
 import { setOrganizerName } from '../lib/organizer';
 import { AuthContext } from './AuthContext';
@@ -31,11 +38,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return flagged;
   });
   const [sessionChecked, setSessionChecked] = useState(false);
+  const [preferredRole, setPreferredRole] = useState<Role | null>(readRolePreference);
 
-  const setVoterLoggedIn = (v: boolean) => {
+  const activeRole = resolveActiveRole({ voterLoggedIn, organizerLoggedIn }, preferredRole);
+
+  const setActiveRole = (role: Role) => {
+    storeRolePreference(role);
+    setPreferredRole(role === 'public' ? null : role);
+  };
+
+  // Signing OUT of the role currently being worn drops the preference with it.
+  // `resolveActiveRole` would ignore it anyway, since a preference only counts
+  // while both sessions are live, but leaving it behind means a voter who signs
+  // back in months later silently inherits a choice they no longer remember
+  // making.
+  const releaseRole = (role: Role) => {
+    if (preferredRole !== role) return;
+    clearRolePreference();
+    setPreferredRole(null);
+  };
+
+  // Split from `setVoterLoggedIn` on purpose. Restoring a session from the
+  // cookie must NOT claim the navigation: an organizer who chose the organizer
+  // view and still holds a voter cookie would have that choice overwritten by
+  // every page load, which is the one thing a preference must survive.
+  const rememberVoterSession = (v: boolean) => {
     if (v) localStorage.setItem(VOTER_KEY, 'true');
     else localStorage.removeItem(VOTER_KEY);
     setVoterLoggedInState(v);
+  };
+
+  // Signing IN is different: it is an explicit act, and the role just entered is
+  // the one the person means to use.
+  const setVoterLoggedIn = (v: boolean) => {
+    rememberVoterSession(v);
+    if (v) setActiveRole('voter');
   };
 
   // The httpOnly voter_vc cookie is the SOURCE OF TRUTH for the voter session.
@@ -71,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // and one whose credential predates the claim must not keep a level
           // it never carried.
           storeVoterPersonhood(data.personhood);
-          setVoterLoggedIn(true);
+          rememberVoterSession(true);
         }
       })
       .catch(() => { /* backend unreachable: keep optimistic state */ })
@@ -104,6 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearVoterPersonhood();
     clearIdentity();
     setVoterLoggedInState(false);
+    releaseRole('voter');
     // Clear the httpOnly VC cookie so /api/me does not restore the session.
     fetch(`${BACKEND_URL}/api/logout`, { method: 'POST', credentials: 'include' }).catch(() => {});
   };
@@ -112,6 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (v) localStorage.setItem(ORGANIZER_KEY, 'true');
     else localStorage.removeItem(ORGANIZER_KEY);
     setOrganizerLoggedInState(v);
+    if (v) setActiveRole('organizer');
   };
 
   // The remembered wallet address and display name identify the organizer, so
@@ -124,12 +163,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     forgetOrganizerAddress();
     setOrganizerName('');
     setOrganizerLoggedInState(false);
+    releaseRole('organizer');
   };
 
   return (
     <AuthContext.Provider value={{
       voterLoggedIn, setVoterLoggedIn, voterSignOut,
       organizerLoggedIn, setOrganizerLoggedIn, organizerSignOut,
+      activeRole, setActiveRole,
       sessionChecked,
     }}>
       {children}

@@ -90,7 +90,10 @@
     "dashboard": "Cruscotto",
     "members": "Membri",
     "gas": "Gas",
-    "verify": "Verifica un voto"
+    "verify": "Verifica un voto",
+    "role_voter": "Elettore",
+    "role_organizer": "Organizzatore",
+    "role_switch": "Cambia ruolo"
   },
   "phase": {
     "enrolling": "Iscrizione",
@@ -175,7 +178,11 @@
     "verified_on_chain": "Verificato sulla blockchain",
     "view_as_voter": "Vedi come elettore",
     "view_as_organizer": "Vedi come organizzatore",
-    "turnout_detail": "Hanno votato {{voted}} iscritti su {{total}}"
+    "turnout_detail": "Hanno votato {{voted}} iscritti su {{total}}",
+    "witness_rule_one": "Approvato con almeno {{count}} voto favorevole",
+    "witness_rule_many": "Approvato con almeno {{count}} voti favorevoli",
+    "witness_rule_other": "Approvato con almeno {{count}} voti favorevoli",
+    "voting_rule": "Come si decide"
   },
   "how": {
     "title": "Come funziona Votain",
@@ -467,7 +474,19 @@
     "forget_passkey_title": "Dimenticare questa passkey?",
     "forget_passkey_desc": "Esce dalla sessione su questo dispositivo e dimentica qui la passkey. La passkey resta nel tuo autenticatore, quindi puoi rientrare con essa e la chiave di scrutinio delle tue elezioni può ancora essere derivata da essa.",
     "forget_passkey_confirm": "Dimentica",
-    "passkey_forgotten": "Passkey dimenticata su questo dispositivo"
+    "passkey_forgotten": "Passkey dimenticata su questo dispositivo",
+    "also_organizer_title": "Vuoi anche creare elezioni?",
+    "also_organizer_desc": "Accedi come organizzatore con una passkey e gestisci le tue elezioni. La tua sessione da elettore resta com’è, e dall’intestazione puoi passare da una all’altra.",
+    "also_organizer_cta": "Accedi come organizzatore",
+    "also_voter_title": "Vuoi anche votare?",
+    "also_voter_desc": "Registrati come elettore con World ID per iscriverti alle elezioni e votare. La tua sessione da organizzatore resta com’è, e dall’intestazione puoi passare da una all’altra.",
+    "also_voter_cta": "Registrati come elettore",
+    "sign_out_voter": "Esci come elettore",
+    "sign_out_organizer": "Esci come organizzatore",
+    "sign_out_both": "Esci da entrambe",
+    "sign_out_voter_desc": "La tua identità di voto e i voti registrati su questo dispositivo vengono eliminati da questo browser. La sessione da organizzatore resta intatta.",
+    "sign_out_organizer_desc": "Il portafoglio e il nome memorizzati su questo dispositivo vengono cancellati. Le chiavi che decifrano le tue elezioni restano, quindi i risultati pubblicati restano leggibili. La sessione da elettore resta intatta.",
+    "sign_out_both_desc": "Entrambe le sessioni terminano e torni alla schermata iniziale."
   },
   "tx": {
     "title_pending": "Transazione in corso",

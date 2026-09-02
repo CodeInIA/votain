@@ -8,7 +8,7 @@
  * are standing.
  */
 import { matchesEligibilityFilter, isEligibilityFilterActive, type EligibilityFilter } from './eligibilityFilter';
-import { type Election, type ElectionPhase } from '../data/seed';
+import { type Election, type ElectionPhase, type VotingType } from '../data/seed';
 import { isEmptyPolicy } from './eligibility';
 
 /** Phases worth offering as a chip. Draft and terminal states are not useful filters. */
@@ -27,6 +27,12 @@ export interface ElectionFilterState {
    * requirements at all", which no combination of the inputs can express.
    */
   restrictedOnly: boolean;
+  /**
+   * How the election is decided. A single choice rather than a set: the four
+   * rules are alternatives, and someone narrowing by rule is looking for one of
+   * them, the same way they narrow by phase.
+   */
+  votingType: VotingType | null;
   eligibility: EligibilityFilter;
 }
 
@@ -35,6 +41,7 @@ export const EMPTY_FILTERS: ElectionFilterState = {
   phase: null,
   domainOnly: false,
   restrictedOnly: false,
+  votingType: null,
   eligibility: {},
 };
 
@@ -49,6 +56,7 @@ export function isAnyFilterActive(filter: ElectionFilterState): boolean {
     Boolean(filter.phase) ||
     filter.domainOnly ||
     filter.restrictedOnly ||
+    Boolean(filter.votingType) ||
     isEligibilityFilterActive(filter.eligibility)
   );
 }
@@ -88,5 +96,6 @@ export function matchesElectionFilter(
   if (!matchesQuery(election, filter.query.trim().toLowerCase())) return false;
   if (filter.domainOnly && !isDomainVerified(election)) return false;
   if (filter.restrictedOnly && !isRestricted(election)) return false;
+  if (filter.votingType && election.votingType !== filter.votingType) return false;
   return matchesEligibilityFilter(election.eligibilityPolicy, filter.eligibility);
 }

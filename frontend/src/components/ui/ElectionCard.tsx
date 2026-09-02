@@ -9,6 +9,7 @@ import { Button } from './Button';
 import { cn } from '../../lib/utils';
 import { endsSoon, nextBoundary } from '../../lib/phase';
 import type { Election, ElectionPhase } from '../../data/seed';
+import { VOTING_TYPE_ICONS, votingTypeLabelKey } from '../../lib/votingTypes';
 
 function phaseVariant(phase: ElectionPhase) {
   return phase as Parameters<typeof Badge>[0]['variant'];
@@ -55,6 +56,8 @@ export function ElectionCard({ election, voterView = false, className }: Electio
     voted: Math.min(election.castVotes, election.totalEnrolled),
     total: election.totalEnrolled,
   });
+
+  const VotingTypeIcon = VOTING_TYPE_ICONS[election.votingType];
 
   const href = voterView
     ? `/voter/election/${election.id}`
@@ -116,8 +119,16 @@ export function ElectionCard({ election, voterView = false, className }: Electio
         {election.description}
       </p>
 
-      {/* Stats row */}
-      <div className="flex items-center gap-4 text-xs text-on-surface-meta">
+      {/* Stats row. Wraps, because the rule that decides the election joined a
+          row that was already three items wide on a card two to a screen. */}
+      <div className="flex items-center flex-wrap gap-x-4 gap-y-1.5 text-xs text-on-surface-meta">
+        {/* How it is decided, which the card never said: a plurality and a
+            two-thirds bar look identical here otherwise, and they are not the
+            same question being asked of the voter. */}
+        <span className="flex items-center gap-1.5 min-w-0">
+          <VotingTypeIcon className="w-3.5 h-3.5 shrink-0" />
+          <span className="truncate">{t(votingTypeLabelKey(election.votingType))}</span>
+        </span>
         <span className="flex items-center gap-1.5">
           <Users className="w-3.5 h-3.5" />
           {election.totalEnrolled.toLocaleString()} {t('election.enrolled')}

@@ -6,7 +6,7 @@
  * OS chrome that cannot be themed to match the Liquid Glass surfaces.
  */
 import * as Select from '@radix-ui/react-select';
-import { ChevronDown, Check } from 'lucide-react';
+import { ChevronDown, Check, type LucideIcon } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useTapSafeSelect } from '../../hooks/useTapSafeSelect';
 
@@ -14,6 +14,12 @@ export interface SelectMenuOption {
   value: string;
   label: string;
   description?: string;
+  /**
+   * Optional glyph for the choice. Shown in the list AND on the trigger, so a
+   * value the app labels with an icon elsewhere is recognisable by the same one
+   * while it is being picked.
+   */
+  icon?: LucideIcon;
 }
 
 interface SelectMenuProps {
@@ -69,7 +75,10 @@ export function SelectMenu({
           )}
         >
           <Select.Value placeholder={placeholder}>
-            {selected?.label ?? placeholder}
+            <span className="flex items-center gap-2 min-w-0">
+              {selected?.icon && <selected.icon className="w-4 h-4 shrink-0 text-primary" strokeWidth={2.5} />}
+              <span className="truncate">{selected?.label ?? placeholder}</span>
+            </span>
           </Select.Value>
           <Select.Icon asChild>
             <ChevronDown className="w-4 h-4 text-on-surface-meta transition-transform duration-200 group-data-[state=open]:rotate-180" />
@@ -98,6 +107,12 @@ export function SelectMenu({
                     'data-[state=checked]:text-on-surface data-[state=checked]:bg-primary/10',
                   )}
                 >
+                  {opt.icon && (
+                    <opt.icon
+                      className="w-4 h-4 shrink-0 mt-0.5 text-on-surface-meta"
+                      strokeWidth={2.5}
+                    />
+                  )}
                   <div className="flex-1 min-w-0">
                     <Select.ItemText asChild>
                       <span className="font-medium block">{opt.label}</span>

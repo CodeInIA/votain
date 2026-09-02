@@ -90,7 +90,10 @@
     "dashboard": "仪表板",
     "members": "成员",
     "gas": "Gas",
-    "verify": "验证投票"
+    "verify": "验证投票",
+    "role_voter": "投票人",
+    "role_organizer": "组织者",
+    "role_switch": "切换角色"
   },
   "phase": {
     "enrolling": "报名中",
@@ -173,7 +176,9 @@
     "verified_on_chain": "已在区块链上验证",
     "view_as_voter": "以选民身份查看",
     "view_as_organizer": "以组织者身份查看",
-    "turnout_detail": "{{total}} 位登记选民中已有 {{voted}} 位投票"
+    "turnout_detail": "{{total}} 位登记选民中已有 {{voted}} 位投票",
+    "witness_rule_other": "至少 {{count}} 票赞成即通过",
+    "voting_rule": "如何决出结果"
   },
   "how": {
     "title": "Votain 工作原理",
@@ -459,7 +464,19 @@
     "forget_passkey_title": "忘记此通行密钥？",
     "forget_passkey_desc": "这会在本设备上退出登录并忘记此处的通行密钥。通行密钥本身仍留在您的验证器中，您可以用它重新登录，选举的计票密钥也仍可由它派生。",
     "forget_passkey_confirm": "忘记",
-    "passkey_forgotten": "已在本设备上忘记通行密钥"
+    "passkey_forgotten": "已在本设备上忘记通行密钥",
+    "also_organizer_title": "也想创建选举吗？",
+    "also_organizer_desc": "用通行密钥以组织者身份登录，运行自己的选举。你的投票人会话保持不变，可在页首在两者之间切换。",
+    "also_organizer_cta": "以组织者身份登录",
+    "also_voter_title": "也想投票吗？",
+    "also_voter_desc": "用 World ID 注册为投票人，即可参加选举并投票。你的组织者会话保持不变，可在页首在两者之间切换。",
+    "also_voter_cta": "注册为投票人",
+    "sign_out_voter": "以投票人身份退出",
+    "sign_out_organizer": "以组织者身份退出",
+    "sign_out_both": "两者都退出",
+    "sign_out_voter_desc": "你的投票身份以及本设备上记录的投票会从此浏览器中删除。组织者会话不受影响。",
+    "sign_out_organizer_desc": "本设备记住的钱包和显示名称会被清除。解密你选举的密钥会保留，因此已公布的结果仍可读取。投票人会话不受影响。",
+    "sign_out_both_desc": "两个会话都会结束，并返回首页。"
   },
   "tx": {
     "title_pending": "交易进行中",

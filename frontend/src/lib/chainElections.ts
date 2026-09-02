@@ -250,6 +250,7 @@ export async function fetchElection(address: string): Promise<Election> {
     ipfsCid,
     eligibilityPolicy,
     votingType: VOTING_TYPE_MAP[Number(votingType)] ?? "simple_plurality",
+    thresholdValue: Number(thresholdValue),
     privacyQuorum: meta.privacyQuorum ?? (Number(thresholdValue) || 0),
     keyNonce: meta.keyNonce,
     isEnrolled,
