@@ -17,7 +17,7 @@
     "subtitle_2": "Tuyo.",
     "hero_desc": "Participa en procesos democráticos con absoluta privacidad. Votain utiliza pruebas criptográficas para garantizar que tu voto cuente sin revelar tu identidad.",
     "are_you_organizer": "¿Eres un organizador?",
-    "create_election_link": "Crear una elección"
+    "create_election_link": "Entrar como organizador"
   },
   "onboarding": {
     "language_title": "Selecciona tu idioma",
@@ -312,7 +312,17 @@
     "no_wallet_title": "No se detectó ninguna wallet",
     "no_wallet_desc": "Instala MetaMask (u otra wallet EVM) para firmar como organizador.",
     "no_authenticator": "Este dispositivo no tiene autenticador de passkeys",
-    "no_authenticator_help": "Configura un bloqueo de pantalla (PIN de Windows Hello, Touch ID o bloqueo de Android), o usa un móvil o llave de seguridad cuando se te pida."
+    "no_authenticator_help": "Configura un bloqueo de pantalla (PIN de Windows Hello, Touch ID o bloqueo de Android), o usa un móvil o llave de seguridad cuando se te pida.",
+    "title_back": "Bienvenido de nuevo",
+    "subtitle_back": "Entra con la passkey de este dispositivo",
+    "passkey_desc_back": "Tu cartera sigue vinculada. Solo se te pide cuando hay algo que firmar.",
+    "continue_passkey": "Continuar con la passkey",
+    "use_existing": "Ya tengo una passkey",
+    "create_first": "Crear mi primera passkey",
+    "which_one_help": "Elige la primera si organizas elecciones en otro dispositivo: tu passkey puede estar sincronizada o responder desde tu móvil. Crear una segunda dejaría los resultados de tus elecciones anteriores imposibles de descifrar.",
+    "no_passkey_found": "No se ofreció ninguna passkey",
+    "no_passkey_found_help": "Este dispositivo no encontró ninguna. Si tienes una en otro sitio, usa el mismo gestor de contraseñas o responde desde tu móvil. Si es tu primera vez, crea una.",
+    "enter_here": "Entra aquí"
   },
   "dashboard": {
     "title": "Panel de Organizador",
@@ -465,7 +475,7 @@
     "title": "Perfil",
     "display_name": "Nombre visible",
     "passkeys": "Passkeys",
-    "add_passkey": "Añadir passkey",
+    "add_passkey": "Añadir otra passkey",
     "add_passkey_pending": "Añadiendo passkey…",
     "last_used": "Último uso",
     "sign_out": "Cerrar sesión",
@@ -493,7 +503,9 @@
     "sign_out_both": "Cerrar ambas sesiones",
     "sign_out_voter_desc": "Se borran de este navegador tu identidad de voto y los votos registrados en este dispositivo. Tu sesión de organizador no se toca.",
     "sign_out_organizer_desc": "Se borran la cartera y el nombre guardados en este dispositivo. Las claves que descifran tus elecciones se conservan, así que los resultados publicados siguen siendo legibles. Tu sesión de votante no se toca.",
-    "sign_out_both_desc": "Se cierran las dos sesiones y vuelves a la pantalla de inicio."
+    "sign_out_both_desc": "Se cierran las dos sesiones y vuelves a la pantalla de inicio.",
+    "add_passkey_help": "Hazlo desde un dispositivo que ya funcione. La passkey nueva derivará las mismas claves que esta, así que podrá descifrar los resultados de todas tus elecciones. Añadirla después desde el dispositivo nuevo no es posible.",
+    "passkey_added": "Passkey añadida a tu cofre"
   },
   "tx": {
     "title_pending": "Transacción en progreso",

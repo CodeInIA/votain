@@ -14,13 +14,17 @@
  */
 import { isProbablyPrime } from "bigint-crypto-utils";
 import { PublicKey, PrivateKey } from "paillier-bigint";
+import type { Signer } from "ethers";
+
 import { derivePrfSecret } from "./passkeyPrf";
+import { getTallyMasterSecret, TALLY_PRF_SALT, VaultUnavailableError } from "./organizerVault";
 import { PAILLIER_KEY_BITS, type SerializedKeyPair } from "./paillier";
 
+// HKDF info for the per-election key stretch. NOT the PRF eval salt, which
+// lives in `organizerVault` beside the sealing that uses it: this one
+// labels the derivation, that one decides which secret the passkey yields.
 const TALLY_KEY_SALT = "votain:tally-key:v1";
-// PRF-eval salt for the organizer's tally master secret — independent from the
-// voter identity secret derived from the same passkey.
-const TALLY_PRF_SALT = new TextEncoder().encode(TALLY_KEY_SALT);
+
 // Miller-Rabin rounds. 40 gives a false-prime probability < 2^-80, the usual
 // margin for RSA/Paillier-sized primes.
 const MR_ROUNDS = 40;
@@ -189,7 +193,31 @@ export async function deriveKeysFromSecret(
  * null when the device has no PRF passkey (the caller must fall back to a random
  * keypair that is exported/stored, since nothing could be re-derived here).
  */
-export async function deriveElectionKeys(keyNonce: string): Promise<SerializedKeyPair | null> {
+export async function deriveElectionKeys(
+  keyNonce: string,
+  signer?: Signer,
+): Promise<SerializedKeyPair | null> {
+  // With a wallet in hand the secret comes from the on-chain vault, which is
+  // what makes a second passkey derive the SAME key instead of a new one. The
+  // first copy in that vault seals this very PRF output, so the two agree on
+  // the device that created the election and only diverge where the old path
+  // was wrong.
+  if (signer) {
+    try {
+      const master = await getTallyMasterSecret(signer);
+      return deriveKeysFromSecret(master, keyNonce, PAILLIER_KEY_BITS);
+    } catch (e) {
+      // A deployment without the vault contract is the only tolerated miss:
+      // fall through to the old derivation, which is what those elections were
+      // created with anyway. A locked vault is NOT tolerated, because deriving
+      // from the raw PRF there would hand back a key that decrypts nothing.
+      if (!(e instanceof VaultUnavailableError)) throw e;
+    }
+  }
+
+  // No wallet: the raw PRF output, as before. Reached only by callers that
+  // cannot sign, and identical to the vault answer on the passkey that seeded
+  // it.
   const secret = await derivePrfSecret(TALLY_PRF_SALT);
   if (!secret) return null;
   return deriveKeysFromSecret(secret, keyNonce, PAILLIER_KEY_BITS);

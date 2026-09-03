@@ -166,7 +166,7 @@ export async function createElection(
   }
 
   const keyNonce = newKeyNonce();
-  const derived = await deriveElectionKeys(keyNonce);
+  const derived = await deriveElectionKeys(keyNonce, signer);
   const keyDerivable = derived !== null;
   const paillierKeys = derived ?? (await generateElectionKeys());
 

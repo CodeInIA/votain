@@ -17,7 +17,7 @@
     "subtitle_2": "属于你。",
     "hero_desc": "在完全保护隐私的情况下参与民主进程。Votain 使用密码学证明确保您的投票计入结果，同时不会泄露您的身份。",
     "are_you_organizer": "您是组织者吗？",
-    "create_election_link": "创建选举"
+    "create_election_link": "以组织者身份登录"
   },
   "onboarding": {
     "language_title": "选择语言",
@@ -306,7 +306,17 @@
     "no_wallet_title": "未检测到钱包",
     "no_wallet_desc": "请安装 MetaMask（或其他 EVM 钱包）以组织者身份签名。",
     "no_authenticator": "此设备没有通行密钥验证器",
-    "no_authenticator_help": "请设置屏幕锁定（Windows Hello PIN、触控 ID 或 Android 锁屏），或在出现提示时使用手机或安全密钥。"
+    "no_authenticator_help": "请设置屏幕锁定（Windows Hello PIN、触控 ID 或 Android 锁屏），或在出现提示时使用手机或安全密钥。",
+    "title_back": "欢迎回来",
+    "subtitle_back": "使用本设备上的通行密钥登录",
+    "passkey_desc_back": "你的钱包保持关联，只有需要签名时才会调用。",
+    "continue_passkey": "使用通行密钥继续",
+    "use_existing": "我已经有通行密钥",
+    "create_first": "创建我的第一个通行密钥",
+    "which_one_help": "如果你在另一台设备上组织选举，请选第一项：你的通行密钥可能已同步，或可由手机应答。再创建一个会让你此前选举的结果无法解密。",
+    "no_passkey_found": "没有可用的通行密钥",
+    "no_passkey_found_help": "本设备没有找到。如果你在别处有，请使用同一个密码管理器，或用手机应答。如果是第一次，请创建一个。",
+    "enter_here": "在此登录"
   },
   "dashboard": {
     "title": "组织者仪表板",
@@ -455,7 +465,7 @@
     "title": "个人资料",
     "display_name": "显示名称",
     "passkeys": "Passkeys",
-    "add_passkey": "添加 Passkey",
+    "add_passkey": "添加另一个通行密钥",
     "add_passkey_pending": "正在添加 Passkey…",
     "last_used": "最后使用",
     "sign_out": "退出登录",
@@ -483,7 +493,9 @@
     "sign_out_both": "两者都退出",
     "sign_out_voter_desc": "你的投票身份以及本设备上记录的投票会从此浏览器中删除。组织者会话不受影响。",
     "sign_out_organizer_desc": "本设备记住的钱包和显示名称会被清除。解密你选举的密钥会保留，因此已公布的结果仍可读取。投票人会话不受影响。",
-    "sign_out_both_desc": "两个会话都会结束，并返回首页。"
+    "sign_out_both_desc": "两个会话都会结束，并返回首页。",
+    "add_passkey_help": "请在已经可用的设备上操作。新的通行密钥将导出与此设备相同的密钥，因此可以解密你创建过的所有选举结果。事后从新设备添加是做不到的。",
+    "passkey_added": "通行密钥已加入你的保险库"
   },
   "tx": {
     "title_pending": "交易进行中",

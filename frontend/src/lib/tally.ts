@@ -42,7 +42,7 @@ export async function resolveTallyKey(
 ): Promise<SerializedKeyPair | null> {
   const stored = loadElectionPrivateKey(address);
   if (stored) return stored;
-  return keyNonce ? deriveElectionKeys(keyNonce) : null;
+  return keyNonce ? deriveElectionKeys(keyNonce, signer) : null;
 }
 
 /**
@@ -89,7 +89,10 @@ export async function importTallyKey(address: string, fileText: string): Promise
  * Computes the tally without publishing it, so the organizer can see the result
  * (and whether the privacy quorum held) before committing it on-chain.
  */
-export async function computeTally(address: string): Promise<TallyResult> {
+// The signer is what reaches the organizer vault, and therefore what lets a
+// second passkey derive the same key as the first. Optional so a caller that
+// only wants the shape of a tally need not connect a wallet.
+export async function computeTally(address: string, signer?: Signer): Promise<TallyResult> {
   const election = getElection(address);
   const [numOptionsBn, pkJson, metadataJson] = await Promise.all([
     election.numOptions(),
@@ -107,7 +110,7 @@ export async function computeTally(address: string): Promise<TallyResult> {
   } catch { /* no metadata: treat as no quorum, no derivable key */ }
 
   // Imported/stored key first, else re-derive from the passkey (prompts).
-  const keys = await resolveTallyKey(address, keyNonce);
+  const keys = await resolveTallyKey(address, keyNonce, signer);
   if (!keys) throw new MissingTallyKeyError();
 
   const { publicKey, privateKey } = restoreKeyPair(keys);

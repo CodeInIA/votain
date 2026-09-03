@@ -17,7 +17,7 @@
     "subtitle_2": "당신의 것.",
     "hero_desc": "완전한 프라이버시로 민주적 과정에 참여하세요. Votain은 암호학적 증명을 사용하여 신원을 밝히지 않고도 투표가 집계되도록 합니다.",
     "are_you_organizer": "주최자이신가요?",
-    "create_election_link": "선거 만들기"
+    "create_election_link": "주최자로 로그인"
   },
   "onboarding": {
     "language_title": "언어 선택",
@@ -306,7 +306,17 @@
     "no_wallet_title": "지갑이 감지되지 않음",
     "no_wallet_desc": "주최자로 서명하려면 MetaMask(또는 다른 EVM 지갑)를 설치하세요.",
     "no_authenticator": "이 기기에 패스키 인증기가 없습니다",
-    "no_authenticator_help": "화면 잠금(Windows Hello PIN, Touch ID 또는 Android 화면 잠금)을 설정하거나, 요청 시 휴대폰 또는 보안 키를 사용하세요."
+    "no_authenticator_help": "화면 잠금(Windows Hello PIN, Touch ID 또는 Android 화면 잠금)을 설정하거나, 요청 시 휴대폰 또는 보안 키를 사용하세요.",
+    "title_back": "다시 오신 것을 환영합니다",
+    "subtitle_back": "이 기기의 패스키로 로그인하세요",
+    "passkey_desc_back": "지갑은 연결된 채로 있으며, 서명할 일이 있을 때만 호출됩니다.",
+    "continue_passkey": "패스키로 계속",
+    "use_existing": "이미 패스키가 있습니다",
+    "create_first": "첫 패스키 만들기",
+    "which_one_help": "다른 기기에서 선거를 운영한다면 첫 번째를 고르세요. 패스키는 동기화되어 있거나 휴대폰에서 응답할 수 있습니다. 두 번째를 만들면 이전 선거의 결과를 복호화할 수 없게 됩니다.",
+    "no_passkey_found": "제공된 패스키가 없습니다",
+    "no_passkey_found_help": "이 기기에서 찾지 못했습니다. 다른 곳에 있다면 같은 비밀번호 관리자를 쓰거나 휴대폰에서 응답하세요. 처음이라면 새로 만드세요.",
+    "enter_here": "여기서 로그인"
   },
   "dashboard": {
     "title": "주최자 대시보드",
@@ -455,7 +465,7 @@
     "title": "프로필",
     "display_name": "표시 이름",
     "passkeys": "Passkeys",
-    "add_passkey": "Passkey 추가",
+    "add_passkey": "패스키 추가",
     "add_passkey_pending": "Passkey 추가 중…",
     "last_used": "마지막 사용",
     "sign_out": "로그아웃",
@@ -483,7 +493,9 @@
     "sign_out_both": "둘 다 로그아웃",
     "sign_out_voter_desc": "투표 신원과 이 기기에 기록된 투표가 이 브라우저에서 삭제됩니다. 주최자 세션은 그대로 유지됩니다.",
     "sign_out_organizer_desc": "이 기기에 저장된 지갑과 표시 이름을 지웁니다. 선거를 복호화하는 키는 남으므로 공개된 결과는 계속 읽을 수 있습니다. 유권자 세션은 그대로 유지됩니다.",
-    "sign_out_both_desc": "두 세션이 모두 종료되고 홈 화면으로 돌아갑니다."
+    "sign_out_both_desc": "두 세션이 모두 종료되고 홈 화면으로 돌아갑니다.",
+    "add_passkey_help": "이미 작동하는 기기에서 하세요. 그러면 새 패스키가 이 기기와 같은 키를 도출하므로, 지금까지 만든 모든 선거의 결과를 복호화할 수 있습니다. 나중에 새 기기에서 추가하는 것은 불가능합니다.",
+    "passkey_added": "보관함에 패스키를 추가했습니다"
   },
   "tx": {
     "title_pending": "트랜잭션 진행 중",

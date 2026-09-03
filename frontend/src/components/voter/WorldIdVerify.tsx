@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, Loader2, ChevronLeft, X } from 'lucide-react';
@@ -137,6 +138,21 @@ export function WorldIdVerify({ onBack }: WorldIdVerifyProps) {
                 <><img src="/world-id-logo.svg" alt="World ID" className="w-5 h-5" />{t('verify.btn_verify')}</>
               )}
             </Button>
+            {/* The organizer's way in, from the screen everyone lands on.
+                The header's Log in button means "voter", which is right for
+                almost everyone who taps it, and left an organizer arriving from
+                Discover with no door at all: the only other one is a link on
+                the landing page. Subtle rather than a second button, because
+                two buttons of equal weight would claim two equal audiences. */}
+            <p className="mt-4 text-center text-xs text-on-surface-meta">
+              {t('landing.are_you_organizer')}{' '}
+              <Link
+                to="/organizer/auth"
+                className="text-primary-dim font-semibold underline underline-offset-4 hover:text-primary"
+              >
+                {t('org_auth.enter_here')}
+              </Link>
+            </p>
           </div>
         )}
       </motion.div>

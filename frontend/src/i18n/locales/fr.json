@@ -17,7 +17,7 @@
     "subtitle_2": "Le vôtre.",
     "hero_desc": "Participez aux processus démocratiques en toute confidentialité. Votain utilise des preuves cryptographiques pour garantir que votre vote compte sans révéler votre identité.",
     "are_you_organizer": "Êtes-vous un organisateur ?",
-    "create_election_link": "Créer une élection"
+    "create_election_link": "Se connecter comme organisateur"
   },
   "onboarding": {
     "language_title": "Choisissez votre langue",
@@ -312,7 +312,17 @@
     "no_wallet_title": "Aucun portefeuille détecté",
     "no_wallet_desc": "Installez MetaMask (ou un autre portefeuille EVM) pour signer en tant qu'organisateur.",
     "no_authenticator": "Aucun authentificateur de clé d’accès sur cet appareil",
-    "no_authenticator_help": "Configurez un verrouillage d’écran (code Windows Hello, Touch ID ou verrouillage Android), ou utilisez un téléphone ou une clé de sécurité lorsque cela vous est demandé."
+    "no_authenticator_help": "Configurez un verrouillage d’écran (code Windows Hello, Touch ID ou verrouillage Android), ou utilisez un téléphone ou une clé de sécurité lorsque cela vous est demandé.",
+    "title_back": "Bon retour",
+    "subtitle_back": "Connectez-vous avec la passkey de cet appareil",
+    "passkey_desc_back": "Votre portefeuille reste lié. Il n'est sollicité que lorsqu'il faut signer.",
+    "continue_passkey": "Continuer avec la passkey",
+    "use_existing": "J'ai déjà une passkey",
+    "create_first": "Créer ma première passkey",
+    "which_one_help": "Choisissez la première si vous organisez des élections sur un autre appareil : votre passkey peut être synchronisée ou répondre depuis votre téléphone. En créer une seconde rendrait les résultats de vos élections précédentes impossibles à déchiffrer.",
+    "no_passkey_found": "Aucune passkey proposée",
+    "no_passkey_found_help": "Cet appareil n'en a trouvé aucune. Si vous en avez une ailleurs, utilisez le même gestionnaire de mots de passe ou répondez depuis votre téléphone. Si c'est la première fois, créez-en une.",
+    "enter_here": "Connectez-vous ici"
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -465,7 +475,7 @@
     "title": "Profil",
     "display_name": "Nom affiché",
     "passkeys": "Passkeys",
-    "add_passkey": "Ajouter une passkey",
+    "add_passkey": "Ajouter une autre passkey",
     "add_passkey_pending": "Ajout de la passkey…",
     "last_used": "Dernière utilisation",
     "sign_out": "Se déconnecter",
@@ -493,7 +503,9 @@
     "sign_out_both": "Fermer les deux sessions",
     "sign_out_voter_desc": "Votre identité de vote et les votes enregistrés sur cet appareil sont supprimés de ce navigateur. Votre session d’organisateur reste intacte.",
     "sign_out_organizer_desc": "Le portefeuille et le nom mémorisés sur cet appareil sont effacés. Les clés qui déchiffrent vos élections sont conservées, donc les résultats publiés restent lisibles. Votre session d’électeur reste intacte.",
-    "sign_out_both_desc": "Les deux sessions se terminent et vous revenez à l'écran d'accueil."
+    "sign_out_both_desc": "Les deux sessions se terminent et vous revenez à l'écran d'accueil.",
+    "add_passkey_help": "Faites-le depuis un appareil qui fonctionne déjà. La nouvelle passkey dérivera les mêmes clés que celle-ci et pourra déchiffrer les résultats de toutes vos élections. L'ajouter ensuite depuis le nouvel appareil est impossible.",
+    "passkey_added": "Passkey ajoutée à votre coffre"
   },
   "tx": {
     "title_pending": "Transaction en cours",

@@ -17,7 +17,7 @@
     "subtitle_2": "Deins.",
     "hero_desc": "Nehmen Sie an demokratischen Prozessen mit vollständiger Privatsphäre teil. Votain verwendet kryptografische Beweise, um sicherzustellen, dass Ihre Stimme zählt, ohne Ihre Identität zu offenbaren.",
     "are_you_organizer": "Sind Sie ein Organisator?",
-    "create_election_link": "Eine Wahl erstellen"
+    "create_election_link": "Als Veranstalter anmelden"
   },
   "onboarding": {
     "language_title": "Sprache wählen",
@@ -309,7 +309,17 @@
     "no_wallet_title": "Keine Wallet erkannt",
     "no_wallet_desc": "Installieren Sie MetaMask (oder eine andere EVM-Wallet), um als Organisator zu signieren.",
     "no_authenticator": "Kein Passkey-Authentifikator auf diesem Gerät",
-    "no_authenticator_help": "Richten Sie eine Bildschirmsperre ein (Windows Hello PIN, Touch ID oder Android-Sperre), oder verwenden Sie auf Aufforderung ein Telefon oder einen Sicherheitsschlüssel."
+    "no_authenticator_help": "Richten Sie eine Bildschirmsperre ein (Windows Hello PIN, Touch ID oder Android-Sperre), oder verwenden Sie auf Aufforderung ein Telefon oder einen Sicherheitsschlüssel.",
+    "title_back": "Willkommen zurück",
+    "subtitle_back": "Melden Sie sich mit dem Passkey dieses Geräts an",
+    "passkey_desc_back": "Ihre Wallet bleibt verknüpft und wird nur geholt, wenn etwas signiert werden muss.",
+    "continue_passkey": "Mit Passkey fortfahren",
+    "use_existing": "Ich habe bereits einen Passkey",
+    "create_first": "Meinen ersten Passkey erstellen",
+    "which_one_help": "Wählen Sie das Erste, wenn Sie Wahlen auf einem anderen Gerät organisieren: Ihr Passkey kann synchronisiert sein oder von Ihrem Telefon antworten. Ein zweiter würde die Ergebnisse Ihrer früheren Wahlen unentschlüsselbar machen.",
+    "no_passkey_found": "Kein Passkey angeboten",
+    "no_passkey_found_help": "Dieses Gerät hat keinen gefunden. Falls Sie anderswo einen haben, nutzen Sie denselben Passwortmanager oder antworten Sie vom Telefon. Ist es das erste Mal, erstellen Sie einen.",
+    "enter_here": "Hier anmelden"
   },
   "dashboard": {
     "title": "Organisator-Dashboard",
@@ -460,7 +470,7 @@
     "title": "Profil",
     "display_name": "Anzeigename",
     "passkeys": "Passkeys",
-    "add_passkey": "Passkey hinzufügen",
+    "add_passkey": "Weiteren Passkey hinzufügen",
     "add_passkey_pending": "Passkey wird hinzugefügt…",
     "last_used": "Zuletzt verwendet",
     "sign_out": "Abmelden",
@@ -488,7 +498,9 @@
     "sign_out_both": "Von beiden abmelden",
     "sign_out_voter_desc": "Ihre Wahlidentität und die auf diesem Gerät erfassten Stimmen werden aus diesem Browser gelöscht. Ihre Veranstaltersitzung bleibt unberührt.",
     "sign_out_organizer_desc": "Die auf diesem Gerät gemerkte Wallet und der Anzeigename werden gelöscht. Die Schlüssel, die Ihre Wahlen entschlüsseln, bleiben erhalten, veröffentlichte Ergebnisse bleiben also lesbar. Ihre Wählersitzung bleibt unberührt.",
-    "sign_out_both_desc": "Beide Sitzungen enden und Sie kehren zur Startseite zurück."
+    "sign_out_both_desc": "Beide Sitzungen enden und Sie kehren zur Startseite zurück.",
+    "add_passkey_help": "Tun Sie das auf einem Gerät, das bereits funktioniert. Der neue Passkey leitet dann dieselben Schlüssel ab wie dieser und kann die Ergebnisse all Ihrer Wahlen entschlüsseln. Ihn später vom neuen Gerät aus hinzuzufügen, ist nicht möglich.",
+    "passkey_added": "Passkey zu Ihrem Tresor hinzugefügt"
   },
   "tx": {
     "title_pending": "Transaktion läuft",

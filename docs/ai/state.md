@@ -1674,6 +1674,60 @@ signing out of the organizer left the voter cookie and nullifier untouched and
 landed on the voter's elections, and the witness threshold filter narrowed 26
 elections to exactly the 3 on chain.
 
+## The organizer login forked identities in silence (2026-09-03)
+
+Asked how the organizer login could be improved, and the answer turned out not
+to be about the login screen.
+
+`authenticatePasskey` decided from `votain_prf_cred_id` in localStorage: no id,
+register a new passkey. That id is a per-browser cache and never meant "new
+organizer". A returning organizer on a second browser was handed a fresh
+credential without being asked, their elections still appeared because those
+belong to the wallet, and the damage surfaced only at the tally: the Paillier
+key of every election they had created is derived from the OLD passkey's PRF
+output.
+
+`derivePrfSecret` had already solved exactly this, asking the authenticator with
+an empty `allowCredentials` before minting, with a comment naming the risk. The
+login path never got the same treatment. Two paths, one rule, and only one of
+them followed it.
+
+The fix has three parts and one of them is not a fix at all:
+
+- **Ask instead of guessing.** `PasskeyIntent` splits "existing", which asks the
+  authenticator and reaches a synced passkey or a phone answering by QR, from
+  "first", which mints one. The screen puts the question to the person, because
+  the wrong guess is unrecoverable and the right one costs a tap.
+- **Say which visit this is.** The screen showed two steps and an ambiguous
+  sentence to everybody, though `hasPrfCredential()` and
+  `getRememberedOrganizerAddress()` were both already in the file. They answer
+  different questions and are used for different things: the passkey cache
+  decides the buttons, the remembered wallet decides the greeting, since the
+  voter passkey shares the same cache.
+- **Give the door a place to be.** The header's Log in means voter, so an
+  organizer arriving from Discover had no entry point at all. It sits under the
+  primary button on the sign in screen now, subtle rather than a second button:
+  two buttons of equal weight would claim two equal audiences, and they are not.
+
+### And the part that was never a login problem
+
+Even with a perfect login, a second passkey still derived a second key, because
+the key comes from the PRF output itself. `OrganizerVault` ends that: one sealed
+copy of a tally master secret per passkey, keyed by the wallet, ownerless and
+self-service like `OrganizerDomains`.
+
+The migration is the part worth recording. The first copy seals the PRF output
+of the passkey ALREADY IN USE, so the master secret is what that organizer has
+always derived from, every existing election keeps the key it had, and there is
+no version flag to get wrong. `getTallyMasterSecret` refuses when no passkey on
+the device can open the vault rather than falling back to the raw PRF, since
+that fallback is precisely the silent fork being removed.
+
+What it does not solve, and cannot: a brand new passkey has to be enrolled from
+a device that can already open the vault, because sealing needs the plaintext.
+The voter side has the same shape and the same limit. The profile says so where
+the button is.
+
 ## Next: Phase C, Decentralized deployments
 ### H10: Frontend on IPFS via Fleek CD
 ### H11: Backend on Phala TEE

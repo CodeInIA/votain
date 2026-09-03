@@ -63,6 +63,15 @@ async function main() {
   await domains.waitForDeployment();
   console.log("OrganizerDomains:", await domains.getAddress());
 
+  // Also ownerless, and for a related reason: the wallet that owns an
+  // organizer's elections is the right key for their sealed tally secret, so
+  // there is nobody to ask permission from. Without it a second passkey means
+  // a second tally key, and results that no longer decrypt.
+  const Vault = await ethers.getContractFactory("OrganizerVault");
+  const organizerVault = await Vault.deploy();
+  await organizerVault.waitForDeployment();
+  console.log("OrganizerVault:", await organizerVault.getAddress());
+
   const Paymaster = await ethers.getContractFactory("ElectionPaymaster");
   const paymaster = await Paymaster.deploy();
   await paymaster.waitForDeployment();
@@ -115,6 +124,7 @@ async function main() {
     contracts: {
       PlatformRegistry: await registry.getAddress(),
       OrganizerDomains: await domains.getAddress(),
+      OrganizerVault: await organizerVault.getAddress(),
       ElectionPaymaster: await paymaster.getAddress(),
       [verifierName]: await verifier.getAddress(),
       ElectionFactory: await factory.getAddress(),

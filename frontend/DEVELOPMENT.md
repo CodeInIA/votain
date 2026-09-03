@@ -1104,6 +1104,67 @@ derives to. A backup that opens but yields a different identity belongs to
 another voter or was edited, and enrolling with it would fail much later with an
 error pointing nowhere near the cause.
 
+## The organizer login, and the second device it used to break
+
+Four problems, one of them not a login problem at all.
+
+**A silently forked identity.** `authenticatePasskey` decided what to do from
+`votain_prf_cred_id` in localStorage: no id, register a new passkey. That id is
+a per-browser cache, not an account, so a returning organizer on a second
+browser was handed a brand new credential without being asked. Their elections
+still appeared, because those belong to the WALLET, and the damage showed up
+only at the tally: a new credential is a new PRF output, and the Paillier key
+of every election they had already created is derived from the old one.
+
+`derivePrfSecret` had solved this months earlier, asking the authenticator with
+an empty `allowCredentials` before minting anything. The login path never got
+the same treatment. It does now, through `PasskeyIntent`: "existing" asks the
+authenticator, which is what reaches a synced passkey or one answering by QR
+from a phone, and "first" mints one. The screen asks rather than guessing,
+because the wrong guess is unrecoverable and the right one costs a tap.
+
+**A screen that could not tell a first visit from a return.** It always showed
+two steps and always said "create or use an existing passkey", though the code
+already knew: `hasPrfCredential()` says whether this browser can assert
+straight away, and `getRememberedOrganizerAddress()` says whether the wallet is
+linked. The first decides the buttons, the second decides the greeting, and
+they are deliberately different questions: the voter passkey shares the same
+cache, so greeting on it alone would welcome back somebody who has only voted.
+
+**No door except the landing page.** The header's Log in means voter, which is
+right for almost everyone who taps it, and left an organizer arriving from
+Discover with nowhere to go. The organizer entry now sits on the sign in screen
+itself, under the primary button: subtle rather than a second button of equal
+weight, which would claim two equal audiences. The landing link stopped saying
+"Create an election", a task, and says "Sign in as an organizer", a door.
+
+## The organizer's tally vault
+
+The deepest of the four, and the reason the others were only half fixes: even
+with a perfect login, a SECOND passkey still derived a second key.
+
+`OrganizerVault` is the answer, and it is the voter's identity vault with a
+different key: one sealed copy of a tally master secret per passkey, keyed by
+the wallet, ownerless and self-service like `OrganizerDomains`, since the wallet
+already owns the organizer's elections and needs nobody to vouch for it.
+
+- **Existing elections keep their keys.** The first copy seals the PRF output of
+  the passkey already in use, so the master secret IS what that organizer has
+  always derived from. No version flag, no migration step, nothing to get wrong.
+- **`getTallyMasterSecret` refuses rather than inventing.** A passkey with no
+  copy that cannot reach one throws `VaultLockedError`. Deriving from its raw
+  PRF output would hand back a key that decrypts nothing, which is the failure
+  this whole change exists to remove.
+- **`deriveElectionKeys(nonce, signer)`** takes the vault path when a wallet is
+  present and falls back to the raw PRF only for a deployment with no vault
+  contract, which is what those elections were created with anyway.
+- **Adding a passkey happens on a device that already works**, from the
+  organizer profile, because sealing needs the plaintext. Enrolling from the new
+  machine is the case a sealed vault cannot serve, in either direction, and the
+  copy says so.
+- **The contract refuses to remove the last copy.** That loss is permanent and
+  no later action undoes it, so it is a rule rather than a confirmation dialog.
+
 ## Organizer domains are claimed by the organizer
 
 `fetchOrganizerDomains` now reads the claim list from `OrganizerDomains` on

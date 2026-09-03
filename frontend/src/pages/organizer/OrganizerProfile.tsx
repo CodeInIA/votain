@@ -15,6 +15,7 @@ import { useToast } from '../../components/ui/useToast';
 import { useAuth } from '../../contexts/AuthContext';
 import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
 import { MyDomains } from '../../components/organizer/MyDomains';
+import { addPasskeyToVault } from '../../lib/organizerVault';
 import { getPasskeyInfo, clearPrfCredential } from '../../lib/passkeyPrf';
 import { getOrganizerName, setOrganizerName } from '../../lib/organizer';
 
@@ -31,6 +32,7 @@ export default function OrganizerProfile() {
   // The single passkey actually registered on this device (null if none).
   const [passkey, setPasskey] = useState(() => getPasskeyInfo());
   const [deleteModal, setDeleteModal] = useState(false);
+  const [addingPasskey, setAddingPasskey] = useState(false);
 
   const saveName = () => {
     const next = nameInput.trim() || displayName;
@@ -48,6 +50,31 @@ export default function OrganizerProfile() {
    * authenticator for an existing credential before minting a new one, which is
    * what makes coming back from here safe.
    */
+  /**
+   * Seals the tally master secret under a second passkey.
+   *
+   * The wallet signs the vault write, and the prompt that follows is the new
+   * authenticator being created: a phone over QR, a security key, or another
+   * profile in the same password manager. Afterwards that passkey derives the
+   * same Paillier keys this one does, which is the whole point.
+   */
+  const handleAddPasskey = async () => {
+    setAddingPasskey(true);
+    try {
+      if (wallet.wrongNetwork) await wallet.switchToAmoy();
+      await addPasskeyToVault(await wallet.getSigner());
+      toast({ title: t('profile.passkey_added'), variant: 'success' });
+    } catch (e) {
+      toast({
+        title: t('errors.generic_title'),
+        description: e instanceof Error ? e.message : String(e),
+        variant: 'error',
+      });
+    } finally {
+      setAddingPasskey(false);
+    }
+  };
+
   const forgetPasskey = () => {
     clearPrfCredential();
     setPasskey(null);
@@ -136,6 +163,25 @@ export default function OrganizerProfile() {
           ) : (
             <p className="text-sm text-on-surface-meta">{t('profile.no_passkey')}</p>
           )}
+
+          {/* Adding the second one has to happen HERE, on a device that can
+              already open the vault, because sealing the master secret under a
+              new passkey needs the plaintext. Enrolling from the new machine
+              instead is the case the vault cannot serve, and the reason the
+              login screen asks whether a passkey already exists rather than
+              minting one. */}
+          <Button
+            variant="default"
+            className="w-full rounded-full mt-3 gap-2"
+            disabled={addingPasskey}
+            onClick={() => void handleAddPasskey()}
+          >
+            <KeyRound className="w-4 h-4" />
+            {t('profile.add_passkey')}
+          </Button>
+          <p className="text-xs text-on-surface-meta mt-2 leading-relaxed">
+            {t('profile.add_passkey_help')}
+          </p>
         </Card>
 
         {/* Linked wallet, used only to sign transactions */}

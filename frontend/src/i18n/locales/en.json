@@ -17,7 +17,7 @@
     "subtitle_2": "Yours.",
     "hero_desc": "Participate in democratic processes with full privacy. Votain uses cryptographic proofs to ensure your vote counts without revealing your identity.",
     "are_you_organizer": "Are you an organizer?",
-    "create_election_link": "Create an election"
+    "create_election_link": "Sign in as an organizer"
   },
   "onboarding": {
     "language_title": "Select your language",
@@ -309,7 +309,17 @@
     "no_wallet_title": "No wallet detected",
     "no_wallet_desc": "Install MetaMask (or another EVM wallet) to sign as an organizer.",
     "no_authenticator": "No passkey authenticator on this device",
-    "no_authenticator_help": "Set up a screen lock (Windows Hello PIN, Touch ID, or Android screen lock), or use a phone or security key when prompted."
+    "no_authenticator_help": "Set up a screen lock (Windows Hello PIN, Touch ID, or Android screen lock), or use a phone or security key when prompted.",
+    "title_back": "Welcome back",
+    "subtitle_back": "Sign in with the passkey on this device",
+    "passkey_desc_back": "Your wallet stays linked. It is only summoned when something has to be signed.",
+    "continue_passkey": "Continue with passkey",
+    "use_existing": "I already have a passkey",
+    "create_first": "Create my first passkey",
+    "which_one_help": "Choose the first if you organise elections on another device: your passkey may be synced, or answer from your phone. Creating a second one would leave the results of your earlier elections impossible to decrypt.",
+    "no_passkey_found": "No passkey was offered",
+    "no_passkey_found_help": "This device found none. If you have one elsewhere, use the same password manager or answer from your phone. If this is your first time, create one.",
+    "enter_here": "Sign in here"
   },
   "dashboard": {
     "title": "Organizer Dashboard",
@@ -460,7 +470,7 @@
     "title": "Profile",
     "display_name": "Display name",
     "passkeys": "Passkeys",
-    "add_passkey": "Add passkey",
+    "add_passkey": "Add another passkey",
     "add_passkey_pending": "Adding passkey…",
     "last_used": "Last used",
     "sign_out": "Sign out",
@@ -488,7 +498,9 @@
     "sign_out_both": "Sign out of both",
     "sign_out_voter_desc": "Your voting identity and the votes recorded on this device are deleted from this browser. Your organizer session is untouched.",
     "sign_out_organizer_desc": "The wallet and display name remembered on this device are cleared. The keys that decrypt your elections stay, so published results remain readable. Your voter session is untouched.",
-    "sign_out_both_desc": "Both sessions end and you return to the home screen."
+    "sign_out_both_desc": "Both sessions end and you return to the home screen.",
+    "add_passkey_help": "Do it from a device that already works. The new passkey then derives the same keys as this one, so it can decrypt the results of every election you have created. Adding one later from the new device is not possible.",
+    "passkey_added": "Passkey added to your vault"
   },
   "tx": {
     "title_pending": "Transaction in progress",

@@ -17,7 +17,7 @@
     "subtitle_2": "あなたのもの。",
     "hero_desc": "完全なプライバシーで民主的プロセスに参加しましょう。Votainは暗号証明を使用して、あなたの身元を明かすことなく投票が確実に集計されるようにします。",
     "are_you_organizer": "あなたは主催者ですか？",
-    "create_election_link": "選挙を作成"
+    "create_election_link": "主催者としてサインイン"
   },
   "onboarding": {
     "language_title": "言語を選択",
@@ -306,7 +306,17 @@
     "no_wallet_title": "ウォレットが検出されません",
     "no_wallet_desc": "主催者として署名するには MetaMask（または他の EVM ウォレット）をインストールしてください。",
     "no_authenticator": "このデバイスにはパスキー認証器がありません",
-    "no_authenticator_help": "画面ロック（Windows Hello の PIN、Touch ID、Android の画面ロック）を設定するか、求められたときにスマートフォンやセキュリティキーを使用してください。"
+    "no_authenticator_help": "画面ロック（Windows Hello の PIN、Touch ID、Android の画面ロック）を設定するか、求められたときにスマートフォンやセキュリティキーを使用してください。",
+    "title_back": "おかえりなさい",
+    "subtitle_back": "この端末のパスキーでサインイン",
+    "passkey_desc_back": "ウォレットは紐づいたままで、署名が必要なときだけ呼び出します。",
+    "continue_passkey": "パスキーで続ける",
+    "use_existing": "すでにパスキーがあります",
+    "create_first": "最初のパスキーを作成",
+    "which_one_help": "別の端末で選挙を運営しているなら上を選んでください。パスキーは同期されていることも、スマートフォンから応答することもあります。二つ目を作ると、以前の選挙の結果は復号できなくなります。",
+    "no_passkey_found": "パスキーが提示されませんでした",
+    "no_passkey_found_help": "この端末では見つかりませんでした。ほかにお持ちなら同じパスワードマネージャーを使うか、スマートフォンから応答してください。初めてなら作成してください。",
+    "enter_here": "こちらからサインイン"
   },
   "dashboard": {
     "title": "主催者ダッシュボード",
@@ -455,7 +465,7 @@
     "title": "プロフィール",
     "display_name": "表示名",
     "passkeys": "Passkeys",
-    "add_passkey": "Passskeyを追加",
+    "add_passkey": "パスキーを追加",
     "add_passkey_pending": "Passkey追加中…",
     "last_used": "最終使用",
     "sign_out": "サインアウト",
@@ -483,7 +493,9 @@
     "sign_out_both": "両方からサインアウト",
     "sign_out_voter_desc": "投票用の識別情報と、この端末に記録された投票がこのブラウザーから削除されます。主催者としてのセッションはそのままです。",
     "sign_out_organizer_desc": "この端末に記憶されたウォレットと表示名を消去します。選挙を復号する鍵は残るため、公開済みの結果は引き続き読めます。投票者としてのセッションはそのままです。",
-    "sign_out_both_desc": "両方のセッションが終了し、ホーム画面に戻ります。"
+    "sign_out_both_desc": "両方のセッションが終了し、ホーム画面に戻ります。",
+    "add_passkey_help": "すでに使えている端末から行ってください。追加したパスキーはこの端末と同じ鍵を導くので、これまでに作成したすべての選挙の結果を復号できます。あとから新しい端末側で追加することはできません。",
+    "passkey_added": "金庫にパスキーを追加しました"
   },
   "tx": {
     "title_pending": "トランザクション処理中",

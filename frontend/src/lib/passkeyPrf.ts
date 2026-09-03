@@ -73,6 +73,21 @@ export class NoAuthenticatorError extends Error {
  * holds one that is registered for this voter. Not a failure: the device is
  * already able to vote, and the caller should say so rather than report an error.
  */
+/** What a missing local credential id should be taken to mean. */
+export type PasskeyIntent = "existing" | "first";
+
+/**
+ * Thrown when the authenticator offered nothing and the person had said they
+ * already had a passkey. Distinct from a cancellation: the caller can offer to
+ * create one instead of repeating the same prompt.
+ */
+export class NoPasskeyFoundError extends Error {
+  constructor() {
+    super("No passkey was available on this device");
+    this.name = "NoPasskeyFoundError";
+  }
+}
+
 export class PasskeyAlreadyRegisteredError extends Error {
   constructor() {
     super("This device already has a passkey registered for your identity.");
@@ -396,12 +411,24 @@ export async function derivePrfSecret(salt: Uint8Array = IDENTITY_SALT): Promise
 }
 
 /**
- * Real passkey authentication gate: registers a credential the first time and
- * asserts it (biometric / PIN prompt) on every subsequent login. Throws with a
- * descriptive message when WebAuthn is unavailable or the user cancels: the
- * caller must NOT let the user through in that case.
+ * Real passkey authentication gate: asserts an existing credential (biometric /
+ * PIN prompt) and registers one only when the person says they have none.
+ * Throws with a descriptive message when WebAuthn is unavailable or the user
+ * cancels: the caller must NOT let the user through in that case.
+ *
+ * `intent` is what a missing local credential id means, because it does not
+ * mean a missing passkey: it is only THIS browser's cache. An organizer on a
+ * second browser, or one who cleared site data, still holds their credential in
+ * the authenticator or synced through their password manager.
+ *
+ * Getting that wrong is not a login annoyance. The organizer's Paillier tally
+ * keys are re-derived from the passkey's PRF output and stored nowhere, so a
+ * silently minted second credential is a different key for every election they
+ * ever created, discovered only when a result refuses to decrypt.
+ * `derivePrfSecret` already asks the authenticator before minting; this is the
+ * same rule on the login path, which is where the fork actually started.
  */
-export async function authenticatePasskey(): Promise<void> {
+export async function authenticatePasskey(intent: PasskeyIntent = "existing"): Promise<void> {
   if (!isWebAuthnAvailable()) {
     throw new Error("This browser does not support passkeys (WebAuthn)");
   }
@@ -409,8 +436,17 @@ export async function authenticatePasskey(): Promise<void> {
 
   const credId = localStorage.getItem(CRED_ID_KEY);
 
+  // Nothing cached: ask the authenticator what it has, unless the person has
+  // explicitly said this is their first passkey. The empty allowCredentials
+  // list is what reaches a synced passkey, and, over WebAuthn's hybrid
+  // transport, one that lives on their phone and answers by QR.
+  if (!credId && intent === "existing") {
+    const recovered = await assertPrf();
+    if (recovered) return;
+    throw new NoPasskeyFoundError();
+  }
+
   if (!credId) {
-    // First login on this device: create the passkey (prompts the authenticator).
     try {
       const { registered } = await registerCredential();
       if (!registered) throw new Error("Passkey registration was cancelled");
@@ -423,7 +459,7 @@ export async function authenticatePasskey(): Promise<void> {
     return; // registration already proved user presence
   }
 
-  // Subsequent logins: assert the existing credential.
+  // Cached id: assert that exact credential, which keeps the prompt narrow.
   let assertion: PublicKeyCredential | null;
   try {
     assertion = (await navigator.credentials.get({
@@ -440,7 +476,7 @@ export async function authenticatePasskey(): Promise<void> {
       throw new Error("Passkey authentication was cancelled", { cause: e });
     }
     // The stored credential may no longer exist on this authenticator (e.g. the
-    // user deleted it). Drop it so the next attempt registers a fresh one.
+    // user deleted it). Drop it so the next attempt can discover another.
     clearPrfCredential();
     throw new Error(`Passkey unavailable, please try again, ${describe(e)}`, { cause: e });
   }

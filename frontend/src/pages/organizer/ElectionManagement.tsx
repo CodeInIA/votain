@@ -124,7 +124,7 @@ export default function ElectionManagement() {
     setBusy(true);
     setTallyError(null);
     try {
-      setTallyPreview(await computeTally(election.contractAddress));
+      setTallyPreview(await computeTally(election.contractAddress, await wallet.getSigner()));
     } catch (e) {
       setTallyError(
         e instanceof MissingTallyKeyError
@@ -143,7 +143,11 @@ export default function ElectionManagement() {
     setBusy(true);
     setTallyError(null);
     try {
-      const keys = await resolveTallyKey(election.contractAddress, election.keyNonce);
+      const keys = await resolveTallyKey(
+        election.contractAddress,
+        election.keyNonce,
+        await wallet.getSigner(),
+      );
       if (!keys) { setTallyError(t('election_mgmt.tally_key_missing')); return; }
       const blob = new Blob([JSON.stringify(keys, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);

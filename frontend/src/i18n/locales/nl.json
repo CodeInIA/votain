@@ -17,7 +17,7 @@
     "subtitle_2": "Van jou.",
     "hero_desc": "Neem deel aan democratische processen met volledige privacy. Votain gebruikt cryptografische bewijzen om te garanderen dat jouw stem telt zonder jouw identiteit te onthullen.",
     "are_you_organizer": "Ben je een organisator?",
-    "create_election_link": "Een verkiezing aanmaken"
+    "create_election_link": "Aanmelden als organisator"
   },
   "onboarding": {
     "language_title": "Kies je taal",
@@ -309,7 +309,17 @@
     "no_wallet_title": "Geen wallet gedetecteerd",
     "no_wallet_desc": "Installeer MetaMask (of een andere EVM-wallet) om als organisator te ondertekenen.",
     "no_authenticator": "Geen passkey-authenticator op dit apparaat",
-    "no_authenticator_help": "Stel een schermvergrendeling in (Windows Hello-pincode, Touch ID of Android-vergrendeling), of gebruik een telefoon of beveiligingssleutel wanneer daarom wordt gevraagd."
+    "no_authenticator_help": "Stel een schermvergrendeling in (Windows Hello-pincode, Touch ID of Android-vergrendeling), of gebruik een telefoon of beveiligingssleutel wanneer daarom wordt gevraagd.",
+    "title_back": "Welkom terug",
+    "subtitle_back": "Meld je aan met de passkey op dit apparaat",
+    "passkey_desc_back": "Je wallet blijft gekoppeld en wordt alleen opgeroepen als er iets ondertekend moet worden.",
+    "continue_passkey": "Doorgaan met passkey",
+    "use_existing": "Ik heb al een passkey",
+    "create_first": "Mijn eerste passkey aanmaken",
+    "which_one_help": "Kies de eerste als je op een ander apparaat verkiezingen organiseert: je passkey kan gesynchroniseerd zijn of vanaf je telefoon antwoorden. Een tweede aanmaken zou de uitslagen van je eerdere verkiezingen onontcijferbaar maken.",
+    "no_passkey_found": "Geen passkey aangeboden",
+    "no_passkey_found_help": "Dit apparaat vond er geen. Heb je er elders een, gebruik dan dezelfde wachtwoordmanager of antwoord vanaf je telefoon. Is dit de eerste keer, maak er dan een aan.",
+    "enter_here": "Meld je hier aan"
   },
   "dashboard": {
     "title": "Organisatordashboard",
@@ -460,7 +470,7 @@
     "title": "Profiel",
     "display_name": "Weergavenaam",
     "passkeys": "Passkeys",
-    "add_passkey": "Passkey toevoegen",
+    "add_passkey": "Nog een passkey toevoegen",
     "add_passkey_pending": "Passkey toevoegen…",
     "last_used": "Laatste gebruik",
     "sign_out": "Uitloggen",
@@ -488,7 +498,9 @@
     "sign_out_both": "Van beide afmelden",
     "sign_out_voter_desc": "Je stemidentiteit en de op dit apparaat vastgelegde stemmen worden uit deze browser verwijderd. Je organisatorsessie blijft ongemoeid.",
     "sign_out_organizer_desc": "De op dit apparaat onthouden wallet en weergavenaam worden gewist. De sleutels die je verkiezingen ontsleutelen blijven staan, dus gepubliceerde uitslagen blijven leesbaar. Je kiezerssessie blijft ongemoeid.",
-    "sign_out_both_desc": "Beide sessies eindigen en je keert terug naar het startscherm."
+    "sign_out_both_desc": "Beide sessies eindigen en je keert terug naar het startscherm.",
+    "add_passkey_help": "Doe dit vanaf een apparaat dat al werkt. De nieuwe passkey leidt dan dezelfde sleutels af als deze en kan de uitslagen van al je verkiezingen ontsleutelen. Hem later vanaf het nieuwe apparaat toevoegen kan niet.",
+    "passkey_added": "Passkey toegevoegd aan je kluis"
   },
   "tx": {
     "title_pending": "Transactie bezig",
