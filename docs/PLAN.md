@@ -101,6 +101,14 @@ Default in the Create Election wizard: `SIMPLE_PLURALITY` (most common globally)
 
 ### Identity and selective disclosure sources (decision 2026-05-25, revised 2026-08-26)
 
+**Age is a floor, never a range.** Self proves `minimumAge` as a one-sided
+predicate and returns the threshold it proved, never the age, which is what keeps
+the birth date on the phone. Self Enterprise documents a maximum-age rule for
+backend mode without naming its field, and reaching it would mean migrating off
+the open-source SDK to dashboard-managed immutable flows. Recorded in
+`docs/ai/state.md` as future work; the alternative, revealing the date of birth,
+is refused.
+
 For elections that require attribute verification (age, nationality), Votain
 delegates to an external provider instead of building the document-reading and
 ZK-proof pipeline from scratch. Reading a passport chip end to end means MRZ OCR

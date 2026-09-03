@@ -1732,6 +1732,43 @@ the button is.
 ### H10: Frontend on IPFS via Fleek CD
 ### H11: Backend on Phala TEE
 
+## Future work: an age range, and why an election only has a floor
+
+An election can require a minimum age and not a maximum, so a youth council or a
+seniors' committee cannot be gated by the rule that defines it. The reason is
+what the proof carries, not the wizard.
+
+Self's age check is a one-sided predicate. The circuit echoes back the THRESHOLD
+it proved, never the holder's age, which is exactly what keeps the birth date on
+the phone; `self.ts` says so where it reads `minimumAge` / `olderThan` back. An
+upper bound is a second, different predicate, and it cannot be derived from a
+lower-bound answer.
+
+Self Enterprise does have one. Its verification-modes table lists supported
+rules as "All rules" for backend mode and "All rules except maximum age" for
+on-chain, and the on-chain limits page repeats that a flow with a maximum-age
+rule cannot be deployed on chain. Votain verifies in backend mode, which is the
+mode that supports it.
+
+Two things put it out of reach anyway:
+
+- **No documented field.** Neither the flow rule schema (`minimumAge`,
+  `excludedCountries`, `includedCountries`, `ofac`) nor the Pre-KYC, Age
+  Verification or Custom Config rule tables mention a maximum. Two pages assert
+  the rule exists and none names it, so there is nothing to implement against.
+- **It is Enterprise.** This project integrates `@selfxyz/core`, the open-source
+  SDK, whose disclosure config documents only `minimumAge`, `excludedCountries`
+  and `ofac`. Reaching Enterprise means dashboard-managed flows, `flowId`, API
+  keys, webhooks and credits, and those flows are immutable once deployed, while
+  `self.ts` builds a disclosure config per election at run time. A per-election
+  age range would mean one deployed flow per distinct policy.
+
+The refused alternative, for the record: request the `Date of birth` reveal and
+compute the range on the server. That converts a predicate into personal data
+this project promises never to receive, for a restriction few elections need. A
+gate nobody can satisfy is a bug; a gate that costs everybody their birth date
+is worse.
+
 ## Future work: institutional identity beyond domain control
 
 Domain control proves control of a domain, which is what people actually use to judge
