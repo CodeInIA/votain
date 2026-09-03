@@ -18,11 +18,18 @@ import { Card } from './Card';
 import { Button } from './Button';
 import { useAuth } from '../../contexts/AuthContext';
 
-/** Where each role is entered. Voters register through World ID onboarding,
- *  which is the same door the landing page and How it works use; organizers
- *  authenticate with a passkey. */
+/**
+ * Where each role is entered.
+ *
+ * Voters go to the plain World ID sign in, NOT to `/voter/onboarding`. Both
+ * end at the same verification, but onboarding leads with four slides explaining
+ * what Votain is, what it does with your identity and why a vote can be
+ * changed. That is the right introduction for someone arriving from the landing
+ * page and a waste of an organizer's time: they already run elections here.
+ * Organizers authenticate with a passkey, which has no such preamble.
+ */
 const ENTRY: Record<'voter' | 'organizer', string> = {
-  voter: '/voter/onboarding',
+  voter: '/voter/signin',
   organizer: '/organizer/auth',
 };
 

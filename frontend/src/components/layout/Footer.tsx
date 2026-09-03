@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
+import { SITE_LINKS } from './siteLinks';
 
 export function Footer({ className }: { className?: string }) {
   const { t } = useTranslation();
@@ -19,10 +20,11 @@ export function Footer({ className }: { className?: string }) {
         </span>
 
         <div className="flex items-center gap-5 text-xs text-on-surface-meta">
-          <Link to="/terms" className="hover:text-on-surface transition-colors">{t('landing.footer.terms')}</Link>
-          <Link to="/privacy" className="hover:text-on-surface transition-colors">{t('landing.footer.privacy')}</Link>
-          <Link to="/how-it-works" className="hover:text-on-surface transition-colors">{t('nav.how_it_works')}</Link>
-          <Link to="/verify-receipt" className="hover:text-on-surface transition-colors">{t('nav.verify')}</Link>
+          {SITE_LINKS.map(({ to, labelKey }) => (
+            <Link key={to} to={to} className="hover:text-on-surface transition-colors">
+              {t(labelKey)}
+            </Link>
+          ))}
         </div>
 
         <span className="text-xs text-on-surface-meta">{t('landing.footer.copyright')}</span>

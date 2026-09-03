@@ -1,15 +1,15 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { KeyRound, Trash2, User, Wallet, Info, FileText, Shield } from 'lucide-react';
+import { KeyRound, Trash2, User, Wallet } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Card } from '../../components/ui/Card';
 import { OtherRoleCard } from '../../components/ui/OtherRoleCard';
 import { Button } from '../../components/ui/Button';
-import { BackButton } from '../../components/ui/BackButton';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
 import { SignOutActions } from '../../components/ui/SignOutActions';
+import { SiteLinksCard } from '../../components/layout/SiteLinksCard';
 import { LanguageSelector } from '../../components/ui/LanguageSelector';
 import { useToast } from '../../components/ui/useToast';
 import { useAuth } from '../../contexts/AuthContext';
@@ -59,9 +59,11 @@ export default function OrganizerProfile() {
 
   return (
     <PageLayout role="organizer" showNav>
-      <div className="max-w-xl mx-auto pt-4 pb-24">
-        <BackButton className="mb-5" />
-
+      <div className="max-w-xl mx-auto pt-6 pb-24">
+        {/* No back arrow. Every other page carrying one is somewhere you drill
+            INTO from a list: an election, its results, the create wizard. This
+            is reached from the avatar in the header, exactly like the voter
+            profile beside it, which never had one. */}
         <h1 className="text-2xl font-black tracking-tight text-white mb-6">{t('profile.title')}</h1>
 
         {/* Display name */}
@@ -166,20 +168,8 @@ export default function OrganizerProfile() {
         </Card>
 
         {/* Legal links, mobile only (desktop sees them in the footer) */}
-        <Card className="p-2 mb-4 md:hidden">
-          <Link to="/how-it-works" className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 transition-colors text-sm text-on-surface-variant hover:text-on-surface">
-            <Info className="w-4 h-4 shrink-0" />
-            {t('nav.how_it_works')}
-          </Link>
-          <Link to="/terms" className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 transition-colors text-sm text-on-surface-variant hover:text-on-surface">
-            <FileText className="w-4 h-4 shrink-0" />
-            {t('landing.footer.terms')}
-          </Link>
-          <Link to="/privacy" className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 transition-colors text-sm text-on-surface-variant hover:text-on-surface">
-            <Shield className="w-4 h-4 shrink-0" />
-            {t('landing.footer.privacy')}
-          </Link>
-        </Card>
+        {/* The footer's links, for the screens where the footer is hidden. */}
+        <SiteLinksCard />
 
         {/* Sign out, of this role or of both when both are held. */}
         <Card className="p-5">

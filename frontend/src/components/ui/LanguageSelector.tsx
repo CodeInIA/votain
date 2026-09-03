@@ -35,7 +35,11 @@ export function LanguageSelector({ className, align = 'right' }: LanguageSelecto
         )}
       >
         <span className="text-base leading-none">{currentLang.flag}</span>
-        <span className="hidden sm:inline font-medium">{currentLang.nativeName}</span>
+        {/* Named at every width. It was flag-only below `sm:`, and a flag is
+           not a language: several are shared, and the one shown belongs to the
+           language currently set, which is the one a person looking for this
+           control cannot read. It fits on a phone. */}
+        <span className="font-medium">{currentLang.nativeName}</span>
         <Select.Icon asChild>
           <ChevronDown className="w-3.5 h-3.5 transition-transform duration-200 group-data-[state=open]:rotate-180" />
         </Select.Icon>

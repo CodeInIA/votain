@@ -67,8 +67,16 @@ export function WorldIdVerify({ onBack }: WorldIdVerifyProps) {
               transition={{ duration: 0.25, ease: 'easeOut' }}
               className="w-full flex flex-col items-center min-h-72 sm:min-h-80"
             >
-              <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">{t('verify.qr_title')}</h2>
-              <p className="text-on-surface-variant text-sm mb-6 px-4">{t('verify.qr_desc')}</p>
+              {/* A phone cannot photograph its own screen, so it gets a deep
+                  link into the app instead of a code. The heading said "scan
+                  this code" either way, describing something that was not on
+                  screen. */}
+              <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">
+                {t(isMobile ? 'verify.open_title' : 'verify.qr_title')}
+              </h2>
+              <p className="text-on-surface-variant text-sm mb-6 px-4">
+                {t(isMobile ? 'verify.open_desc' : 'verify.qr_desc')}
+              </p>
               {isMobile ? (
                 <div className="flex flex-col items-center gap-4 mb-6">
                   <a href={connectorURI} target="_blank" rel="noopener noreferrer"
@@ -124,7 +132,7 @@ export function WorldIdVerify({ onBack }: WorldIdVerifyProps) {
               className="w-full rounded-full flex items-center justify-center gap-2 group text-lg font-semibold h-14"
             >
               {isLoadingQr ? (
-                <><Loader2 className="w-5 h-5 animate-spin" /><span className="opacity-80">{t('verify.btn_loading')}</span></>
+                <><Loader2 className="w-5 h-5 animate-spin" /><span className="opacity-80">{t(isMobile ? 'verify.btn_loading_mobile' : 'verify.btn_loading')}</span></>
               ) : (
                 <><img src="/world-id-logo.svg" alt="World ID" className="w-5 h-5" />{t('verify.btn_verify')}</>
               )}

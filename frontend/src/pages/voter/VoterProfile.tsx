@@ -1,6 +1,6 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ShieldCheck, SearchCheck, RefreshCw, Info, FileText, Shield } from 'lucide-react';
+import { ShieldCheck, SearchCheck, RefreshCw } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -9,6 +9,7 @@ import { MyDevices } from '../../components/voter/MyDevices';
 import { IdentityBackupCard } from '../../components/voter/IdentityBackupCard';
 import { OtherRoleCard } from '../../components/ui/OtherRoleCard';
 import { SignOutActions } from '../../components/ui/SignOutActions';
+import { SiteLinksCard } from '../../components/layout/SiteLinksCard';
 
 export default function VoterProfile() {
   const navigate = useNavigate();
@@ -80,21 +81,10 @@ export default function VoterProfile() {
           </div>
         </Card>
 
-        {/* Legal links: mobile only (desktop sees them in the footer) */}
-        <Card className="p-2 mb-4 md:hidden">
-          <Link to="/how-it-works" className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 transition-colors text-sm text-on-surface-variant hover:text-on-surface">
-            <Info className="w-4 h-4 shrink-0" />
-            {t('nav.how_it_works')}
-          </Link>
-          <Link to="/terms" className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 transition-colors text-sm text-on-surface-variant hover:text-on-surface">
-            <FileText className="w-4 h-4 shrink-0" />
-            {t('landing.footer.terms')}
-          </Link>
-          <Link to="/privacy" className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 transition-colors text-sm text-on-surface-variant hover:text-on-surface">
-            <Shield className="w-4 h-4 shrink-0" />
-            {t('landing.footer.privacy')}
-          </Link>
-        </Card>
+        {/* The footer's links, for the screens where the footer is hidden.
+            Minus the verifier: the quick actions above link it at every width,
+            and two ways to one page on one screen is not two features. */}
+        <SiteLinksCard omit={['/verify-receipt']} />
 
         {/* Sign out, of this role or of both when both are held. */}
         <SignOutActions role="voter" />

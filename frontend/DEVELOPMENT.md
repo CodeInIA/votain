@@ -496,6 +496,25 @@ hash covers it and the backend recomputes it before signing anything.
 - `requireOrb` is still READ, for elections deployed before the move, and
   written by nothing. `lib/organizer.ts` no longer emits it.
 
+### The sign in screen was still promising one vote per person
+
+`verify.description` read "We use World ID to ensure one vote per person. Your
+biometric data never leaves your device". The second sentence is still true. The
+first stopped being true when personhood moved to the document: sign in accepts
+whatever World ID credential a voter holds, so its nullifier identifies an
+ACCOUNT, and somebody with two of them holds two. One vote per person is a
+property of a gated ELECTION now, enforced by the document nullifier the
+contract deduplicates on.
+
+It says what it does instead: World ID signs you in anonymously, it identifies
+an account rather than a person, and each election sets for itself how strongly
+a voter must prove they are one human. Worth keeping accurate rather than
+reassuring, since the whole point of the migration was that the old sentence was
+a claim nothing backed.
+
+The two privacy strings beside it (`privacy.summary_1`, `privacy.worldid_2`)
+were checked and left alone: nothing about the migration made them false.
+
 ## Two ballot options that read the same are one option
 
 Uniqueness of candidate names was `new Set(names.map(n => n.toLowerCase()))`,
@@ -992,6 +1011,14 @@ Two consequences of the roles becoming simultaneous, both on the profiles:
 - `components/ui/OtherRoleCard.tsx` offers the session the person does not hold,
   and disappears once they do, since the header switch serves them from then on.
   Until the chrome could hold both, there was nowhere honest to make that offer.
+  It sends a voter to `/organizer/auth` and an organizer to `/voter/signin`, NOT
+  to `/voter/onboarding`: both voter doors end at the same World ID
+  verification, but onboarding leads with four slides explaining what Votain is,
+  which is the right introduction for someone arriving from the landing page and
+  a waste of the time of someone already running elections here. `SignIn` sends
+  Back to wherever the person came from for the same reason: it used to go
+  straight to the landing page, which was harmless while the landing page was
+  the only way in.
 - `components/ui/SignOutActions.tsx` replaces the single sign out button on both
   profiles. With one session it is exactly what it was. With two, "sign out"
   stops having one meaning, so each role gets its own exit and the joint one
