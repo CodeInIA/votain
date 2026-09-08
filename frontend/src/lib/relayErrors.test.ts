@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { id } from "ethers";
 
-import i18n from "../i18n/config";
+import i18n, { bootstrapI18n, setLanguage } from "../i18n/config";
 import { GasTankEmptyError, relayErrorMessage, revertNameOf } from "./relay";
 
 /**
@@ -11,8 +11,12 @@ import { GasTankEmptyError, relayErrorMessage, revertNameOf } from "./relay";
  * leaves them retrying a ballot that will never go through.
  */
 
+// i18next is no longer initialised on import: the language is fetched as its
+// own chunk, so the bootstrap has to run before any key resolves. English is
+// then forced, because these assertions are on the English wording.
 beforeAll(async () => {
-  await i18n.changeLanguage("en");
+  await bootstrapI18n();
+  await setLanguage("en");
 });
 
 describe("relayErrorMessage", () => {
@@ -39,10 +43,10 @@ describe("relayErrorMessage", () => {
   });
 
   it("follows the active language", async () => {
-    await i18n.changeLanguage("es");
+    await setLanguage("es");
     expect(relayErrorMessage(new GasTankEmptyError())).toBe(i18n.t("errors.gas_tank_empty"));
     expect(relayErrorMessage(new GasTankEmptyError())).toMatch(/organizador/i);
-    await i18n.changeLanguage("en");
+    await setLanguage("en");
   });
 
   it("reads the real ethers error a drained tank produces", () => {

@@ -202,6 +202,75 @@ src/
                                #   paillier, tally, logs, worldId
 ```
 
+## Installable, and findable
+
+The app shipped with a four-line `<head>`: one title for every route, no
+manifest, no icons beyond a favicon, no `robots.txt`, no `sitemap.xml`. A
+crawler saw one page called "Votain" and Chrome offered no way to install
+anything.
+
+### The install half
+
+`public/manifest.webmanifest` plus PNG icons at 192, 512 and a 512 maskable.
+
+**Transparency is decided per icon, not once.** The `any` icons and the favicon
+are transparent, because the launcher and the browser chrome supply their own
+ground and a baked-in dark square would sit as a black tile on a light one. The
+maskable icon cannot be: Android crops it to a circle or a squircle, so it
+carries the brand ground and keeps the mark inside the 80% safe zone. The
+apple-touch icon is opaque too, since iOS composites transparency onto black
+rather than leaving it, and an explicit colour is more predictable than
+whatever that resolves to. `theme_color`
+and the `theme-color` meta carry the same value, since one paints the task
+switcher and the other paints the browser chrome before the manifest is parsed.
+iOS ignores the manifest, so `apple-touch-icon` and the two `apple-mobile-web-app`
+metas are there as well.
+
+**The service worker is network first, and that is a decision rather than a
+default.** Chrome will not offer "Install app", and Android will not mint a
+WebAPK, without a worker that handles fetch. Putting a cache in front of a
+voting application is a liability: a stale shell is old verification code
+running against a new backend, and nobody can see it happen. So the network
+answer always wins, the cache only answers when there is no network, and a
+deployment takes effect on the next load. Cross-origin requests, non-GETs and
+`/api/` are never cached at all: a cached answer from the RPC or the issuer
+would be a lie about the state of an election. It registers in production only,
+because a worker in front of the dev server serves yesterday's modules with
+today's edits.
+
+### The findable half
+
+- `src/seo/publicRoutes.ts` is the one list of indexable routes.
+  `src/seo/seoPlugin.ts` renders `robots.txt` and `sitemap.xml` from it at build
+  time, using `VITE_PUBLIC_URL`. Neither file is checked in, because both need
+  an absolute origin, and a hostname baked into a static file is one nobody
+  remembers to change. The origin is `https://votain.app`, set in a committed
+  `.env.production` that `vite build` loads on its own: a build that has to be
+  told its own address on the command line is a build that eventually ships a
+  sitemap full of localhost. Being a `.app` domain it is HSTS preloaded, so it
+  is HTTPS only, which is also what the service worker needs to register.
+- **Election pages are crawlable but unlisted.** They live on chain, so a static
+  sitemap cannot enumerate them and one generated at build time is stale the
+  moment an organizer deploys the next election. Crawlers find them through
+  Discover, which is what links to them.
+- **`/voter/*` and `/organizer/*` say no twice.** `robots.txt` asks a crawler
+  not to fetch them, and `useRouteMeta` writes `noindex, nofollow` into any page
+  under those prefixes for a crawler that ignores it or arrived from elsewhere.
+  Neither is a security boundary; the route guards are.
+- `usePageMeta` gives each page its own title and description, from the heading
+  it already renders, so there is no second set of SEO-only strings to drift
+  from the visible ones. The election preview titles itself with the election's
+  name, which is what a shared link should say. A page that sets no description
+  restores the document default: leaving the previous page's behind had the
+  terms page describing how the protocol works.
+- `public/_redirects` serves `index.html` for every path. Without it a deep link
+  to `/discover` is a 404 on a static host, which is also what a crawler records
+  for a page that exists.
+
+`landing-background.jpg` became a 1440px WebP on the way through: 1055 kB to
+202 kB, on every page, for an image that renders at ten to twenty eight percent
+opacity behind everything.
+
 ## Design-system rules
 
 - Any CTA-looking button MUST use `components/ui/Button` (never restyle a raw `<button>`).
@@ -1043,6 +1112,98 @@ The filter is a single choice, like the phase pills: the four rules are
 alternatives, so picking one clears the last. It goes through
 `ElectionFilterState` like every other filter, which is what makes it count
 towards the dot on the collapsed bar.
+
+## Nothing loads that this visit does not need
+
+The bundle was one 868 kB file. Every screen was imported statically, so
+somebody reading the privacy policy downloaded the create-election wizard, the
+ZK proof generator and the tally, and all thirteen translations. It is 51 kB
+now, and the rest arrives when something asks for it.
+
+Three separate causes, and only the first is the obvious one:
+
+- **Every route behind `lazy()`.** Landing and NotFound stay eager: Landing is
+  where a cold visit begins and deferring it puts a round trip before the first
+  paint of the most linked URL on the site, and NotFound is smaller than the
+  loading state it would need.
+- **One language at a time.** 641 kB of it, all thirteen, in the main bundle. A
+  Spanish reader downloaded Arabic, Hindi, Japanese, Korean, Russian and Chinese
+  to never look at them. `i18n/config.ts` fetches the active language and
+  English, which is the fallback and has to be there for a key that has not been
+  translated yet to resolve to its English string rather than to its own name.
+  `i18next-browser-languagedetector` went with them: detection was two rules,
+  localStorage then the browser's list, and inlining them is what lets the right
+  language be fetched BEFORE init rather than after.
+- **`setLanguage`, never `changeLanguage`.** Switching to a language that is not
+  loaded shows the raw keys. The helper loads, then switches. A test caught
+  this, which is the argument for it existing.
+
+`main.tsx` awaits the bootstrap before the first render, so nothing paints in
+the wrong language and corrects itself, and renders anyway if that fetch fails:
+an app showing its keys is bad, an app showing nothing is broken.
+
+## A wallet that lives in another app
+
+`window.ethereum` exists in a desktop browser with an extension and inside a
+wallet's own in-app browser. Nowhere else, and that includes Chrome on Android
+and this app once installed, so `hasWallet` was answering "no compatible wallet"
+to a phone with MetaMask sitting one icon away.
+
+WalletConnect is the protocol for that gap and `lib/walletConnect.ts` is the
+whole of it: a session through a relay, a deep link into the wallet app on a
+phone or a QR on a desktop, and an ordinary EIP-1193 provider back. The page
+stays where it is, which is the point. Only organizers ever need it; a voter
+holds no wallet, because an address of their own would tie their enrolment to
+their ballot.
+
+Three things worth knowing about how it is wired:
+
+- **One accessor decides which provider is in play.** Six places used to read
+  `window.ethereum` for themselves. Reading the chain from one provider while
+  signing through another is how an app checks one wallet and transacts with a
+  different one.
+- **The event listeners re-subscribe when the session opens.** They attach to
+  whatever provider exists when the effect runs, which with no extension is
+  nothing, and the session is created later by `connect`. Without the epoch
+  counter a network switch made in the wallet never reached the interface, which
+  is the exact case the whole path exists for.
+- **It is loaded on demand, and proving that took measuring.** The modal is
+  950 kB of `@reown/appkit`. A dynamic import was not enough: Vite preloaded the
+  chunk from the HTML, and once that was stopped it still arrived, pulled in by
+  a vendor chunk that does load eagerly. `manualChunks` was forcing one chunk per
+  package, which fragments the dynamic import's graph until the pieces are
+  reachable from elsewhere. The wallet stack is excluded from it now.
+
+## Asking for the fingerprint, without making it the only answer
+
+Creating a passkey offered a list of USB and NFC security keys on a phone with a
+working fingerprint reader, because `authenticatorSelection` named no
+attachment and the browser then has to offer every transport it knows.
+
+WebAuthn has no way to express a preference: the field is a filter or it is
+absent. So the attempt ladder gained a second dimension. The first pass asks for
+the device's own authenticator with `userVerification: "required"`, which is the
+combination Google Password Manager treats as "create a passkey" and what makes
+PRF available at all. The second drops the attachment entirely, so a device
+whose credential manager cannot serve a platform credential gets the security
+key and the QR rather than a dead end. An error that says "not this
+authenticator" skips the rest of its pass instead of walking the extension
+variants, which are not what failed.
+
+`residentKey` became `required` in the same change, and that one is not cosmetic:
+a non-discoverable credential cannot be found by an assertion with an empty
+`allowCredentials` list, which is how a second browser finds an existing passkey
+and how the organizer vault avoids minting a second identity.
+
+## The local chain's keys are not in the production bundle
+
+`relay.ts` held two Hardhat private keys as literals. They are the well-known
+public ones, worthless anywhere, and the comment said so, but a shipped build of
+a voting application containing the string "private key" is a question nobody
+should have to answer twice. They sit behind `import.meta.env.DEV`, which is a
+compile-time constant, so the production build drops the literals entirely.
+`VITE_LOCAL_RELAY_KEY` and `VITE_LOCAL_REGISTRAR_KEY` exist for the one case
+that needs them: a production build deliberately pointed at a local chain.
 
 ## Shared pieces added along the way
 

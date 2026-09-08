@@ -33,7 +33,7 @@ export default function Landing() {
       <div className="fixed inset-0 z-0 w-full h-full opacity-20 pointer-events-none mix-blend-screen">
         <div 
           className="w-full h-full bg-cover bg-center bg-no-repeat" 
-          style={{ backgroundImage: "url('/landing-background.jpg')" }}
+          style={{ backgroundImage: "url('/landing-background.webp')" }}
         />
       </div>
 

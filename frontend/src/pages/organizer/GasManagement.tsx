@@ -60,9 +60,14 @@ export default function GasManagement() {
       toast({ title: t('gas.deposit_pending'), description: t('common.integration_pending'), variant: 'info' });
       return;
     }
-    if (!wallet.address) { await wallet.connect(); return; }
     setBusy(true);
     try {
+      // Inside the try: connecting can fail, and out here the rejection had
+      // nowhere to be shown.
+      if (!wallet.address) {
+        await wallet.connect();
+        return;
+      }
       if (await wallet.isWrongNetwork()) await wallet.switchToAmoy();
       const signer = await wallet.getSigner();
       await depositGas(signer, wallet.address, amount);

@@ -145,9 +145,24 @@ function describe(e: unknown): string {
  *    would mint a credential with no hmac-secret, permanently PRF-incapable,
  *    which is far worse than one extra prompt.
  */
+/**
+ * Where a new credential is allowed to live.
+ *
+ * "device" asks for the authenticator built into the machine in front of the
+ * person: a fingerprint, a face, a PIN. Without it the browser has to offer
+ * every transport it knows, and on Android that means a phone with a working
+ * fingerprint reader is shown a list of USB and NFC security keys instead.
+ *
+ * "any" is for the flows that are about a DIFFERENT device: adding a second
+ * passkey, or enrolling a security key. There the QR-to-phone option and the
+ * security-key option are the whole point, so nothing is narrowed.
+ */
+export type CredentialTarget = "device" | "any";
+
 async function registerCredential(
   salt: Uint8Array = IDENTITY_SALT,
   excludeCredentialIds: string[] = [],
+  target: CredentialTarget = "device",
 ): Promise<{
   registered: boolean;
   prfEnabled: boolean;
@@ -156,6 +171,8 @@ async function registerCredential(
   prfSecret?: Uint8Array;
 }> {
   assertSecureContext();
+
+  const platformAvailable = target === "device" && (await hasPlatformAuthenticator());
 
   const base: PublicKeyCredentialCreationOptions = {
     challenge: randomBytes(32),
@@ -170,8 +187,16 @@ async function registerCredential(
       { type: "public-key", alg: -257 }, // RS256
     ],
     authenticatorSelection: {
-      residentKey: "preferred",
-      userVerification: "preferred",
+      // REQUIRED, not preferred. A non-discoverable credential cannot be found
+      // by an assertion with an empty allowCredentials list, and that is
+      // exactly how a second browser finds an existing passkey and how the
+      // organizer vault avoids minting a second identity. "preferred" lets an
+      // authenticator quietly create one that discovery can never see.
+      residentKey: "required",
+      requireResidentKey: true, // the pre-level-2 spelling, for older authenticators
+      // `userVerification` and `authenticatorAttachment` are deliberately
+      // absent: each attempt below sets its own, and a value here would be
+      // dead config that reads as if it applied.
     },
     // Let the authenticator itself refuse a duplicate. It knows which
     // credentials it holds; this browser only knows what it happens to have
@@ -184,19 +209,66 @@ async function registerCredential(
     timeout: 60_000,
   };
 
-  const attempts: Array<{ label: string; prf?: AuthenticationExtensionsClientInputs }> = [
+  /**
+   * What to try, in order, and why there are two dimensions to it.
+   *
+   * EXTENSIONS, because not every authenticator understands PRF, and one that
+   * does not may reject the whole request rather than ignore the extension.
+   *
+   * ATTACHMENT, because asking for the device's own authenticator is a
+   * preference and WebAuthn offers no way to say so: the field is a filter or
+   * it is absent. Forcing it turns "no fingerprint here" into a dead end,
+   * which on Android arrives as `NotReadableError` from the credential
+   * manager. So the platform pass runs first, and anything that says this
+   * authenticator cannot serve the request falls through to the unrestricted
+   * pass, where a security key or a phone over QR is still offered.
+   */
+  const extensionAttempts: Array<{ label: string; prf?: AuthenticationExtensionsClientInputs }> = [
     { label: "prf.eval", prf: { prf: { eval: { first: salt } } } as AuthenticationExtensionsClientInputs },
     { label: "prf", prf: { prf: {} } as AuthenticationExtensionsClientInputs },
     { label: "no extensions" },
   ];
 
+  /**
+   * The passes, and the user-verification policy each one needs.
+   *
+   * A platform pass asks for it REQUIRED, because that is the combination
+   * Google Password Manager treats as "create a passkey": with
+   * `preferred` it declines and Android falls through to the security-key
+   * chooser, so the phone in the person's hand never offers its own
+   * fingerprint. It is also what makes PRF available, since an authenticator
+   * that did not verify the user has nothing to derive a secret from.
+   *
+   * The unrestricted pass keeps `preferred`, so an older security key that
+   * cannot verify a user is still allowed to enrol rather than being turned
+   * away by a requirement it has no way to meet.
+   */
+  const passes: Array<{ attachment?: "platform"; uv: UserVerificationRequirement }> =
+    platformAvailable
+      ? [{ attachment: "platform", uv: "required" }, { uv: "preferred" }]
+      : [{ uv: "preferred" }];
+
+  const attempts = passes.flatMap(pass => extensionAttempts.map(e => ({ ...e, ...pass })));
+
+  /** Errors that mean "not this authenticator", as opposed to "not this request". */
+  const cannotServe = (e: unknown) =>
+    e instanceof DOMException &&
+    ["NotReadableError", "NotSupportedError", "ConstraintError"].includes(e.name);
+
   let cred: PublicKeyCredential | null = null;
   for (let i = 0; i < attempts.length; i++) {
     const attempt = attempts[i];
     try {
-      cred = (await navigator.credentials.create({
-        publicKey: attempt.prf ? { ...base, extensions: attempt.prf } : base,
-      })) as PublicKeyCredential | null;
+      const publicKey: PublicKeyCredentialCreationOptions = {
+        ...base,
+        authenticatorSelection: {
+          ...base.authenticatorSelection,
+          ...(attempt.attachment ? { authenticatorAttachment: attempt.attachment } : {}),
+          userVerification: attempt.uv,
+        },
+        ...(attempt.prf ? { extensions: attempt.prf } : {}),
+      };
+      cred = (await navigator.credentials.create({ publicKey })) as PublicKeyCredential | null;
       break;
     } catch (e) {
       if (isUserCancellation(e)) {
@@ -210,7 +282,16 @@ async function registerCredential(
       if (i === attempts.length - 1) {
         throw new Error(`Could not create a passkey, ${describe(e)}`, { cause: e });
       }
-      console.warn(`Passkey creation with ${attempt.label} failed, retrying:`, describe(e));
+      console.warn(
+        `Passkey creation with ${attempt.label} on ${attempt.attachment ?? "any"} failed, retrying:`,
+        describe(e),
+      );
+      // No point walking the other extension variants of a pass the
+      // authenticator has already refused outright: jump to the next
+      // attachment, which is the thing that might actually differ.
+      if (cannotServe(e) && attempt.attachment) {
+        while (i + 1 < attempts.length && attempts[i + 1].attachment === attempt.attachment) i++;
+      }
     }
   }
 
@@ -310,10 +391,13 @@ export async function assertPrf(
 export async function enrollPrfPasskey(
   excludeCredentialIds: string[] = [],
   salt: Uint8Array = IDENTITY_SALT,
+  /** Its callers are adding ANOTHER authenticator, so nothing is narrowed. */
+  target: CredentialTarget = "any",
 ): Promise<PrfAssertion | null> {
   const { registered, prfEnabled, credentialId, prfSecret } = await registerCredential(
     salt,
     excludeCredentialIds,
+    target,
   );
   if (!registered || !credentialId) return null;
   // The authenticator already evaluated the PRF while creating the credential,

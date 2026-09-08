@@ -2,10 +2,68 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/votain-logo.webp" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Votain - Private. Verifiable. Yours. End-to-end verifiable blockchain voting platform deployed on Polygon Amoy." />
-    <title>Votain</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <title>Votain, end-to-end verifiable anonymous voting</title>
+    <meta
+      name="description"
+      content="Vote anonymously and check that your ballot was counted. Ballots are encrypted on your device, only the final total is ever decrypted, and anyone can audit the result."
+    />
+    <link rel="canonical" href="%VITE_PUBLIC_URL%/" />
+
+    <!-- The install surface. `theme_color` in the manifest colours the task
+         switcher; this one colours the browser chrome before the manifest is
+         parsed, so both are the same value. -->
+    <meta name="theme-color" content="#0a0a0f" />
+    <!-- `use-credentials` because the manifest is fetched as a separate
+         request that, by default, carries no cookies. Any host that decides what
+         to serve from a cookie then answers it with something that is not the
+         manifest: a tunnel interstitial, a login page, a consent wall. Chrome
+         reports that as "no manifest" and silently drops the install prompt.
+         Same origin, so this asks for nothing a normal page load does not. -->
+    <link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials" />
+
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <!-- iOS ignores the manifest and reads these instead. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Votain" />
+
+    <!-- What a link to Votain looks like when someone shares one. Absolute URLs
+         are required here: relative ones are ignored by most crawlers. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Votain" />
+    <meta property="og:title" content="Votain, end-to-end verifiable anonymous voting" />
+    <meta
+      property="og:description"
+      content="Vote anonymously and check that your ballot was counted. Only the final total is ever decrypted, and anyone can audit the result."
+    />
+    <meta property="og:url" content="%VITE_PUBLIC_URL%/" />
+    <meta property="og:image" content="%VITE_PUBLIC_URL%/og-card.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Votain" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Votain, end-to-end verifiable anonymous voting" />
+    <meta
+      name="twitter:description"
+      content="Vote anonymously and check that your ballot was counted."
+    />
+    <meta name="twitter:image" content="%VITE_PUBLIC_URL%/og-card.jpg" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Votain",
+        "applicationCategory": "GovernmentApplication",
+        "operatingSystem": "Any",
+        "description": "End-to-end verifiable anonymous voting on a public blockchain.",
+        "license": "https://www.gnu.org/licenses/agpl-3.0.html",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" }
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

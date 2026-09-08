@@ -25,6 +25,7 @@ import { PULSE_PHASES } from '../../lib/phase';
 import { explorerAddressUrl } from '../../lib/deployments';
 import { ExpandableText } from '../../components/ui/ExpandableText';
 import { VotingRule } from '../../components/ui/VotingRule';
+import { usePageMeta } from '../../seo/usePageMeta';
 
 export default function ElectionPreview() {
   const { id } = useParams<{ id: string }>();
@@ -33,6 +34,9 @@ export default function ElectionPreview() {
   const { voterLoggedIn, organizerLoggedIn } = useAuth();
   const wallet = useOrganizerWallet();
   const { election, loading } = useElection(id);
+  // Falls back to the site name until the chain answers, rather than
+  // flashing "undefined" into the tab and into a crawler snapshot.
+  usePageMeta({ title: election?.title, description: election?.description });
 
   // Computed with optional chaining so it sits above the loading and not-found
   // early returns, where the election may not exist yet.

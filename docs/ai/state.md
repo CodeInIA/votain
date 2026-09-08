@@ -1728,6 +1728,96 @@ a device that can already open the vault, because sealing needs the plaintext.
 The voter side has the same shape and the same limit. The profile says so where
 the button is.
 
+## Installable and findable (2026-09-03)
+
+The app had a four-line `<head>`. One title for every route, no manifest, no
+icons, no `robots.txt`, no `sitemap.xml`, no share card. A crawler saw a single
+page called "Votain" and Chrome had nothing to offer an install prompt for.
+
+Two decisions are worth recording, because both had a cheaper wrong answer.
+
+**The service worker is network first.** Chrome will not offer to install a site
+without a worker that handles fetch, which means a voting application has to put
+a cache in front of itself to be installable. Cache first is the usual choice
+and is wrong here: a stale shell is old verification code running against a new
+backend, invisible to the person running it. So the network answer always wins,
+the cache exists only for when there is no network, and a deployment takes hold
+on the next load. Cross-origin requests, non-GETs and `/api/` are never cached,
+because a cached answer from the RPC or the issuer would misstate the state of
+an election.
+
+**Election pages are crawlable but not in the sitemap.** They come from the
+chain. A static file cannot enumerate them, and one generated at build time is
+stale as soon as an organizer deploys the next election. A sitemap that lists a
+page which no longer exists is worse than no sitemap, so they are found through
+the links on Discover, which is what a crawler follows anyway.
+
+The rest is ordinary: a manifest with a maskable icon drawn inside the safe
+zone, `robots.txt` and `sitemap.xml` generated from one route list and
+`VITE_PUBLIC_URL` rather than checked in with a hostname baked in, per-page
+titles taken from the headings the pages already render, `noindex` written into
+the private routes as a second line of defence after `robots.txt`, and
+`_redirects` so a deep link on a static host is not a 404.
+
+Along the way the landing background went from a 1055 kB JPEG to a 202 kB WebP.
+It renders at ten to twenty eight percent opacity behind every page, so nothing
+about it needed to be a megabyte.
+
+What is not solved, and cannot be by this: the pages are rendered by JavaScript.
+Google executes it, most other crawlers and every link preview scraper do not,
+so a shared election link shows the site-wide card rather than that election's
+own. Fixing it properly means prerendering, which needs a build step that can
+read the chain and a host that can serve per-route HTML. Recorded rather than
+half-done.
+
+## The bundle, the wallet on a phone, and the fingerprint (2026-09-08)
+
+Three findings from the same afternoon, each one only visible by measuring
+rather than reading.
+
+**868 kB in one file, and 641 kB of it was translations.** Every screen was
+imported statically and all thirteen languages with them, so a visitor reading
+the privacy policy in Spanish downloaded the create-election wizard and the
+Arabic, Hindi, Japanese, Korean, Russian and Chinese locales. Routes went behind
+`lazy()` and languages behind a dynamic import each; the main bundle is 51 kB.
+The detector dependency left too, because detection was two rules and doing them
+inline is what lets the right language be fetched BEFORE i18next initialises.
+
+**A phone was told it had no compatible wallet while MetaMask sat one icon
+away.** `window.ethereum` exists only in a desktop extension or a wallet's own
+in-app browser. WalletConnect fills the gap and keeps the person on the page,
+which is what the deep link into MetaMask's browser did not.
+
+Making it load on demand is the part worth recording. A dynamic import was not
+enough: Vite preloaded the 950 kB modal from the HTML, and once that was stopped
+it still arrived, pulled in by a vendor chunk that loads eagerly. `manualChunks`
+was forcing one chunk per package, which fragments a dynamic import's graph
+until its pieces are reachable from somewhere else. Asking Chrome who initiated
+the request is what found it; reading the config would not have.
+
+**The fingerprint was not offered because WebAuthn cannot express a
+preference.** `authenticatorAttachment` is a filter or it is absent, so the
+attempt ladder gained a second dimension: the device's own authenticator with
+user verification required, which is what Google Password Manager treats as
+"create a passkey", then no attachment at all so a device that cannot serve one
+still gets a security key rather than a dead end. `residentKey` became
+`required` in the same change, which is load-bearing: a non-discoverable
+credential cannot be found by an assertion with an empty `allowCredentials`,
+and that is how a second browser finds an existing passkey.
+
+### What the tooling had been hiding
+
+`npx tsc --noEmit` was checking nothing. `tsconfig.json` is a solution file with
+`"files": []` and references, so the command every verification in this project
+had been running resolved zero files and exited zero. The real check is `tsc -b`,
+which `npm run build` runs, and it found five errors that had been sitting there
+through several "verified" reports, including a function whose signature never
+got the parameter its call sites were already passing.
+
+The second half of that: the source files are CRLF, so scripted edits matching
+multi-line anchors with `\n` silently failed to apply. A vacuous type check and
+edits that half-land are a bad pair, because each hides the other.
+
 ## Next: Phase C, Decentralized deployments
 ### H10: Frontend on IPFS via Fleek CD
 ### H11: Backend on Phala TEE

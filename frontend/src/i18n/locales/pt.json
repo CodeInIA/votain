@@ -322,7 +322,9 @@
     "which_one_help": "Escolhe a primeira se organizas eleições noutro dispositivo: a tua passkey pode estar sincronizada ou responder do telemóvel. Criar uma segunda deixaria os resultados das tuas eleições anteriores impossíveis de decifrar.",
     "no_passkey_found": "Nenhuma passkey oferecida",
     "no_passkey_found_help": "Este dispositivo não encontrou nenhuma. Se tens uma noutro lado, usa o mesmo gestor de palavras-passe ou responde do telemóvel. Se é a primeira vez, cria uma.",
-    "enter_here": "Entra aqui"
+    "enter_here": "Entra aqui",
+    "passkey_provider_hint": "Não te oferece impressão digital ou rosto? O teu dispositivo precisa de um fornecedor de passkeys ativo, em Definições, Palavras-passe e chaves de acesso.",
+    "no_wallet_mobile": "Num telemóvel a carteira vive dentro da sua própria aplicação e esta página não lhe chega. Organizar foi pensado para um computador com a extensão da carteira."
   },
   "dashboard": {
     "title": "Painel do Organizador",
@@ -529,7 +531,9 @@
     "personhood_used": "Este documento de identidade já foi usado para inscrição nesta eleição.",
     "not_platform_verified": "A tua conta não está verificada na plataforma.",
     "attestation_required": "Esta eleição exige uma verificação de elegibilidade antes da inscrição.",
-    "attestation_expired": "A tua aprovação de elegibilidade expirou. Verifica-te novamente."
+    "attestation_expired": "A tua aprovação de elegibilidade expirou. Verifica-te novamente.",
+    "no_wallet": "Nenhuma carteira está acessível a partir deste navegador. Instala uma ou liga a do telemóvel.",
+    "wallet_rejected": "A ligação à carteira foi recusada."
   },
   "demo": {
     "banner": "Dados de demonstração: sem contratos implantados. Nada aqui está on-chain."

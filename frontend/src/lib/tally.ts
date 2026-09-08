@@ -11,6 +11,8 @@
  * leaves it. `scripts-tally` stays in the repo as the auditor-facing path: it
  * recomputes the same result independently and pins the audit trail to IPFS.
  */
+import type { Signer } from "ethers";
+
 import { getElection } from "./contracts";
 import { queryLogsFrom } from "./logs";
 import { loadElectionPrivateKey, storeElectionPrivateKey } from "./organizer";
@@ -39,6 +41,8 @@ export interface TallyResult {
 export async function resolveTallyKey(
   address: string,
   keyNonce?: string,
+  /** Reaches the organizer vault, so a second passkey derives the same key. */
+  signer?: Signer,
 ): Promise<SerializedKeyPair | null> {
   const stored = loadElectionPrivateKey(address);
   if (stored) return stored;

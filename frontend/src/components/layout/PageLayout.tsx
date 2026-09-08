@@ -30,7 +30,7 @@ export function PageLayout({
       <div className="fixed bottom-[-15%] right-[-15%] w-[55%] h-[55%] bg-secondary/8 blur-[160px] rounded-full pointer-events-none" />
       <div className="fixed inset-0 z-0 w-full h-full opacity-10 pointer-events-none mix-blend-screen">
         <div className="w-full h-full bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: "url('/landing-background.jpg')" }} />
+          style={{ backgroundImage: "url('/landing-background.webp')" }} />
       </div>
 
       <DemoDataBanner />

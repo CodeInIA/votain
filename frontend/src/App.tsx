@@ -1,42 +1,58 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { useRouteMeta } from './seo/usePageMeta';
 import { ToastProvider } from './components/ui/Toast';
 import { AuthProvider } from './contexts/AuthProvider';
 import { RequireVoter, RequireOrganizer } from './components/auth/RequireAuth';
 import Landing from './pages/Landing';
-import Onboarding from './pages/voter/Onboarding';
-import SignIn from './pages/voter/SignIn';
 
 // Public
-import Discover from './pages/public/Discover';
-import ElectionPreview from './pages/public/ElectionPreview';
-import ElectionResults from './pages/public/ElectionResults';
-import HowItWorks from './pages/public/HowItWorks';
-import Terms from './pages/public/Terms';
-import Privacy from './pages/public/Privacy';
-import VerifyReceipt from './pages/public/VerifyReceipt';
 
 // Voter
-import VoterElections from './pages/voter/VoterElections';
-import ElectionDetail from './pages/voter/ElectionDetail';
-import ZkProofGeneration from './pages/voter/ZkProofGeneration';
-import VoteConfirmation from './pages/voter/VoteConfirmation';
-import ChangeVote from './pages/voter/ChangeVote';
-import VoterHistory from './pages/voter/VoterHistory';
-import VoterProfile from './pages/voter/VoterProfile';
-import ReVerification from './pages/voter/ReVerification';
 
 // Organizer
-import OrganizerAuth from './pages/organizer/OrganizerAuth';
-import OrganizerDashboard from './pages/organizer/OrganizerDashboard';
-import CreateElection from './pages/organizer/CreateElection';
-import ElectionManagement from './pages/organizer/ElectionManagement';
-import GasManagement from './pages/organizer/GasManagement';
-import MemberList from './pages/organizer/MemberList';
-import OrganizerProfile from './pages/organizer/OrganizerProfile';
 
 // Shared
 import NotFound from './pages/shared/NotFound';
+
+/**
+ * One chunk per screen.
+ *
+ * Every page used to be imported statically, so a visitor reading the privacy
+ * policy downloaded the create-election wizard, the ZK proof generator and the
+ * tally screen with it: 868 kB of application code in a single file. Each is
+ * fetched now when its route is first shown.
+ *
+ * Landing and NotFound stay eager on purpose. Landing is where a cold visit
+ * begins, and deferring it puts a network round trip before the first paint of
+ * the most linked URL on the site; NotFound is small enough that a loading
+ * state would cost more than the bytes.
+ */
+const Onboarding = lazy(() => import('./pages/voter/Onboarding'));
+const SignIn = lazy(() => import('./pages/voter/SignIn'));
+const Discover = lazy(() => import('./pages/public/Discover'));
+const ElectionPreview = lazy(() => import('./pages/public/ElectionPreview'));
+const ElectionResults = lazy(() => import('./pages/public/ElectionResults'));
+const HowItWorks = lazy(() => import('./pages/public/HowItWorks'));
+const Terms = lazy(() => import('./pages/public/Terms'));
+const Privacy = lazy(() => import('./pages/public/Privacy'));
+const VerifyReceipt = lazy(() => import('./pages/public/VerifyReceipt'));
+const VoterElections = lazy(() => import('./pages/voter/VoterElections'));
+const ElectionDetail = lazy(() => import('./pages/voter/ElectionDetail'));
+const ZkProofGeneration = lazy(() => import('./pages/voter/ZkProofGeneration'));
+const VoteConfirmation = lazy(() => import('./pages/voter/VoteConfirmation'));
+const ChangeVote = lazy(() => import('./pages/voter/ChangeVote'));
+const VoterHistory = lazy(() => import('./pages/voter/VoterHistory'));
+const VoterProfile = lazy(() => import('./pages/voter/VoterProfile'));
+const ReVerification = lazy(() => import('./pages/voter/ReVerification'));
+const OrganizerAuth = lazy(() => import('./pages/organizer/OrganizerAuth'));
+const OrganizerDashboard = lazy(() => import('./pages/organizer/OrganizerDashboard'));
+const CreateElection = lazy(() => import('./pages/organizer/CreateElection'));
+const ElectionManagement = lazy(() => import('./pages/organizer/ElectionManagement'));
+const GasManagement = lazy(() => import('./pages/organizer/GasManagement'));
+const MemberList = lazy(() => import('./pages/organizer/MemberList'));
+const OrganizerProfile = lazy(() => import('./pages/organizer/OrganizerProfile'));
+
 
 const ComponentsShowcase = import.meta.env.DEV
   ? lazy(() => import('./pages/dev/Components'))
@@ -48,11 +64,24 @@ const Fallback = () => (
   </div>
 );
 
+/**
+ * Canonical URL and indexability for whatever route is showing.
+ *
+ * Inside the Router because it reads the location, and separate from App so
+ * that reading the location is all it does.
+ */
+function RouteMeta() {
+  useRouteMeta();
+  return null;
+}
+
 export default function App() {
   return (
     <AuthProvider>
     <ToastProvider>
       <Router>
+        <RouteMeta />
+        <Suspense fallback={<Fallback />}>
         <Routes>
           {/* Landing */}
           <Route path="/" element={<Landing />} />
@@ -104,6 +133,7 @@ export default function App() {
           {/* 404 */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </Suspense>
       </Router>
     </ToastProvider>
     </AuthProvider>

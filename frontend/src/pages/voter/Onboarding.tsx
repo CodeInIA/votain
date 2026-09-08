@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '../../components/ui/Button';
+import { OrganizerEntryHint } from '../../components/voter/OrganizerEntryHint';
 import { useWorldIdVerify } from '../../hooks/useWorldIdVerify';
 import { cn } from '../../lib/utils';
 
@@ -74,7 +75,7 @@ export default function Onboarding() {
       <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 blur-[120px] rounded-full" />
       <div className="fixed bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-secondary/10 blur-[150px] rounded-full" />
       <div className="fixed inset-0 z-0 w-full h-full opacity-20 pointer-events-none mix-blend-screen">
-        <div className="w-full h-full bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/landing-background.jpg')" }} />
+        <div className="w-full h-full bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/landing-background.webp')" }} />
       </div>
 
       <Button
@@ -230,6 +231,11 @@ export default function Onboarding() {
                 </Button>
               )}
             </div>
+
+            {/* Same offer the sign in screen makes. Only on the verification
+                step: during the explanatory slides there is nothing to switch
+                away from yet. */}
+            {isVerifyStepActive && <OrganizerEntryHint className="mt-4" />}
           </div>
         )}
       </motion.div>

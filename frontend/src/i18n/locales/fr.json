@@ -322,7 +322,9 @@
     "which_one_help": "Choisissez la première si vous organisez des élections sur un autre appareil : votre passkey peut être synchronisée ou répondre depuis votre téléphone. En créer une seconde rendrait les résultats de vos élections précédentes impossibles à déchiffrer.",
     "no_passkey_found": "Aucune passkey proposée",
     "no_passkey_found_help": "Cet appareil n'en a trouvé aucune. Si vous en avez une ailleurs, utilisez le même gestionnaire de mots de passe ou répondez depuis votre téléphone. Si c'est la première fois, créez-en une.",
-    "enter_here": "Connectez-vous ici"
+    "enter_here": "Connectez-vous ici",
+    "passkey_provider_hint": "Pas d'empreinte ni de visage proposés ? Votre appareil a besoin d'un fournisseur de passkeys activé, dans Paramètres, Mots de passe et clés d'accès.",
+    "no_wallet_mobile": "Sur un téléphone, un portefeuille vit dans sa propre application et cette page ne peut pas l'atteindre. L'organisation est prévue pour un ordinateur avec l'extension."
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -529,7 +531,9 @@
     "personhood_used": "Ce document d'identité a déjà servi à s'inscrire à cette élection.",
     "not_platform_verified": "Votre compte n'est pas vérifié sur la plateforme.",
     "attestation_required": "Cette élection exige une vérification d'éligibilité avant l'inscription.",
-    "attestation_expired": "Votre validation éligibilité a expiré. Veuillez la refaire."
+    "attestation_expired": "Votre validation éligibilité a expiré. Veuillez la refaire.",
+    "no_wallet": "Aucun portefeuille n'est accessible depuis ce navigateur. Installez-en un ou connectez celui de votre téléphone.",
+    "wallet_rejected": "La connexion au portefeuille a été refusée."
   },
   "demo": {
     "banner": "Données de démonstration: aucun contrat déployé. Rien ici n'est sur la blockchain."

@@ -1,5 +1,5 @@
-import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { OrganizerEntryHint } from './OrganizerEntryHint';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, Loader2, ChevronLeft, X } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
@@ -25,7 +25,7 @@ export function WorldIdVerify({ onBack }: WorldIdVerifyProps) {
       <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 blur-[120px] rounded-full" />
       <div className="fixed bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-secondary/10 blur-[150px] rounded-full" />
       <div className="fixed inset-0 z-0 w-full h-full opacity-20 pointer-events-none mix-blend-screen">
-        <div className="w-full h-full bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/landing-background.jpg')" }} />
+        <div className="w-full h-full bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/landing-background.webp')" }} />
       </div>
 
       <Button
@@ -138,21 +138,7 @@ export function WorldIdVerify({ onBack }: WorldIdVerifyProps) {
                 <><img src="/world-id-logo.svg" alt="World ID" className="w-5 h-5" />{t('verify.btn_verify')}</>
               )}
             </Button>
-            {/* The organizer's way in, from the screen everyone lands on.
-                The header's Log in button means "voter", which is right for
-                almost everyone who taps it, and left an organizer arriving from
-                Discover with no door at all: the only other one is a link on
-                the landing page. Subtle rather than a second button, because
-                two buttons of equal weight would claim two equal audiences. */}
-            <p className="mt-4 text-center text-xs text-on-surface-meta">
-              {t('landing.are_you_organizer')}{' '}
-              <Link
-                to="/organizer/auth"
-                className="text-primary-dim font-semibold underline underline-offset-4 hover:text-primary"
-              >
-                {t('org_auth.enter_here')}
-              </Link>
-            </p>
+            <OrganizerEntryHint className="mt-4" />
           </div>
         )}
       </motion.div>

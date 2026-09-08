@@ -1,0 +1,4 @@
+# Every path renders the same document: the router resolves it in the browser.
+# Without this a deep link to /discover or /election/0x… is a 404 on a static
+# host, which is also what a crawler would record for a page that exists.
+/*  /index.html  200

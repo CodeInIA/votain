@@ -13,6 +13,7 @@ import { useElections } from '../../hooks/useElections';
 import { findVoteReceipt, fetchVoteHistory, fetchLocalVoteHistory, type PublicReceipt } from '../../lib/voting';
 import { useVoterIdentity } from '../../hooks/useVoterIdentity';
 import { shortenReference } from '../../lib/utils';
+import { usePageMeta } from '../../seo/usePageMeta';
 
 /**
  * Checks one receipt against the chain. For ANYONE, not only its holder.
@@ -39,6 +40,7 @@ interface Shortcut {
 
 export default function VerifyReceipt() {
   const { t } = useTranslation();
+  usePageMeta({ title: t('verify_receipt.title'), description: t('verify_receipt.subtitle') });
   const { voterLoggedIn } = useAuth();
   const { elections, live, loading } = useElections();
   const [params, setParams] = useSearchParams();

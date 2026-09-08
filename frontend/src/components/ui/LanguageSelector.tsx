@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import { LANGUAGES, getLanguageByCode } from '../../data/languages';
 import { useTapSafeSelect } from '../../hooks/useTapSafeSelect';
+import { setLanguage, type Language } from '../../i18n/config';
 
 interface LanguageSelectorProps {
   className?: string;
@@ -22,7 +23,7 @@ export function LanguageSelector({ className, align = 'right' }: LanguageSelecto
       open={open}
       onOpenChange={onOpenChange}
       value={currentLang.code}
-      onValueChange={code => void i18n.changeLanguage(code)}
+      onValueChange={code => void setLanguage(code as Language)}
     >
       <Select.Trigger
         aria-label="Language"

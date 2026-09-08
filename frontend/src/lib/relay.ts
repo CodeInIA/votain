@@ -21,11 +21,42 @@ import i18n from "../i18n/config";
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL as string | undefined;
 
-/// Hardhat's well-known dev accounts (PUBLIC test keys, worthless on any real
-/// network). Used only on the local chain, which has no backend relayer.
 export const LOCAL_CHAIN_ID = 31337;
-const LOCAL_RELAY_KEY = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d";
-const LOCAL_REGISTRAR_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+
+/**
+ * Signers for the local chain, which has no backend relayer of its own.
+ *
+ * Hardhat's well-known dev accounts, public and worthless on any real
+ * network, but they were written into the source and so travelled into every
+ * production bundle. Nothing could be stolen with them; the problem is that a
+ * shipped build of a voting application contained the string "private key" at
+ * all, which is a question nobody should have to answer twice.
+ *
+ * `import.meta.env.DEV` is a compile-time constant, so in a production build
+ * the fallback is dead code and the literals are dropped from the bundle
+ * entirely. Pointing a production build at a local chain is still possible,
+ * it just has to say so through the environment.
+ */
+const HARDHAT_ACCOUNT_1 = '0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d';
+const HARDHAT_ACCOUNT_0 = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
+
+const LOCAL_RELAY_KEY =
+  (import.meta.env.VITE_LOCAL_RELAY_KEY as string | undefined) ??
+  (import.meta.env.DEV ? HARDHAT_ACCOUNT_1 : undefined);
+const LOCAL_REGISTRAR_KEY =
+  (import.meta.env.VITE_LOCAL_REGISTRAR_KEY as string | undefined) ??
+  (import.meta.env.DEV ? HARDHAT_ACCOUNT_0 : undefined);
+
+/** Refuses clearly rather than letting ethers report an undefined key. */
+function localSigner(key: string | undefined, which: string): string {
+  if (!key) {
+    throw new Error(
+      `No local ${which} key: this build has none compiled in. Set ` +
+        `VITE_LOCAL_${which.toUpperCase()}_KEY to use the local chain from a production build.`,
+    );
+  }
+  return key;
+}
 
 export function isLocalChain(): boolean {
   return chainInfo.chainId === LOCAL_CHAIN_ID;
@@ -83,7 +114,7 @@ async function localRelay(functionName: string, args: unknown[]): Promise<{ txHa
       "function relayVote(address election, bytes voteCiphertext, uint256 nullifier, uint256 merkleRoot, uint256 merkleDepth, uint256[2] pA, uint256[2][2] pB, uint256[2] pC)",
       ...RELAY_ERROR_ABI,
     ],
-    new Wallet(LOCAL_RELAY_KEY, provider),
+    new Wallet(localSigner(LOCAL_RELAY_KEY, 'relay'), provider),
   );
   try {
     const tx = await paymaster[functionName](...args);
@@ -252,7 +283,7 @@ export async function ensureLocalRegistration(commitment: bigint): Promise<void>
       "function verifiedMembers(uint256 identityCommitment) view returns (bool)",
       "function registerMember(uint256 nullifier, uint256 identityCommitment)",
     ],
-    new Wallet(LOCAL_REGISTRAR_KEY, provider),
+    new Wallet(localSigner(LOCAL_REGISTRAR_KEY, 'registrar'), provider),
   );
   if (await registry.verifiedMembers(commitment)) return;
   // No World ID here, so the commitment stands in as its own nullifier.

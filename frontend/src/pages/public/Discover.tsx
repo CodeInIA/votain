@@ -7,6 +7,7 @@ import { useElections } from '../../hooks/useElections';
 import { useVerifiedDomains } from '../../hooks/useVerifiedDomains';
 import { useAuth } from '../../contexts/AuthContext';
 import { ElectionFilters } from '../../components/ui/ElectionFilters';
+import { usePageMeta } from '../../seo/usePageMeta';
 import {
   matchesElectionFilter,
   isAnyFilterActive,
@@ -16,6 +17,7 @@ import {
 
 export default function Discover() {
   const { t } = useTranslation();
+  usePageMeta({ title: t('discover.title'), description: t('discover.subtitle') });
   const { voterLoggedIn } = useAuth();
   const [filters, setFilters] = useState<ElectionFilterState>(EMPTY_FILTERS);
   const [showFilters, setShowFilters] = useState(false);

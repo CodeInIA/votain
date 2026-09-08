@@ -322,7 +322,9 @@
     "which_one_help": "Scegli la prima se organizzi elezioni su un altro dispositivo: la tua passkey può essere sincronizzata o rispondere dal telefono. Crearne una seconda renderebbe indecifrabili i risultati delle tue elezioni precedenti.",
     "no_passkey_found": "Nessuna passkey offerta",
     "no_passkey_found_help": "Questo dispositivo non ne ha trovata nessuna. Se ne hai una altrove, usa lo stesso gestore di password o rispondi dal telefono. Se è la prima volta, creane una.",
-    "enter_here": "Accedi qui"
+    "enter_here": "Accedi qui",
+    "passkey_provider_hint": "Non ti propone impronta o volto? Il dispositivo ha bisogno di un fornitore di passkey attivo, in Impostazioni, Password e passkey.",
+    "no_wallet_mobile": "Su un telefono il portafoglio vive dentro la sua app e questa pagina non può raggiungerlo. Organizzare è pensato per un computer con l’estensione del portafoglio."
   },
   "dashboard": {
     "title": "Dashboard Organizzatore",
@@ -529,7 +531,9 @@
     "personhood_used": "Questo documento d'identità è già stato usato per iscriversi a questa elezione.",
     "not_platform_verified": "Il tuo account non è verificato sulla piattaforma.",
     "attestation_required": "Questa elezione richiede un controllo di idoneità prima dell'iscrizione.",
-    "attestation_expired": "La tua approvazione di idoneità è scaduta. Verificati di nuovo."
+    "attestation_expired": "La tua approvazione di idoneità è scaduta. Verificati di nuovo.",
+    "no_wallet": "Nessun portafoglio è raggiungibile da questo browser. Installane uno o collega quello del telefono.",
+    "wallet_rejected": "La connessione al portafoglio è stata rifiutata."
   },
   "demo": {
     "banner": "Dati dimostrativi: nessun contratto distribuito. Niente qui è on-chain."

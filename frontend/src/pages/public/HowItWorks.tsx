@@ -5,6 +5,7 @@ import { PageLayout } from '../../components/layout/PageLayout';
 import { Button } from '../../components/ui/Button';
 import { BlockchainBadge, IPFSBadge } from '../../components/ui/BlockchainBadge';
 import { useAuth } from '../../contexts/AuthContext';
+import { usePageMeta } from '../../seo/usePageMeta';
 
 const STEPS = [
   { icon: Fingerprint, color: 'text-secondary',  bg: 'bg-secondary/10',  titleKey: 'how.step1_title', descKey: 'how.step1_desc' },
@@ -16,6 +17,7 @@ const STEPS = [
 export default function HowItWorks() {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  usePageMeta({ title: t('how.title'), description: t('how.subtitle') });
   const { voterLoggedIn } = useAuth();
 
   return (

@@ -319,7 +319,9 @@
     "which_one_help": "Kies de eerste als je op een ander apparaat verkiezingen organiseert: je passkey kan gesynchroniseerd zijn of vanaf je telefoon antwoorden. Een tweede aanmaken zou de uitslagen van je eerdere verkiezingen onontcijferbaar maken.",
     "no_passkey_found": "Geen passkey aangeboden",
     "no_passkey_found_help": "Dit apparaat vond er geen. Heb je er elders een, gebruik dan dezelfde wachtwoordmanager of antwoord vanaf je telefoon. Is dit de eerste keer, maak er dan een aan.",
-    "enter_here": "Meld je hier aan"
+    "enter_here": "Meld je hier aan",
+    "passkey_provider_hint": "Geen vingerafdruk of gezicht aangeboden? Je apparaat heeft een ingeschakelde passkey-provider nodig, bij Instellingen, Wachtwoorden en passkeys.",
+    "no_wallet_mobile": "Op een telefoon leeft een wallet in zijn eigen app en is hij vanaf deze pagina niet bereikbaar. Organiseren is bedoeld voor een computer met de wallet-extensie."
   },
   "dashboard": {
     "title": "Organisatordashboard",
@@ -524,7 +526,9 @@
     "personhood_used": "Dit identiteitsdocument is al gebruikt om je in te schrijven voor deze verkiezing.",
     "not_platform_verified": "Je account is niet geverifieerd op het platform.",
     "attestation_required": "Deze verkiezing vereist een geschiktheidscontrole voordat je je kunt inschrijven.",
-    "attestation_expired": "Je goedkeuring is verlopen. Verifieer jezelf opnieuw."
+    "attestation_expired": "Je goedkeuring is verlopen. Verifieer jezelf opnieuw.",
+    "no_wallet": "Vanuit deze browser is geen wallet bereikbaar. Installeer er een of verbind die op je telefoon.",
+    "wallet_rejected": "De wallet-verbinding is geweigerd."
   },
   "demo": {
     "banner": "Demogegevens: geen contracten uitgerold. Niets hiervan staat on-chain."

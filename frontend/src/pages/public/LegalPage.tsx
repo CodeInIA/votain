@@ -1,4 +1,6 @@
 import { useTranslation } from 'react-i18next';
+
+import { usePageMeta } from '../../seo/usePageMeta';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Card } from '../../components/ui/Card';
 
@@ -18,6 +20,7 @@ export function LegalPage({
   sections: LegalSection[];
 }) {
   const { t } = useTranslation();
+  usePageMeta({ title: t(titleKey) });
 
   return (
     <PageLayout role="public" showNav showFooter>

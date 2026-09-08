@@ -17,6 +17,9 @@ import {
   type PasskeyIntent,
 } from '../../lib/passkeyPrf';
 
+/** A phone or tablet, where a wallet extension cannot exist. */
+const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
 export default function OrganizerAuth() {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -72,12 +75,22 @@ export default function OrganizerAuth() {
 
   const STEPS = [{ label: t('org_auth.step_passkey') }, { label: t('org_auth.step_wallet') }];
 
-  const fail = (e: unknown) =>
-    toast({
-      title: t('errors.generic_title'),
-      description: e instanceof Error ? e.message : String(e),
-      variant: 'error',
-    });
+  /**
+   * Shows the error NAME as well as its message.
+   *
+   * A WebAuthn failure arrives as a DOMException whose message is often empty
+   * and never specific, while the name is the whole diagnosis:
+   * `NotAllowedError` is a cancellation or a missing screen lock,
+   * `NotSupportedError` an authenticator that cannot do what was asked,
+   * `InvalidStateError` a credential this device already holds. Reporting
+   * "something went wrong" for all three leaves the person, and whoever they
+   * ask for help, with nothing to go on.
+   */
+  const fail = (e: unknown) => {
+    const detail =
+      e instanceof Error ? [e.name, e.message].filter(Boolean).join(": ") : String(e);
+    toast({ title: t('errors.generic_title'), description: detail, variant: 'error' });
+  };
 
   /**
    * Step 1: real WebAuthn passkey. Authentication NEVER falls back to a
@@ -220,6 +233,10 @@ export default function OrganizerAuth() {
                 </div>
               )}
 
+              <p className="text-xs text-on-surface-meta text-center leading-relaxed">
+                {t('org_auth.passkey_provider_hint')}
+              </p>
+
               {/* One button when this browser already holds the credential, two
                   when it does not. The second case is a real question and not a
                   formality: "I have one elsewhere" reaches a synced passkey or
@@ -278,6 +295,17 @@ export default function OrganizerAuth() {
                 </div>
               )}
               <p className="text-sm text-on-surface-variant text-center">{t('org_auth.wallet_desc')}</p>
+
+              {/* A phone has no injected provider, and there is nothing to
+                  detect: a wallet app exposes one only inside its OWN browser.
+                  Saying so is the whole of what can honestly be offered here.
+                  Reaching MetaMask without leaving this page needs
+                  WalletConnect, which this build does not carry. */}
+              {!wallet.hasWallet && isMobile && (
+                <p className="text-xs text-on-surface-meta text-center leading-relaxed">
+                  {t('org_auth.no_wallet_mobile')}
+                </p>
+              )}
               {wrongNetwork ? (
                 <Button variant="gradient" size="lg" className="w-full rounded-full h-14 gap-2" disabled={busy} onClick={handleSwitchNetwork}>
                   {t('org_auth.switch_network')}

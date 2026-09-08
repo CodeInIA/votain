@@ -322,7 +322,9 @@
     "which_one_help": "Elige la primera si organizas elecciones en otro dispositivo: tu passkey puede estar sincronizada o responder desde tu móvil. Crear una segunda dejaría los resultados de tus elecciones anteriores imposibles de descifrar.",
     "no_passkey_found": "No se ofreció ninguna passkey",
     "no_passkey_found_help": "Este dispositivo no encontró ninguna. Si tienes una en otro sitio, usa el mismo gestor de contraseñas o responde desde tu móvil. Si es tu primera vez, crea una.",
-    "enter_here": "Entra aquí"
+    "enter_here": "Entra aquí",
+    "passkey_provider_hint": "¿No te ofrece la huella o la cara? Tu dispositivo necesita un proveedor de passkeys activo, en Ajustes, Contraseñas y claves de acceso.",
+    "no_wallet_mobile": "En un móvil la cartera vive dentro de su propia aplicación y esta página no puede alcanzarla. Organizar está pensado para un ordenador con la extensión de la cartera."
   },
   "dashboard": {
     "title": "Panel de Organizador",
@@ -529,7 +531,9 @@
     "personhood_used": "Este documento de identidad ya se ha usado para inscribirse en esta elección.",
     "not_platform_verified": "Tu cuenta no está verificada en la plataforma.",
     "attestation_required": "Esta elección exige una comprobación de elegibilidad antes de poder inscribirte.",
-    "attestation_expired": "Tu aprobación de elegibilidad ha caducado. Verifícate de nuevo."
+    "attestation_expired": "Tu aprobación de elegibilidad ha caducado. Verifícate de nuevo.",
+    "no_wallet": "Ninguna cartera es alcanzable desde este navegador. Instala una o conecta la del móvil.",
+    "wallet_rejected": "Se rechazó la conexión con la cartera."
   },
   "demo": {
     "banner": "Datos de demostración: sin contratos desplegados. Nada de esto está en cadena."

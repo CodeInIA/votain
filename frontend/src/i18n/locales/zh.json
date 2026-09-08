@@ -316,7 +316,9 @@
     "which_one_help": "如果你在另一台设备上组织选举，请选第一项：你的通行密钥可能已同步，或可由手机应答。再创建一个会让你此前选举的结果无法解密。",
     "no_passkey_found": "没有可用的通行密钥",
     "no_passkey_found_help": "本设备没有找到。如果你在别处有，请使用同一个密码管理器，或用手机应答。如果是第一次，请创建一个。",
-    "enter_here": "在此登录"
+    "enter_here": "在此登录",
+    "passkey_provider_hint": "没有出现指纹或人脸？你的设备需要启用通行密钥提供程序，在“设置”“密码和通行密钥”中。",
+    "no_wallet_mobile": "手机上的钱包存在于它自己的应用中，本页面无法访问。组织选举是为装有钱包扩展的电脑设计的。"
   },
   "dashboard": {
     "title": "组织者仪表板",
@@ -519,7 +521,9 @@
     "personhood_used": "该身份证件已用于登记本次选举。",
     "not_platform_verified": "你的账户尚未在平台上完成验证。",
     "attestation_required": "本次选举要求在登记前完成资格核验。",
-    "attestation_expired": "你的资格核验已过期，请重新验证。"
+    "attestation_expired": "你的资格核验已过期，请重新验证。",
+    "no_wallet": "此浏览器无法访问任何钱包。请安装一个，或连接手机上的钱包。",
+    "wallet_rejected": "钱包连接已被拒绝。"
   },
   "demo": {
     "banner": "演示数据：未部署合约。此处内容均不在链上。"

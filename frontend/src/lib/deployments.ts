@@ -15,6 +15,7 @@ export interface Deployment {
   contracts: {
     PlatformRegistry?: string;
     OrganizerDomains?: string;
+    OrganizerVault?: string;
     ElectionPaymaster?: string;
     ElectionFactory?: string;
     SemaphoreVerifierV4?: string;

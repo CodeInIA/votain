@@ -319,7 +319,9 @@
     "which_one_help": "Choose the first if you organise elections on another device: your passkey may be synced, or answer from your phone. Creating a second one would leave the results of your earlier elections impossible to decrypt.",
     "no_passkey_found": "No passkey was offered",
     "no_passkey_found_help": "This device found none. If you have one elsewhere, use the same password manager or answer from your phone. If this is your first time, create one.",
-    "enter_here": "Sign in here"
+    "enter_here": "Sign in here",
+    "passkey_provider_hint": "No fingerprint or face offered? Your device needs a passkey provider turned on, under Settings, Passwords and passkeys.",
+    "no_wallet_mobile": "A wallet on a phone lives inside its own app and cannot be reached from this page. Organizing is meant for a computer with the wallet extension."
   },
   "dashboard": {
     "title": "Organizer Dashboard",
@@ -524,7 +526,9 @@
     "personhood_used": "This identity document has already been used to enroll in this election.",
     "not_platform_verified": "Your account is not verified on the platform.",
     "attestation_required": "This election requires an eligibility check before you can enroll.",
-    "attestation_expired": "Your eligibility approval expired. Please verify again."
+    "attestation_expired": "Your eligibility approval expired. Please verify again.",
+    "no_wallet": "No wallet is reachable from this browser. Install one, or connect the wallet app on your phone.",
+    "wallet_rejected": "The wallet connection was declined."
   },
   "demo": {
     "banner": "Demo data: no contracts deployed. Nothing here is on-chain."

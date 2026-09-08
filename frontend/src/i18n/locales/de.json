@@ -319,7 +319,9 @@
     "which_one_help": "Wählen Sie das Erste, wenn Sie Wahlen auf einem anderen Gerät organisieren: Ihr Passkey kann synchronisiert sein oder von Ihrem Telefon antworten. Ein zweiter würde die Ergebnisse Ihrer früheren Wahlen unentschlüsselbar machen.",
     "no_passkey_found": "Kein Passkey angeboten",
     "no_passkey_found_help": "Dieses Gerät hat keinen gefunden. Falls Sie anderswo einen haben, nutzen Sie denselben Passwortmanager oder antworten Sie vom Telefon. Ist es das erste Mal, erstellen Sie einen.",
-    "enter_here": "Hier anmelden"
+    "enter_here": "Hier anmelden",
+    "passkey_provider_hint": "Kein Fingerabdruck oder Gesicht angeboten? Ihr Gerät braucht einen aktivierten Passkey-Anbieter, unter Einstellungen, Passwörter und Passkeys.",
+    "no_wallet_mobile": "Auf einem Telefon lebt eine Wallet in ihrer eigenen App und ist von dieser Seite aus nicht erreichbar. Das Organisieren ist für einen Computer mit der Wallet-Erweiterung gedacht."
   },
   "dashboard": {
     "title": "Organisator-Dashboard",
@@ -524,7 +526,9 @@
     "personhood_used": "Dieses Ausweisdokument wurde bereits für die Anmeldung zu dieser Wahl verwendet.",
     "not_platform_verified": "Ihr Konto ist auf der Plattform nicht verifiziert.",
     "attestation_required": "Für diese Wahl ist vor der Anmeldung eine Berechtigungsprüfung erforderlich.",
-    "attestation_expired": "Ihre Berechtigungsfreigabe ist abgelaufen. Bitte verifizieren Sie sich erneut."
+    "attestation_expired": "Ihre Berechtigungsfreigabe ist abgelaufen. Bitte verifizieren Sie sich erneut.",
+    "no_wallet": "Aus diesem Browser ist keine Wallet erreichbar. Installieren Sie eine oder verbinden Sie die auf Ihrem Telefon.",
+    "wallet_rejected": "Die Wallet-Verbindung wurde abgelehnt."
   },
   "demo": {
     "banner": "Demo-Daten: keine Verträge bereitgestellt. Nichts hiervon ist on-chain."

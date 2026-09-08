@@ -50,10 +50,12 @@
    → Backend issues SD-JWT (httpOnly cookie, 7 days)
    → SD-JWT claims: nullifier_hash, verification_level, issued_at
 
-2. SMART ACCOUNT CREATION
-   Frontend -> issuer relayer
-   → WebAuthn (Passkey) → KernelAccount v3
-   → Smart Account (AA, ERC-4337) on Amoy
+2. VOTING IDENTITY
+   Frontend, on the device
+   → WebAuthn (Passkey) → PRF secret → Semaphore identity
+   → the voter never holds an address: transactions go through the
+     issuer relayer, because a per-voter address would link their
+     enrolment to their ballot on chain
 
 3. ELECTION ENROLLMENT
    Frontend reads SD-JWT cookie
