@@ -244,11 +244,12 @@ today's edits.
   `src/seo/seoPlugin.ts` renders `robots.txt` and `sitemap.xml` from it at build
   time, using `VITE_PUBLIC_URL`. Neither file is checked in, because both need
   an absolute origin, and a hostname baked into a static file is one nobody
-  remembers to change. The origin is `https://votain.app`, set in a committed
-  `.env.production` that `vite build` loads on its own: a build that has to be
-  told its own address on the command line is a build that eventually ships a
-  sitemap full of localhost. Being a `.app` domain it is HSTS preloaded, so it
-  is HTTPS only, which is also what the service worker needs to register.
+  remembers to change. The origin comes from `VITE_PUBLIC_URL`: `.env` locally,
+  a real environment variable on the host in production, since no env file is
+  deployed. A build that cannot find it fails rather than emitting a site with
+  no sitemap and an empty canonical. The production origin is
+  `https://votain.app`; being a `.app` domain it is HSTS preloaded, so it is
+  HTTPS only, which is also what the service worker needs to register.
 - **Election pages are crawlable but unlisted.** They live on chain, so a static
   sitemap cannot enumerate them and one generated at build time is stale the
   moment an organizer deploys the next election. Crawlers find them through

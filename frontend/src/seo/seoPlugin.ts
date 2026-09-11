@@ -62,19 +62,25 @@ export function seoFiles(): Plugin {
 
     configResolved(config) {
       siteUrl = config.env.VITE_PUBLIC_URL ?? '';
+
+      // Checked here, at the earliest hook, rather than when the files are
+      // emitted. A warning was enough while a committed .env.production
+      // guaranteed the value, but production now supplies it as an environment
+      // variable and forgetting it has to stop the build. It has to stop it
+      // HERE because index.html interpolates %VITE_PUBLIC_URL% into its
+      // canonical and og:url: left empty those collapse to "/", and Vite's HTML
+      // pass dies first, trying to read the project root as an asset and
+      // reporting EISDIR from a plugin that has nothing to do with the cause.
+      if (!siteUrl) {
+        throw new Error(
+          'VITE_PUBLIC_URL is not set. It is the absolute origin this build is served ' +
+            'from, for example https://votain.app, and it fills the canonical link, the ' +
+            'Open Graph URLs, robots.txt and sitemap.xml.',
+        );
+      }
     },
 
     generateBundle() {
-      if (!siteUrl) {
-        // Loud rather than emitting a sitemap full of relative URLs, which
-        // search engines reject outright.
-        this.warn(
-          'VITE_PUBLIC_URL is not set: robots.txt and sitemap.xml were not generated. ' +
-            'Set it to the absolute site URL, for example https://votain.app',
-        );
-        return;
-      }
-
       const today = new Date().toISOString().slice(0, 10);
       this.emitFile({ type: 'asset', fileName: 'robots.txt', source: robotsTxt(siteUrl) });
       this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: sitemapXml(siteUrl, today) });

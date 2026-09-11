@@ -1,8 +1,11 @@
 # ------------- General -------------
 **/node_modules/
+# One .env per package holds the secrets and is never committed; .env.example
+# documents its keys and is. Nothing else: no .env.local, no .env.production.
+# Production sets real environment variables instead of shipping a file.
 **/.env
-**/.env.*.local
-**/.env.local
+**/.env.*
+!**/.env.example
 **/npm-debug.log*
 **/yarn-debug.log*
 **/yarn-error.log*
