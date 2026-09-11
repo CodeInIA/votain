@@ -22,7 +22,7 @@ import { network } from "hardhat";
 import fs from "node:fs";
 import path from "node:path";
 
-const { ethers } = await network.connect();
+const { ethers } = await network.getOrCreate();
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const ATTESTER_FILE = process.env.ATTESTER_FILE;

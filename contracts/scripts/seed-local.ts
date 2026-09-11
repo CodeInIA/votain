@@ -10,7 +10,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const { ethers } = await network.connect();
+const { ethers } = await network.getOrCreate();
 
 const HOUR = 3600;
 

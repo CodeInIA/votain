@@ -30,7 +30,7 @@ import { poseidon2 } from "poseidon-lite/poseidon2";
 import { generateRandomKeys, PublicKey } from "paillier-bigint";
 import type { Wallet } from "ethers";
 
-const { ethers } = await network.connect();
+const { ethers } = await network.getOrCreate();
 
 /**
  * Seed only the elections that are still running. Set SEED_LIVE_ONLY=1 to keep
@@ -202,8 +202,30 @@ const ENROLL_ATTESTATION_TYPES = {
  * because the address is frozen into each election at creation: seeding with a
  * different one produces elections the running backend can never let anyone
  * into. Only required when a spec declares a policy.
+ *
+ * Read out of the backend's own .env rather than asked for on every run. The
+ * two values have to agree, so passing it by hand was the only way to make them
+ * disagree, and a mismatch is invisible until someone tries to enrol.
+ * SEED_ATTESTER_KEY still wins when set, which is what testing a deliberately
+ * wrong attester needs.
  */
-const attesterKey = process.env.SEED_ATTESTER_KEY;
+function readAttesterKey(): string | undefined {
+  if (process.env.SEED_ATTESTER_KEY) return process.env.SEED_ATTESTER_KEY;
+
+  const backendEnv = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "backend", ".env");
+  try {
+    const line = readFileSync(backendEnv, "utf-8").match(
+      /^ELIGIBILITY_ATTESTER_PRIVATE_KEY=(.+)$/m,
+    );
+    return line?.[1].trim() || undefined;
+  } catch {
+    // No backend checkout next door. Fall through to the error raised at the
+    // first gated election, which already says what to set.
+    return undefined;
+  }
+}
+
+const attesterKey = readAttesterKey();
 const attesterWallet = attesterKey ? new ethers.Wallet(attesterKey) : null;
 
 async function main(): Promise<void> {
@@ -302,9 +324,10 @@ async function main(): Promise<void> {
     const keys = await generateRandomKeys(PAILLIER_BITS);
     if (spec.eligibility && !attesterWallet) {
       throw new Error(
-        `"${spec.name}" declares an eligibility policy but SEED_ATTESTER_KEY is unset. ` +
-          "Set it to the backend's ELIGIBILITY_ATTESTER_PRIVATE_KEY, or the election " +
-          "would be deployed naming an attester nobody holds.",
+        `"${spec.name}" declares an eligibility policy but no attester key was found. ` +
+          "Expected ELIGIBILITY_ATTESTER_PRIVATE_KEY in backend/.env, or SEED_ATTESTER_KEY " +
+          "in the environment. Without it the election would be deployed naming an " +
+          "attester nobody holds.",
       );
     }
 
