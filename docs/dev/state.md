@@ -75,22 +75,27 @@ then Phase C (H10 IPFS/Fleek, H11 Phala TEE).
 
 | Dep | Version | Notes |
 |-----|---------|-------|
-| react / react-dom | 19.2.7 | OK |
-| vite | 8.1.4 | OK |
-| tailwindcss | 4.3.2 | OK |
-| typescript | **6.0.3 (pinned)** | `typescript-eslint@8.64` requires `<6.1.0`: do NOT bump to 7.x until typescript-eslint supports it |
+| react / react-dom | 19.3.0 | OK |
+| vite | 8.3.0 | OK |
+| tailwindcss | 4.3.3 | OK |
+| typescript | 7.0.2 | The native compiler, in all four packages. Cost: no ESLint, `typescript-eslint` throws on TS >= 7. See `frontend/DEVELOPMENT.md`, `No linter` |
 | `@radix-ui/react-select` | 2.3.3 | Headless primitive for LanguageSelector |
 | country-flag-emoji-polyfill | 0.1.8 | Flag emoji font for Windows/Chromium |
 | ethers | 6.17.0 | OK |
 | `@semaphore-protocol/*` | 4.14.3 | OK |
-| `@worldcoin/idkit` / `idkit-core` | 4.2.0 / 4.2.1 | OK, hook typechecks |
-| `@sd-jwt/core` | 0.20.0 | OWF migration (see backend note) |
+| `@worldcoin/idkit` / `idkit-core` | 4.2.3 / 4.2.4 | OK, hook typechecks |
+| `@sd-jwt/core` | 0.20.1 | OWF migration (see backend note) |
 | `@sd-jwt/present` | 0.19.0 | **No stable 0.20 yet**: revisit when wiring presentation in H6/H7 |
-| framer-motion | 12.42.2 | OK |
-| i18next / react-i18next | 26.3.6 / 17.0.9 | OK |
-| react-router-dom | 7.18.1 | OK |
-| lucide-react | 1.24.0 | OK |
-| recharts | 3.9.2 | OK |
+| framer-motion | 13.2.0 | OK |
+| i18next / react-i18next | 26.4.2 / 17.0.13 | OK |
+| react-router-dom | 7.18.3 | OK |
+| lucide-react | 1.45.0 | OK |
+| recharts | 3.10.1 | OK |
+| vitest / jsdom | 5.0.0 / 30.0.1 | OK |
+| `@testing-library/jest-dom` | 7.0.1 | Matchers and their types come from the `/vitest` subpath since v7 |
+| hardhat | 3.16.0 | contracts |
+| `@selfxyz/core` / `common` | 1.2.0-beta.2 / 0.0.10 | Newest published. Its `latest` tag points at an older release, so `npm outdated` reports a downgrade |
+| `@types/node` | 26.5.1 | Same: the `latest` tag lags at 22.x |
 
 **Build**: ✅ clean, no sourcemaps.
 **Tests**: 17/17 unit tests passing (Vitest, jsdom), covering identity-vault sealing and the Paillier ballot encoding. Playwright E2E scaffold in `e2e/` (excluded from Vitest).

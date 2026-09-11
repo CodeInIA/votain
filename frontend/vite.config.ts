@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
-import { seoFiles } from './src/seo/seoPlugin'
+import { seoFiles } from './src/seo/seoPlugin.ts'
 
 
 /**

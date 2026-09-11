@@ -1,4 +1,7 @@
-import '@testing-library/jest-dom';
+// v7 registers its matchers, and their types, through this subpath. The bare
+// import still adds the matchers at runtime but no longer augments Vitest's
+// Assertion interface, so every toBeInTheDocument stopped type checking.
+import '@testing-library/jest-dom/vitest';
 import { vi } from 'vitest';
 
 // Browser APIs jsdom does not implement, stubbed so components can mount.

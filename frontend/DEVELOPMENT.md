@@ -2,12 +2,12 @@
 
 ## Stack (versions as of 2026-07-15)
 
-- **React** 19.2.7
-- **Vite** 8.1.4 (Rolldown)
-- **Tailwind CSS** 4.3.2
-- **TypeScript** 6.0.3, **pinned**. `typescript-eslint` requires `<6.1.0`, do not bump to 7.x yet
-- **react-router-dom** 7.18.1
-- **framer-motion** 12.42.2
+- **React** 19.3.0
+- **Vite** 8.3.0 (Rolldown)
+- **Tailwind CSS** 4.3.3
+- **TypeScript** 7.0.2, the native compiler. See `No linter` below
+- **react-router-dom** 7.18.3
+- **framer-motion** 13.2.0
 - **i18next** 26.3.6 + react-i18next 17.0.9 (13 languages)
 - **`@radix-ui/react-select`** 2.3.3 (headless primitive, LanguageSelector)
 - **country-flag-emoji-polyfill** 0.1.8 (flag emojis on Windows/Chromium)
@@ -321,8 +321,31 @@ npm run dev          # http://localhost:5173
 npm run build        # tsc + vite build (no sourcemaps)
 npm test             # vitest run (e2e/ excluded)
 npm run test:e2e     # playwright (requires: npx playwright install chromium)
-npm run lint         # eslint
 ```
+
+## No linter
+
+There is none, on purpose. `typescript-eslint` refuses to load against
+TypeScript 7: it reads `ts.versionMajorMinor` and throws before any config is
+read, so the whole ESLint run exits 2. That is the package's own hard check, not
+a setting, and no published version lifts it. Its tracking issue targets TS
+>= 7.1.
+
+Rather than keep a `lint` script that always fails and five packages that cannot
+load, both are gone: `eslint`, `typescript-eslint`, `@eslint/js`,
+`eslint-plugin-react-hooks`, `eslint-plugin-react-refresh`, plus
+`eslint.config.js`. The config is in git history at the commit that removed it.
+
+What this costs: `tsc` still type checks everything, but the typed lint rules
+are gone with it, and those are the ones that catch a floating promise or an
+implicit `any` that the compiler accepts. Keep that in mind when reviewing.
+
+To bring it back once typescript-eslint supports TS 7, restore the config and
+reinstall those five. The alternative, if it is needed sooner, is Microsoft's
+side-by-side layout: `typescript` aliased to `@typescript/typescript6` with the
+real 7.x under `@typescript/native`. That was tried here and worked, `tsc` on
+7.0.2 and ESLint on the 6.0 API at once, but it was dropped to keep the manifest
+plain.
 
 ## Required environment variables
 

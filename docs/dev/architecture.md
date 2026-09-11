@@ -197,6 +197,41 @@ Eligibility attributes (age, nationality, region) are carried in SD-JWT VCs. Vot
 
 The frontend onboarding flow lets the user pick the source. The backend SD-JWT issuer acts as a thin connector layer rather than implementing document reading itself.
 
+### Why Self Pass and not Self Enterprise
+
+Self marks the open-source SDK we use (`@selfxyz/core`) as legacy and points new
+integrations at Self Enterprise (`@selfxyz/enterprise-sdk`). We stay on the
+open-source one deliberately. The legacy docs are explicit that they remain for
+existing integrations, and no end-of-life date has been announced.
+
+Enterprise is a managed service, and every one of these is on its own enough to
+rule it out here:
+
+- **Rules live in a dashboard flow, one active per workspace.** A flow is
+  immutable once deployed and carries the predicate config (`minimumAge`,
+  `excludedCountries`, `ofac`). Votain builds that config per election, at run
+  time, from what the organizer chose in the wizard. The one workspace that
+  allows several active flows at once, Custom Config, has no age or country
+  predicates at all.
+- **There is no API to create a flow.** The SDK exposes `sessions.create`,
+  `sessions.get` and webhook verification. Flows are dashboard-only, so an
+  election cannot provision its own rules even if the limit above did not exist.
+- **It reintroduces the handle the per-election scope exists to avoid.**
+  `sessions.create` takes a stable `externalUuid` for the user, stores it in an
+  activity log and echoes it on every webhook. Our scope is derived per election
+  precisely so no party holds one pseudonym per voter across elections. Moving
+  that correlation to a third party does not remove it.
+- **On-chain mode is on the wrong chain and needs a voter wallet.** It verifies
+  on Celo, not on our deployment chain, and mints a non-transferable SBT into
+  the voter's wallet. Voters here hold no address by design, because one would
+  link enrolment to ballot. It is also one verification per person per flow,
+  where we need a fresh nullifier per election.
+- **It bills per verification.**
+
+Worth noting that the replacement is at 0.x while the SDK it replaces is at
+1.2.0. Revisit if Self announces an end-of-life date for the open-source
+verifier, or if flows become API-creatable with per-session rules.
+
 ## Deployment targets
 
 | Component | Solution | Reason |

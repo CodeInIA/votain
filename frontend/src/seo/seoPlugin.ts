@@ -12,7 +12,7 @@
  */
 import type { Plugin } from 'vite';
 
-import { PRIVATE_PREFIXES, PUBLIC_ROUTES } from './publicRoutes';
+import { PRIVATE_PREFIXES, PUBLIC_ROUTES } from './publicRoutes.ts';
 
 /** Trailing slashes are stripped so joins below cannot produce `//`. */
 const normalise = (url: string): string => url.trim().replace(/\/+$/, '');
