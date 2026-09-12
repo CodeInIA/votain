@@ -13,6 +13,8 @@
  */
 import { Contract, JsonRpcProvider, Wallet } from 'ethers';
 
+import { contractAddress } from './deployments.js';
+
 const REGISTRY_ABI = [
   'function registerMember(uint256 nullifier, uint256 identityCommitment)',
   'function rotateMember(uint256 nullifier, uint256 newCommitment)',
@@ -35,9 +37,14 @@ const REGISTRY_ABI = [
   'function restoreStatus(uint256 statusIndex)',
 ];
 
+/** The PlatformRegistry address: REGISTRY_ADDRESS, else the deployment manifest. */
+export function registryAddress(): string | undefined {
+  return contractAddress('PlatformRegistry', 'REGISTRY_ADDRESS');
+}
+
 export function isRegistrarConfigured(): boolean {
   return Boolean(
-    process.env.CHAIN_RPC_URL && process.env.REGISTRY_ADDRESS && process.env.REGISTRAR_PRIVATE_KEY,
+    process.env.CHAIN_RPC_URL && registryAddress() && process.env.REGISTRAR_PRIVATE_KEY,
   );
 }
 
@@ -55,7 +62,7 @@ function getRegistry(): Contract {
 export function getRegistryWriter(): Contract {
   const provider = new JsonRpcProvider(process.env.CHAIN_RPC_URL);
   const wallet = new Wallet(process.env.REGISTRAR_PRIVATE_KEY as string, provider);
-  return new Contract(process.env.REGISTRY_ADDRESS as string, REGISTRY_ABI, wallet);
+  return new Contract(registryAddress() as string, REGISTRY_ABI, wallet);
 }
 
 /**
@@ -67,7 +74,7 @@ export function getRegistryWriter(): Contract {
  */
 export function getRegistryReader(): Contract {
   const provider = new JsonRpcProvider(process.env.CHAIN_RPC_URL);
-  return new Contract(process.env.REGISTRY_ADDRESS as string, REGISTRY_ABI, provider);
+  return new Contract(registryAddress() as string, REGISTRY_ABI, provider);
 }
 
 export interface RegistrationResult {

@@ -21,6 +21,8 @@
  */
 import { Contract, JsonRpcProvider, Wallet, isAddress } from 'ethers';
 
+import { contractAddress } from './deployments.js';
+
 const PAYMASTER_ABI = [
   'function relayEnroll(address election, uint256 identityCommitment)',
   'function relayEnrollAttested(address election, uint256 identityCommitment, uint256 personhoodNullifier, uint256 deadline, bytes signature)',
@@ -51,16 +53,21 @@ const PAYMASTER_ABI = [
   'function gasBalance(address organizer) view returns (uint256)',
 ];
 
+/** The ElectionPaymaster address: PAYMASTER_ADDRESS, else the deployment manifest. */
+export function paymasterAddress(): string | undefined {
+  return contractAddress('ElectionPaymaster', 'PAYMASTER_ADDRESS');
+}
+
 export function isRelayerConfigured(): boolean {
   return Boolean(
-    process.env.CHAIN_RPC_URL && process.env.PAYMASTER_ADDRESS && process.env.RELAYER_PRIVATE_KEY,
+    process.env.CHAIN_RPC_URL && paymasterAddress() && process.env.RELAYER_PRIVATE_KEY,
   );
 }
 
 function getPaymaster(): Contract {
   const provider = new JsonRpcProvider(process.env.CHAIN_RPC_URL);
   const wallet = new Wallet(process.env.RELAYER_PRIVATE_KEY as string, provider);
-  return new Contract(process.env.PAYMASTER_ADDRESS as string, PAYMASTER_ABI, wallet);
+  return new Contract(paymasterAddress() as string, PAYMASTER_ABI, wallet);
 }
 
 export interface RelayResult {
