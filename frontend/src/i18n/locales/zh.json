@@ -210,7 +210,12 @@
     "participation": "参与率",
     "export_json": "导出审计记录",
     "view_ipfs": "在 IPFS 上查看",
-    "not_available": "结果尚未公布。"
+    "not_available": "结果尚未公布。",
+    "check_ok_title": "已与链上核对",
+    "check_ok_body": "公布的计数合计为 {{declared}}，合约记录了 {{voters}} 名投票人。没有凭空增加，也没有丢弃任何选票。",
+    "check_bad_title": "与链上不一致",
+    "check_bad_body": "公布的计数合计为 {{declared}}，但合约记录了 {{voters}} 名投票人。这两个数字本应相同。",
+    "check_limit": "这不需要密钥，也不需要信任任何人，任何人都可以复核。但它看不出选票是否在选项之间被挪动，因为那样总数不变。"
   },
   "verify_receipt": {
     "title": "验证一笔投票",

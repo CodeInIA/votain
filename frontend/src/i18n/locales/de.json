@@ -212,7 +212,12 @@
     "participation": "Beteiligung",
     "export_json": "Prüfprotokoll exportieren",
     "view_ipfs": "Auf IPFS anzeigen",
-    "not_available": "Ergebnisse noch nicht verfügbar."
+    "not_available": "Ergebnisse noch nicht verfügbar.",
+    "check_ok_title": "Gegen die Chain geprüft",
+    "check_ok_body": "Die veröffentlichten Zählwerte ergeben {{declared}}, und der Vertrag hat {{voters}} Wählende erfasst. Keine Stimme wurde erfunden oder verworfen.",
+    "check_bad_title": "Stimmt nicht mit der Chain überein",
+    "check_bad_body": "Die veröffentlichten Zählwerte ergeben {{declared}}, der Vertrag hat aber {{voters}} Wählende erfasst. Beide Zahlen sollten gleich sein.",
+    "check_limit": "Dafür braucht es weder Schlüssel noch Vertrauen: jede Person kann es wiederholen. Ob Stimmen zwischen Optionen verschoben wurden, zeigt es nicht, denn das ändert die Summe nicht."
   },
   "verify_receipt": {
     "title": "Eine Stimme prüfen",

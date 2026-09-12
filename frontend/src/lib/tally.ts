@@ -16,7 +16,13 @@ import type { Signer } from "ethers";
 import { getElection } from "./contracts";
 import { queryLogsFrom } from "./logs";
 import { loadElectionPrivateKey, storeElectionPrivateKey } from "./organizer";
-import { addCiphertexts, decryptTally, restoreKeyPair, type SerializedKeyPair } from "./paillier";
+import {
+  addCiphertexts,
+  counterBaseFor,
+  decryptTally,
+  restoreKeyPair,
+  type SerializedKeyPair,
+} from "./paillier";
 import { deriveElectionKeys } from "./tallyKey";
 import { hasPrfCredential } from "./passkeyPrf";
 
@@ -143,12 +149,16 @@ export async function computeTally(address: string, signer?: Signer): Promise<Ta
 
   // With no votes there is nothing to add: report an all-zero tally rather than
   // letting addCiphertexts throw on an empty list.
+  // One ballot per voter reaches the sum, so the unpacked counters have to add
+  // up to exactly this many. `decryptTally` refuses anything else.
   const counts = finalVotes.length === 0
     ? Array.from({ length: totalSlots }, () => 0)
     : decryptTally(
         { publicKey, privateKey },
         addCiphertexts(publicKey, finalVotes.map(v => v.ciphertext)),
         totalSlots,
+        counterBaseFor(metadataJson),
+        finalVotes.length,
       ).map(Number);
 
   return {

@@ -10,7 +10,7 @@
 import { type Signer } from "ethers";
 import { getFactory, getElection, getPaymaster } from "./contracts";
 import { queryLogsFrom } from "./logs";
-import { generateElectionKeys, type SerializedKeyPair } from "./paillier";
+import { COUNTER_BASE, generateElectionKeys, type SerializedKeyPair } from "./paillier";
 import { deriveElectionKeys, newKeyNonce } from "./tallyKey";
 import {
   effectivePersonhood,
@@ -182,6 +182,11 @@ export async function createElection(
     ...(input.organizerDomain ? { organizerDomain: input.organizerDomain } : {}),
     candidates: input.candidates,
     privacyQuorum: input.privacyQuorum,
+    // Recorded, not assumed. The base is fixed into every ballot at encryption
+    // time, so an election tallied against a different one decodes to nonsense.
+    // Writing it here is what lets the constant be raised later without
+    // stranding the elections already running under the old value.
+    counterBase: COUNTER_BASE.toString(),
     ...(keyDerivable ? { keyNonce } : {}),
     // The personhood level travels inside `eligibility`, where the on-chain
     // policy hash covers it. The old top-level `requireOrb` flag sat outside
@@ -228,6 +233,10 @@ export async function createElection(
     // a DEVICE election may carry no attester, and therefore no age or
     // nationality rule, since neither can be proved without a document.
     personhood: PERSONHOOD_ENUM[effectivePersonhood(input.eligibility)],
+    // On chain as well as in the metadata, because the contract is what has to
+    // refuse the publication. Kept in both places on purpose: the metadata copy
+    // is what the interface reads to explain the rule before anyone votes.
+    privacyQuorum: BigInt(input.privacyQuorum),
   };
 
   const factory = getFactory(signer);

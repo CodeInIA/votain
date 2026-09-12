@@ -17,7 +17,7 @@ import {
   relayVote,
   type EnrollAttestationInput,
 } from "./relay";
-import { encryptBallot } from "./paillier";
+import { counterBaseFor, encryptBallot } from "./paillier";
 import {
   computeNullifier,
   fetchElectionGroup,
@@ -65,10 +65,16 @@ export async function castVote(electionAddress: string, optionIndex: number): Pr
   const identity = await getOrCreateIdentity();
 
   const election = getElection(electionAddress);
-  const [paillierPk, scope] = await Promise.all([election.paillierPublicKey(), election.scope()]);
+  const [paillierPk, scope, metadataJson] = await Promise.all([
+    election.paillierPublicKey(),
+    election.scope(),
+    election.metadataJson(),
+  ]);
 
-  // 1. Encrypt ballot
-  const ciphertext = encryptBallot(paillierPk, optionIndex);
+  // 1. Encrypt ballot, in the base THIS election records. Using the current
+  //    constant instead would make every ballot cast after a base change
+  //    unreadable to a tally that correctly follows the election's own.
+  const ciphertext = encryptBallot(paillierPk, optionIndex, counterBaseFor(metadataJson));
 
   // 2. Read the current nonce (re-vote support) from the deterministic nullifier
   const nullifier = computeNullifier(identity, BigInt(scope));

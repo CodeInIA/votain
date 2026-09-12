@@ -82,7 +82,20 @@ export interface Election {
   /** True when that level is `orb`. Kept for the views that only ask that. */
   requiresOrb?: boolean;
   totalEnrolled: number;
+  /** Ballots on chain, re-votes included. Not the number of people. */
   castVotes: number;
+  /** People who voted at least once. What a published tally has to add up to. */
+  distinctVoters?: number;
+  /**
+   * The public half of verifying a published result.
+   *
+   * Present only once results are published. Needs no decryption key: it
+   * compares the counters the organizer published against the number of voters
+   * the contract counted, which anyone can read. It catches invented or dropped
+   * ballots. It cannot catch votes moved between options, since that keeps the
+   * total intact.
+   */
+  tallyCheck?: { declared: number; voters: number; matches: boolean };
   contractAddress: string;
   ipfsCid?: string;
   /** Attribute restrictions on enrolment, verified against the contract's hash. */

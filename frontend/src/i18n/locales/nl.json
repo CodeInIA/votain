@@ -212,7 +212,12 @@
     "participation": "Deelname",
     "export_json": "Audittrail exporteren",
     "view_ipfs": "Bekijk op IPFS",
-    "not_available": "Resultaten nog niet beschikbaar."
+    "not_available": "Resultaten nog niet beschikbaar.",
+    "check_ok_title": "Gecontroleerd tegen de chain",
+    "check_ok_body": "De gepubliceerde tellingen komen op {{declared}}, en het contract registreerde {{voters}} stemmers. Geen stem is verzonnen of weggelaten.",
+    "check_bad_title": "Komt niet overeen met de chain",
+    "check_bad_body": "De gepubliceerde tellingen komen op {{declared}}, maar het contract registreerde {{voters}} stemmers. Dat horen dezelfde getallen te zijn.",
+    "check_limit": "Hier is geen sleutel of vertrouwen voor nodig: iedereen kan het herhalen. Het ziet niet of stemmen tussen opties zijn verschoven, want dat laat het totaal gelijk."
   },
   "verify_receipt": {
     "title": "Een stem verifiëren",

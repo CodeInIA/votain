@@ -214,7 +214,12 @@
     "participation": "Participación",
     "export_json": "Exportar registro de auditoría",
     "view_ipfs": "Ver en IPFS",
-    "not_available": "Los resultados aún no están disponibles."
+    "not_available": "Los resultados aún no están disponibles.",
+    "check_ok_title": "Comprobado contra la cadena",
+    "check_ok_body": "Los recuentos publicados suman {{declared}} y el contrato registró {{voters}} votantes. No se inventó ni se descartó ninguna papeleta.",
+    "check_bad_title": "No cuadra con la cadena",
+    "check_bad_body": "Los recuentos publicados suman {{declared}}, pero el contrato registró {{voters}} votantes. Deberían ser el mismo número.",
+    "check_limit": "Esto no necesita ninguna clave ni confiar en nadie: cualquiera puede repetirlo. No detecta si se movieron votos entre opciones, porque eso no altera el total."
   },
   "verify_receipt": {
     "title": "Verifica un voto",

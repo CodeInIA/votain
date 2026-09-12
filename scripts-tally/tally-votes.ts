@@ -25,7 +25,22 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { Contract, JsonRpcProvider, Wallet } from "ethers";
 import { PublicKey, PrivateKey } from "paillier-bigint";
 
-const COUNTER_BASE = 1_000_000n;
+/**
+ * Fallback only. The base is fixed into every ballot at encryption time, so an
+ * election is decoded in the base IT recorded (metadataJson.counterBase), and
+ * this is what the ones created before that field existed used.
+ */
+const LEGACY_COUNTER_BASE = 1_000_000n;
+
+/** Reads the base one election was encoded with. */
+function counterBaseOf(metadataJson: string): bigint {
+  try {
+    const meta = JSON.parse(metadataJson) as { counterBase?: string };
+    return meta.counterBase ? BigInt(meta.counterBase) : LEGACY_COUNTER_BASE;
+  } catch {
+    return LEGACY_COUNTER_BASE;
+  }
+}
 
 const ELECTION_ABI = [
   "function numOptions() view returns (uint256)",
@@ -190,10 +205,14 @@ async function main() {
   const finalVotes = [...latest.values()];
   console.log(`${finalVotes.length} unique voters after coercion-resistance dedup`);
 
+  // Read once: the quorum below and the counter base further down both come
+  // from it, and two round trips could disagree if the chain moved between them.
+  const metadataJson: string = await election.metadataJson();
+
   // Privacy quorum (metadata): never reveal a tally computed from too few voters
   let privacyQuorum = 0;
   try {
-    const meta = JSON.parse(await election.metadataJson()) as { privacyQuorum?: number };
+    const meta = JSON.parse(metadataJson) as { privacyQuorum?: number };
     privacyQuorum = meta.privacyQuorum ?? 0;
   } catch { /* no metadata */ }
 
@@ -216,14 +235,25 @@ async function main() {
     counts = new Array(totalSlots).fill(0n);
   } else {
     const aggregate = finalVotes.map(v => BigInt(v.ciphertext)).reduce((acc, c) => publicKey.addition(acc, c));
-    // 4. Decrypt + unpack
+    // 4. Decrypt + unpack, in the base this election recorded
+    const base = counterBaseOf(metadataJson);
     let remaining = privateKey.decrypt(aggregate);
     counts = [];
     for (let i = 0; i < totalSlots; i++) {
-      counts.push(remaining % COUNTER_BASE);
-      remaining /= COUNTER_BASE;
+      counts.push(remaining % base);
+      remaining /= base;
     }
-    if (remaining !== 0n) throw new Error("tally overflow: a counter exceeded COUNTER_BASE");
+    if (remaining !== 0n) throw new Error("tally overflow: a counter exceeded the counter base");
+
+    // Every ballot adds one to exactly one counter, so the counters have to
+    // account for all of them. This is the check that sees a carry BETWEEN
+    // counters; the leftover above only sees one past the last.
+    const declared = counts.reduce((a, c) => a + c, 0n);
+    if (declared !== BigInt(finalVotes.length)) {
+      throw new Error(
+        `tally does not match the ballots counted: unpacked ${declared}, expected ${finalVotes.length}`,
+      );
+    }
   }
 
   // 5. Outcome

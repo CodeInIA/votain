@@ -214,7 +214,12 @@
     "participation": "Participação",
     "export_json": "Exportar trilha de auditoria",
     "view_ipfs": "Ver no IPFS",
-    "not_available": "Resultados ainda não disponíveis."
+    "not_available": "Resultados ainda não disponíveis.",
+    "check_ok_title": "Verificado na cadeia",
+    "check_ok_body": "As contagens publicadas somam {{declared}} e o contrato registou {{voters}} votantes. Nenhum boletim foi inventado nem descartado.",
+    "check_bad_title": "Não corresponde à cadeia",
+    "check_bad_body": "As contagens publicadas somam {{declared}}, mas o contrato registou {{voters}} votantes. Deveriam ser o mesmo número.",
+    "check_limit": "Não precisa de chave nem de confiar em ninguém: qualquer pessoa pode repetir. Não deteta votos movidos entre opções, porque isso não altera o total."
   },
   "verify_receipt": {
     "title": "Verifica um voto",

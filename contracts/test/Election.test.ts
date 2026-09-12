@@ -407,6 +407,113 @@ describe("ElectionV4, organizer lifecycle", () => {
   });
 });
 
+describe("ElectionV4, privacy quorum", () => {
+  /** Enrolls and votes once, so the election has exactly `n` distinct voters. */
+  async function withVoters(election: any, n: number): Promise<void> {
+    const ids = [];
+    for (let i = 0; i < n; i++) {
+      const id = nextCommitment();
+      await platformRegister(id.nullifier, id.commitment);
+      await (await election.connect(voter).enroll(id.commitment)).wait();
+      ids.push(id);
+    }
+    await networkHelpers.time.increaseTo(await election.voteStart());
+    const root = await election.merkleTreeRoot();
+    for (const id of ids) {
+      await (
+        await election
+          .connect(voter)
+          .castVote("0x01", id.nullifier, root, 1n, DUMMY_PROOF.pA, DUMMY_PROOF.pB, DUMMY_PROOF.pC)
+      ).wait();
+    }
+  }
+
+  it("counts people, not ballots, however often they re-vote", async () => {
+    const election = await freshElection();
+    const { nullifier, commitment } = nextCommitment();
+    await platformRegister(nullifier, commitment);
+    await (await election.connect(voter).enroll(commitment)).wait();
+    await networkHelpers.time.increaseTo(await election.voteStart());
+    const root = await election.merkleTreeRoot();
+
+    for (const ballot of ["0x01", "0x02", "0x03"]) {
+      await (
+        await election
+          .connect(voter)
+          .castVote(ballot, nullifier, root, 1n, DUMMY_PROOF.pA, DUMMY_PROOF.pB, DUMMY_PROOF.pC)
+      ).wait();
+    }
+
+    // Three ballots, one person. The quorum is about how many people a result
+    // would expose, so re-voting must not inflate it.
+    expect(await election.voteCount()).to.equal(3n);
+    expect(await election.distinctVoters()).to.equal(1n);
+  });
+
+  it("refuses to publish a result that rests on too few voters", async () => {
+    const election = await freshElection({ privacyQuorum: 3n });
+    await withVoters(election, 2);
+    await networkHelpers.time.increaseTo((await election.voteEnd()) + 1n);
+
+    await expect(
+      election.connect(organizer).publishResults("cid", [1n, 1n, 0n, 0n]),
+    ).to.be.revertedWithCustomError(election, "PrivacyQuorumNotMet");
+  });
+
+  it("leaves voiding as the way out, so the election still reaches an end", async () => {
+    const election = await freshElection({ privacyQuorum: 3n });
+    await withVoters(election, 2);
+    await networkHelpers.time.increaseTo((await election.voteEnd()) + 1n);
+
+    await (await election.connect(organizer).markVoided()).wait();
+    expect(await election.phase()).to.equal(Phase.VOIDED);
+  });
+
+  it("publishes once the quorum is reached", async () => {
+    const election = await freshElection({ privacyQuorum: 3n });
+    await withVoters(election, 3);
+    await networkHelpers.time.increaseTo((await election.voteEnd()) + 1n);
+
+    await (await election.connect(organizer).publishResults("cid", [2n, 1n, 0n, 0n])).wait();
+    expect(await election.phase()).to.equal(Phase.CLOSED);
+    expect(await election.distinctVoters()).to.equal(3n);
+  });
+
+  it("is off by default, so an election that sets no floor behaves as before", async () => {
+    const election = await freshElection();
+    expect(await election.privacyQuorum()).to.equal(0n);
+    await networkHelpers.time.increaseTo((await election.voteEnd()) + 1n);
+    await (await election.connect(organizer).publishResults("cid", [1n, 0n, 0n, 0n])).wait();
+    expect(await election.phase()).to.equal(Phase.CLOSED);
+  });
+});
+
+describe("ElectionV4, option ceiling", () => {
+  it("refuses more options than the tally encoding can carry", async () => {
+    const now = await networkHelpers.time.latest();
+    const Election = await ethers.getContractFactory("ElectionV4", {
+      libraries: { "PoseidonT3": stack.poseidonAddress },
+    });
+    const deployWith = (cfg: ReturnType<typeof baseConfig>) =>
+      Election.deploy(
+        FORWARDER,
+        stack.verifier.getAddress(),
+        stack.registry.getAddress(),
+        organizer.address,
+        cfg,
+      );
+
+    // 51 counters of 12 digits would pass the 2048-bit Paillier modulus, and a
+    // tally that wraps is worse than one that was never allowed to exist.
+    await expect(deployWith(baseConfig(now, { numOptions: 51n })))
+      .to.be.revertedWithCustomError(Election, "InvalidConfig");
+
+    const atCeiling = await deployWith(baseConfig(now, { numOptions: 50n }));
+    expect(await atCeiling.numOptions()).to.equal(50n);
+    expect(await atCeiling.MAX_OPTIONS()).to.equal(50n);
+  });
+});
+
 describe("ElectionV4, publishResults & outcomes", () => {
   async function publish(election: any, tallyArr: bigint[]): Promise<void> {
     await networkHelpers.time.increaseTo((await election.voteEnd()) + 1n);

@@ -214,7 +214,12 @@
     "participation": "Participation",
     "export_json": "Exporter la piste d'audit",
     "view_ipfs": "Voir sur IPFS",
-    "not_available": "Résultats pas encore disponibles."
+    "not_available": "Résultats pas encore disponibles.",
+    "check_ok_title": "Vérifié sur la chaîne",
+    "check_ok_body": "Les décomptes publiés totalisent {{declared}} et le contrat a enregistré {{voters}} votants. Aucun bulletin n'a été inventé ni écarté.",
+    "check_bad_title": "Ne correspond pas à la chaîne",
+    "check_bad_body": "Les décomptes publiés totalisent {{declared}}, mais le contrat a enregistré {{voters}} votants. Ces deux nombres devraient être identiques.",
+    "check_limit": "Aucune clé ni confiance requise : n'importe qui peut le refaire. Cela ne détecte pas un déplacement de voix entre options, qui laisse le total inchangé."
   },
   "verify_receipt": {
     "title": "Vérifier un vote",

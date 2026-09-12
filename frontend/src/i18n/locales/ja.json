@@ -210,7 +210,12 @@
     "participation": "参加率",
     "export_json": "監査証跡をエクスポート",
     "view_ipfs": "IPFSで表示",
-    "not_available": "結果はまだ利用できません。"
+    "not_available": "結果はまだ利用できません。",
+    "check_ok_title": "チェーンと照合済み",
+    "check_ok_body": "公開された集計の合計は {{declared}} で、コントラクトが記録した投票者数は {{voters}} 人です。票の水増しも取りこぼしもありません。",
+    "check_bad_title": "チェーンと一致しません",
+    "check_bad_body": "公開された集計の合計は {{declared}} ですが、コントラクトが記録した投票者数は {{voters}} 人です。本来は同じ数になるはずです。",
+    "check_limit": "鍵も信頼も要らず、誰でも同じ確認ができます。ただし選択肢のあいだで票が移された場合は合計が変わらないため、この確認では分かりません。"
   },
   "verify_receipt": {
     "title": "投票を確認する",

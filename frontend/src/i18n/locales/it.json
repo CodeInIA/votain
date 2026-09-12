@@ -214,7 +214,12 @@
     "participation": "Partecipazione",
     "export_json": "Esporta registro audit",
     "view_ipfs": "Vedi su IPFS",
-    "not_available": "Risultati non ancora disponibili."
+    "not_available": "Risultati non ancora disponibili.",
+    "check_ok_title": "Verificato sulla catena",
+    "check_ok_body": "I conteggi pubblicati sommano {{declared}} e il contratto ha registrato {{voters}} votanti. Nessuna scheda è stata inventata o scartata.",
+    "check_bad_title": "Non corrisponde alla catena",
+    "check_bad_body": "I conteggi pubblicati sommano {{declared}}, ma il contratto ha registrato {{voters}} votanti. Dovrebbero essere lo stesso numero.",
+    "check_limit": "Non serve alcuna chiave né fiducia: chiunque può ripeterlo. Non rileva voti spostati tra opzioni, perché il totale resta uguale."
   },
   "verify_receipt": {
     "title": "Verifica un voto",

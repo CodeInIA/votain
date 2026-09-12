@@ -118,6 +118,7 @@ export interface ElectionConfig {
   eligibilityAttester: string;
   eligibilityPolicyHash: string;
   personhood: number;
+  privacyQuorum: bigint;
 }
 
 export const VotingType = {
@@ -164,6 +165,7 @@ export function baseConfig(now: number, overrides: Partial<ElectionConfig> = {})
     eligibilityAttester: ZERO_ADDRESS,
     eligibilityPolicyHash: ZERO_HASH,
     personhood: 0,
+    privacyQuorum: 0n,
     ...overrides,
   };
 }

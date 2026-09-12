@@ -197,6 +197,94 @@ Eligibility attributes (age, nationality, region) are carried in SD-JWT VCs. Vot
 
 The frontend onboarding flow lets the user pick the source. The backend SD-JWT issuer acts as a thin connector layer rather than implementing document reading itself.
 
+### What the tally guarantees, and what it does not
+
+Three separate things protect a published result. They are worth keeping apart,
+because each stops a different attack and none of them stops all three.
+
+**The counters have to account for every ballot.** A ballot for option i is the
+Paillier plaintext B^i, so summing ciphertexts sums per-option counters in base
+B, and every ballot adds exactly one to exactly one counter. `decryptTally`
+therefore checks that the unpacked counters total the ballots that went in. The
+check it replaces only looked for a leftover past the LAST counter, which an
+overflow from option 0 into option 1 never produces: the tally came out quietly
+wrong with nothing to show for it. B is a trillion, and `MAX_OPTIONS` in the
+contract is 50 because 51 counters of 12 digits is as much as a 2048-bit modulus
+can carry. The base is recorded per election in `metadataJson.counterBase`,
+since it is fixed into each ballot when it is encrypted and cannot be changed
+underneath an election already running.
+
+**A result may not rest on too few voters.** `publishResults` reverts below
+`privacyQuorum`, leaving `markVoided` as the only way the election can end.
+This bounds PUBLICATION, not knowledge: the organizer holds the decryption key
+and the ciphertexts are public, so they can always compute the result privately
+and no contract can prevent it. Only threshold decryption, splitting the key so
+no single party can decrypt alone, would. Note also that a small tally leaks by
+itself, whoever decrypts it: three voters and a 3-0 result identifies everyone.
+
+**Anyone can check the totals without a key.** The results screen compares the
+published counters against `distinctVoters`, which the contract counts and
+anyone can read, so invented or dropped ballots are visible to every reader
+rather than only to someone who runs the CLI.
+
+#### Not guaranteed
+
+The contract does NOT require the published counters to sum to
+`distinctVoters`, though every honest tally does. It never validates a
+ciphertext, only the membership proof around one, so an enrolled voter can cast
+arbitrary bytes as their ballot; with that rule in place, one voter could make
+any election permanently unpublishable. It would also buy little, since an
+organizer inclined to falsify moves votes BETWEEN options and leaves the total
+alone.
+
+Closing that needs two pieces this project does not have. A **ballot validity
+proof**, so a ciphertext is provably one of the allowed plaintexts, which is
+what would make the sum rule safe to enforce. And a **proof of correct
+decryption**, so the organizer must show the published numbers really are the
+decryption of the aggregate anyone can recompute from chain. With both, a false
+tally could not be posted at all. Without them it can be posted and then
+contradicted, which is weaker, and saying so is more useful than implying
+otherwise.
+
+#### Threshold decryption, and why it is not here
+
+The organizer holding the whole decryption key is the one limit none of the
+above reaches. The standard answer is threshold decryption: split the private
+key into k shares so that any t of them can decrypt together and t-1 learn
+nothing. Each trustee produces a partial decryption of the aggregate and the
+partials combine into the result, so the complete key never exists anywhere.
+That is what would make "not even the organizer can see the result early" a
+property rather than a promise.
+
+It is not here, and the reason is the primitive. With Paillier the hard part is
+not decrypting, it is GENERATING: the trustees would have to jointly produce an
+RSA modulus n = p*q without any of them learning p or q, which is a serious
+multi-party protocol. The usual shortcut is a trusted dealer who generates the
+key, splits it and deletes the original, but then that party held the whole key
+for a moment, which is precisely the assumption threshold decryption exists to
+remove.
+
+Comparable systems avoid this by not choosing Paillier. Helios and Belenios use
+exponential ElGamal, where distributed key generation is almost free: each
+trustee picks x_i and publishes g^x_i, and the public key is the product. No
+factoring, no dealer. The cost is that decryption ends in a discrete log, which
+is fine because the result is bounded by the number of voters and can simply be
+searched. The honest summary is that the clean route to a threshold ran through
+choosing ElGamal at the start.
+
+There is also a product cost, separate from the cryptography. Trustees are
+people who hold shares and have to turn up to decrypt. An organizer creating an
+election in two minutes is part of what this is; requiring three parties to
+coordinate before anyone sees a result is a different system.
+
+**A tempting non-solution, recorded so nobody proposes it again.** Publishing
+the private key once the election closes looks like it buys full verifiability:
+anyone could then repeat the decryption and confirm the published numbers. It
+does, and it simultaneously lets anyone decrypt INDIVIDUAL ballots. Paired with
+the receipts voters already hold, that destroys coercion resistance completely.
+Verifiability bought at the price of the secret ballot is not a trade worth
+making.
+
 ### Why Self Pass and not Self Enterprise
 
 Self marks the open-source SDK we use (`@selfxyz/core`) as legacy and points new

@@ -210,7 +210,12 @@
     "participation": "참여율",
     "export_json": "감사 추적 내보내기",
     "view_ipfs": "IPFS에서 보기",
-    "not_available": "결과가 아직 없습니다."
+    "not_available": "결과가 아직 없습니다.",
+    "check_ok_title": "체인과 대조 완료",
+    "check_ok_body": "공개된 집계의 합은 {{declared}}이고, 컨트랙트가 기록한 투표자는 {{voters}}명입니다. 만들어 낸 표도, 빠뜨린 표도 없습니다.",
+    "check_bad_title": "체인과 맞지 않습니다",
+    "check_bad_body": "공개된 집계의 합은 {{declared}}이지만, 컨트랙트가 기록한 투표자는 {{voters}}명입니다. 두 숫자는 같아야 합니다.",
+    "check_limit": "열쇠도 신뢰도 필요 없으며 누구나 다시 확인할 수 있습니다. 다만 선택지 사이에서 표를 옮긴 경우는 합계가 그대로여서 드러나지 않습니다."
   },
   "verify_receipt": {
     "title": "투표 확인하기",

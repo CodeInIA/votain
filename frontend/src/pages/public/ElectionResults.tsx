@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Download, ExternalLink } from 'lucide-react';
+import { Download, ExternalLink, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
@@ -113,6 +113,31 @@ export default function ElectionResults() {
           <h2 className="text-sm font-semibold text-on-surface mb-4">{t('results.breakdown')}</h2>
           <ResultBarChart candidates={election.candidates as Parameters<typeof ResultBarChart>[0]['candidates']} totalVotes={totalVotes} />
         </Card>
+
+        {/* What a reader can check for themselves, with no key and no CLI */}
+        {election.tallyCheck && (
+          <Card className="p-5 mb-6">
+            <div className="flex items-start gap-3">
+              {election.tallyCheck.matches ? (
+                <ShieldCheck className="w-5 h-5 text-success shrink-0 mt-0.5" />
+              ) : (
+                <ShieldAlert className="w-5 h-5 text-error shrink-0 mt-0.5" />
+              )}
+              <div className="min-w-0">
+                <h2 className="text-sm font-semibold text-on-surface mb-1">
+                  {t(election.tallyCheck.matches ? 'results.check_ok_title' : 'results.check_bad_title')}
+                </h2>
+                <p className="text-xs text-on-surface-variant">
+                  {t(election.tallyCheck.matches ? 'results.check_ok_body' : 'results.check_bad_body', {
+                    declared: election.tallyCheck.declared,
+                    voters: election.tallyCheck.voters,
+                  })}
+                </p>
+                <p className="text-xs text-on-surface-meta mt-2">{t('results.check_limit')}</p>
+              </div>
+            </div>
+          </Card>
+        )}
 
         {/* Transparency actions */}
         <div className="flex flex-wrap gap-3">

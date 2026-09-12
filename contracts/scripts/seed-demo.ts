@@ -55,7 +55,15 @@ const ONLY = (process.env.SEED_ONLY ?? "")
 
 const HOUR = 3600;
 const DAY = 24 * HOUR;
-const COUNTER_BASE = 1_000_000n;
+const COUNTER_BASE = 1_000_000_000_000n;
+
+/**
+ * Privacy quorum for seeded elections. Below the number of voters each spec
+ * enrolls, so the demo can still publish a result; a quorum nothing reaches
+ * would make every seeded election end voided, which demonstrates the rule but
+ * nothing else.
+ */
+const SEED_PRIVACY_QUORUM = 3;
 /// 1024-bit keeps seeding quick; the app generates 2048-bit for real elections.
 const PAILLIER_BITS = 1024;
 
@@ -353,7 +361,8 @@ async function main(): Promise<void> {
         description: spec.description,
         organizerName: spec.organizerName,
         candidates: spec.candidates,
-        privacyQuorum: 3,
+        privacyQuorum: SEED_PRIVACY_QUORUM,
+        counterBase: COUNTER_BASE.toString(),
         ...(spec.eligibility ? { eligibility: canonicalPolicy(spec.eligibility) } : {}),
         tags: spec.tags ?? ["demo"],
       }),
@@ -366,6 +375,9 @@ async function main(): Promise<void> {
       // Mirrors `ElectionV4.PersonhoodLevel`. The constructor refuses a DEVICE
       // election that names an attester, so this has to agree with the policy.
       personhood: spec.eligibility ? PERSONHOOD_ENUM[effectiveLevel(spec.eligibility)] : 0,
+      // The same number the metadata declares. Two copies that disagree would
+      // put the interface and the contract on different sides of the same rule.
+      privacyQuorum: BigInt(SEED_PRIVACY_QUORUM),
     };
 
     const receipt = await (

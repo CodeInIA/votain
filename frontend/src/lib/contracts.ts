@@ -13,7 +13,7 @@ import { addresses, chainInfo } from "./deployments";
 // ────────────────────────────────────────────────
 
 export const ELECTION_FACTORY_ABI = [
-  "function createElection((string name, uint8 votingType, uint256 thresholdValue, uint256 numOptions, uint256 enrollStart, uint256 enrollEnd, uint256 voteStart, uint256 voteEnd, uint256 scope, string paillierPublicKey, string metadataJson, address eligibilityAttester, bytes32 eligibilityPolicyHash, uint8 personhood) cfg) payable returns (address)",
+  "function createElection((string name, uint8 votingType, uint256 thresholdValue, uint256 numOptions, uint256 enrollStart, uint256 enrollEnd, uint256 voteStart, uint256 voteEnd, uint256 scope, string paillierPublicKey, string metadataJson, address eligibilityAttester, bytes32 eligibilityPolicyHash, uint8 personhood, uint256 privacyQuorum) cfg) payable returns (address)",
   "function electionsCount() view returns (uint256)",
   "function getElections(uint256 offset, uint256 limit) view returns (address[])",
   "event ElectionCreated(address indexed electionAddress, address indexed organizer, string name, uint8 votingType, uint256 scope)",
@@ -41,6 +41,8 @@ export const ELECTION_ABI = [
   "function hasMember(uint256 identityCommitment) view returns (bool)",
   "function nullifierNonces(uint256 nullifier) view returns (uint256)",
   "function voteCount() view returns (uint256)",
+  "function distinctVoters() view returns (uint256)",
+  "function privacyQuorum() view returns (uint256)",
   "function resultsPublished() view returns (bool)",
   "function resultsCid() view returns (string)",
   "function tally() view returns (uint256[])",

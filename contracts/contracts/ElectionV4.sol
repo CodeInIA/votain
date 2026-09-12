@@ -71,6 +71,7 @@ contract ElectionV4 is ERC2771Context {
         address eligibilityAttester;   // address(0) = open election, no attribute policy
         bytes32 eligibilityPolicyHash; // keccak256 of the policy declared in metadataJson
         PersonhoodLevel personhood;    // how distinct a human each voter must prove to be
+        uint256 privacyQuorum;         // fewest distinct voters a publishable result may rest on
     }
 
     // ────────────────────────────────────────────────
@@ -83,6 +84,20 @@ contract ElectionV4 is ERC2771Context {
 
     uint256 public constant MIN_TREE_DEPTH = 1;
     uint256 public constant MAX_TREE_DEPTH = 32;
+
+    /**
+     * @dev Ceiling on ballot options, and it is the ENCODING that sets it.
+     *
+     * A ballot for option i is the Paillier plaintext B^i with B = 10^12, so a
+     * tally packs one counter per option into a single plaintext, base B. That
+     * plaintext must stay below the 2048-bit modulus, which is about 616
+     * decimal digits: 12 digits per counter leaves room for 51 of them, and the
+     * blank vote takes one. Above that the top counter wraps and the decrypted
+     * tally is silently wrong, so the bound belongs here, where an election is
+     * refused before anyone votes in it, rather than in the client that happens
+     * to do the arithmetic.
+     */
+    uint256 public constant MAX_OPTIONS = 50;
 
     address public immutable organizer;
     ISemaphoreVerifier public immutable verifier;
@@ -110,6 +125,20 @@ contract ElectionV4 is ERC2771Context {
     /// @notice The personhood bar this election sets, readable without parsing
     /// the metadata or trusting anything that did.
     PersonhoodLevel public immutable personhood;
+
+    /**
+     * @notice Fewest distinct voters a result may be published on.
+     *
+     * A tally over three ballots that comes out 3-0 tells everyone how all
+     * three voted, whoever holds the key. This is the floor below which the
+     * organizer's only remaining move is to void the election.
+     *
+     * It bounds PUBLICATION, not knowledge. The organizer holds the decryption
+     * key and the ciphertexts are public, so they can always compute the result
+     * privately; no contract can prevent that. Only threshold decryption, where
+     * no single party can decrypt alone, would.
+     */
+    uint256 public immutable privacyQuorum;
 
     bytes32 private constant ENROLL_TYPEHASH =
         keccak256(
@@ -187,6 +216,16 @@ contract ElectionV4 is ERC2771Context {
     /// @dev Total VoteCast events emitted (re-votes included).
     uint256 public voteCount;
 
+    /**
+     * @dev How many distinct nullifiers have voted at least once.
+     *
+     * Not the same number as `voteCount`: re-voting is the coercion defence, so
+     * one person can appear in that total many times while the tally counts
+     * them once. This is the figure a published result has to agree with, and
+     * the figure the privacy quorum is measured against.
+     */
+    uint256 public distinctVoters;
+
     string public resultsCid;
     uint256[] internal _tally;
     Outcome public outcome;
@@ -239,6 +278,8 @@ contract ElectionV4 is ERC2771Context {
     error BadAttestation();
     error MissingPersonhoodNullifier();
     error PersonhoodNullifierUsed();
+    error TooManyOptions();
+    error PrivacyQuorumNotMet();
 
     // ────────────────────────────────────────────────
     // Modifiers
@@ -272,6 +313,7 @@ contract ElectionV4 is ERC2771Context {
             _registry == address(0) ||
             _organizer == address(0) ||
             cfg.numOptions == 0 ||
+            cfg.numOptions > MAX_OPTIONS ||
             bytes(cfg.name).length < MIN_NAME_BYTES ||
             bytes(cfg.name).length > MAX_NAME_BYTES ||
             bytes(cfg.metadataJson).length > MAX_METADATA_BYTES ||
@@ -322,6 +364,7 @@ contract ElectionV4 is ERC2771Context {
         votingType = cfg.votingType;
         thresholdValue = cfg.thresholdValue;
         numOptions = cfg.numOptions;
+        privacyQuorum = cfg.privacyQuorum;
         enrollStart = cfg.enrollStart;
         enrollEnd = cfg.enrollEnd;
         voteStart = cfg.voteStart;
@@ -527,6 +570,10 @@ contract ElectionV4 is ERC2771Context {
 
         emit VoteCast(nullifier, voteCiphertext, currentNonce, block.timestamp);
 
+        // Nonce zero is this nullifier's first ballot, so this is where a
+        // PERSON joins the count. Every later ballot from them replaces it.
+        if (currentNonce == 0) distinctVoters += 1;
+
         nullifierNonces[nullifier] = currentNonce + 1;
         voteCount += 1;
     }
@@ -579,6 +626,36 @@ contract ElectionV4 is ERC2771Context {
     ) external onlyOrganizer notDecided {
         if (block.timestamp <= voteEnd) revert VotingNotEnded();
         if (tallyResults.length != numOptions + 1) revert InvalidTally();
+
+        // Below the quorum there is no publishable result, only `markVoided`.
+        // Enforced here rather than in the client that draws the button,
+        // because a rule a wallet can step around is not a rule.
+        if (distinctVoters < privacyQuorum) revert PrivacyQuorumNotMet();
+
+        // NOT CHECKED HERE: that the counters sum to `distinctVoters`.
+        //
+        // It is true of every honest tally, and refusing anything else looks
+        // like the obvious way to make ballot stuffing impossible. It is not,
+        // for two reasons that only show up together.
+        //
+        // This contract never validates a ciphertext; it validates the proof of
+        // membership around one. So an enrolled voter can cast arbitrary bytes
+        // as their ballot, and no tally over that election will ever sum to the
+        // voter count again. The rule would hand any single voter the power to
+        // make any election permanently unpublishable.
+        //
+        // And it would buy little: an organizer inclined to falsify moves votes
+        // BETWEEN options and keeps the total right, which the sum cannot see.
+        // It would stop the crude attack at the price of a denial of service,
+        // and leave the careful one untouched.
+        //
+        // The equality is checked where it is safe and useful instead: in the
+        // client, as `decryptTally`'s `expectedBallots`, where it turns a
+        // corrupted or overflowed tally into a visible error rather than a
+        // wrong number; and on the results screen, where `distinctVoters` is
+        // public and anyone can compare it against the published counters. What
+        // would make stuffing genuinely impossible is a ballot validity proof,
+        // and that is a different piece of work.
 
         (Outcome computed, uint256 winIdx) = _computeOutcome(tallyResults);
 

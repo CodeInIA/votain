@@ -212,7 +212,12 @@
     "participation": "Participation",
     "export_json": "Export audit trail",
     "view_ipfs": "View on IPFS",
-    "not_available": "Results not yet available."
+    "not_available": "Results not yet available.",
+    "check_ok_title": "Checked against the chain",
+    "check_ok_body": "The published counts add up to {{declared}}, and the contract recorded {{voters}} voters. No ballot was invented or dropped.",
+    "check_bad_title": "Does not match the chain",
+    "check_bad_body": "The published counts add up to {{declared}}, but the contract recorded {{voters}} voters. These should be the same number.",
+    "check_limit": "This needs no key and no trust: anyone can repeat it. It cannot tell whether votes were moved between options, which keeps the total unchanged."
   },
   "verify_receipt": {
     "title": "Verify a vote",
