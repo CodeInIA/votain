@@ -43,7 +43,7 @@ Full diagram in [`docs/dev/architecture.md`](docs/dev/architecture.md).
 
 ```
 votain/
-├── contracts/         # Solidity 0.8.36 + Hardhat 3 + Semaphore V4
+├── contracts/         # Solidity 0.8.37 + Hardhat 3 + Semaphore V4
 ├── backend/           # Node.js Express SD-JWT issuer (target: Phala TEE)
 ├── frontend/          # React 19 + Vite (target: IPFS / Fleek)
 ├── scripts-tally/     # off-chain Paillier tally + IPFS publication (auditor CLI)
@@ -60,7 +60,7 @@ votain/
 
 ## Tech stack
 
-**Contracts**: Solidity 0.8.36, Hardhat 3, ethers v6, OpenZeppelin 5, [`@semaphore-protocol/contracts`](https://semaphore.pse.dev/) 4.x, ERC-2771 context.
+**Contracts**: Solidity 0.8.37, Hardhat 3, ethers v6, OpenZeppelin 5, [`@semaphore-protocol/contracts`](https://semaphore.pse.dev/) 4.x, ERC-2771 context.
 
 **Backend**: Node.js 24, Express 5, [`@sd-jwt/core`](https://github.com/openwallet-foundation-labs/sd-jwt-js) (EdDSA / Ed25519), [`@worldcoin/idkit-core`](https://docs.world.org/) v4, tsx.
 

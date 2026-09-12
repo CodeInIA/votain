@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-pragma solidity ^0.8.36;
+pragma solidity ^0.8.37;
 
 import {ElectionV4} from "./ElectionV4.sol";
 

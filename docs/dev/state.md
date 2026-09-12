@@ -28,8 +28,8 @@ then Phase C (H10 IPFS/Fleek, H11 Phala TEE).
 | `@semaphore-protocol/contracts` | 4.14.3 | OK |
 | dotenv | 17.4.2 | OK |
 | typescript | 7.0.2 | Native (Go) compiler: works with HH3 toolchain |
-| `@types/node` | 26.1.1 | OK |
-| Solidity | 0.8.36 | Latest stable |
+| `@types/node` | 26.5.1 | OK |
+| Solidity | 0.8.37 | Latest stable |
 | TypeScript target | ESNext | |
 
 **Tests**: 67/67 passing, including an E2E suite that checks real Groth16 proofs against the official Semaphore verifier.

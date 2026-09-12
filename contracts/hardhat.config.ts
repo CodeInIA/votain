@@ -12,14 +12,14 @@ export default defineConfig({
       // the stack at all. Building tests the same way the deployment does also
       // keeps the suite from passing on bytecode nobody will ever run.
       default: {
-        version: "0.8.36",
+        version: "0.8.37",
         settings: {
           evmVersion: "paris",
           optimizer: { enabled: true, runs: 200 },
         },
       },
       production: {
-        version: "0.8.36",
+        version: "0.8.37",
         settings: {
           evmVersion: "paris",
           optimizer: { enabled: true, runs: 200 },

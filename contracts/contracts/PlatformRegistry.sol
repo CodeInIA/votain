@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-pragma solidity ^0.8.36;
+pragma solidity ^0.8.37;
 
 /// @title PlatformRegistry
 /// @notice Binds a World ID nullifier (one per human, per app+action) to the

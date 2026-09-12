@@ -2,7 +2,7 @@
 
 ## Stack (versions as of 2026-07-15)
 
-- Solidity 0.8.36
+- Solidity 0.8.37
 - Hardhat 3.9 (`hardhat.config.ts`, `defineConfig`, `plugins` array)
 - `@nomicfoundation/hardhat-toolbox-mocha-ethers` 3.0.7 (HH3 toolbox with mocha + ethers)
 - ethers v6 (native BigInt, NO BigNumber)
@@ -270,7 +270,7 @@ which is why the ceiling matters more than the floor.
 `hardhat.config.ts` (ESM TypeScript, HH3 format):
 
 - `defineConfig({ plugins: [hardhatToolboxMochaEthers], ... })`
-- Solidity 0.8.36, profiles `default` and `production`, both with the optimizer
+- Solidity 0.8.37, profiles `default` and `production`, both with the optimizer
   enabled (see "The optimizer now runs in the default profile too" above).
 - Network `amoy`: uses `AMOY_RPC_URL` and `PRIVATE_KEY` from `.env`.
 

@@ -14,7 +14,7 @@ Votain is an **end-to-end verifiable, anonymous, coercion-resistant voting dApp*
 
 ```
 votain/
-├── contracts/        # Solidity 0.8.36 + Hardhat 3 + Semaphore V4
+├── contracts/        # Solidity 0.8.37 + Hardhat 3 + Semaphore V4
 ├── backend/          # Node.js Express SD-JWT issuer + World ID v4
 ├── frontend/         # React 19 + Vite + Tailwind 4 + ethers v6
 ├── scripts-tally/    # off-chain tally with paillier-bigint (to create)
