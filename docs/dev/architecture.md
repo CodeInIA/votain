@@ -285,6 +285,220 @@ the receipts voters already hold, that destroys coercion resistance completely.
 Verifiability bought at the price of the secret ballot is not a trade worth
 making.
 
+#### Why the contract does not tally by itself
+
+The obvious fix to the organizer seeing the result early is to have the contract
+compute it at close. It cannot, and the reason is worth stating precisely,
+because it is the first thing anyone asks.
+
+A contract HAS NO SECRETS. Everything in its storage is readable by anyone;
+`private` in Solidity means other contracts cannot read it through Solidity,
+not that it is hidden, and `eth_getStorageAt` returns it to whoever asks. A
+decryption key stored in the contract is a decryption key everyone has, and with
+it anyone decrypts INDIVIDUAL ballots rather than just the total. That is
+strictly worse than what we have.
+
+The homomorphic sum is a different matter: adding ciphertexts needs only the
+public key, so the contract could maintain the aggregate itself. With a 2048-bit
+key the modulus n^2 is 4096 bits and the EVM can only do that through the MODEXP
+precompile, at real cost per ballot. It would also buy very little. That sum is
+already deterministic and public: anyone can read the VoteCast events and
+recompute the identical aggregate on their own machine. Putting it on chain
+moves where a public computation happens without adding any assurance. The trust
+gap is not in the addition. It is entirely in the decryption.
+
+Timelock encryption (encrypting the key to a future drand round, say) looks like
+it closes this: nobody could decrypt before the deadline, everybody could after.
+But the ciphertexts stay on chain forever, so releasing the key at any point
+lets anyone decrypt individual ballots retroactively. Same trap as above.
+
+What would actually give a contract-computed result is a chain where the
+contract can operate on encrypted data with a validator committee holding the
+key in threshold, such as an FHE rollup. That is a real answer, and its price is
+deploying there and trusting that committee. There is a lighter one that needs
+no change of chain, described under **An auto-tally that gives nothing up**
+below. Notice the pattern across every option: none removes trust, they
+redistribute it.
+
+#### Who would hold the shares
+
+Threshold decryption only means anything if the shareholders would not collude,
+and that is a property of people, not of cryptography. Three arrangements were
+considered.
+
+**Split among the organizer's own members**, enabled for organizers who have
+verified a domain through `OrganizerDomains`. Sound where the organizer is an
+institution: it turns "the mayor can look" into "three of five board members
+must act", which has a direct real-world analogue. It does nothing where the
+organizer is one person, and a system should not pretend otherwise: a wedding
+with four witnesses gains nothing from splitting a key four ways among one
+household. The property is opt-in by nature.
+
+**Sampled randomly among enrolled voters.** Appealing, and used elsewhere
+(Ethereum samples validator committees this way), but it fails here on liveness.
+Decryption would need t voters to COME BACK after the close, and voters vote and
+leave. Set t high and an election that nobody returns to has no result, ever,
+with no recourse. Set t low and collusion needs fewer people than the board you
+distrusted. Worse, it creates an attack that does not exist today: the aggregate
+is recomputable at any moment, so a small coalition of voters holding shares
+could decrypt the RUNNING tally during voting and campaign on it. The organizer
+seeing the final result once is a smaller problem than a faction watching the
+scoreboard live.
+
+**A declared electoral board.** The arrangement that survives the objections to
+the other two, and the one that matches how the domain actually works. The board
+is fixed when the election is created, committed on chain the way
+`eligibilityPolicyHash` already commits the rules, so it cannot be swapped
+afterwards. Members are identified, which lets a voter evaluate the trust model
+BEFORE casting a ballot rather than discovering it afterwards. It exchanges a
+cryptographic guarantee for an accountable one, deliberately, which is what a
+real electoral board is: not people who cannot cheat, but people who can be
+named if they do.
+
+Three things constrain it, and all three are why it would be per-election and
+opt-in rather than the default:
+
+- **Naming people is itself a risk.** In a contested election a named board is a
+  target. Real boards have legal protection behind them; a board in a dApp may
+  not, and in a repressive setting publishing who holds the keys publishes who
+  to arrest. It fits high-stakes elections with institutional backing, which is
+  exactly where it is worth having, and fits nothing else.
+- **Names are personal data, and this chain forgets nothing.** The terms already
+  tell organizers not to put third-party personal data on chain, precisely
+  because it is public, permanent and unerasable. A roster would have to follow
+  the pattern the eligibility policy already uses: the names served off chain,
+  only a hash committed, so the contract proves the board did not change without
+  making the members' data indelible. Board members consent as part of accepting
+  the role, which is a different legal position from a third party who was never
+  asked.
+- **Accountability is not prevention.** A board that colludes still sees the
+  result early. What changes is that the misuse is attributable rather than
+  impossible, which is the same trade real elections make and is worth making
+  knowingly.
+
+One thing a named board buys that nothing else does: a documented key ceremony
+becomes meaningful. The distributed-keygen problem above can be answered the way
+certificate authorities answer it, with a recorded procedure and witnesses, but
+only when the witnesses have names.
+
+#### An auto-tally that gives nothing up
+
+Every arrangement above needs people: an organizer, a board, a committee of
+members. The question that follows is whether a result can be produced with
+nobody acting at all, and whether that can be had without giving up a property
+Votain already has. Five candidates were looked at, and the last one works.
+
+**Functional encryption is the right primitive and has no usable library.** In
+functional encryption a key is issued FOR A FUNCTION: `sk_f` reveals `f(x)`
+and nothing else about `x`. With `f` = sum that is inner-product functional
+encryption, which is precisely a key that opens the total and cannot open the
+parts, and its multi-client variants (MCFE, DMCFE) decentralise the authority so
+no single party issues it. A 2025 scheme, FTMCFE-IP, even adds the property this
+would need most: clients encrypt independently with no interaction, and
+decryption succeeds once a threshold of them has contributed, so the key
+material would arrive as a side effect of voting and abstention would be the
+"dropout" the scheme tolerates. The blocker is not the mathematics. The two
+reference implementations, CiFEr in C and GoFE in Go, both state in their own
+READMEs that they exist for research and must not be used in production, and
+there is no JavaScript or TypeScript implementation at all.
+
+**Timelock encryption is production-ready and unusable here on its own.** drand's
+`tlock` is a TypeScript library, security-assessed by Kudelski, running against
+a mainnet the League of Entropy has operated since 2019: exactly this stack.
+Sealing the tally key until `voteEnd` would remove the organizer's early access
+and let anyone tally afterwards. It cannot be used as it stands because the key
+becomes PUBLIC at the deadline, and the ciphertexts stay on chain forever, so
+every individual ballot becomes decryptable retroactively.
+
+**And that points at the real obstacle, which is not cryptographic.** Releasing
+the key is only dangerous because voters hold receipts. As the coercion section
+records, the key alone yields an anonymous table of votes and deanonymises
+nobody; it is the pairing with a receipt that reads a vote. So auto-tally by key
+release and individual verifiability are not both available: Votain chose
+individual verifiability, and that choice, not a missing library, is what ruled
+out the simplest path.
+
+**FHE coprocessors work but arrive too late.** Zama's fhEVM coprocessor reaches
+EVM chains including Polygon without changing the underlying protocol, and
+decryption runs through a 13-node MPC committee under an honest-majority
+assumption. Mainnet integration lands in Q3 2026, which makes it a moving target
+for a system being finished, and adopting it would mean rewriting the ballot and
+tally layers around someone else's protocol.
+
+**The one that gives nothing up: compute where the key lives.** The assumption
+buried in all of the above is that decrypting requires the key to reach
+somebody. It does not, if the computation happens where the key already is. Lit
+Protocol is a key-management network whose nodes hold shares from a distributed
+key generation, so no node ever has a whole key, and whose Lit Actions run
+JavaScript inside each node's trusted execution environment. `decryptAndCombine`
+decrypts inside that enclave, and only what the action chooses to return ever
+leaves it.
+
+The shape that follows:
+
+- At election creation a Lit Action generates the Paillier keypair INSIDE the
+  enclave, returns only the public `n` and `g`, and stores the private key
+  sealed under an access condition that reads this election's `phase()` on
+  Polygon. The organizer never holds it, so there is nothing to take on trust
+  about deleting it.
+- Before the close nobody can decrypt: the condition is not met.
+- After it anyone can trigger the tally action, which decrypts the key inside the
+  enclave, reads the VoteCast events, keeps the highest nonce per nullifier,
+  aggregates, decrypts THE AGGREGATE ONLY, and returns the counts. The key never
+  leaves and no individual ballot is ever decrypted.
+
+Receipts keep working, ballot secrecy is stronger than today because not even
+the organizer can read a ballot, coercion resistance is untouched, and the
+Paillier pipeline is unchanged. What it buys is that no party can see the result
+early and anybody can produce it.
+
+What it costs, stated plainly:
+
+- **It is still a committee.** Lit's nodes, thresholded and with distributed
+  keygen, but a committee. The gain is moving trust from a party with an
+  interest in the outcome to a network that does not know the election exists,
+  which is a real gain and not the same as removing trust.
+- **It trusts hardware.** Enclaves have a long history of side-channel breaks.
+- **It adds an external dependency.** An election sealed to a network that later
+  disappears can never be tallied, and every contingency plan for that
+  reintroduces somebody holding a copy.
+- **Two limits are unmeasured and would decide it.** Whether generating a
+  2048-bit Paillier keypair fits inside a Lit Action's time and memory budget,
+  and whether some thousands of 4096-bit modular multiplications fit in its
+  execution budget. Both are answered by measuring, not by reasoning, and a
+  proof of concept over twenty ballots would settle them before any of this is
+  worth building.
+
+##### Where this was checked
+
+The claims above are someone else's work, and a reader should be able to go and
+disagree with them.
+
+- Functional encryption, the primitive that separates "read the sum" from "read
+  a ballot": [DMCFE for inner product](https://eprint.iacr.org/2017/989.pdf),
+  [verifiable DMCFE](https://eprint.iacr.org/2023/268.pdf), and
+  [FTMCFE-IP](https://arxiv.org/abs/2510.15367) for the threshold-and-dropout
+  variant that would suit an electorate.
+- That its implementations are not production software, in their own words:
+  [GoFE](https://github.com/fentec-project/gofe) and
+  [CiFEr](https://github.com/fentec-project/CiFEr).
+- Timelock: [tlock-js](https://github.com/drand/tlock-js), the
+  [scheme](https://eprint.iacr.org/2023/189.pdf) and its
+  [security assessment](https://docs.drand.love/blog/2023/05/26/tlock-security-assessment/).
+- FHE on an existing EVM chain:
+  [the fhEVM coprocessor](https://www.zama.org/post/fhevm-coprocessor) and the
+  [protocol litepaper](https://docs.zama.org/protocol/zama-protocol-litepaper)
+  for the decryption committee.
+- Decrypting inside an enclave without releasing the key:
+  [decryptAndCombine](https://developer.litprotocol.com/sdk/serverless-signing/combining-decryption-shares),
+  the [Lit Actions SDK](https://actions-docs.litprotocol.com/), and
+  [wrapped keys](https://developer.litprotocol.com/user-wallets/wrapped-keys/exporting-wrapped-key),
+  which is the mechanism for a key that is generated where it will be used and
+  never exists anywhere else.
+- Secure aggregation, the mask-cancelling approach that needs no key at all and
+  founders on dropouts:
+  [information-theoretic secure aggregation with user dropouts](https://arxiv.org/pdf/2101.07750).
+
 ### Why Self Pass and not Self Enterprise
 
 Self marks the open-source SDK we use (`@selfxyz/core`) as legacy and points new
