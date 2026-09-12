@@ -534,6 +534,53 @@ Worth noting that the replacement is at 0.x while the SDK it replaces is at
 1.2.0. Revisit if Self announces an end-of-life date for the open-source
 verifier, or if flows become API-creatable with per-session rules.
 
+## Candidate photographs, and what they would cost
+
+A ballot with a face on it is not a decoration. India's voting machines carry
+candidate photographs precisely so a voter can recognise who they are choosing,
+and for a residents' association or a union a face is how most members know who
+is standing at all. `Candidate` has no image field and probably should.
+
+It is not implemented because of where the image would have to live, not because
+of the interface work.
+
+**A photograph of a person is personal data, and this chain does not forget.**
+The terms already tell organizers that names, descriptions and candidate lists
+are public, permanent and uneditable, and ask them to keep third parties'
+personal data out of them. A face is a stronger claim on a person than a name,
+under the same permanence, and the right to erasure has nowhere to go. The
+resolution is the same as for an electoral board roster: the candidate consents
+as part of standing, which is a different position from a third party nobody
+asked.
+
+**It cannot go in `metadataJson`.** That field is capped at 16000 bytes for the
+description, every candidate, the eligibility policy and the tags together. Not
+even a thumbnail fits.
+
+**A URL would break the commitment.** This design turns on what was declared at
+creation staying declared, which is why `eligibilityPolicyHash` exists. A URL
+can be repointed the day after the count, so the picture a voter saw and the
+picture the record shows would not have to be the same one.
+
+### The shape it would take
+
+An optional `imageCid` per candidate inside `metadataJson`, which the existing
+commitment already covers. The image goes to IPFS and only the content
+identifier reaches the chain, about sixty bytes per candidate. Content
+addressing is what makes it safe: the CID IS the hash of the image, so it cannot
+be swapped for another one, and an unpinned image simply stops loading rather
+than turning into something else. IPFS is already how results are published, so
+this reuses a decision rather than adding one.
+
+What it would take beyond the schema: an upload path from the browser, which
+does not exist today (`PINATA_JWT` is noted as postponed), the create wizard,
+the candidate cards, the results view and its chart, alt text for anything a
+screen reader has to describe, and the strings in all thirteen locales.
+
+One thing worth deciding rather than discovering: images are a far larger abuse
+surface than text on a platform with no moderation, and what lands on IPFS under
+a committed CID cannot be taken back.
+
 ## Deployment targets
 
 | Component | Solution | Reason |
