@@ -317,11 +317,86 @@ with Playwright MCP. Save evidence to `docs/progress/H<n>/screens/<name>/`.
 ## Commands
 
 ```bash
-npm run dev          # http://localhost:5173
+npm run dev          # http://localhost:5173 (and the LAN address: vite --host)
 npm run build        # tsc + vite build (no sourcemaps)
 npm test             # vitest run (e2e/ excluded)
 npm run test:e2e     # playwright (requires: npx playwright install chromium)
+npm run tunnel       # cloudflared quick tunnel to 5173, for the browser
 ```
+
+## Testing on a real device, and why it is one origin
+
+Three things have to be true at once for a phone to work, and each one rules
+out the arrangement that looks obvious.
+
+- **The page must be https**, or there are no passkeys at all: `http://192.168.x.x`
+  is not a secure context and only `localhost` is exempt. That means a tunnel.
+- **The backend and the chain must be https too**, because an https page may
+  call neither an http backend nor an http RPC. The browser blocks both as
+  mixed content, silently enough to look like a bug in the app.
+- **They must be the SAME SITE as the page.** `voter_vc` is `SameSite=strict`,
+  and two tunnel subdomains are two different sites: the tunnel domains are on
+  the Public Suffix List, so `a.trycloudflare.com` and `b.trycloudflare.com`
+  are no more same-site than two unrelated domains. Two tunnels do not work.
+
+So there is one tunnel, to the dev server, and the dev server proxies the rest:
+
+```
+https://<tunnel>/          the app          (vite)
+https://<tunnel>/api/...   the backend      (proxy -> 127.0.0.1:3000)
+https://<tunnel>/rpc       the chain        (proxy -> 127.0.0.1:8545)
+```
+
+Which is why `.env` carries no hostname at all:
+
+```
+VITE_BACKEND_URL=          # empty: this app's own origin
+VITE_RPC_URL=/rpc          # a path, resolved against the page's origin
+```
+
+Both work unchanged on localhost, on the LAN address, and behind a tunnel whose
+name changes on every restart. Nothing here needs editing when it does. The
+proxy also means Hardhat can stay bound to `127.0.0.1`: the proxy dials it from
+the host, the phone never does.
+
+### The second tunnel, and why it does not break the rule
+
+`backend/` has its own `npm run tunnel` (`ngrok http 3000`), and it is for ONE
+caller: the Self relayer, which posts the document-check result to
+`SELF_ENDPOINT` from the internet. That is server to server. No page and no
+cookie ever travels over it, so it does not touch the single-origin rule above,
+which exists entirely for the browser.
+
+Do not point the browser at it. Two origins is the arrangement the cookie
+refuses, and ngrok's free tier would serve its interstitial to the app's own
+`fetch` calls as HTML where they expected JSON.
+
+The name it hands out changes on every restart, so `SELF_ENDPOINT` has to be
+updated and the backend restarted with it. That is the price of not reserving a
+domain, and on a local chain that is re-seeded constantly it costs nothing:
+the elections whose scope it invalidates were going to be thrown away anyway.
+On a long-lived network, reserve a domain and pass `--url`.
+
+### What bites on a real network
+
+- **A TLS-inspecting antivirus breaks the AGENT, not the app.** Measured here:
+  Avast Web/Mail Shield re-signs everything, and for `connect.ngrok-agent.com`
+  it presents its "Untrusted Root" deliberately, so the ngrok agent cannot even
+  authenticate (`x509: certificate signed by unknown authority`). cloudflared is
+  unaffected and works with the shield running. The fix for ngrok is an
+  exclusion for its domains, or turning HTTPS scanning off while developing.
+- **A quick tunnel's hostname takes a moment to resolve.** One run here returned
+  NXDOMAIN from the ISP's resolvers while `1.1.1.1` already answered, and the
+  next run resolved everywhere immediately. Propagation, not blocking: wait a few
+  seconds before deciding something is broken.
+- **A quick tunnel's hostname is the WebAuthn `rpId`.** It changes on every
+  restart, so passkeys created under the old name are orphaned. For repeated
+  passkey testing use a named tunnel on a domain you own.
+- **The Self scope is `Poseidon(seed, endpoint)`**, so `SELF_ENDPOINT` is part of
+  every proof an election was enrolled with. Changing that URL changes the scope
+  and the enrolments made under the old one stop verifying. Set `SELF_MOCK=1`
+  unless that path is what is being tested, and then the tunnel's name does not
+  matter at all.
 
 ## No linter
 

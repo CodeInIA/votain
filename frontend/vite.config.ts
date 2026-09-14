@@ -20,6 +20,22 @@ import { seoFiles } from './src/seo/seoPlugin.ts'
  */
 const TUNNEL_HOSTS = ['.ngrok-free.dev', '.ngrok.io', '.ngrok.app', '.trycloudflare.com', '.loca.lt']
 
+/**
+ * The two local services the app talks to, behind paths on its own origin.
+ *
+ * `ws: true` on the RPC because a provider may upgrade to a subscription, and a
+ * proxy that drops the upgrade fails in a way that looks like a hung page.
+ */
+const LOCAL_SERVICES = {
+  '/api': { target: 'http://127.0.0.1:3000', changeOrigin: false },
+  '/rpc': {
+    target: 'http://127.0.0.1:8545',
+    changeOrigin: false,
+    ws: true,
+    rewrite: (path: string) => path.replace(/^\/rpc/, '') || '/',
+  },
+}
+
 export default defineConfig({
   plugins: [
     react(),
@@ -39,8 +55,22 @@ export default defineConfig({
   // `npm run dev -- --host` for the dev server, `npm run preview -- --host`
   // for the built app. The install prompt needs the second one: the service
   // worker only registers in a production build.
-  server: { allowedHosts: TUNNEL_HOSTS },
-  preview: { allowedHosts: TUNNEL_HOSTS },
+  /**
+   * Everything on one origin, which is what makes a phone work.
+   *
+   * A tunnelled page is https, and an https page may call neither an http
+   * backend nor an http RPC: the browser blocks both as mixed content. Two
+   * tunnels do not solve it, because the session cookie is SameSite=strict and
+   * two tunnel subdomains are two different sites, their domains being on the
+   * Public Suffix List.
+   *
+   * With these, `VITE_BACKEND_URL=` and `VITE_RPC_URL=/rpc` work unchanged on
+   * localhost, on the LAN address, and behind a tunnel whose name changes every
+   * time it restarts. Dev and preview only: the production build is static
+   * files, and there the two services have real addresses of their own.
+   */
+  server: { allowedHosts: TUNNEL_HOSTS, proxy: LOCAL_SERVICES },
+  preview: { allowedHosts: TUNNEL_HOSTS, proxy: LOCAL_SERVICES },
 
   build: {
     // Chunks that exist only for a path most people never take. Vite preloads

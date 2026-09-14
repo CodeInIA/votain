@@ -107,13 +107,30 @@ const KNOWN_CHAINS: Record<number, { name: string; currency: string; explorer?: 
   31337: { name: "Hardhat Local", currency: "ETH" },
 };
 
+/**
+ * Lets `VITE_RPC_URL` be a PATH on this app's own origin, not only an absolute
+ * URL.
+ *
+ * `/rpc` is what makes a phone work: the dev server proxies it to the local
+ * node, so the page and the chain share an origin and a scheme. An https page
+ * may not call `http://192.168.x.x:8545`, and naming the tunnel in `.env`
+ * means editing it every time the tunnel restarts. ethers needs an absolute URL,
+ * so the origin is filled in here rather than written down anywhere.
+ */
+function resolveRpcUrl(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  if (!value.startsWith("/")) return value;
+  if (typeof window === "undefined") return undefined; // tests, SSR: no origin
+  return window.location.origin + value;
+}
+
 export const chainInfo = {
   chainId: CHAIN_ID,
   network: TARGET_NETWORK,
   // VITE_RPC_URL is the generic override (works for local chains too);
   // VITE_AMOY_RPC_URL is kept for backwards compatibility.
   rpcUrl:
-    envOverride(import.meta.env.VITE_RPC_URL) ??
+    resolveRpcUrl(envOverride(import.meta.env.VITE_RPC_URL)) ??
     envOverride(import.meta.env.VITE_AMOY_RPC_URL) ??
     // Tenderly, not rpc-amoy.polygon.technology (dead) and not drpc/publicnode,
     // which cap eth_getLogs at 10000 blocks and would truncate queryFilter reads.
