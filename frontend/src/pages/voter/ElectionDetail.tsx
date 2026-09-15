@@ -66,6 +66,16 @@ export default function ElectionDetail() {
   // show but still has to go through the scan.
   const isGated = !isEmptyPolicy(eligibilityPolicy);
   const policyRequirements = usePolicyRequirements(eligibilityPolicy);
+  // ABOVE THE EARLY RETURNS, with every other hook, and it has to be. It sat
+  // below them, so the first render (still loading) never reached it and the
+  // one after did: React counts hooks by call order, saw one more than last
+  // time and threw "Rendered more hooks than during the previous render",
+  // which took the whole election page down rather than degrading it.
+  //
+  // `live` comes from `useElection` above and does not depend on the election
+  // having loaded, so there was never a reason for it to be down there. The
+  // comment on `canManage` says the same thing about the same two returns.
+  const { ready: identityReady, unlocking, unlock } = useVoterIdentity(live);
 
 
   if (loading) {
@@ -96,7 +106,6 @@ export default function ElectionDetail() {
   // The ballot is only interactive for an enrolled voter who has not voted yet;
   // every other case still gets to *see* the options, just read-only.
   const canPickCandidate = isActivePhase && election.isEnrolled && !election.hasVoted;
-  const { ready: identityReady, unlocking, unlock } = useVoterIdentity(live);
 
   /**
    * Whether this device can even tell if the voter is enrolled.
