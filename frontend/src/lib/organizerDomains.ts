@@ -15,7 +15,7 @@
 import { Contract, type Signer } from "ethers";
 import { addresses } from "./deployments";
 import { getReadProvider } from "./contracts";
-import { backendBase } from "./backend";
+import { backendBase, backendQuery } from "./backend";
 
 
 export type DomainStatus =
@@ -42,10 +42,9 @@ export interface DomainRecord {
 
 /** The exact TXT record to publish, ready to copy. */
 export async function fetchDomainRecord(address: string, domain: string): Promise<DomainRecord> {
-  const url = new URL(`${backendBase()}/api/organizer/domain-record`);
-  url.searchParams.set("address", address);
-  url.searchParams.set("domain", domain);
-  const res = await fetch(url);
+  const res = await fetch(
+    backendQuery("/api/organizer/domain-record", { address, domain }),
+  );
   if (!res.ok) throw new Error(`Could not build the record: ${res.status}`);
   return (await res.json()) as Promise<DomainRecord>;
 }
@@ -80,10 +79,9 @@ export async function fetchClaimedDomains(address: string): Promise<string[]> {
 
 /** The live DNS verdict for one pair. */
 async function checkOneDomain(address: string, domain: string): Promise<DomainCheck> {
-  const url = new URL(`${backendBase()}/api/organizer/domain-status`);
-  url.searchParams.set("address", address);
-  url.searchParams.set("domain", domain);
-  const res = await fetch(url);
+  const res = await fetch(
+    backendQuery("/api/organizer/domain-status", { address, domain }),
+  );
   if (!res.ok) return { domain, status: "lookup_failed" };
   return (await res.json()) as DomainCheck;
 }
@@ -140,10 +138,9 @@ export async function checkElectionDomain(
   organizerAddress: string,
   domain: string,
 ): Promise<DomainCheck> {
-  const url = new URL(`${backendBase()}/api/organizer/domain-status`);
-  url.searchParams.set("address", organizerAddress);
-  url.searchParams.set("domain", domain);
-  const res = await fetch(url);
+  const res = await fetch(
+    backendQuery("/api/organizer/domain-status", { address: organizerAddress, domain }),
+  );
   if (!res.ok) return { domain, status: "lookup_failed" };
   return (await res.json()) as Promise<DomainCheck>;
 }

@@ -636,7 +636,9 @@
     "check_yourself": "Selbst prüfen",
     "select_label": "Domain für diese Wahl",
     "select_none": "Keine Domain anzeigen",
-    "select_hint": "Wird mit der Wahl gespeichert. Spätere Änderungen an Ihren Domains ändern bereits erstellte Wahlen nicht."
+    "select_hint": "Wird mit der Wahl gespeichert. Spätere Änderungen an Ihren Domains ändern bereits erstellte Wahlen nicht.",
+    "record_failed": "Der DNS-Eintrag konnte nicht vorbereitet werden",
+    "check_failed": "Die Domain konnte nicht geprüft werden"
   },
   "eligibility": {
     "enrolled": "Für diese Wahl angemeldet",

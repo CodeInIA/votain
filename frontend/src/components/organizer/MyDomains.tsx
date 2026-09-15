@@ -99,8 +99,14 @@ export function MyDomains({
         toast({ title: t('errors.wallet_request_rejected'), variant: 'info' });
         return;
       }
+      // NOT "that does not look like a domain name". This caught everything:
+      // a backend that was down, a 500, and for a long time a bug of ours that
+      // threw `TypeError: Invalid URL` before the request was ever made. Each
+      // one told the organizer their domain was malformed, which sent them off
+      // to check a spelling that was fine and hid the real fault completely.
+      console.error('Could not prepare the DNS record:', error);
       toast({
-        title: t('domain.invalid'),
+        title: t('domain.record_failed'),
         description: error instanceof Error ? error.message : undefined,
         variant: 'error',
       });
@@ -127,8 +133,16 @@ export function MyDomains({
         setReloadToken(n => n + 1);
       }
     } catch (error: unknown) {
+      // Same reasoning as above, plus one case of its own: this step asks the
+      // organizer's wallet to sign, so a rejected signature landed here too and
+      // was reported as a bad domain.
+      if (isUserRejection(error)) {
+        toast({ title: t('errors.wallet_request_rejected'), variant: 'info' });
+        return;
+      }
+      console.error('Could not check the domain:', error);
       toast({
-        title: t('domain.invalid'),
+        title: t('domain.check_failed'),
         description: error instanceof Error ? error.message : undefined,
         variant: 'error',
       });

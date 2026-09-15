@@ -641,7 +641,9 @@
     "check_yourself": "Vérifiez par vous-même",
     "select_label": "Domaine à afficher sur cette élection",
     "select_none": "Ne pas afficher de domaine",
-    "select_hint": "Enregistré avec l'élection. Modifier vos domaines plus tard ne change pas les élections déjà créées."
+    "select_hint": "Enregistré avec l'élection. Modifier vos domaines plus tard ne change pas les élections déjà créées.",
+    "record_failed": "Impossible de préparer l’enregistrement DNS",
+    "check_failed": "Impossible de vérifier le domaine"
   },
   "eligibility": {
     "enrolled": "Inscrit à cette élection",

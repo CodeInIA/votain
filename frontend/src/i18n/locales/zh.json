@@ -631,7 +631,9 @@
     "check_yourself": "自行核验",
     "select_label": "本次选举显示的域名",
     "select_none": "不显示域名",
-    "select_hint": "随选举一同保存。之后更改域名不会影响已创建的选举。"
+    "select_hint": "随选举一同保存。之后更改域名不会影响已创建的选举。",
+    "record_failed": "无法准备 DNS 记录",
+    "check_failed": "无法检查该域名"
   },
   "eligibility": {
     "enrolled": "已报名本次选举",

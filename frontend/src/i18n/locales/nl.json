@@ -636,7 +636,9 @@
     "check_yourself": "Controleer het zelf",
     "select_label": "Domein voor deze verkiezing",
     "select_none": "Geen domein tonen",
-    "select_hint": "Opgeslagen bij de verkiezing. Uw domeinen later wijzigen verandert niets aan al aangemaakte verkiezingen."
+    "select_hint": "Opgeslagen bij de verkiezing. Uw domeinen later wijzigen verandert niets aan al aangemaakte verkiezingen.",
+    "record_failed": "Kon het DNS-record niet voorbereiden",
+    "check_failed": "Kon het domein niet controleren"
   },
   "eligibility": {
     "enrolled": "Ingeschreven voor deze verkiezing",

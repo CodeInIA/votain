@@ -32,3 +32,22 @@ export function backendBase(): string {
 export function backendUrl(path: string): string {
   return `${backendBase()}${path}`;
 }
+
+/**
+ * The same, with query parameters, and ABSOLUTE even when the base is empty.
+ *
+ * `new URL("/api/x")` throws `TypeError: Invalid URL`. A bare path is not a URL
+ * without something to resolve it against, and the empty base that means "this
+ * app's own origin" produces exactly that. `fetch` accepts a relative string
+ * happily, which is why every other call site survived and only the three that
+ * needed query parameters, and reached for `new URL` to build them, did not.
+ *
+ * It broke the organizer's domain verifier outright: typing any domain reported
+ * "that does not look like a domain name", because the message shown was the
+ * thrown error's, and the thrown error was the browser's opinion of our URL.
+ */
+export function backendQuery(path: string, params: Record<string, string>): string {
+  const url = new URL(backendUrl(path), window.location.origin);
+  for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
+  return url.toString();
+}

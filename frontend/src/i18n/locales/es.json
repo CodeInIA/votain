@@ -641,7 +641,9 @@
     "check_yourself": "Compruébalo tú mismo",
     "select_label": "Dominio que mostrar en esta elección",
     "select_none": "No mostrar dominio",
-    "select_hint": "Se guarda con la elección. Cambiar tus dominios más adelante no altera las elecciones ya creadas."
+    "select_hint": "Se guarda con la elección. Cambiar tus dominios más adelante no altera las elecciones ya creadas.",
+    "record_failed": "No se pudo preparar el registro DNS",
+    "check_failed": "No se pudo comprobar el dominio"
   },
   "eligibility": {
     "enrolled": "Inscrito en esta elección",

@@ -641,7 +641,9 @@
     "check_yourself": "Verifique você mesmo",
     "select_label": "Domínio a mostrar nesta eleição",
     "select_none": "Não mostrar domínio",
-    "select_hint": "Guardado com a eleição. Alterar os seus domínios mais tarde não muda as eleições já criadas."
+    "select_hint": "Guardado com a eleição. Alterar os seus domínios mais tarde não muda as eleições já criadas.",
+    "record_failed": "Não foi possível preparar o registo DNS",
+    "check_failed": "Não foi possível verificar o domínio"
   },
   "eligibility": {
     "enrolled": "Inscrito nesta eleição",

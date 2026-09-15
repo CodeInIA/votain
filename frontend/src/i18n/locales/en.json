@@ -636,7 +636,9 @@
     "check_yourself": "Check it yourself",
     "select_label": "Domain to show on this election",
     "select_none": "Do not show a domain",
-    "select_hint": "Saved with the election. Changing your domains later does not alter elections already created."
+    "select_hint": "Saved with the election. Changing your domains later does not alter elections already created.",
+    "record_failed": "Could not prepare the DNS record",
+    "check_failed": "Could not check the domain"
   },
   "eligibility": {
     "enrolled": "Enrolled in this election",
