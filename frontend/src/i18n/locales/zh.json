@@ -78,7 +78,8 @@
     "no": "反对",
     "clear": "清除",
     "show_more": "展开",
-    "show_less": "收起"
+    "show_less": "收起",
+    "load_more": "加载更多"
   },
   "nav": {
     "discover": "发现",
@@ -140,7 +141,8 @@
     "group_status": "状态",
     "group_properties": "选举",
     "group_voting_type": "决出方式",
-    "group_eligibility": "我是否符合"
+    "group_eligibility": "我是否符合",
+    "results_partial": "目前找到 {{shown}} 个"
   },
   "election": {
     "by": "由",

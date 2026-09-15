@@ -78,7 +78,8 @@
     "no": "Нет",
     "clear": "Очистить",
     "show_more": "Показать больше",
-    "show_less": "Показать меньше"
+    "show_less": "Показать меньше",
+    "load_more": "Загрузить ещё"
   },
   "nav": {
     "discover": "Поиск",
@@ -143,7 +144,8 @@
     "group_status": "Статус",
     "group_properties": "Голосование",
     "group_voting_type": "Решается по",
-    "group_eligibility": "Подхожу ли я"
+    "group_eligibility": "Подхожу ли я",
+    "results_partial": "Пока найдено: {{shown}}"
   },
   "election": {
     "by": "организовано",

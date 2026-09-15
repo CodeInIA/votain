@@ -78,7 +78,8 @@
     "no": "नहीं",
     "clear": "साफ़ करें",
     "show_more": "और देखें",
-    "show_less": "कम देखें"
+    "show_less": "कम देखें",
+    "load_more": "और लोड करें"
   },
   "nav": {
     "discover": "खोजें",
@@ -141,7 +142,8 @@
     "group_status": "स्थिति",
     "group_properties": "चुनाव",
     "group_voting_type": "किससे तय होता है",
-    "group_eligibility": "क्या मैं पात्र हूँ"
+    "group_eligibility": "क्या मैं पात्र हूँ",
+    "results_partial": "अब तक {{shown}} मिलीं"
   },
   "election": {
     "by": "द्वारा",

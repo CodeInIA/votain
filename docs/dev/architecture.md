@@ -164,6 +164,52 @@ Backend modules: `sd/issuer.ts` (SD-JWT issue/verify), `status/statusList.ts`
 - Screen 21: Error & Empty States (14 variants)
 - Screen 22: Transaction Pending Modal
 
+## How a list is read
+
+Every screen that shows more than one election used to call one function, which
+read every election the platform had ever created: one cheap call for the
+addresses, then about eighteen calls per address to turn each one into something
+a card could draw. The cost grew with the age of the platform rather than with
+what anyone was looking at, and the cap that existed (fifty) was silent, so
+election fifty-one simply did not exist for the interface.
+
+Three different questions were being answered with that one function, and they
+have three different answers.
+
+**Which elections exist.** Discover, and nothing else. Unbounded by anyone's own
+activity, so it is the one list that genuinely has to be paged:
+`useElectionPages` reads a page and one page beyond it, keeps the reader's
+filters inside the fetch loop so a search that matches nothing further down
+still finds it, and offers a "load more" control. Its count says "so far" until
+the chain is exhausted, because a figure that looks final and is not is the kind
+of number people quote back at you.
+
+**Which elections are mine.** The organizer's dashboard and the member list. The
+factory's `ElectionCreated` event indexes the organizer, so their elections can
+be asked for by name in one log query rather than found by reading everyone's
+and discarding the rest. The set is then read completely, on purpose: the
+dashboard adds these up, and a total over the first page is a wrong number that
+looks right. What is paged there is only what gets drawn.
+
+**Which elections am I in.** The voter's list and their history. `MemberEnrolled`
+indexes the identity commitment, so one topic query across all contracts answers
+it. The commitment is public on chain already, so this reveals nothing new. The
+addresses that come back are intersected with the factory's own list, because a
+topic query names no contract and anything at all can emit an event with that
+shape.
+
+Two screens cannot be paged at all, and say so: the receipt verifier searches for
+one ballot among every election, and a missing election there produces "not
+found", which is what the page says about a forgery. The vote history has the
+same problem in reverse, since a ballot in an unread election is a vote the voter
+would reasonably believe was lost. Both read digests instead (address, title,
+phase, whether results are published), which is three calls per election rather
+than eighteen, so staying complete is affordable.
+
+Both log queries fall back to reading the full list if an endpoint refuses them.
+A provider that will not answer must not be able to tell an organizer they have
+no elections, and the address filter is applied either way.
+
 ## Election state machine
 
 `ElectionV4.phase()` derives the phase from the timestamps (plus the terminal
@@ -510,6 +556,38 @@ disagree with them.
   founders on dropouts:
   [information-theoretic secure aggregation with user dropouts](https://arxiv.org/pdf/2101.07750).
 
+### What enrolment reveals, and what it does not
+
+A voter has ONE identity commitment for the whole platform. The registry stores
+it against their World ID nullifier (`commitmentOf` in `PlatformRegistry`), and
+that same value is inserted into every election's tree, so `MemberEnrolled`
+publishes it again in each one. The consequence is worth stating plainly:
+**which elections a voter joined is public, and linkable across all of them**,
+by anyone reading the chain, permanently.
+
+What is not linkable is the ballot. The nullifier in `VoteCast` is
+`poseidon2(scope, secret)`, and every election is created with its own random
+scope (31 random bytes, `lib/organizer.ts`), so two ballots cast by the same
+voter in two elections share nothing, and no ballot can be tied back to the
+commitment that enrolled. That is where the anonymity lives, and it is intact.
+
+The honest summary: the chain shows that someone took part, never what they
+said, and never that two things they said came from the same person.
+
+The commitment is anonymous in the sense that matters most, since it is bound to
+no name, no document and no wallet. It is still a stable handle. Removing it
+would mean a per-election commitment plus a proof that it derives from a
+registered identity, which is a nested proof this project does not build, and it
+is the reason the platform can enforce one identity per World ID at all.
+
+The member list draws each commitment as a colour and a pattern rather than as
+two hex characters, so a voter enrolled in several of an organizer's elections
+is recognisable at a glance. That reveals nothing the row did not already print
+in full underneath; it makes an existing property easy to see rather than
+tedious to check. Deliberate: a screen that obscured something the chain
+publishes would be the wrong kind of quiet for a system whose case rests on
+being checkable.
+
 ### Why Self Pass and not Self Enterprise
 
 Self marks the open-source SDK we use (`@selfxyz/core`) as legacy and points new
@@ -529,11 +607,13 @@ rule it out here:
 - **There is no API to create a flow.** The SDK exposes `sessions.create`,
   `sessions.get` and webhook verification. Flows are dashboard-only, so an
   election cannot provision its own rules even if the limit above did not exist.
-- **It reintroduces the handle the per-election scope exists to avoid.**
-  `sessions.create` takes a stable `externalUuid` for the user, stores it in an
-  activity log and echoes it on every webhook. Our scope is derived per election
-  precisely so no party holds one pseudonym per voter across elections. Moving
-  that correlation to a third party does not remove it.
+- **It binds a stable handle to the verified person.** `sessions.create` takes a
+  stable `externalUuid` for the user, stores it in an activity log and echoes it
+  on every webhook. Enrolment here already carries a stable commitment across
+  elections (see `What enrolment reveals`), but an anonymous one: no name, no
+  document, no wallet. An `externalUuid` would sit in a third party's log beside
+  the passport data Self has just read, which is the binding the whole design
+  exists to avoid, and the per-election scope cannot undo it.
 - **On-chain mode is on the wrong chain and needs a voter wallet.** It verifies
   on Celo, not on our deployment chain, and mints a non-transferable SBT into
   the voter's wallet. Voters here hold no address by design, because one would

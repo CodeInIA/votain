@@ -78,7 +78,8 @@
     "no": "لا",
     "clear": "مسح",
     "show_more": "عرض المزيد",
-    "show_less": "عرض أقل"
+    "show_less": "عرض أقل",
+    "load_more": "تحميل المزيد"
   },
   "nav": {
     "discover": "اكتشف",
@@ -145,7 +146,8 @@
     "group_status": "الحالة",
     "group_properties": "الانتخاب",
     "group_voting_type": "يُحسم بـ",
-    "group_eligibility": "هل تنطبق عليّ الشروط"
+    "group_eligibility": "هل تنطبق عليّ الشروط",
+    "results_partial": "تم العثور على {{shown}} حتى الآن"
   },
   "election": {
     "by": "بواسطة",

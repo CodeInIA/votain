@@ -11,7 +11,7 @@
  * back to fixed-size windows if the endpoint still refuses the range. That
  * keeps member lists, vote history and the tally correct on any provider.
  */
-import type { Contract, EventLog, Log } from "ethers";
+import type { Contract, EventLog, Log, Provider } from "ethers";
 import { deploymentBlock } from "./deployments";
 
 /// Range accepted by the strictest free tiers we target.
@@ -71,4 +71,36 @@ async function queryInWindows(
   // Windows are walked in ascending order, so the result already matches the
   // (blockNumber, logIndex) ordering callers rely on for insertion order.
   return out;
+}
+
+/**
+ * The same read, but across every contract at once.
+ *
+ * `Contract.queryFilter` always pins the query to one address, which is right
+ * when the question is about one election and wrong when it is about one VOTER:
+ * "which elections did this commitment enrol in" is a single `eth_getLogs` on an
+ * indexed topic, where asking each election in turn is one round trip per
+ * election, which is the cost this whole layer exists to avoid.
+ *
+ * Callers must treat the result as untrusted: anything on the chain can emit an
+ * event with this shape, so the addresses that come back are only candidates
+ * until they are checked against the factory's own list.
+ */
+export async function queryTopicLogs(
+  provider: Provider,
+  topics: Array<string | null>,
+  fromBlock: number = deploymentBlock,
+): Promise<Log[]> {
+  try {
+    return await provider.getLogs({ topics, fromBlock, toBlock: "latest" });
+  } catch (error: unknown) {
+    if (!isRangeError(error)) throw error;
+    const head = await provider.getBlockNumber();
+    const out: Log[] = [];
+    for (let start = fromBlock; start <= head; start += MAX_RANGE) {
+      const end = Math.min(start + MAX_RANGE - 1, head);
+      out.push(...(await provider.getLogs({ topics, fromBlock: start, toBlock: end })));
+    }
+    return out;
+  }
 }

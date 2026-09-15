@@ -177,8 +177,9 @@ accounts: see "Pending user actions").
 - `express-rate-limit` (global 120/min, verify-human 10/min). 5 tests.
 
 ### H7: Real voter flow ✅
-Chain-aware hooks (`useElections`, `useElection`) serve on-chain data when configured, seed
-otherwise. Discover/VoterElections/Preview/Detail/Results wired. Enroll = sponsored UserOp;
+Chain-aware hooks (`useElectionPages`, `useElectionDigests`, `useElection`) serve on-chain data
+when configured, seed otherwise. Lists are paged rather than hydrated whole, and the ones about
+one person resolve through the `ElectionCreated` and `MemberEnrolled` indexes. Discover/VoterElections/Preview/Detail/Results wired. Enroll = sponsored UserOp;
 ZkProofGeneration runs the real encrypt→proof→submit pipeline (`lib/voting.ts`); Confirmation
 shows the real tx + reference. History from VoteCast events (candidate hidden, anonymity).
 World ID verify creates the Semaphore identity and sends its commitment to the issuer.

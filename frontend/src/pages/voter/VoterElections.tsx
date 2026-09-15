@@ -5,7 +5,9 @@ import { PageLayout } from '../../components/layout/PageLayout';
 import { ElectionCard } from '../../components/ui/ElectionCard';
 import { endsSoon } from '../../lib/phase';
 import { Spinner } from '../../components/ui/Spinner';
-import { useElections } from '../../hooks/useElections';
+import { LoadMore } from '../../components/ui/LoadMore';
+import { useElectionPages } from '../../hooks/useElectionPages';
+import { usePageLimit } from '../../hooks/usePageLimit';
 import type { ElectionPhase } from '../../data/seed';
 
 const TABS: { key: 'all' | ElectionPhase; labelKey: string }[] = [
@@ -19,17 +21,33 @@ const TABS: { key: 'all' | ElectionPhase; labelKey: string }[] = [
 export default function VoterElections() {
   const { t } = useTranslation();
   const [tab, setTab] = useState<'all' | ElectionPhase>('all');
-  const { elections, loading } = useElections();
+  /**
+   * Read in full, drawn a page at a time.
+   *
+   * `enrolled` resolves through the `MemberEnrolled` index, so this reads the
+   * elections this voter joined and no others: the screen used to hydrate every
+   * election on the platform to find the three that were theirs. Since the set is
+   * bounded by the voter's own participation it is read completely, which is what
+   * keeps the count in the header and the "ending soon" warning exact. A voter
+   * who is warned about none of their deadlines because the election was on the
+   * second page has been failed by the feature.
+   */
+  const { all: myElections, loading } = useElectionPages({
+    scope: 'enrolled',
+    hydrateAll: true,
+    keep: e => Boolean(e.isEnrolled || e.hasVoted),
+  });
 
   // Snapshot the clock once at mount so render stays pure (the count doesn't
   // need second-by-second accuracy; Countdown handles the ticking).
   const [now] = useState(() => Date.now());
 
-  const myElections = elections.filter(e => e.isEnrolled || e.hasVoted);
   const filtered = tab === 'all' ? myElections : myElections.filter(e => {
     if (tab === 'voted') return e.hasVoted;
     return e.phase === tab;
   });
+  // Switching tab starts a different list, so it starts at the first page.
+  const { visible, hasMore, loadMore } = usePageLimit(filtered, undefined, tab);
 
   const urgentCount = myElections.filter(e => endsSoon(e, now)).length;
 
@@ -78,11 +96,16 @@ export default function VoterElections() {
             <p className="text-on-surface-variant text-sm">{t('voter_elections.empty')}</p>
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
-            {filtered.map(e => (
-              <ElectionCard key={e.id} election={e} voterView />
-            ))}
-          </div>
+          <>
+            <div className="flex flex-col gap-3">
+              {visible.map(e => (
+                <ElectionCard key={e.id} election={e} voterView />
+              ))}
+            </div>
+            {/* Nothing is being fetched: the whole set is already here and this
+                only widens what is drawn, so it never shows a spinner. */}
+            <LoadMore hasMore={hasMore} loading={false} onClick={loadMore} />
+          </>
         )}
       </div>
     </PageLayout>

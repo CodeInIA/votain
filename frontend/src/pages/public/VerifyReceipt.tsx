@@ -9,7 +9,7 @@ import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Spinner } from '../../components/ui/Spinner';
 import { useAuth } from '../../contexts/AuthContext';
-import { useElections } from '../../hooks/useElections';
+import { useElectionDigests } from '../../hooks/useElectionDigests';
 import { findVoteReceipt, fetchVoteHistory, fetchLocalVoteHistory, type PublicReceipt } from '../../lib/voting';
 import { useVoterIdentity } from '../../hooks/useVoterIdentity';
 import { shortenReference } from '../../lib/utils';
@@ -42,7 +42,15 @@ export default function VerifyReceipt() {
   const { t } = useTranslation();
   usePageMeta({ title: t('verify_receipt.title'), description: t('verify_receipt.subtitle') });
   const { voterLoggedIn } = useAuth();
-  const { elections, live, loading } = useElections();
+  /**
+   * Every election, and only the three fields the lookup uses.
+   *
+   * This one cannot be paginated: a receipt is searched for across all of them,
+   * and an election that was not loaded produces "not found", which is what this
+   * page says about a FORGED receipt. Being cheap to read is the only way for it
+   * to stay complete.
+   */
+  const { digests: elections, live, loading } = useElectionDigests();
   const [params, setParams] = useSearchParams();
 
   const [ref, setRef] = useState(() => params.get('ref') ?? '');

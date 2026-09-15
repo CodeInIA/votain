@@ -78,7 +78,8 @@
     "no": "Nein",
     "clear": "Löschen",
     "show_more": "Mehr anzeigen",
-    "show_less": "Weniger anzeigen"
+    "show_less": "Weniger anzeigen",
+    "load_more": "Mehr laden"
   },
   "nav": {
     "discover": "Entdecken",
@@ -141,7 +142,8 @@
     "group_status": "Status",
     "group_properties": "Wahl",
     "group_voting_type": "Entschieden durch",
-    "group_eligibility": "Erfülle ich die Kriterien"
+    "group_eligibility": "Erfülle ich die Kriterien",
+    "results_partial": "Bisher {{shown}} gefunden"
   },
   "election": {
     "by": "von",

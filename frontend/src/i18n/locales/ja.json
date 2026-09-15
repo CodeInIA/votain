@@ -78,7 +78,8 @@
     "no": "反対",
     "clear": "消去",
     "show_more": "もっと見る",
-    "show_less": "折りたたむ"
+    "show_less": "折りたたむ",
+    "load_more": "さらに読み込む"
   },
   "nav": {
     "discover": "探す",
@@ -140,7 +141,8 @@
     "group_status": "状態",
     "group_properties": "選挙",
     "group_voting_type": "決まり方",
-    "group_eligibility": "参加できるか"
+    "group_eligibility": "参加できるか",
+    "results_partial": "現在 {{shown}} 件"
   },
   "election": {
     "by": "主催:",

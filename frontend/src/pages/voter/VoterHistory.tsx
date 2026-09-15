@@ -7,7 +7,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Spinner } from '../../components/ui/Spinner';
 import { VOTER_HISTORY, hasPublishedResults } from '../../data/seed';
-import { useElections } from '../../hooks/useElections';
+import { useElectionDigests } from '../../hooks/useElectionDigests';
 import { fetchVoteHistory, fetchLocalVoteHistory } from '../../lib/voting';
 import { useVoterIdentity } from '../../hooks/useVoterIdentity';
 import { shortenReference } from '../../lib/utils';
@@ -25,7 +25,15 @@ interface HistoryRow {
 export default function VoterHistory() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { elections, live } = useElections();
+  /**
+   * The elections this voter enrolled in, as digests.
+   *
+   * Complete on purpose, like the receipt verifier: a ballot in an election that
+   * was never loaded is a vote missing from your own history, which reads as a
+   * vote that was lost. Narrowed by the chain's own enrolment index instead, so
+   * completeness costs a fraction of what reading every election cost.
+   */
+  const { digests: elections, live } = useElectionDigests('enrolled');
 
   const [rows, setRows] = useState<HistoryRow[]>(
     live ? [] : VOTER_HISTORY.map(v => ({ ...v })),
@@ -83,7 +91,7 @@ export default function VoterHistory() {
    * and a fourth copy of the rule would be a fourth thing to drift.
    */
   const destinationFor = (row: HistoryRow) => {
-    const election = elections.find(e => e.id === row.electionId);
+    const election = elections.find(e => e.contractAddress === row.electionId);
     return election && hasPublishedResults(election)
       ? `/election/${row.electionId}/results`
       : `/voter/election/${row.electionId}`;

@@ -11,7 +11,10 @@ import { GasWidget } from '../../components/ui/GasWidget';
 import { Spinner } from '../../components/ui/Spinner';
 import { DomainBadge } from '../../components/ui/DomainBadge';
 import { Modal } from '../../components/ui/Modal';
-import { useElections } from '../../hooks/useElections';
+import { LoadMore } from '../../components/ui/LoadMore';
+import { useElectionPages } from '../../hooks/useElectionPages';
+import { usePageLimit } from '../../hooks/usePageLimit';
+import { ELECTIONS } from '../../data/seed';
 import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
 import { useRefreshOnReturn } from '../../hooks/useRefreshOnReturn';
 import {
@@ -36,8 +39,28 @@ const VOTE_COST = 0.03;
 export default function OrganizerDashboard() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { elections, loading, live, refresh } = useElections();
   const wallet = useOrganizerWallet();
+  /**
+   * This organizer's own elections, through the factory's own index.
+   *
+   * `ElectionCreated` indexes the organizer, so their elections can be asked for
+   * by name instead of read out of the whole platform and filtered: this screen
+   * used to hydrate every election anyone had ever created to show the four that
+   * were yours. The address filter below stays anyway, because the index read
+   * falls back to the full list when an endpoint refuses the log query, and a
+   * dashboard must never show one organizer another's election.
+   *
+   * Read completely rather than a page at a time: the stat tiles add these up,
+   * and a total over the first page is a wrong number that looks right. What is
+   * paged is the list underneath, which is a drawing limit and nothing more.
+   */
+  const pages = useElectionPages({
+    scope: 'mine',
+    organizer: wallet.address ?? null,
+    hydrateAll: true,
+    keep: e => e.organizerAddress.toLowerCase() === wallet.address?.toLowerCase(),
+  });
+  const { loading, live, refresh } = pages;
   const [gasBalance, setGasBalance] = useState(live ? 0 : 2.5);
   // Set once the organizer has answered or dismissed the name prompt, so it
   // does not reopen on the next render.
@@ -70,9 +93,7 @@ export default function OrganizerDashboard() {
   }, [live, wallet.address, reloadToken]);
 
   // Live: only elections created by the connected organizer. Seed: first few.
-  const myElections = live
-    ? elections.filter(e => e.organizerAddress.toLowerCase() === wallet.address?.toLowerCase())
-    : elections.slice(0, 4);
+  const myElections = live ? pages.all : ELECTIONS.slice(0, 4);
 
   // The display name lives in localStorage, so a new browser or a sign out
   // leaves it unset and the next election created would be labelled with the
@@ -106,6 +127,12 @@ export default function OrganizerDashboard() {
   // box should narrow what you are looking at, not silently restate the totals.
   const visibleElections = myElections.filter(e =>
     matchesElectionFilter(e, filters, isDomainVerified),
+  );
+  // Narrowing the filters is a different list, so it starts at the first page.
+  const { visible, hasMore, loadMore } = usePageLimit(
+    visibleElections,
+    undefined,
+    JSON.stringify(filters),
   );
 
   const totalEnrolled = myElections.reduce((s, e) => s + e.totalEnrolled, 0);
@@ -186,7 +213,7 @@ export default function OrganizerDashboard() {
                   <p className="px-5 py-8 text-center text-sm text-on-surface-meta">{t('dashboard.no_matches')}</p>
                 ) : (
                   <div className="divide-y divide-white/5">
-                    {visibleElections.map(e => (
+                    {visible.map(e => (
                       <button
                         key={e.id}
                         type="button"
@@ -223,6 +250,14 @@ export default function OrganizerDashboard() {
                         </div>
                       </button>
                     ))}
+                    {/* Everything is already read; this only widens what is
+                        drawn, so it never waits on the chain. */}
+                    <LoadMore
+                      hasMore={hasMore}
+                      loading={false}
+                      onClick={loadMore}
+                      className="pb-5"
+                    />
                   </div>
                 )}
               </CardContent>

@@ -4,8 +4,9 @@
  * Reads ElectionV4 state and converts it into the same `Election` shape the
  * Phase A screens already consume, so components stay presentation-only.
  */
-import { getElection, getFactory } from "./contracts";
-import { queryLogsFrom } from "./logs";
+import { id, toBeHex, zeroPadValue } from "ethers";
+import { getElection, getFactory, getReadProvider } from "./contracts";
+import { queryLogsFrom, queryTopicLogs } from "./logs";
 import { withDistinctNames } from "./ballotNames";
 // The i18n singleton rather than the hook: this is a data layer, not a
 // component. The labels below were hardcoded English and rendered that way in
@@ -288,12 +289,131 @@ export async function fetchElection(address: string): Promise<Election> {
   };
 }
 
-/** Lists elections from the factory (newest first). */
-export async function fetchElections(offset = 0, limit = 50): Promise<Election[]> {
+/** How many elections the factory holds. One cheap call, no hydration. */
+export async function fetchElectionCount(): Promise<number> {
+  return Number(await getFactory().electionsCount());
+}
+
+/**
+ * Every election address, newest first.
+ *
+ * Addresses are cheap and hydration is not: this is one view call for the lot,
+ * where turning those addresses into elections is about eighteen calls EACH.
+ * Splitting the two is what lets a screen know how many elections exist, and in
+ * what order, without paying to read any of them.
+ *
+ * Newest first because that is the order every list shows. The factory appends,
+ * so its own array runs oldest first, and a screen that paged it in that order
+ * would open on the oldest elections in the system.
+ */
+export async function fetchElectionAddresses(): Promise<string[]> {
   const factory = getFactory();
-  const addressList = (await factory.getElections(offset, limit)) as string[];
-  const elections = await Promise.all(addressList.map(fetchElection));
-  return elections.reverse();
+  const total = Number(await factory.electionsCount());
+  if (total === 0) return [];
+  const list = (await factory.getElections(0, total)) as string[];
+  return [...list].reverse();
+}
+
+/** Hydrates the given addresses, preserving the order they were given in. */
+export async function hydrateElections(addresses: string[]): Promise<Election[]> {
+  return Promise.all(addresses.map(fetchElection));
+}
+
+/**
+ * Enough of an election to search it, and nothing more.
+ *
+ * The receipt lookup and the vote history both walk EVERY election and both
+ * need exactly three fields. Hydrating the full model for that was eighteen
+ * calls per election to use two of them, and neither screen can be paginated
+ * instead: a receipt that is not searched for is reported as forged, and a vote
+ * in an election that was not loaded simply does not appear in your history.
+ * So the list stays complete and the reading gets cheaper.
+ */
+export interface ElectionDigest {
+  contractAddress: string;
+  title: string;
+  phase: ElectionPhase;
+  /** Whether a tally has been published, which decides where a receipt links. */
+  resultsPublished: boolean;
+}
+
+export async function fetchElectionDigests(addresses?: string[]): Promise<ElectionDigest[]> {
+  const list = addresses ?? (await fetchElectionAddresses());
+  return Promise.all(
+    list.map(async address => {
+      const c = getElection(address);
+      const [name, phase, resultsPublished] = await Promise.all([
+        c.name(),
+        c.phase(),
+        c.resultsPublished(),
+      ]);
+      return {
+        contractAddress: address,
+        title: String(name),
+        phase: PHASE_MAP[Number(phase)] ?? "upcoming",
+        resultsPublished: Boolean(resultsPublished),
+      };
+    }),
+  );
+}
+
+/**
+ * The elections one organizer created, from the event the factory already
+ * indexes them by.
+ *
+ * `ElectionCreated` declares `organizer` as an indexed argument, which means the
+ * chain keeps a lookup the dashboard was not using: it read every election ever
+ * created and kept the ones whose `organizer` field matched. On a platform with
+ * a thousand elections that is a thousand hydrations to show the four that are
+ * yours, and it is why the dashboard's totals could not be both exact and cheap.
+ *
+ * FALLS BACK TO THE FULL LIST rather than to an empty one. An endpoint that
+ * refuses the log query, or a deployment block recorded wrongly, must not be
+ * able to tell an organizer they have no elections. The caller filters by
+ * organizer anyway, so the fallback is the old behaviour: correct, and slow.
+ */
+export async function fetchOrganizerElectionAddresses(organizer: string): Promise<string[]> {
+  const factory = getFactory();
+  try {
+    const logs = await queryLogsFrom(factory, factory.filters.ElectionCreated(null, organizer));
+    const addresses = logs.map(
+      log => (log as unknown as { args: { electionAddress: string } }).args.electionAddress,
+    );
+    return addresses.reverse();
+  } catch (error) {
+    console.warn("Could not read the organizer's election index; reading them all:", error);
+    return fetchElectionAddresses();
+  }
+}
+
+/**
+ * The elections one voter enrolled in, in a single query.
+ *
+ * `MemberEnrolled` indexes the identity commitment, so every enrolment this
+ * voter ever made can be asked for at once, across all elections, instead of
+ * asking each election "is this commitment a member of yours". The commitment is
+ * public (it is on the chain in the clear), so this reveals nothing that reading
+ * the chain does not already reveal.
+ *
+ * INTERSECTED WITH THE FACTORY'S OWN LIST, because a topic query names no
+ * contract: any address at all can emit an event with this signature and this
+ * commitment, and without the intersection anyone could inject rows into a
+ * voter's list of elections. Ordered by the factory, not by the logs, so the
+ * result is in the same newest-first order as every other list.
+ */
+export async function fetchEnrolledElectionAddresses(commitment: bigint): Promise<string[]> {
+  const known = await fetchElectionAddresses();
+  try {
+    const logs = await queryTopicLogs(getReadProvider(), [
+      id("MemberEnrolled(uint256,uint256,uint256)"),
+      zeroPadValue(toBeHex(commitment), 32),
+    ]);
+    const enrolled = new Set(logs.map(log => log.address.toLowerCase()));
+    return known.filter(address => enrolled.has(address.toLowerCase()));
+  } catch (error) {
+    console.warn("Could not read the voter's enrolment index; reading them all:", error);
+    return known;
+  }
 }
 
 export interface ChainMember {
@@ -304,30 +424,49 @@ export interface ChainMember {
   electionTitle: string;
 }
 
-/** Reads a single election's enrolled members from MemberEnrolled events. */
+/**
+ * Reads a single election's enrolled members from MemberEnrolled events.
+ *
+ * ONE BLOCK READ PER BLOCK, not per member, which is the whole cost of this
+ * function. An event carries no timestamp, only the block it was mined in, and
+ * `e.getBlock()` fetches that block again for every event: a hundred members
+ * meant a hundred round trips for what is usually a handful of distinct blocks,
+ * because enrolments arrive in bursts and several share one. Asking for each
+ * block once collapses that.
+ *
+ * A block that cannot be read leaves the date undefined rather than failing the
+ * list. The enrolment is a fact of the chain; when it happened is a nicety, and
+ * losing a provider's answer about one block should not cost the organizer their
+ * member list.
+ */
 export async function fetchElectionMembers(
   electionAddress: string,
   electionTitle: string,
 ): Promise<ChainMember[]> {
   const election = getElection(electionAddress);
   const events = await queryLogsFrom(election, election.filters.MemberEnrolled());
-  return Promise.all(
-    events.map(async e => {
-      const args = (e as unknown as { args: { identityCommitment: bigint; index: bigint } }).args;
-      let enrolledAt: Date | undefined;
+
+  const provider = getReadProvider();
+  const times = new Map<number, Date | undefined>();
+  await Promise.all(
+    [...new Set(events.map(e => e.blockNumber))].map(async blockNumber => {
       try {
-        const block = await e.getBlock();
-        enrolledAt = block ? new Date(Number(block.timestamp) * 1000) : undefined;
+        const block = await provider.getBlock(blockNumber);
+        times.set(blockNumber, block ? new Date(Number(block.timestamp) * 1000) : undefined);
       } catch {
-        enrolledAt = undefined;
+        times.set(blockNumber, undefined);
       }
-      return {
-        commitment: "0x" + args.identityCommitment.toString(16),
-        index: Number(args.index),
-        enrolledAt,
-        electionId: electionAddress,
-        electionTitle,
-      };
     }),
   );
+
+  return events.map(e => {
+    const args = (e as unknown as { args: { identityCommitment: bigint; index: bigint } }).args;
+    return {
+      commitment: "0x" + args.identityCommitment.toString(16),
+      index: Number(args.index),
+      enrolledAt: times.get(e.blockNumber),
+      electionId: electionAddress,
+      electionTitle,
+    };
+  });
 }

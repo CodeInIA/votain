@@ -78,7 +78,8 @@
     "no": "반대",
     "clear": "지우기",
     "show_more": "더 보기",
-    "show_less": "접기"
+    "show_less": "접기",
+    "load_more": "더 불러오기"
   },
   "nav": {
     "discover": "탐색",
@@ -140,7 +141,8 @@
     "group_status": "상태",
     "group_properties": "선거",
     "group_voting_type": "결정 방식",
-    "group_eligibility": "자격 여부"
+    "group_eligibility": "자격 여부",
+    "results_partial": "지금까지 {{shown}}개"
   },
   "election": {
     "by": "주최:",

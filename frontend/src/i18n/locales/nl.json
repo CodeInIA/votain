@@ -78,7 +78,8 @@
     "no": "Nee",
     "clear": "Wissen",
     "show_more": "Meer tonen",
-    "show_less": "Minder tonen"
+    "show_less": "Minder tonen",
+    "load_more": "Meer laden"
   },
   "nav": {
     "discover": "Ontdekken",
@@ -141,7 +142,8 @@
     "group_status": "Status",
     "group_properties": "Verkiezing",
     "group_voting_type": "Beslist door",
-    "group_eligibility": "Voldoe ik"
+    "group_eligibility": "Voldoe ik",
+    "results_partial": "{{shown}} tot nu toe gevonden"
   },
   "election": {
     "by": "door",

@@ -56,8 +56,19 @@ export interface VoteRecord {
  *
  * One function so the three views cannot drift apart again.
  */
-export function hasPublishedResults(election: Election): boolean {
-  return election.phase === "closed" && election.candidates.some(c => c.votes !== undefined);
+export function hasPublishedResults(election: {
+  phase: ElectionPhase;
+  candidates?: Candidate[];
+  /** Read straight off the contract, for callers that hold no ballot. */
+  resultsPublished?: boolean;
+}): boolean {
+  if (election.phase !== "closed") return false;
+  // Two ways of knowing the same thing, and the rule stays in one place.
+  // A fully read election carries the tally on its options; a digest, which
+  // exists precisely so screens need not read the tally, carries the flag the
+  // contract sets when results are published. Closed is necessary and never
+  // sufficient: an election can be closed with nothing published yet.
+  return election.resultsPublished ?? election.candidates?.some(c => c.votes !== undefined) ?? false;
 }
 
 export interface Election {

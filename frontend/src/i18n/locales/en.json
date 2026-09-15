@@ -121,7 +121,8 @@
     "no": "No",
     "clear": "Clear",
     "show_more": "Show more",
-    "show_less": "Show less"
+    "show_less": "Show less",
+    "load_more": "Load more"
   },
   "discover": {
     "title": "Elections",
@@ -141,7 +142,8 @@
     "group_status": "Status",
     "group_properties": "Election",
     "group_voting_type": "Decided by",
-    "group_eligibility": "Would I qualify"
+    "group_eligibility": "Would I qualify",
+    "results_partial": "{{shown}} found so far"
   },
   "election": {
     "by": "by",

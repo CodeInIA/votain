@@ -1,68 +1,23 @@
 /**
- * Chain-aware elections data source.
+ * One election, from the chain or from the seed.
  *
- * When contracts are deployed (deployment manifest or VITE_* addresses
- * present) the hooks read live on-chain data; otherwise they serve the
- * Phase A seed so the whole UI keeps working before the Amoy deployment.
+ * When contracts are deployed (deployment manifest or VITE_* addresses present)
+ * this reads live on-chain data; otherwise it serves the Phase A seed so the
+ * whole UI keeps working before the Amoy deployment.
  *
  * Seed data is derived synchronously (never stored in state) and the live fetch
  * lives entirely inside the effect, so no setState ever runs synchronously
  * during render or in an effect body.
+ *
+ * THE LIST LIVES IN `useElectionPages`, not here. This hook used to have a
+ * sibling that fetched every election on mount, which is what each list screen
+ * called; that is the cost the paging hook exists to remove, and leaving an
+ * easier way to do the expensive thing is how it would grow back.
  */
 import { useCallback, useEffect, useState } from "react";
-import { ELECTIONS, getElection as getSeedElection, type Election } from "../data/seed";
+import { getElection as getSeedElection, type Election } from "../data/seed";
 import { isChainConfigured } from "../lib/deployments";
-import { fetchElection, fetchElections } from "../lib/chainElections";
-
-interface ElectionsState {
-  elections: Election[];
-  loading: boolean;
-  error: string | null;
-  /** True when data comes from the chain instead of the local seed. */
-  live: boolean;
-  refresh: () => Promise<void>;
-}
-
-export function useElections(): ElectionsState {
-  const live = isChainConfigured();
-  const [chainElections, setChainElections] = useState<Election[]>([]);
-  const [loading, setLoading] = useState(live);
-  const [error, setError] = useState<string | null>(null);
-  // Bumped by refresh() to re-run the fetch effect.
-  const [reloadToken, setReloadToken] = useState(0);
-
-  const elections = live ? chainElections : ELECTIONS;
-
-  useEffect(() => {
-    if (!live) return; // nothing to fetch in seed mode
-    let cancelled = false;
-
-    void (async () => {
-      try {
-        const data = await fetchElections();
-        if (cancelled) return;
-        setChainElections(data);
-        setError(null);
-      } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, [live, reloadToken]);
-
-  // Called from event handlers (never during render): show the spinner and
-  // re-trigger the effect above.
-  const refresh = useCallback(async () => {
-    if (!live) return;
-    setLoading(true);
-    setReloadToken(t => t + 1);
-  }, [live]);
-
-  return { elections, loading, error, live, refresh };
-}
+import { fetchElection } from "../lib/chainElections";
 
 interface ElectionState {
   election: Election | undefined;
