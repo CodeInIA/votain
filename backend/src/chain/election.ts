@@ -105,15 +105,54 @@ export async function getChainTime(): Promise<number> {
 }
 
 /**
+ * The timestamp the NEXT block will carry, which is the one that judges us.
+ *
+ * An attestation is never evaluated in the last block that was mined. It is
+ * evaluated in the block that includes the enrolment, and `block.timestamp`
+ * there is the pending block's, not the latest one's.
+ *
+ * On a live chain the two differ by one block time and nothing shows. On a node
+ * carrying a time offset they do not: measured here with the latest block
+ * frozen at 19:07:30 while the pending block already stood at 19:34:46, because
+ * the seed script advances the clock with `evm_increaseTime` to create
+ * historical elections and the offset keeps running afterwards. A fifteen
+ * minute deadline measured from the latest block was therefore twelve minutes
+ * in the past before it was signed. `eth_call` accepted the very same call
+ * while `eth_estimateGas` rejected it, which is exactly this gap: one simulates
+ * against the latest block and the other against the next.
+ *
+ * Falls back to the latest block, which is what most nodes outside development
+ * answer for "pending" anyway.
+ */
+async function nextBlockTime(): Promise<number> {
+  try {
+    // THE RAW CALL, because `provider.getBlock('pending')` throws. A pending
+    // block has `number: null` and ethers v6 rejects the whole payload as
+    // BAD_DATA before any field can be read, so the tidy-looking version of
+    // this swallowed its own exception and quietly returned the latest block:
+    // the exact value it was written to stop using.
+    const pending = (await getProvider().send('eth_getBlockByNumber', ['pending', false])) as
+      | { timestamp?: string }
+      | null;
+    if (pending?.timestamp) return Number(BigInt(pending.timestamp));
+  } catch {
+    // A node that does not serve a pending block is not an error here: the
+    // latest one is a fine approximation wherever blocks arrive steadily.
+  }
+  return getChainTime();
+}
+
+/**
  * The base an attestation deadline is measured from: whichever clock is
- * further ahead.
+ * furthest ahead.
  *
  * Taking the chain alone would be wrong in the other direction, on an idle node
  * whose last block is hours old: the deadline would be short by exactly that
- * gap. The later of the two satisfies both readings.
+ * gap. The latest of the readings satisfies all of them.
  */
 export async function attestationBaseTime(): Promise<number> {
-  return Math.max(Math.floor(Date.now() / 1000), await getChainTime());
+  const [chain, next] = await Promise.all([getChainTime(), nextBlockTime()]);
+  return Math.max(Math.floor(Date.now() / 1000), chain, next);
 }
 
 /** Chain id the attester must sign against, read once and cached. */
