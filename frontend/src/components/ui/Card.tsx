@@ -15,7 +15,27 @@ export function Card({ className, glass = true, depth = 'mid', children, ...prop
         depth === 'low'  && 'bg-surface-low/40',
         depth === 'mid'  && 'bg-surface-mid/50',
         depth === 'high' && 'bg-surface-high/60',
-        'shadow-[0_8px_32px_rgba(0,0,0,0.4)]',
+        /* NO BOX-SHADOW HERE, and it is not an omission.
+         *
+         * A drop shadow on an element that also carries `backdrop-filter` made
+         * Chromium paint a band of the wrong colour along the card's bottom
+         * edge, appearing after a hover anywhere on the page repainted. Bisected
+         * against the running app:
+         *
+         *   disable the ambient blur(140px) layers  no change
+         *   disable every backdrop-filter           gone
+         *   remove the shadow                       gone
+         *   shadow with no vertical offset          still there, fainter
+         *   shadow + isolate + translateZ           still there
+         *
+         * So the two cannot share an element, and the shadow is the half worth
+         * giving up: the glass IS the design, the depth is decoration. The
+         * border and the background carry it now.
+         *
+         * If it is ever wanted back, it has to be painted by something that is
+         * not this element, a wrapper or a pseudo-element with no
+         * `backdrop-filter` of its own. Not by turning this line back on.
+         */
         className
       )}
       {...props}
