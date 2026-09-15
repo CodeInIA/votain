@@ -51,8 +51,13 @@ export function SelectMenu({
   // on touch devices. See the hook for what Radix does.
   const { open, onOpenChange } = useTapSafeSelect();
 
+  // `min-w-0` below because `w-full` is not a promise a flex item keeps: its
+  // minimum width defaults to its CONTENT, so a dropdown holding a long election
+  // title grew past the column it was given and pushed the card it sits in off
+  // the side of the page. The truncation only engages once every ancestor is
+  // allowed to be narrower than its text.
   return (
-    <div className="flex flex-col gap-1.5 w-full">
+    <div className="flex flex-col gap-1.5 w-full min-w-0">
       {label && (
         <label htmlFor={selectId} className="text-sm font-medium text-on-surface-variant">
           {label}
@@ -65,6 +70,16 @@ export function SelectMenu({
           aria-label={label}
           className={cn(
             'group flex items-center justify-between gap-2 w-full h-11 px-4 rounded-xl text-sm',
+            // The selected value, reached from HERE because it cannot be
+            // reached from itself: Radix's `Select.Value` renders a span and
+            // drops the `className` given to it, which the DOM shows as
+            // `<span style="pointer-events: none;">` with an empty class. That
+            // unstyled span is a flex child whose minimum width is its own
+            // text, so a long election title made it 326px wide inside a 232px
+            // trigger and spilled out over the card. Measured, not assumed:
+            // every other `min-w-0` in this file does apply, and this was the
+            // one link in the chain that silently did not.
+            '[&>span:first-child]:flex-1 [&>span:first-child]:min-w-0 [&>span:first-child]:overflow-hidden',
             'bg-surface-lowest/60 border border-outline-variant/20 text-on-surface',
             'transition-all duration-200 cursor-pointer',
             'hover:border-outline-variant/40',
@@ -74,6 +89,7 @@ export function SelectMenu({
             className,
           )}
         >
+          {/* No `className` here: Radix throws it away. See the trigger. */}
           <Select.Value placeholder={placeholder}>
             <span className="flex items-center gap-2 min-w-0">
               {selected?.icon && <selected.icon className="w-4 h-4 shrink-0 text-primary" strokeWidth={2.5} />}
@@ -81,7 +97,7 @@ export function SelectMenu({
             </span>
           </Select.Value>
           <Select.Icon asChild>
-            <ChevronDown className="w-4 h-4 text-on-surface-meta transition-transform duration-200 group-data-[state=open]:rotate-180" />
+            <ChevronDown className="w-4 h-4 shrink-0 text-on-surface-meta transition-transform duration-200 group-data-[state=open]:rotate-180" />
           </Select.Icon>
         </Select.Trigger>
 
