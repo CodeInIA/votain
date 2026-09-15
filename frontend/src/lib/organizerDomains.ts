@@ -10,6 +10,21 @@
  *
  * The lookup runs on our backend rather than in the voter's browser so that the
  * organization's own infrastructure never learns who is reading their election.
+ *
+ * VERIFYING COSTS NO SIGNATURE, and the order in `addOrganizerDomain` is what
+ * makes that true: the DNS answer comes first and anything short of `verified`
+ * returns before the wallet is touched, so a domain whose record has not
+ * propagated yet costs nothing to check again. The signature that follows
+ * records the CLAIM, not the proof.
+ *
+ * It has to be the organizer's signature rather than a row this server writes.
+ * The backend can prove a TXT record exists; only the wallet that owns the
+ * elections can state where it publishes. A server able to write claims could
+ * attach any domain to any organizer, and the badge would rest on trusting us
+ * again, which is the thing a domain was chosen to avoid. The cost is one
+ * transaction per domain, paid by the organizer.
+ *
+ * `docs/dev/architecture.md` carries the full reasoning.
  */
 
 import { Contract, type Signer } from "ethers";

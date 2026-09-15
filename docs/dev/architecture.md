@@ -702,6 +702,57 @@ rather than stored has nothing to seal, so the contract, its tests and the
 interface for adding a second passkey are gone rather than left deployed and
 unused.
 
+## The organizer's badge is a domain, not a checkmark
+
+A voter looking at an election has to answer a question no cryptography answers
+for them: is this the real town hall, or somebody who registered a similar name?
+The obvious answer is a verified badge, and it is the wrong one. A checkmark is
+an opaque claim that means whatever the party granting it decided it means, and
+it only helps if you already trust that party. Ours would be us.
+
+A domain carries its own evidence. `elecciones.gob.es` says what it is, and
+`votacion-oficial-gob.com` looks exactly as suspicious as it deserves, where a
+checkmark beside that same name would launder it. Anyone can repeat the check.
+
+### Two directions, and neither is enough alone
+
+**DNS says the domain names the wallet.** The organizer publishes a TXT record
+at `_votain.<domain>` whose value is `v=votain1; address=0x...`. Publishing it
+requires control of the domain, which is the thing being proven.
+
+**The chain says the wallet claims the domain.** `OrganizerDomains.claim` is a
+transaction from the organizer's own address, recording which domains to go and
+ask about.
+
+Forging one half gets an attacker nothing. Publishing a TXT record that names
+somebody else's wallet does not let them sign as that wallet; claiming a domain
+they do not control fails the lookup that follows. The contract's own comment
+puts it plainly: it stores a claim, not a credential, because domain control is
+whatever DNS answers right now and cannot be read off a chain.
+
+### Why the organizer signs, and what does not need a signature
+
+VERIFYING COSTS NO SIGNATURE. `POST /api/organizer/domains` resolves the record
+and answers; `addOrganizerDomain` returns early on anything other than
+`verified`, so a voter-facing organizer whose DNS has not propagated is told so
+without their wallet being touched. The signature happens only after the proof
+has already passed, and what it writes is the claim.
+
+It has to be their signature rather than a row our server writes, and that is
+the whole point rather than an implementation detail. Our backend can prove a
+TXT record exists; only the wallet that owns the elections can state where it
+publishes. A server able to write claims could attach any domain to any
+organizer, and the badge would rest on trusting us again, which is the thing the
+domain was chosen to avoid. It also means an auditor reads a past election's
+claim from the chain instead of asking a server what it remembers.
+
+The lookup runs on our backend rather than in the voter's browser, so the
+organization's own DNS never learns who is reading their election.
+
+**What it costs**: one transaction per domain, paid by the organizer. Once per
+domain, for a badge that needs no trusted issuer, which is a fair price, but it
+is not free and the interface should not pretend otherwise.
+
 ## Candidate photographs, and what they would cost
 
 A ballot with a face on it is not a decoration. India's voting machines carry
