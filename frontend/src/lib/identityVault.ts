@@ -13,11 +13,11 @@
  *
  * Wrapping: HKDF-SHA256(prf, info) -> AES-256-GCM key; blob = iv ‖ ciphertext.
  */
+import { backendBase } from "./backend";
 
 const HKDF_INFO = new TextEncoder().encode("votain:identity-vault:v1");
 const IV_BYTES = 12;
 
-const BACKEND = import.meta.env.VITE_BACKEND_URL as string | undefined;
 
 function b64urlEncode(bytes: Uint8Array): string {
   let s = "";
@@ -96,14 +96,9 @@ export interface VaultState {
   entries: VaultEntry[];
 }
 
-function requireBackend(): string {
-  if (!BACKEND) throw new Error("VITE_BACKEND_URL is not configured");
-  return BACKEND;
-}
-
 /** Reads this voter's wrapped secrets. Requires the SD-JWT session cookie. */
 export async function fetchVault(): Promise<VaultState | null> {
-  const res = await fetch(`${requireBackend()}/api/identity/vault`, {
+  const res = await fetch(`${backendBase()}/api/identity/vault`, {
     credentials: "include",
   });
   if (res.status === 401) return null;
@@ -119,13 +114,44 @@ export interface VaultWriteResult {
   registrationError?: string;
 }
 
+/**
+ * Records this voter on chain, with no passkey involved.
+ *
+ * Being REGISTERED and having a passkey are two different facts, and the vault
+ * route used to write them in one transaction: a voter whose authenticator
+ * refused to hold the secret was therefore never registered at all. They kept
+ * their twelve words, the screen said they were done, and the first enrollment
+ * failed much later with `NotPlatformVerified`. The next device, meanwhile, read
+ * the empty vault as "new voter" and minted a second identity for one human.
+ *
+ * `PlatformRegistry.registerMember` pins the commitment; `addVaultEntry` may
+ * follow whenever a passkey that works turns up. Idempotent: re-registering the
+ * same commitment for the same human is a success with nothing written.
+ */
+export async function registerCommitment(commitment: string): Promise<VaultWriteResult> {
+  const res = await fetch(`${backendBase()}/api/identity/vault`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ commitment }),
+  });
+
+  if (res.status === 409) {
+    throw new Error(
+      "This World ID is already bound to a different identity. Unlock it with one of your existing passkeys, or ask the issuer to reset it.",
+    );
+  }
+  if (!res.ok) throw new Error(`Registration failed: ${res.status}`);
+  return (await res.json()) as Promise<VaultWriteResult>;
+}
+
 /** Registers one passkey as able to unlock this voter's identity. */
 export async function putVaultEntry(params: {
   credentialId: string;
   blob: string;
   commitment: string;
 }): Promise<VaultWriteResult> {
-  const res = await fetch(`${requireBackend()}/api/identity/vault`, {
+  const res = await fetch(`${backendBase()}/api/identity/vault`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -144,14 +170,31 @@ export async function putVaultEntry(params: {
   return (await res.json()) as Promise<VaultWriteResult>;
 }
 
+/**
+ * The one passkey a voter has left, which the server refuses to remove.
+ *
+ * Typed rather than left as a message to match on: it is the single case where
+ * "link another one first" is the right thing to say, and the caller used to
+ * say it for EVERY failure, sending somebody whose backend was down off to
+ * create a credential that would not have helped.
+ */
+export class LastPasskeyError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "LastPasskeyError";
+  }
+}
+
 export async function removeVaultEntry(credentialId: string): Promise<void> {
   const res = await fetch(
-    `${requireBackend()}/api/identity/vault/${encodeURIComponent(credentialId)}`,
+    `${backendBase()}/api/identity/vault/${encodeURIComponent(credentialId)}`,
     { method: "DELETE", credentials: "include" },
   );
   if (!res.ok) {
-    const body = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new Error(body.error ?? `Vault delete failed: ${res.status}`);
+    const body = (await res.json().catch(() => ({}))) as { error?: string; code?: string };
+    const message = body.error ?? `Vault delete failed: ${res.status}`;
+    if (body.code === "last_passkey") throw new LastPasskeyError(message);
+    throw new Error(message);
   }
 }
 
@@ -165,12 +208,13 @@ export async function removeVaultEntry(credentialId: string): Promise<void> {
  * the authorisation and the cookie would add nothing but a linkage.
  */
 export async function recoverIdentity(params: {
-  credentialId: string;
-  blob: string;
+  /** Omitted together with `blob` when no passkey could be made here. */
+  credentialId?: string;
+  blob?: string;
   commitment: string;
   worldIdProof: unknown;
 }): Promise<{ commitment: string; rotationTx?: string }> {
-  const res = await fetch(`${requireBackend()}/api/identity/recover`, {
+  const res = await fetch(`${backendBase()}/api/identity/recover`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "omit",

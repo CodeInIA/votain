@@ -14,6 +14,35 @@ const app = express();
 const port = process.env.PORT || 3000;
 const isDev = process.env.NODE_ENV !== 'production';
 
+/**
+ * Who is allowed to tell us the client's address.
+ *
+ * NOT cosmetic, even though it surfaced as a warning in the log. Every rate
+ * limit here is keyed on `req.ip`, and with no proxy trusted that is the
+ * SOCKET peer. Reached through the dev tunnel, every request in the world
+ * arrives from 127.0.0.1, so the whole internet shared one bucket: 120 requests
+ * a minute for everybody together, and 20 for the relayer. One person refreshing
+ * could lock out every voter, and the per-IP limit protected nothing.
+ *
+ * "loopback" rather than `true`, and the difference is the security of it.
+ * `true` trusts the LEFTMOST entry of `X-Forwarded-For`, which the client
+ * writes, so anyone could invent an address per request and never be limited at
+ * all. Trusting loopback means we trust only a proxy running on this machine,
+ * and Express then takes the rightmost entry the client could not have written:
+ * the one `cloudflared` appended.
+ *
+ * Overridable because the right answer is the deployment's, not ours: behind
+ * two proxies it is `2`, behind none `false`.
+ */
+function trustProxySetting(): boolean | number | string {
+  const raw = process.env.TRUST_PROXY;
+  if (raw === undefined || raw === '') return 'loopback';
+  if (raw === 'true') return true;
+  if (raw === 'false') return false;
+  return /^\d+$/.test(raw) ? Number(raw) : raw;
+}
+app.set('trust proxy', trustProxySetting());
+
 app.use(cors(
   isDev
     ? // Development: accept any origin (mobile, localhost, local IP)

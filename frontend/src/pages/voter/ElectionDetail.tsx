@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, ExternalLink, Users, Calendar, Copy, Check } from 'lucide-react';
+import { AlertTriangle, ExternalLink, Users, Calendar, Copy, Check, Lock } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { DomainBadge } from '../../components/ui/DomainBadge';
 import { Badge } from '../../components/ui/Badge';
@@ -30,7 +30,8 @@ import { enrollInElection } from '../../lib/voting';
 import { EligibilityCheck } from '../../components/voter/EligibilityCheck';
 import { relayErrorMessage, type EnrollAttestationInput } from '../../lib/relay';
 import { isEmptyPolicy } from '../../lib/eligibility';
-import { getOrCreateIdentity, getStoredCommitment } from '../../lib/semaphore';
+import { getStoredCommitment } from '../../lib/semaphore';
+import { useVoterIdentity } from '../../hooks/useVoterIdentity';
 import { nextBoundary, PULSE_PHASES } from '../../lib/phase';
 
 export default function ElectionDetail() {
@@ -66,18 +67,6 @@ export default function ElectionDetail() {
   const isGated = !isEmptyPolicy(eligibilityPolicy);
   const policyRequirements = usePolicyRequirements(eligibilityPolicy);
 
-  // In PRF mode the identity isn't cached across sessions, so enrollment status
-  // can read as "unknown" (isEnrolled === undefined) with no commitment stored.
-  // Derive it once (a single passkey tap) to persist the public commitment, then
-  // refetch so the enrolled/vote UI is correct. Runs only when status is unknown.
-  const triedDerive = useRef(false);
-  useEffect(() => {
-    if (!live || !election || triedDerive.current) return;
-    if (election.isEnrolled === undefined && getStoredCommitment() === null) {
-      triedDerive.current = true;
-      getOrCreateIdentity().then(() => refresh()).catch(() => {});
-    }
-  }, [live, election, refresh]);
 
   if (loading) {
     return (
@@ -107,6 +96,22 @@ export default function ElectionDetail() {
   // The ballot is only interactive for an enrolled voter who has not voted yet;
   // every other case still gets to *see* the options, just read-only.
   const canPickCandidate = isActivePhase && election.isEnrolled && !election.hasVoted;
+  const { ready: identityReady, unlocking, unlock } = useVoterIdentity(live);
+
+  /**
+   * Whether this device can even tell if the voter is enrolled.
+   *
+   * Enrolment is read from the chain by commitment, and the commitment comes
+   * from the identity, which is sealed. With nothing stored here the answer is
+   * UNKNOWN, and that is not the same as "not enrolled": showing the enrol
+   * button then invites somebody to enrol twice.
+   *
+   * This used to resolve itself in an effect, so opening an election summoned
+   * an authenticator dialog on its own, unannounced, exactly the pattern the
+   * sign-in step was rebuilt to avoid. Now it is asked for, with a reason.
+   */
+  const enrolmentUnknown =
+    live && election.isEnrolled === undefined && getStoredCommitment() === null && !identityReady;
 
   const infoPanel = (message: string) => (
     <StatusNotice message={message} />
@@ -130,6 +135,25 @@ export default function ElectionDetail() {
         // above with its own link to the full view, and repeating it as the
         // main call to action would send the reader away from what they came for.
         return hasResults ? null : infoPanel(t('results.not_available'));
+    }
+
+    // Before any of the live-phase actions: none of them can be right while
+    // the answer they depend on is unknown.
+    if (enrolmentUnknown) {
+      return (
+        <div className="flex flex-col items-center gap-3 text-center">
+          <p className="text-xs text-on-surface-meta max-w-md">{t('election.enrolment_unknown')}</p>
+          <Button
+            variant="ghost"
+            className="rounded-full px-6 gap-2"
+            disabled={unlocking}
+            onClick={() => { void unlock().then(() => refresh()); }}
+          >
+            <Lock className="w-4 h-4" />
+            {unlocking ? t('common.loading') : t('election.check_enrolment')}
+          </Button>
+        </div>
+      );
     }
 
     if (isEnrollPhase) {

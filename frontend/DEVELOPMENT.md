@@ -32,7 +32,8 @@
 
 /voter/onboarding                Onboarding (5 steps + World ID QR, REAL integration)
 /voter/signin                    Voter sign in
-/voter/re-verify                 Identity recovery (World ID + new passkey)
+/voter/recover                   Identity recovery by typing the phrase
+/voter/re-verify                 Last resort: World ID rebinds a new phrase
 /voter/elections                 My elections (phase-aware tabs)
 /voter/election/:id              Election detail (enrollment / active)
 /voter/election/:id/zk-proof     ZK proof generation (simulated)
@@ -139,22 +140,38 @@ produce two independently countable ballots that no contract could correlate, so
 multi-device support means the SAME secret unlocked from each passkey, never a new
 identity per device.
 
-- **The secret is sealed once per passkey** in the encrypted vault:
+**The root is a twelve-word RECOVERY PHRASE**, not the passkey. `identityFromPhrase`
+is a pure function of the words, so the same phrase rebuilds the same voter anywhere,
+with no server, no network and no platform capability involved. The passkey is a
+convenience layered on top of that, and the order matters: it used to be the other way
+round, and a voter on a platform that cannot evaluate PRF on an assertion (Chrome and
+Firefox on Windows) could enrol and then be unable to vote after a page reload. See
+`docs/dev/architecture.md`, "Two roles, two anchors", for the measurements.
+
+- **The phrase is sealed once per passkey** in the encrypted vault:
   HKDF-SHA256(WebAuthn PRF) then AES-256-GCM. The issuer stores ciphertext only and cannot
-  decrypt it, so it cannot compute a voter per-election nullifiers.
+  decrypt it, so it cannot compute a voter per-election nullifiers. What the blob holds
+  is the PHRASE: unsealing it and deriving is what makes a sealed copy and a typed
+  phrase produce the same identity rather than two.
 - **A new device unlocks it** through `assertPrf([...credentialIds])`. Passing every known
   credential lets a synced passkey, or the voter phone over the WebAuthn hybrid/QR
   transport, answer the prompt.
 - **Failure to unlock is loud.** `getOrCreateIdentity` throws `IdentityLockedError` rather
   than minting a second identity, which the registry would refuse and `enroll` would reject
   much later with an unrelated error.
-- **Recovery** (`/voter/re-verify`) needs a FRESH World ID proof, not the session: it
+- **Recovery is the phrase first** (`/voter/recover`): typing the words restores the
+  identity with no passkey, no proof and no help from us, and keeps every enrolment,
+  because the commitment does not change. Everything below is the last resort for
+  someone who lost the words too.
+- **Rebinding** (`/voter/re-verify`) needs a FRESH World ID proof, not the session: it
   rebinds the on-chain commitment through `PlatformRegistry.rotateMember`, so a stolen
   session must not be enough. The voter regains elections they had not joined, and is
   permanently refused in the ones they had.
-- **Fallback (no PRF support):** a random identity in localStorage
-  (`votain_semaphore_identity`), never published to the vault. Note it is NOT registered on
-  chain, so on Amoy it cannot enroll. See docs/ai/state.md for the open decision.
+- **Fallback (no vault, no PRF):** the phrase itself in localStorage
+  (`votain_recovery_phrase`), never published. It is a PHRASE in that slot and never an
+  exported identity, because the same slot is read back and derived from: writing an
+  export there produced a voter who silently became a different voter on the next load.
+  Note it is NOT registered on chain, so on Amoy it cannot enroll. See docs/ai/state.md.
 - **Never trust `prf.enabled` from a creation.** Windows Hello does not evaluate the PRF
   while creating a credential and reports `enabled: false` while being fully capable, so
   gating on it rejects every Windows Hello voter. Only the PRF value itself is evidence.
@@ -171,9 +188,8 @@ identity per device.
   which is what makes the profile show the device as registered.
 - **A missing cached credential id never means a missing passkey.** `derivePrfSecret`
   asks the authenticator for an existing credential (`assertPrf([])`) before creating one.
-  For the organizer this is load-bearing: their Paillier tally key is re-derived from the
-  passkey rather than stored, so a new credential would be a new key and every election
-  they created would stop decrypting.
+  It matters less than it did, since the organizer's key no longer hangs off the passkey,
+  but a duplicate credential is still a duplicate vault entry for one authenticator.
 - `votain_identity_mode` records which mode is active.
 - **Signing out clears the identity** (`clearIdentity` from `voterSignOut`). Leaving it
   behind let the next person on the browser inherit the previous voter's identity, since
@@ -476,10 +492,12 @@ Key rules:
   not only about gas: a per-voter sending address would publicly link a voter enrollment to
   their ballot and defeat the Semaphore proof.
 - Organizers use an **injected EOA** (MetaMask) to deploy/manage and pay for it.
-- The election's **Paillier private key** is generated at creation and stored in localStorage
-  (`votain_paillier_sk_<address>`); the organizer exports it for the tally CLI. Known
-  limitation (documented for the thesis): production would seal it to the organizer's
-  passkey via WebAuthn PRF, as done for the voter's Semaphore identity.
+- The election's **Paillier private key** is DERIVED, not kept: from a deterministic
+  EIP-712 signature by the organizer's wallet plus the election's public `keyNonce`
+  (`lib/organizerKey.ts`, `lib/tallyKey.ts`). Nothing is at rest, so there is nothing to
+  lose and nothing to steal from a disk. A random key stored in localStorage
+  (`votain_paillier_sk_<address>`) remains the fallback for a caller with no wallet, and
+  the export exists for the tally CLI.
 - History/receipts prove *that* and *when* you voted. They do not reveal *what*,
   but say why precisely: the ballot is a Paillier ciphertext in the `VoteCast`
   event, paired with the voter's nullifier, and the receipt shown to the voter IS
@@ -607,8 +625,8 @@ present. It used to be three conditions in three files, and two of them tested
 
 ## Tally key derivation cost
 
-The organizer's Paillier key is re-derived from the passkey PRF secret rather
-than stored, which means a 2048-bit key is generated in the browser every time an
+The organizer's Paillier key is re-derived from a wallet signature rather than
+stored, which means a 2048-bit key is generated in the browser every time an
 election is created. That is pure BigInt work: **nothing in the path touches the
 chain or the network**, so the cost is identical on a local node and on Amoy.
 
@@ -630,7 +648,7 @@ undecryptable. If that test fails, the fix is not to update the vector.
 
 What is left is unavoidable arithmetic, and a handful of seconds of frozen tab
 still reads as a crash. The create wizard should say what it is doing between the
-passkey prompt and the wallet prompt.
+signature prompt and the transaction.
 
 ## What an election asks of a voter, and where that claim lives
 
@@ -1355,7 +1373,8 @@ Same ciphertext, no third party in the path.
 
 It is deliberately NOT presented as a secret to hide, and the copy says so: the
 blob is sealed under a key derived from the passkey's PRF output, so without the
-authenticator it opens nothing. That is exactly why it is safe to save, mail or
+authenticator it opens nothing. What it holds is the recovery phrase, so restoring
+it derives rather than imports. That is exactly why it is safe to save, mail or
 print, and telling voters to guard it like a seed phrase would be both wrong and
 the kind of warning that makes people skip the backup entirely.
 
@@ -1364,66 +1383,52 @@ derives to. A backup that opens but yields a different identity belongs to
 another voter or was edited, and enrolling with it would fail much later with an
 error pointing nowhere near the cause.
 
-## The organizer login, and the second device it used to break
+## The organizer login, and why it is one step
 
-Four problems, one of them not a login problem at all.
+There were four problems here, three of them in a login that no longer exists,
+and the fourth is the reason it does not.
 
-**A silently forked identity.** `authenticatePasskey` decided what to do from
-`votain_prf_cred_id` in localStorage: no id, register a new passkey. That id is
-a per-browser cache, not an account, so a returning organizer on a second
-browser was handed a brand new credential without being asked. Their elections
-still appeared, because those belong to the WALLET, and the damage showed up
-only at the tally: a new credential is a new PRF output, and the Paillier key
-of every election they had already created is derived from the old one.
+**The fourth one first, because it settles the rest.** A SECOND passkey derived
+a second key. The organizer's Paillier key came from their passkey's PRF output,
+so a returning organizer on another browser, or one replacing a lost
+authenticator, could no longer decrypt any election they had already created.
+Every fix aimed at the login was a half fix: careful intent handling, an honest
+greeting, an `OrganizerVault` contract holding one sealed copy of the master
+secret per passkey. They made the failure rarer without removing it, and the
+vault could only ever be written from a device that already worked, which is
+precisely not the device someone is standing at when they need it.
 
-`derivePrfSecret` had solved this months earlier, asking the authenticator with
-an empty `allowCredentials` before minting anything. The login path never got
-the same treatment. It does now, through `PasskeyIntent`: "existing" asks the
-authenticator, which is what reaches a synced passkey or one answering by QR
-from a phone, and "first" mints one. The screen asks rather than guessing,
-because the wrong guess is unrecoverable and the right one costs a tap.
+What removed it was changing the anchor. The master is now derived from a
+DETERMINISTIC EIP-712 signature by the wallet (`lib/organizerKey.ts`), and an
+organizer cannot act without that wallet in the first place: it owns their
+elections and signs every lifecycle call. A secret reproduced on demand has
+nothing to store, so `OrganizerVault` and its tests are deleted rather than left
+deployed, and the login is a single wallet step.
 
-**A screen that could not tell a first visit from a return.** It always showed
-two steps and always said "create or use an existing passkey", though the code
-already knew: `hasPrfCredential()` says whether this browser can assert
-straight away, and `getRememberedOrganizerAddress()` says whether the wallet is
-linked. The first decides the buttons, the second decides the greeting, and
-they are deliberately different questions: the voter passkey shares the same
-cache, so greeting on it alone would welcome back somebody who has only voted.
+The platform made the choice easy. Chrome and Firefox on Windows return a
+passkey's PRF secret at creation and refuse to evaluate it on an assertion, so a
+vault there could be written and never read. Measured across seven combinations
+of residency, `allowCredentials` and user verification, over both origins:
+always `NotAllowedError`.
 
-**No door except the landing page.** The header's Log in means voter, which is
-right for almost everyone who taps it, and left an organizer arriving from
-Discover with nowhere to go. The organizer entry now sits on the sign in screen
-itself, under the primary button: subtle rather than a second button of equal
-weight, which would claim two equal audiences. The landing link stopped saying
-"Create an election", a task, and says "Sign in as an organizer", a door.
+**What it costs, and it is not nothing.** Whoever holds the wallet can now also
+decrypt the ballots. Two factors became one.
 
-## The organizer's tally vault
+An optional passkey that restored the separation was built and then removed, so
+do not add it back without reading why: `docs/dev/architecture.md`, under "The
+organizer's passkey, and why there is not one". The short version is that the
+PRF belongs to one credential, so an organizer on a second device could not
+tally what they created on the first; that it could never gate anything else,
+since every other organizer action is a transaction the contract checks by
+`msg.sender`; and that losing the passkey destroys results with no attacker
+involved, which is a worse outcome than the theft it defends against.
 
-The deepest of the four, and the reason the others were only half fixes: even
-with a perfect login, a SECOND passkey still derived a second key.
-
-`OrganizerVault` is the answer, and it is the voter's identity vault with a
-different key: one sealed copy of a tally master secret per passkey, keyed by
-the wallet, ownerless and self-service like `OrganizerDomains`, since the wallet
-already owns the organizer's elections and needs nobody to vouch for it.
-
-- **Existing elections keep their keys.** The first copy seals the PRF output of
-  the passkey already in use, so the master secret IS what that organizer has
-  always derived from. No version flag, no migration step, nothing to get wrong.
-- **`getTallyMasterSecret` refuses rather than inventing.** A passkey with no
-  copy that cannot reach one throws `VaultLockedError`. Deriving from its raw
-  PRF output would hand back a key that decrypts nothing, which is the failure
-  this whole change exists to remove.
-- **`deriveElectionKeys(nonce, signer)`** takes the vault path when a wallet is
-  present and falls back to the raw PRF only for a deployment with no vault
-  contract, which is what those elections were created with anyway.
-- **Adding a passkey happens on a device that already works**, from the
-  organizer profile, because sealing needs the plaintext. Enrolling from the new
-  machine is the case a sealed vault cannot serve, in either direction, and the
-  copy says so.
-- **The contract refuses to remove the last copy.** That loss is permanent and
-  no later action undoes it, so it is a rule rather than a confirmation dialog.
+**The door.** The header's Log in means voter, which is right for almost
+everyone who taps it, and left an organizer arriving from Discover with nowhere
+to go. The organizer entry sits on the sign in screen itself, under the primary
+button: subtle rather than a second button of equal weight, which would claim
+two equal audiences. The landing link stopped saying "Create an election", a
+task, and says "Sign in as an organizer", a door.
 
 ## Organizer domains are claimed by the organizer
 

@@ -9,8 +9,11 @@ import { Input } from '../../components/ui/Input';
 import { GasWidget } from '../../components/ui/GasWidget';
 import { useToast } from '../../components/ui/useToast';
 import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
+import { useRefreshOnReturn } from '../../hooks/useRefreshOnReturn';
 import { isChainConfigured, chainInfo } from '../../lib/deployments';
 import { depositGas, getGasBalance, fetchGasHistory, type GasMovement } from '../../lib/organizer';
+import { WalletAnswerLostError } from '../../lib/walletRequest';
+import { isUserRejection } from '../../lib/walletErrors';
 
 /** Sample movements shown only in demo mode (no contracts configured). */
 const SEED_HISTORY: GasMovement[] = [
@@ -31,6 +34,18 @@ export default function GasManagement() {
   const [history, setHistory] = useState<GasMovement[]>(live ? [] : SEED_HISTORY);
   const [busy, setBusy] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
+
+  // Re-read whatever this screen draws, on returning from the wallet app.
+  //
+  // Not a recovery mechanism. The pending request settles on its own terms,
+  // against the chain if its reply was lost on the way back: see
+  // `withReturnDeadline`, which is where that is decided. This is only for what
+  // changed while nobody here was looking.
+  //
+  // `busy` is left alone, here and everywhere. Coming back to the browser is
+  // not evidence that the signing is over, and releasing the button early
+  // invites a second transaction for one intended action.
+  useRefreshOnReturn(() => setReloadToken(n => n + 1));
 
   // Real balance + movements straight from the paymaster.
   useEffect(() => {
@@ -69,11 +84,34 @@ export default function GasManagement() {
         return;
       }
       if (await wallet.isWrongNetwork()) await wallet.switchToAmoy();
+      // Over a relay the prompt appears in the wallet app and nothing brings it
+      // forward, so the only honest thing the page can do is say so.
       const signer = await wallet.getSigner();
-      await depositGas(signer, wallet.address, amount);
+      // Read before sending, so the chain can be asked afterwards whether this
+      // deposit actually landed. It is the only way to know once the wallet's
+      // reply is lost, which is what leaving the page to sign does to it.
+      const before = await getGasBalance(wallet.address!);
+      await wallet.withWalletApp(
+        () => depositGas(signer, wallet.address!, amount),
+        () => toast({ title: t('errors.confirm_in_wallet_app'), variant: 'info' }),
+        async () => ((await getGasBalance(wallet.address!)) > before ? 'confirmed' : undefined),
+      );
       setReloadToken(n => n + 1); // re-read balance + history from chain
       toast({ title: t('gas.deposit'), variant: 'success' });
     } catch (e) {
+      // Nothing went wrong that we know of: the answer simply never came back.
+      // The balance above has already been re-read, so the screen is truthful.
+      // Declining is an answer, not a fault. Reporting it as one hands back a
+      // red box about a decision they made on purpose.
+      if (isUserRejection(e)) {
+        toast({ title: t('errors.wallet_request_rejected'), variant: 'info' });
+        return;
+      }
+      if (e instanceof WalletAnswerLostError) {
+        setReloadToken(n => n + 1);
+        toast({ title: t('errors.wallet_answer_lost'), variant: 'info' });
+        return;
+      }
       toast({ title: t('errors.generic_title'), description: e instanceof Error ? e.message : String(e), variant: 'error' });
     } finally {
       setBusy(false);

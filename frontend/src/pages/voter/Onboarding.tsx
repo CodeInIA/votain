@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Fingerprint, ShieldAlert, CheckCircle,
-  ChevronRight, ChevronLeft, ShieldCheck, Loader2, X,
+  ChevronRight, ChevronLeft, Loader2, X,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '../../components/ui/Button';
@@ -25,7 +25,7 @@ export default function Onboarding() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const {
-    isLoadingQr, isVerifying, isSuccess, connectorURI, qrError,
+    isLoadingQr, isVerifying, connectorURI, qrError,
     handleOpenWorldId, handleCancelQr,
   } = useWorldIdVerify();
 
@@ -83,7 +83,7 @@ export default function Onboarding() {
         variant="ghost"
         className="absolute top-4 left-4 sm:top-6 sm:left-6 z-50 w-12 h-12 p-0 flex items-center justify-center rounded-full bg-surface-low/30 hover:bg-surface-low/50 backdrop-blur-xl border border-white/5 text-white shadow-lg"
         aria-label={t('common.back')}
-        disabled={isVerifying || isLoadingQr || isSuccess}
+        disabled={isVerifying || isLoadingQr}
       >
         <ChevronLeft className="w-6 h-6" />
       </Button>
@@ -94,24 +94,7 @@ export default function Onboarding() {
       >
         <AnimatePresence mode="wait">
 
-          {isVerifyStepActive && isSuccess ? (
-            <motion.div
-              key="success"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4, ease: 'easeOut', delay: 0.1 }}
-              className="w-full flex flex-col items-center justify-center py-8 min-h-72 sm:min-h-80"
-            >
-              <div className="mb-8 w-28 h-28 flex items-center justify-center rounded-full bg-green-500/10 border border-green-500/20 relative">
-                <div className="absolute inset-0 bg-green-500/20 blur-[30px] rounded-full" />
-                <ShieldCheck className="w-14 h-14 text-green-400 drop-shadow-[0_0_15px_rgba(74,222,128,0.8)] z-10" strokeWidth={2} />
-              </div>
-              <h2 className="text-2xl font-bold text-white mb-2">{t('verify.success_toast')}</h2>
-              <p className="text-on-surface-variant text-sm">{t('verify.redirecting')}</p>
-            </motion.div>
-
-          /* QR state */
-          ) : isVerifyStepActive && connectorURI ? (
+          {isVerifyStepActive && connectorURI ? (
             <motion.div
               key="qr"
               initial={{ opacity: 0, scale: 0.95 }}
@@ -186,7 +169,7 @@ export default function Onboarding() {
         </AnimatePresence>
 
         {/* Dots + navigation */}
-        {!isSuccess && !connectorURI && (
+        {!connectorURI && (
           <div className="w-full mt-4 sm:mt-6 flex flex-col items-center">
             <div className="flex gap-2 mb-6 sm:mb-8">
               {Array.from({ length: TOTAL_STEPS }, (_, i) => (

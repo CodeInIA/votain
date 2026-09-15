@@ -52,7 +52,18 @@
 
 2. VOTING IDENTITY
    Frontend, on the device
-   → WebAuthn (Passkey) → PRF secret → Semaphore identity
+   → a twelve-word recovery phrase is minted; the Semaphore identity is a
+     pure function of it, so the same words rebuild the same voter anywhere
+   → POST /api/identity/vault {commitment} → PlatformRegistry.registerMember
+   → WebAuthn (Passkey) → PRF secret → the phrase sealed under it
+     → POST /api/identity/vault {commitment, credentialId, blob}
+       → PlatformRegistry.addVaultEntry
+   → REGISTRATION AND THE PASSKEY ARE TWO WRITES, on purpose. An
+     authenticator that creates a credential and then refuses to evaluate it
+     (Windows Hello, measured 2026-09-15) must still leave a registered
+     voter, holding their phrase. Welding the two together meant such a voter
+     was never on chain at all, and their next device read the empty vault as
+     "new" and minted a second identity for one human.
    → the voter never holds an address: transactions go through the
      issuer relayer, because a per-voter address would link their
      enrolment to their ballot on chain
@@ -60,9 +71,9 @@
 3. ELECTION ENROLLMENT
    Frontend reads SD-JWT cookie
    → Verifies eligibility criteria
-   → Identity commitment = poseidon(nullifier_hash + secret)
-   → PlatformRegistry.registerMember(identityCommitment) via UserOp
-   → ElectionV4 adds member to Semaphore group
+   → ElectionV4 adds the already-registered commitment to the Semaphore group
+   → `enroll` refuses a commitment PlatformRegistry has not verified, which is
+     what step 2 wrote
 
 4. VOTING
    Frontend: user selects candidate
@@ -533,6 +544,163 @@ rule it out here:
 Worth noting that the replacement is at 0.x while the SDK it replaces is at
 1.2.0. Revisit if Self announces an end-of-life date for the open-source
 verifier, or if flows become API-creatable with per-session rules.
+
+## Two roles, two anchors
+
+A voter and an organizer recover their secrets by different means, and that is
+not an inconsistency. It follows from one constraint the rest of the design
+rests on: **a voter must not have a wallet**, because an address of their own
+would tie their enrolment to their ballot on chain. So the two roles have
+different material to work with, and the honest answer is different in each.
+
+| | Anchor | Recovered by |
+|---|---|---|
+| **Voter** | A twelve-word recovery phrase | Typing the words, or a passkey that holds them |
+| **Organizer** | A deterministic wallet signature | Signing again, on any device with the wallet |
+
+### Why not the passkey alone
+
+The passkey PRF extension was the only anchor for both roles, and it failed at
+the one thing an anchor exists for: being there on the second device. Chrome and
+Firefox on Windows return the PRF secret when a credential is CREATED and refuse
+to evaluate it on an assertion. Measured directly, outside this codebase, across
+seven combinations of residency, allowCredentials and user verification, over
+`http://localhost` and over HTTPS, always `NotAllowedError`. It is the
+platform: `webauthn.dll` supports hmac-secret at MakeCredential and not at
+GetAssertion, which is why both browsers behave the same.
+
+Two explanations were checked and ruled out, because both would have made this
+a bug rather than a platform:
+
+- **A credential minted without the extension.** An authenticator refuses to
+  evaluate PRF for a credential that was not created with hmac-secret, and this
+  codebase has a retry chain that can fall back to creating one without
+  extensions. Ruled out by measuring on a credential created seconds earlier
+  that HAD returned a PRF secret at creation. The assertion still refused.
+- **The user-verification method.** Face, fingerprint and PIN are how the person
+  is verified, not what the authenticator can compute. Measured both ways on the
+  same machine: with a PIN, and again after enrolling Windows Hello face
+  recognition on a new camera. Creation returned a secret and the assertion
+  refused, identically. Worth recording because it is the first thing anyone
+  suggests trying.
+- **A missing update.** Windows Hello gained hmac-secret in the February 2026
+  cumulative update, KB5077181, for 25H2 from build 26200.7840. Ruled out on
+  26200.9445 with Chrome 153, which is past both that build and the Chrome
+  release that turned on PRF-at-creation by default.
+
+The second one is worth stating precisely, because it is the shape of the
+problem: creation works, and only creation. The two user verifications Windows
+asks for while creating such a credential are the same fact seen from the other
+side. It implements hmac-secret (CTAP 2.1), where deriving the secret is a
+second operation with its own verification, rather than hmac-secret-mc (FIDO
+2.2), which derives it inside the creation in one interaction.
+
+Reports from other machines say assertion-time PRF works there, so the
+capability is not merely missing, it is INCONSISTENT. That is the stronger
+argument: a design may not rest on something that is present or absent
+depending on a cumulative update.
+
+So the passkey is asked for once and then only where it can do its job. A device
+that fails the read-back is recorded as such and never prompted again: creating
+a credential there costs two verifications and produces a vault entry nothing on
+that device can open, which is worse than not offering it at all.
+
+### The voter: a phrase, with the passkey as a shortcut
+
+The identity is a pure function of the phrase, so the same twelve words rebuild
+the same voter anywhere, with no server, no network and no platform capability
+involved. Where an authenticator can evaluate PRF, the phrase is sealed under it
+and nobody ever types anything. Where it cannot, they type it.
+
+This inverts what was there before, where the passkey was the root and the
+phrase did not exist, and it removes the failure mode that came with it: a voter
+could enrol and then be unable to vote after a page reload, because in PRF mode
+the identity is held in memory and nowhere else.
+
+The cost is a voter now has something to keep. For a system meant for people who
+do not hold seed phrases that is real friction, and it is the right trade only
+because the alternative was losing the vote silently.
+
+### The organizer: the wallet they already need
+
+An organizer cannot act without a wallet: elections are owned by the address and
+every lifecycle call is a transaction from it. Deterministic ECDSA (RFC 6979)
+makes a signature over a fixed EIP-712 payload reproducible, so it is a secret
+that is available wherever they can work at all. Verified against MetaMask:
+three signatures of one message, byte identical.
+
+EIP-712 rather than `personal_sign` because a wallet renders typed data as
+named fields instead of a wall of text, and the domain separator binds the
+derivation to a chain id.
+
+**What this costs, and it is not nothing.** Whoever holds the wallet can now
+also decrypt the ballots. Before, a stolen wallet could cancel an election and
+publish a false result, both detectable and reversible, but could not read how
+anyone voted, which is neither. Two factors became one.
+
+That separation was restorable, and the next section is about why it is not
+restored.
+
+### The organizer's passkey, and why there is not one
+
+It was built. An organizer could turn on a setting that mixed a passkey's PRF
+output into the derivation, so elections created from then on needed the wallet
+AND that passkey to decrypt. A stolen wallet could still cancel an election and
+publish a false result, both visible and reversible, but could not read a single
+ballot. It was removed before it shipped, and the reasons are worth keeping,
+because the feature sounds obviously good until each one is followed through.
+
+**It could never be a second factor for anything else.** Every organizer action
+is a transaction that `ElectionV4` gates on `onlyOrganizer`, which is a check
+on `msg.sender`. A passkey cannot condition that: whoever holds the wallet
+sends the transaction from a script and never sees this application. A passkey
+prompt in front of a button would be theatre. The only place it buys anything
+real is a derivation the chain does not arbitrate, which is why it ended up on
+the tally key and nowhere else, and a second factor that covers exactly one of
+an organizer's powers is a strange thing to ask someone to maintain.
+
+**There is no real multi-device.** This is the one that settles it. The PRF is a
+function of a specific credential, so a second passkey is a different secret and
+opens nothing the first sealed. Where the credential syncs (Google Password
+Manager across a person's own Chrome and Android) a second device works; where
+it does not (Windows Hello is bound to the machine) the organizer simply cannot
+tally, from anywhere else, ever. That is the same wall that removed
+`OrganizerVault`, reached from the other side: sharing the secret requires
+storing it, and storing it is what the derivation existed to avoid.
+
+**The setting could not be shared either.** It lived in one browser's local
+storage, so the same organizer with the same wallet saw it on and off depending
+on the device, and created elections under different rules without being told.
+
+**The failure mode is worse than the risk.** Losing access to the passkey leaves
+those results encrypted for good, with no attacker involved and no way back: a
+cleared password manager, a replaced phone, a reinstalled system. The risk it
+covers, someone stealing the wallet and reading ballots, needs an attacker. A
+feature whose accidental failure is worse than the attack it prevents, and which
+is opt-in so that almost nobody has it when the attack comes, does not earn its
+place.
+
+**And the platform never behaved consistently.** Measured across three
+combinations in one week: Chrome on Android evaluated PRF on an assertion and
+worked; Chrome and Firefox on Windows returned the secret at creation and
+refused on assertion; Firefox on Android needed a second, separate gesture
+because `credentials.get()` wants transient user activation that the creation
+had already spent. Building a guarantee on that is building on sand.
+
+So the tally key comes from the wallet, and only from the wallet. What that
+costs is stated above and not hidden: an organizer's wallet decrypts their
+ballots. The honest mitigation is the one the rest of the system already
+provides, which is that everything else an organizer does is public and
+reversible, plus the privacy quorum that stops a result being revealed at all
+when there are too few voters to hide among.
+
+### What this removed
+
+`OrganizerVault` existed to store the tally master sealed once per passkey, so
+a second passkey could open what the first had sealed. A master that is derived
+rather than stored has nothing to seal, so the contract, its tests and the
+interface for adding a second passkey are gone rather than left deployed and
+unused.
 
 ## Candidate photographs, and what they would cost
 

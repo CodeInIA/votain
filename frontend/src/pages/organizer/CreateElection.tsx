@@ -15,6 +15,7 @@ import { Switch } from '../../components/ui/Switch';
 import { RadioGroup } from '../../components/ui/RadioCard';
 import { Modal } from '../../components/ui/Modal';
 import { TransactionPendingModal, type TxState } from '../../components/ui/TransactionPendingModal';
+import { useToast } from '../../components/ui/useToast';
 import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
 import { getGasBalance } from '../../lib/organizer';
 import { relayErrorMessage } from '../../lib/relay';
@@ -42,6 +43,7 @@ import {
   type EligibilityPolicy,
   type PersonhoodLevel,
 } from '../../lib/eligibility';
+import { isUserRejection } from '../../lib/walletErrors';
 
 interface Candidate { name: string; description: string }
 
@@ -352,6 +354,7 @@ export default function CreateElection() {
   const [step, setStep]       = useState(0);
   const [form, setForm]       = useState<FormState>(INITIAL);
   const [deployModal, setDeployModal] = useState(false);
+  const { toast } = useToast();
   const [txState, setTxState] = useState<TxState>('idle');
   const [txError, setTxError] = useState<string | null>(null);
   // Errors are only surfaced after the user tries to advance, so the form does
@@ -586,7 +589,9 @@ export default function CreateElection() {
         .filter(c => c.name.trim())
         .map(c => ({ name: c.name.trim(), description: c.description.trim() || undefined }));
 
-      const { address } = await createElection(signer, {
+      // The deployment first, the wallet app second: see withWalletApp.
+      const { address } = await wallet.withWalletApp(
+        () => createElection(signer, {
         name: form.title,
         description: form.description,
         votingType: form.votingType,
@@ -606,13 +611,23 @@ export default function CreateElection() {
         depositMatic: form.depositAmount,
         eligibility: policyFromForm(form),
         eligibilityAttester: attester?.address,
-      });
+        }),
+        () => toast({ title: t('errors.confirm_in_wallet_app'), variant: 'info' }),
+      );
 
       setTxState('success');
       // `replace`, not push: the election exists now, and leaving a filled-in
       // wizard one step back invites deploying it a second time.
       setTimeout(() => navigate(`/organizer/election/${address}`, { replace: true }), 1800);
     } catch (e) {
+      // Backing out of the wallet is not a failed deployment, and it must not
+      // read like one: nothing was sent, and the wizard still holds everything
+      // they typed.
+      if (isUserRejection(e)) {
+        toast({ title: t('errors.wallet_request_rejected'), variant: 'info' });
+        setTxState('idle');
+        return;
+      }
       console.error('Deploy failed:', e);
       setTxError(relayErrorMessage(e));
       setTxState('failed');

@@ -1,13 +1,15 @@
 # Votain. Current Project State
 
-**Last updated**: 2026-08-16 (relay architecture, identity vault, session-signature fix)
+**Last updated**: 2026-09-15 (WalletConnect on mobile, voter identity flow rebuilt)
 **Completed milestone**: Phase B (H5–H9), real integration code complete. Contracts, backend
 issuer, voter + organizer flows and tally all wired and green.
-**Since Phase B** (this pass): 8-phase lifecycle (`UPCOMING`/`PENDING_VOTE` added to the contract
-`phase()`), **in-app tally** with a Paillier key **derived from the organizer's passkey PRF**
+**Since Phase B**: 8-phase lifecycle (`UPCOMING`/`PENDING_VOTE` added to the contract
+`phase()`), **in-app tally** with a Paillier key **derived from the organizer's wallet signature**
 (nothing stored at rest; CLI kept as the auditor path), organizer display-name persistence,
 custom dark `DatePicker`, phase-aware voter/organizer/public screens, and shared phase helpers.
-Tests: contracts 67/67, backend 21/21, frontend 17/17; eslint clean, prod build OK.
+**This pass**: WalletConnect works from a phone for every organizer action, and the voter's
+identity flow was rebuilt around the recovery phrase (see the milestone log).
+Tests: contracts 122/122, backend 107/107, frontend 253/253; prod build OK.
 **Next milestone**: Live Amoy deployment (pending funding the deployer key),
 then Phase C (H10 IPFS/Fleek, H11 Phala TEE).
 
@@ -32,7 +34,7 @@ then Phase C (H10 IPFS/Fleek, H11 Phala TEE).
 | Solidity | 0.8.37 | Latest stable |
 | TypeScript target | ESNext | |
 
-**Tests**: 67/67 passing, including an E2E suite that checks real Groth16 proofs against the official Semaphore verifier.
+**Tests**: 122/122 passing, including an E2E suite that checks real Groth16 proofs against the official Semaphore verifier.
 
 **Technical debt pending (H5)**:
 
@@ -66,7 +68,7 @@ then Phase C (H10 IPFS/Fleek, H11 Phala TEE).
 - Normalise SD-JWT VC schema (`country`, `ageOver18`, `region`) across World ID Credentials and the demo issuer so the eligibility check is source-agnostic.
 - Status List 2021 (`/credentials/status/:listId`).
 - SD-JWT presentation endpoint (`@sd-jwt/present`).
-- Tests: World ID v4 verification, replay rejection, SD-JWT round-trip.
+- Tests: 107/107 in 19 suites. World ID v4 verification, replay rejection, SD-JWT round-trip, Status List 2021.
 - Rate limiting with `express-rate-limit`.
 
 ---
@@ -98,7 +100,7 @@ then Phase C (H10 IPFS/Fleek, H11 Phala TEE).
 | `@types/node` | 26.5.1 | Same: the `latest` tag lags at 22.x |
 
 **Build**: ✅ clean, no sourcemaps.
-**Tests**: 17/17 unit tests passing (Vitest, jsdom), covering identity-vault sealing and the Paillier ballot encoding. Playwright E2E scaffold in `e2e/` (excluded from Vitest).
+**Tests**: 253/253 unit tests in 33 files passing (Vitest, jsdom), covering the voter identity lifecycle (minting, sealing, the PRF read-back proof, rotation, adding further passkeys), WalletConnect return handling, the Paillier ballot encoding and the i18n plural tables. Playwright E2E scaffold in `e2e/` (excluded from Vitest).
 
 **Technical debt pending**:
 
@@ -150,4 +152,5 @@ The project is released under **AGPL-3.0** (was MIT until H0 cleanup). All `pack
 | Phase A polish | 2026-07-15 | AuthContext (voter+organizer), auth-driven navigation, viewport layout (sticky header/pinned footer), Radix Select for LanguageSelector, themed scrollbars, i18n fixes, MemberList Select, tests green |
 | Deps refresh | 2026-07-15 | All 3 modules to latest: Hardhat 3.9.1, TS 7.0.2 (contracts+backend), sd-jwt 0.20 (OWF migration, types re-exported from core), IDKit 4.2, ethers 6.17, Vite 8.1.4. Frontend TS pinned at 6.0.3 (typescript-eslint constraint). All tests green |
 | Relay + vault | 2026-08 | ERC-4337 dropped for an own relay contract (a per-voter smart account publicly linked enrollment to ballot, and hosted paymasters cannot fund gas per organizer). Encrypted identity vault so one Semaphore identity unlocks from several passkeys, plus `rotateMember` recovery after losing them all. Session cookies now signature-checked. Contracts 66/66 (including a real-Groth16 E2E suite), backend 21/21, frontend 17/17 |
+| Voter identity flow | 2026-09-15 | Two passes. **WalletConnect**: every organizer action works from a phone (idempotent provider, `rpcMap`, relay recovery on return, cancellation handled everywhere). **Voter identity**: registration on chain no longer rides on having a passkey, so an authenticator that cannot evaluate PRF no longer leaves a voter off the registry; the phrase modal became a two-step screen at `/voter/identity` that will not move on until the words are copied, and nothing mints a phrase outside it; recovery reuses those two steps and stopped demanding a passkey (`clearVault`); `MyDevices` became `MyPasskeys` and can link more than one; the PRF read-back proof is no longer skipped across authenticators. Contracts untouched. Backend 107/107, frontend 253/253 |
 | H5–H9 (Phase B) | 2026-07 | Real integration. Contracts rewritten (on-chain Semaphore group, VotingType, lifecycle, locked paymaster, 94% cov); frontend chain client (`lib/{contracts,paillier,semaphore,zerodev,voting,organizer}.ts`, ZeroDev passkeys, chain-aware hooks); backend on-chain registrar + SD + Status List 2021 + `/present` + rate limiting; `scripts-tally/` homomorphic tally + IPFS. New `viem` (frontend) + `ethers`/`express-rate-limit` (backend) deps. Contracts 28/28, backend 5/5, frontend 9/9. Live Amoy deploy pending user key. Branch `phase-b/real-integration` |

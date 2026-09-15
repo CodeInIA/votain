@@ -15,7 +15,6 @@ export interface Deployment {
   contracts: {
     PlatformRegistry?: string;
     OrganizerDomains?: string;
-    OrganizerVault?: string;
     ElectionPaymaster?: string;
     ElectionFactory?: string;
     SemaphoreVerifierV4?: string;
@@ -77,9 +76,6 @@ export const addresses = {
   organizerDomains:
     envOverride(import.meta.env.VITE_ORGANIZER_DOMAINS_ADDRESS) ??
     manifest?.contracts.OrganizerDomains,
-  organizerVault:
-    envOverride(import.meta.env.VITE_ORGANIZER_VAULT_ADDRESS) ??
-    manifest?.contracts.OrganizerVault,
   paymaster:
     envOverride(import.meta.env.VITE_PAYMASTER_ADDRESS) ??
     manifest?.contracts.ElectionPaymaster,

@@ -1,37 +1,50 @@
 import { useState, useEffect, type ReactNode } from 'react';
-import { hasPrfCredential } from '../lib/passkeyPrf';
+import { clearSessionSecrets } from '../lib/passkeyPrf';
+import { clearOrganizerKeyCache } from '../lib/organizerKey';
 import { clearIdentity } from '../lib/semaphore';
 import { storeVoterPersonhood, clearVoterPersonhood } from '../lib/voterSession';
 import {
   clearRolePreference,
+  noteSignedOutOf,
   readRolePreference,
   resolveActiveRole,
   storeRolePreference,
   type Role,
 } from '../lib/activeRole';
-import { forgetOrganizerAddress } from '../hooks/useOrganizerWallet';
+import {
+  forgetOrganizerAddress,
+  getRememberedOrganizerAddress,
+  WALLET_DISCONNECTED_EVENT,
+} from '../hooks/useOrganizerWallet';
 import { setOrganizerName } from '../lib/organizer';
 import { AuthContext } from './AuthContext';
+import { backendUrl } from '../lib/backend';
 
 const VOTER_KEY = 'votain_voter_logged_in';
 const ORGANIZER_KEY = 'votain_organizer_logged_in';
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? '';
+
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [voterLoggedIn, setVoterLoggedInState] = useState(
     () => localStorage.getItem(VOTER_KEY) === 'true'
   );
-  // The organizer session is authenticated by their PASSKEY, not by the wallet:
-  // the wallet only authorises signing and is summoned lazily when something
-  // must be signed. So a stored session is only honoured while a passkey
-  // credential still exists on this device, evaluated up-front to avoid a
-  // flash of logged-in UI.
+  // The organizer session is the WALLET. It owns their elections on chain, it
+  // signs every lifecycle call, and a deterministic signature from it derives
+  // the key their results are decrypted with, so there is nothing an organizer
+  // can do here without it. A stored session is honoured only while an address
+  // is still remembered on this device, evaluated up-front to avoid a flash of
+  // logged-in UI.
+  //
+  // It used to hang off a passkey instead. That made the session stand for the
+  // wrong thing: a forgotten passkey ended a session the wallet could have
+  // carried on its own, and a linked wallet with no passkey could not get in at
+  // all, on the platforms where an assertion is the part that fails.
   //
   // This flag is a UI convenience, never a security boundary: every write is
   // gated by a wallet signature and the contracts' `onlyOrganizer` check.
   const [organizerLoggedIn, setOrganizerLoggedInState] = useState(() => {
     const flagged = localStorage.getItem(ORGANIZER_KEY) === 'true';
-    if (flagged && !hasPrfCredential()) {
+    if (flagged && !getRememberedOrganizerAddress()) {
       localStorage.removeItem(ORGANIZER_KEY);
       return false;
     }
@@ -86,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 2000);
 
-    fetch(`${BACKEND_URL}/api/me`, { credentials: 'include', signal: controller.signal })
+    fetch(backendUrl('/api/me'), { credentials: 'include', signal: controller.signal })
       .then(async res => {
         if (res.status === 401) {
           // Definitive "not authenticated": clear any (possibly spoofed) flag.
@@ -140,10 +153,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('voter_nullifier');
     clearVoterPersonhood();
     clearIdentity();
+    // The PRF secrets a passkey handed over this session live in memory only,
+    // and memory outlives a sign-out on a shared browser.
+    clearSessionSecrets();
     setVoterLoggedInState(false);
     releaseRole('voter');
     // Clear the httpOnly VC cookie so /api/me does not restore the session.
-    fetch(`${BACKEND_URL}/api/logout`, { method: 'POST', credentials: 'include' }).catch(() => {});
+    fetch(backendUrl('/api/logout'), { method: 'POST', credentials: 'include' }).catch(() => {});
   };
 
   const setOrganizerLoggedIn = (v: boolean) => {
@@ -158,13 +174,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // the tally private keys for elections already on chain, and deleting them
   // would leave those results permanently undecryptable. Signing out must not be
   // able to destroy an election's outcome.
+  //
+  // The cached wallet SIGNATURE is a different matter and does go: it is the
+  // organizer's tally master in all but name, it is held in memory precisely so
+  // that one approval covers a whole session, and that session is over.
   const organizerSignOut = () => {
     localStorage.removeItem(ORGANIZER_KEY);
+    clearOrganizerKeyCache();
+    clearSessionSecrets();
     forgetOrganizerAddress();
     setOrganizerName('');
     setOrganizerLoggedInState(false);
     releaseRole('organizer');
   };
+
+  // A wallet that disconnects from its own side ends the organizer session:
+  // there is nothing left to sign with, and every screen behind the guard is a
+  // screen that cannot work. Treated as a sign-out, so the guard sends them to
+  // the organizer sign-in screen rather than to the landing page.
+  useEffect(() => {
+    const onDisconnected = () => {
+      if (localStorage.getItem(ORGANIZER_KEY) !== 'true') return;
+      noteSignedOutOf('organizer');
+      organizerSignOut();
+    };
+    window.addEventListener(WALLET_DISCONNECTED_EVENT, onDisconnected);
+    return () => window.removeEventListener(WALLET_DISCONNECTED_EVENT, onDisconnected);
+    // No dependency array on purpose. `organizerSignOut` closes over the current
+    // role preference, so pinning this to `[]` would hold a stale one and
+    // release the wrong role. Re-subscribing costs one add and one remove.
+  });
 
   return (
     <AuthContext.Provider value={{

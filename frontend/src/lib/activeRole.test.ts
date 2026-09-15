@@ -7,6 +7,10 @@ import {
   readRolePreference,
   storeRolePreference,
   clearRolePreference,
+  noteSignedOutOf,
+  signedOutOf,
+  clearSignedOutMark,
+  signInRouteFor,
 } from './activeRole';
 
 /**
@@ -123,5 +127,57 @@ describe('where switching leaves you', () => {
     // The organizer view only loads for the wallet that owns it, so this would
     // land on a page that refuses. `ViewAsSwitch` is where that crossing lives.
     expect(switchDestination('/voter/election/0xabc', 'organizer')).toBe('/organizer/dashboard');
+  });
+});
+
+/**
+ * The mark a sign-out leaves behind.
+ *
+ * Signing out re-renders the route guard, which redirects before the screen
+ * holding the button can run its own navigate, and that screen then unmounts
+ * with the navigation still pending. The guard is therefore the only thing that
+ * can honour where the person meant to go, and this is how it is told.
+ */
+describe('the sign-out mark', () => {
+  beforeEach(() => sessionStorage.clear());
+
+  it('names the role that was just left', () => {
+    noteSignedOutOf('organizer');
+    expect(signedOutOf()).toBe('organizer');
+  });
+
+  it('says nothing when nobody signed out', () => {
+    expect(signedOutOf()).toBeNull();
+  });
+
+  it('survives being read, because guards read it while rendering', () => {
+    // React renders twice under StrictMode. A read that consumed the value
+    // would be seen by one render and missed by the other, and the redirect
+    // would land somewhere different depending on which render was kept.
+    noteSignedOutOf('voter');
+    expect(signedOutOf()).toBe('voter');
+    expect(signedOutOf()).toBe('voter');
+    expect(signedOutOf()).toBe('voter');
+  });
+
+  it('is cleared by the sign-in screen it sent them to', () => {
+    noteSignedOutOf('voter');
+    clearSignedOutMark();
+    expect(signedOutOf()).toBeNull();
+  });
+
+  it('expires, so it cannot redirect someone who came back much later', () => {
+    sessionStorage.setItem('votain_just_signed_out', `organizer:${Date.now() - 60_000}`);
+    expect(signedOutOf()).toBeNull();
+  });
+
+  it('ignores anything it did not write', () => {
+    sessionStorage.setItem('votain_just_signed_out', 'nonsense');
+    expect(signedOutOf()).toBeNull();
+  });
+
+  it('points each role at its own sign-in screen', () => {
+    expect(signInRouteFor('organizer')).toBe('/organizer/auth');
+    expect(signInRouteFor('voter')).toBe('/voter/signin');
   });
 });

@@ -20,11 +20,13 @@ import {
 import { counterBaseFor, encryptBallot } from "./paillier";
 import {
   computeNullifier,
+  ensureRegistered,
   fetchElectionGroup,
   generateVoteProof,
   getOrCreateIdentity,
   getStoredIdentity,
   getStoredVoteNullifier,
+  phraseIsUnprotected,
   rememberVote,
 } from "./semaphore";
 
@@ -56,6 +58,13 @@ export async function enrollInElection(
 ): Promise<{ txHash: string }> {
   const identity = await getOrCreateIdentity();
   await ensureLocalRegistration(identity.commitment); // no-op off the local chain
+  // The safety net for a voter carrying nothing but the phrase: their
+  // registration happens when the identity is minted, but that call is best
+  // effort, and a backend that was unreachable then would otherwise leave them
+  // to discover it here as `NotPlatformVerified`. Skipped for anyone whose
+  // phrase a passkey already holds, since reaching the vault is what registered
+  // them in the first place.
+  if (phraseIsUnprotected()) await ensureRegistered(identity);
   return relayEnroll(electionAddress, identity.commitment, attestation);
 }
 

@@ -248,9 +248,9 @@ Design: ONE identity per human, unlockable from every passkey.
   the voter out permanently.
 - **`semaphore.ts`**: `getOrCreateIdentity()` resolves through the vault (unlock,
   or mint on first use); `enrollThisDevice()` adds the current device's passkey.
-- **`components/voter/MyDevices.tsx`** in the voter profile lists passkeys, adds
-  the current device and unlinks others (never the last one). `devices.*` keys in
-  all 13 locales.
+- **`components/voter/MyPasskeys.tsx`** in the voter profile lists passkeys,
+  links more (any authenticator, not just this device) and unlinks others, never
+  the last one. `devices.*` keys in all 13 locales.
 
 Contracts, for the case where the secret is genuinely lost:
 
@@ -1875,3 +1875,388 @@ Out of scope here: it needs a qualified trust service provider, conformance to t
 and access to a member state's issuing infrastructure, none of which are reachable in a
 bachelor's thesis. Recorded so the limitation is a deliberate boundary rather than an
 oversight.
+
+## Two anchors instead of one passkey (2026-09-12)
+
+The passkey was the root of both roles, and it failed at the one thing a root
+exists for: being there on the second device. Chrome and Firefox on Windows
+return a passkey's PRF secret when the credential is CREATED and refuse to
+evaluate it on an assertion. Measured across seven combinations of residency,
+`allowCredentials` and user verification, over `http://localhost` and over
+HTTPS, in two browsers: always `NotAllowedError`. It is `webauthn.dll`, which
+implements hmac-secret at MakeCredential only, which is why both browsers agree.
+
+Reports from other machines say assertion-time PRF works there. That is the
+stronger argument against it: the capability is not missing, it is INCONSISTENT,
+and a design may not rest on something that comes and goes with a cumulative
+update.
+
+**The voter: a twelve-word recovery phrase** (`lib/recoveryPhrase.ts`). The
+identity is a pure function of the words, so the same phrase rebuilds the same
+voter anywhere, with no server, no network and no platform capability. Where an
+authenticator can evaluate PRF, the phrase is sealed under it and nobody types
+anything; where it cannot, they type it. The phrase is shown once in a notice
+that cannot be dismissed without confirming, and readable afterwards from the
+profile (`components/voter/RecoveryPhraseCard.tsx`), because a phrase nobody
+can check they copied correctly becomes a lost phrase on the day it matters.
+`/voter/recover` types it back in and keeps every enrolment;
+`/voter/re-verify` stays as the last resort and now mints a new PHRASE rather
+than a bare identity.
+
+**The organizer: the wallet they already need** (`lib/organizerKey.ts`).
+Deterministic ECDSA (RFC 6979) makes a signature over a fixed EIP-712 payload
+reproducible, so the tally master is available wherever they can work at all.
+`OrganizerVault`, its tests and the second-passkey UI are deleted: a secret
+that is derived has nothing to seal. The login is one wallet step, and the
+session hangs off the remembered address rather than off a passkey.
+
+**What that costs**: whoever holds the wallet can now also decrypt the ballots.
+Two factors became one, and an optional passkey that would have restored the
+separation was built, tested on three platforms, and then removed. See "The
+organizer's passkey, and why there is not one" in `docs/dev/architecture.md`
+for the full account; the decisive one was that the PRF belongs to a single
+credential, so there is no real multi-device: an organizer could not tally from
+anywhere the passkey does not reach, which for Windows Hello is everywhere else.
+
+Two bugs found while rewiring, both silent: `getOrCreateIdentity`'s last-resort
+fallback wrote an EXPORTED identity into the slot the phrase is read from, so
+that voter became a different voter on the next page load; and
+`importIdentityFromBackup` still called `Identity.import` on a blob that now
+holds a phrase.
+
+UI copy followed, in all 13 locales, including the privacy and terms text, which
+was describing a passkey that held the voting secret. 28 keys whose render sites
+are gone were removed.
+
+## Registration stopped depending on a passkey (2026-09-15)
+
+`POST /api/identity/vault` demanded `credentialId` and `blob`, so the only way to
+reach `PlatformRegistry.registerMember` was to arrive with a working passkey. A
+voter whose authenticator creates a credential and then refuses to evaluate it
+(Windows Hello, measured 2026-09-15) was therefore never written to the chain at
+all. Nothing said so: they kept their twelve words, the screen finished, and the
+first enrolment failed with `NotPlatformVerified` for reasons that named none of
+this. Worse, their second device read the empty vault as "new voter" and minted a
+DIFFERENT identity for the same human.
+
+The contract had the two facts apart all along. `registerMember` records the
+human and their commitment; `addVaultEntry` records one passkey that can open it
+and reverts before registration. Only the route welded them together.
+
+- The route now takes `credentialId`/`blob` as an optional pair. A body carrying
+  the commitment alone registers and stops there. `getVault` throws without a
+  configured chain, so the 503 moved ahead of the read.
+- `semaphore.ts`: the no-passkey branch of `resolveIdentityFromVault` calls
+  `ensureRegistered` AFTER writing the phrase to the device and showing it. The
+  chain pins the commitment to this human permanently; doing that while the only
+  copy of the phrase was a local variable would strand anyone who closed the tab.
+- Best effort, with a net: `enrollInElection` retries the registration when
+  `phraseIsUnprotected()`, so a backend that was unreachable at minting time
+  costs the voter nothing. `registerMember` is idempotent for a human already
+  holding this commitment.
+- This is what makes `phrase-only` (a commitment with zero vault entries) a
+  reachable state. `vaultOutcome.test.ts` asserted the anti-fork guard against a
+  state nothing could actually produce; it now asserts the registration too.
+
+## A dismissed read-back stopped meaning "this passkey is rubbish" (2026-09-15)
+
+Reported from a phone: first sign-in, a passkey that evaluates PRF perfectly
+well, and the twelve-word modal came up carrying the warning that says the
+credential is useless and should be deleted.
+
+Two defects, and the first is the one this project keeps rediscovering: code
+that held enough information to tell two situations apart and used one branch.
+
+- `assertPrf` returned `null` both for an assertion that answered without a
+  secret (a real verdict on the authenticator) and for `NotAllowedError`, which
+  is a dismissed prompt or a platform refusing the ceremony (no verdict at all).
+  The read-back proof in `enrollPrfPasskey` read that single `null` as proof of
+  incapability, so closing the second dialog (which arrives unannounced on a
+  phone, seconds after the first) branded the credential unusable and wrote the
+  phrase to disk in the clear. Split into `assertPrfOutcome`, returning
+  `ok | cancelled | empty`; `assertPrf` keeps its old signature as a wrapper, so
+  no other caller changed. A cancelled read-back now throws
+  `PasskeyCancelledError`, which every screen already handles: `/voter/identity`
+  keeps them there with a retry, and the seal offer says "not linked" rather
+  than "this device cannot", a claim nobody had measured.
+- `forgetUnusablePasskey()` existed and NOTHING CALLED IT. The flag is module
+  state for the life of the page, so once set it outlived the failure: a later
+  enrolment that worked still rendered the warning. It is now cleared wherever
+  the doubt is actually resolved, which is any assertion that returns a secret.
+
+Nothing is sealed on a dismissal, deliberately. The creation secret is real for
+that session, but the entire reason this proof exists is that an authenticator
+can hand one over and then refuse every assertion (Windows Hello, measured
+2026-09-15), and sealing under one of those writes a vault entry nobody can ever
+open. A dismissal cannot tell the two apart, so it concludes nothing.
+
+`passkeyReadback.test.ts` covers the three outcomes. Both fixes were checked by
+reintroducing the old behaviour and watching the matching test fail.
+
+The retry re-uses the credential rather than minting another. Creation comes
+before the proof, so a dismissal leaves a real passkey on the authenticator, and
+going straight back to `registerCredential` made a second one for the same
+person and the same salt: somebody who hesitated three times ended up with three
+identical rows in their password manager and no way to tell them apart. The
+pending credential is kept in memory for the page's life (dropped with the
+session secrets on sign-out) and the retry puts the same question to it. ONCE:
+dismissing the re-ask lets it go, so the next press goes the ordinary way and
+the browser offers every transport it has. Without that escape, somebody who
+cancelled on the laptop BECAUSE they wanted their phone would be handed the
+laptop's credential on every press with no way to reach the QR option.
+
+## Setting up a voter became a place they go (2026-09-15)
+
+Reported from a real run: a new voter linked a passkey that works, and the modal
+with their twelve words never appeared. They were simply taken to the elections.
+
+The phrase was minted deep inside `getOrCreateIdentity`, published to an
+in-memory listener, and rendered by a modal mounted near the router. One
+variable, one moment, no second chance. Any reload between the mint and the
+render skipped the only time a voter ever sees their words, silently, and
+`noteSealed` had already removed the local copy because the read-back was
+proven. The chain log ruled out the obvious trigger (the vault write was fifty
+minutes after the last edit to the frontend), and the trigger is still unknown,
+which is the strongest argument for not keeping a design where an unconditional
+call can be lost without trace.
+
+- `components/voter/RecoveryPhraseNotice.tsx` is gone, and with it
+  `announcePhrase`, `onRecoveryPhrase`, `pendingRecoveryPhrase` and
+  `acknowledgeRecoveryPhrase`. Ten i18n keys whose render sites went with it were
+  removed from all 13 locales.
+- NOTHING MINTS A PHRASE ANY MORE except `beginNewIdentity`, called by the setup
+  screen. Both former silent mints now report instead: `resolveIdentityFromVault`
+  returns `{ status: "new" }` and `getOrCreateIdentity` throws
+  `IdentityNotSetUpError`, which the identity step catches to run the setup.
+- `components/voter/NewVoterSetup.tsx`, on the existing `/voter/identity` route,
+  in two steps. One: the words, with copy and download, and a continue button
+  that stays disabled until one of them has been used, then a confirmation
+  asking in words whether they really saved it (copying is a gesture people make
+  without reading). Two: linking a passkey as the PRIMARY action, with
+  "continue without one" quiet and second.
+- Two steps and not one because the confirmation only makes sense as a gate
+  between them; one route and not two because two would let somebody reach step
+  two without passing step one.
+- The passkey stays primary because optional security gets skipped, and a voter
+  without one keeps their phrase on the device in the clear. The way past has to
+  exist all the same: Windows Hello cannot do this and those voters must vote.
+- `beginNewIdentity` REUSES a phrase already on the device. Somebody who copied
+  twelve words onto paper and closed the tab must find the same twelve words.
+- Registration is no longer tied to the passkey at either end: `completeWithPasskey`
+  and `completeWithoutPasskey` both call `ensureRegistered`.
+- `recoverWithNewPasskey` now RETURNS its phrase instead of announcing it, and
+  `/voter/re-verify` shows it through the same `PhraseCard`, shared so the second
+  screen cannot drift into a weaker version of the first.
+- `vaultWritePending()` finally has a reader: the profile's device list, which is
+  where the retry lives.
+
+## Passkeys stopped being called devices (2026-09-15)
+
+"My devices" was wrong in both directions: a passkey synced through Google or
+iCloud lives on many machines, and one machine can hold several. The list is of
+credentials. Renamed through the visible strings in all 13 locales (the `devices`
+key namespace stays, since renaming keys is churn with no reader), and
+`MyDevices.tsx` became `MyPasskeys.tsx`.
+
+Three things found while looking at it:
+
+- REMOVING WAS ONE CLICK on a small icon, and it writes a transaction. It now
+  confirms, and the confirmation is the only place the LIMIT can be explained:
+  `removeVaultEntry` changes which copies `getVault` serves and erases nothing
+  from the chain's history, so somebody still holding that authenticator who can
+  read past transactions could recover the blob. For a lost or stolen device the
+  answer is rotating the identity, and the dialog links to it, quietly, because
+  rotating costs every election already joined.
+- `handleRemove` caught every failure as `devices.last_passkey`, so a backend
+  that was down told the voter to "link another passkey before removing this
+  one": false, and it sent them to do something that would not have helped. The
+  server already answers `code: 'last_passkey'` for the one case where that is
+  true, so `identityVault.ts` gained a typed `LastPasskeyError` and the component
+  branches on it instead of matching a message.
+- The sign-out confirmation said "Your organizer session is untouched" to
+  everyone. The title was conditioned on holding both sessions and the
+  description was not, so a voter who has never organized anything was told
+  about a session they do not have. The single-session wording also says what
+  the old one left out: `clearIdentity` removes the recovery phrase from this
+  browser, so the phrase or a linked passkey is what brings them back.
+
+And on the setup screen that button was not a sign-out at all. Nothing is
+registered until the flow finishes, so it named a standing the voter does not
+have yet; `SignOutActions` takes an `incomplete` flag there and calls it
+cancelling a sign-up. The work is identical, only the words change, and the
+words are what somebody decides on.
+
+The way past a passkey on the identity step is now visible before anything is
+pressed. It used to appear only after an attempt had failed, which made somebody
+sitting at a computer that has never held their passkey summon an authenticator
+dialog and dismiss it just to be told there was another way: a toll for
+information they arrived with. `failedOnce` is gone with it. Still hidden for
+`phrase-only`, where the card's own button already goes to the same screen.
+
+## The recovery screen was claiming something the contract contradicts (2026-09-15)
+
+"One World ID always means one voting identity", in the footer of
+`/voter/re-verify`, is false, and it contradicted the warning directly above it.
+`rotateMember` sets `verifiedMembers[old] = false` but deliberately LEAVES
+`nullifierOf[oldCommitment]` pointing at the human: that is what makes `enroll`
+reject the new commitment in elections they had already joined, and it is why
+those elections stay closed. So a World ID ends up bound to more than one
+commitment, and the old identity remains recorded as theirs. Reworded to what is
+actually true: one ACTIVE identity, and every identity it has ever had stays
+bound to it, which is the reason for the cost stated above.
+
+The screen was also missing its precondition. `recoverWithNewPasskey` throws
+when `enrollPrfPasskey` returns nothing, and `PlatformRegistry.resetVault`
+rejects an empty vault entry, so recovery is the one path that cannot fall back
+to the phrase: a device that creates a credential and never evaluates it
+(Windows Hello) cannot finish here at all. That was discovered AFTER a World ID
+verification had been spent, as a bare English `Error` in a toast, by somebody
+who had already lost everything else. Now stated before the button, pointing at
+a phone over QR.
+
+And the three endings shared one message. `PasskeyCancelledError`, the new typed
+`NoUsablePasskeyError`, and a genuine failure all rendered "could not recover
+your identity" with a raw string underneath; each has its own now.
+
+The rest of the screen checks out: enrolments really are closed (`nullifierOf`
+resolves the old leaf to this human), and receipts really do stop being
+retrievable while the ballots stay counted, because the per-election nullifier is
+derived from the identity and the new one derives a different value.
+
+## Recovery stopped demanding a passkey (2026-09-15)
+
+`/voter/re-verify` forced a voter to link one straight after the World ID scan.
+The cause was one line of Solidity: `resetVault` rejects an empty vault entry,
+and `/identity/recover` called it unconditionally. So the ONE screen that cannot
+fall back to the twelve words was the one reached by people most likely to be on
+a borrowed machine or on an authenticator that creates credentials it will not
+evaluate, which is the case the phrase exists for.
+
+Simply not calling it is not an option, and would be worse than the requirement:
+the old entries seal the phrase whose commitment `rotateMember` has just
+revoked, so a browser that found them would assert a passkey, derive the DEAD
+identity and fail every enrolment afterwards for reasons naming none of it.
+Clearing is mandatory.
+
+No contract change was needed in the end. `removeVaultEntry` carries no minimum
+(the "never remove the last one" rule belongs to the route, not the chain), so
+`identity/vault.ts` gained `clearVault`, which empties the list entry by entry.
+`resetVault` still handles the case WITH a passkey, where it is cheaper and
+atomic.
+
+- The route takes `credentialId`/`blob` as an optional pair, as `/identity/vault`
+  already does. Without them: verify the proof, rotate, clear.
+- `recoverWithNewPasskey` became `rotateToNewIdentity`, which rotates and stops.
+  The voter is then in exactly the state a first-time voter is in, registered
+  with no passkey, so `/voter/re-verify` renders the SAME `NewVoterSetup` rather
+  than a shorter version of it free to drift.
+- It mints a FRESH phrase and deliberately does not call `beginNewIdentity`,
+  which reuses whatever is stored. Reuse is right for a first-time voter, who
+  must find the words they copied; here the stored words belong to the identity
+  being abandoned, and on a shared browser may not be this person's at all.
+  Rotating onto a commitment whose phrase somebody else holds is the opposite of
+  a recovery. The stale copy is overwritten too, since `getOrCreateIdentity`
+  reads that slot first in "local" mode.
+- `rotateOnChain` was already idempotent for a repeated commitment, so a reload
+  mid-flow is safe.
+- `NoUsablePasskeyError` and `reverify.needs_passkey`, both added an hour
+  earlier to explain the requirement, were removed with it.
+
+`rotateRecovery.test.ts` covers both, and the stale-phrase one was checked by
+reintroducing the `beginNewIdentity` call and watching it fail.
+
+The recovery screen now uses the identity step's centred column, because after
+the rotation it IS the identity step: the card below is the same component, and
+it was sitting at the top of the page while the screen it continues was centred,
+so finishing a recovery looked like arriving somewhere else. It also gained the
+exit it was missing, and that exit is a SIGN-OUT rather than the setup screen's
+"cancel sign-up": by then `rotateMember` has run, the old identity is revoked
+and the new commitment is on chain, so there is a standing to leave rather than
+an attempt to abandon. What remains unfinished is optional.
+
+"Continue without a passkey" now confirms first, on both screens that use the
+setup (the new voter and the one who has just rotated). The link sits one tap
+under a large button somebody may be trying to get past, and what it does is not
+undoable by accident: from then on the twelve words are the whole identity,
+sitting on that device in the clear. The dialog also carries the half that makes
+the choice a reasonable one, which the link alone had no room to say, and which
+was the point of asking at all: the door stays open from the profile. Its
+prominent button is "Link a passkey" rather than a bare "Cancel", because naming
+what happens beats naming the gesture.
+
+Linking a SECOND passkey works now, and it never had. Two separate gates said
+no. The button was hidden behind `!registered`, and `enrollThisDevice` returned
+early when the credential id cached in this browser was already in the vault:
+both answered "is this browser's own passkey registered?" and were read as "is
+there anything left to add?". With the button restored, the early return
+surfaced the confusion as a toast saying "this device already holds one of your
+passkeys" on every press. A voter could never add their phone, a second laptop
+or a security key, so the one list standing between them and losing their
+identity stayed a single point of failure.
+
+What prevents a duplicate was never that guard: it is `excludeCredentials`. The
+authenticator knows what it holds, refuses with InvalidStateError (already
+handled as `PasskeyAlreadyRegisteredError`), and the browser goes on offering
+every other transport. `enrollAnother.test.ts` covers it, checked by putting the
+early return back and watching it fail.
+
+"Recover your voting identity" moved out of the profile's quick links and down
+beside the sign-out, in its own card with the cost stated. It was one ghost
+button among peers, styled exactly like "verify a vote", for an action that
+revokes the identity and closes every election the voter had already joined; it
+also called itself a recovery to somebody whose identity works. Kept rather than
+removed, because the reason to reach it from here is not being locked out but a
+device lost or stolen, which is the case the passkey removal dialog points here
+for.
+
+The read-back proof is no longer skipped once a device has proven itself.
+`prfReadbackProven` is a fact about the authenticator this machine reaches by
+default, and the credential just created may live somewhere else entirely, on a
+phone reached over the QR transport, which has proven nothing. So a voter adding
+a SECOND passkey got no proof at all and whatever the phone returned at creation
+was sealed on trust, which is exactly what the proof exists to refuse. It cost
+one skipped prompt and bought a vault entry that might open for nobody. The
+price of the change is one extra verification when a passkey is created, which
+for a phone means the hybrid ceremony twice.
+
+Still unresolved: adding a second passkey can fail at a later step, and that
+step is now named in the console. The phrase has to be sealed under the new
+credential, and it lives either in localStorage or under a credential ALREADY in
+the vault, so reading it means asserting one of those rather than the one just
+created elsewhere. On a machine whose own authenticator cannot evaluate PRF
+there is no way through, and it arrived as a locked identity with no visible
+cause right after an enrolment that looked like it had worked.
+
+## NotAllowedError means two things and WebAuthn will not say which (2026-09-15)
+
+Adding a SECOND passkey failed on Windows over the QR transport: the browser
+showed its own "there was a problem saving your passkey", nothing reached the
+backend, and the app told the voter they had cancelled. Measured in the browser,
+the throw came from `registerCredential`'s cancellation branch with
+`NotAllowedError`.
+
+That code is returned for a dismissed dialog AND for most platform refusals
+alike, deliberately, so a page cannot learn whether a credential exists. Unlike
+every other case this project has untangled by measuring, the ambiguity is in
+the standard, not in our code: there is nothing to read that separates them. So
+the message stopped asserting the wrong half. With entries already in the vault
+it names both and points at what helps, a different authenticator; with an empty
+vault it still says "cancelled", because nothing could have refused a duplicate
+and a dismissal is the only reading left.
+
+It also took two rounds to see, because `handleAdd` swallowed the error into a
+toast and never logged it: a toast carries a sentence a person can act on and
+drops the one thing a diagnosis needs. Every catch that shows a toast should log
+the error too.
+
+STILL OPEN: whether the refusal was the exclusion list doing its job (same
+Google account already holding a credential for this origin) or something wrong
+in how the credential is requested. One experiment settles it: link a passkey
+with a different authenticator.
+
+Noticed while tracing, and worth fixing on its own: adding a passkey once the
+phrase is sealed costs THREE WebAuthn ceremonies (resolve the identity, create,
+read the phrase back to seal under the new credential), against one while the
+phrase is still in localStorage. `resolveIdentityFromVault` holds the phrase in
+its hand when it opens the vault and drops it; keeping it for the session, as
+the PRF secrets already are, would remove the third.

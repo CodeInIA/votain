@@ -224,33 +224,24 @@ to attest would have added a trusted party to a statement nobody has to trust.
 The deploy script writes `deployments/<network>.json` AND mirrors it into
 `frontend/src/lib/deployments/` so the frontend client picks up the addresses automatically.
 
-## OrganizerVault holds the tally secret, once per passkey
+## There is no OrganizerVault any more
 
-The organizer's Paillier key is re-derived from their passkey's PRF output and
-stored nowhere, which is what keeps it off every disk. The cost was invisible
-until it was expensive: a DIFFERENT passkey is a different key, so an organizer
-signing in on a second browser, or replacing a lost authenticator, could no
-longer decrypt any election they had already created. Passkey sync hid it for
-some people and not others, and the failure appeared at the tally rather than at
-the login that caused it.
+There was one, and it is worth knowing why it went. It stored the organizer's
+tally master secret sealed once per passkey, so that a second passkey could open
+what the first had sealed, because a different PRF output is a different key and
+an organizer on a second browser could otherwise decrypt nothing they had
+created.
 
-So the secret is sealed under each passkey, exactly as the voter's identity
-vault does, and the sealed copies live here. What is public is ciphertext and
-credential ids; the blob opens only with the PRF output of the passkey that
-sealed it, which never leaves the authenticator.
+The master is DERIVED now, from a deterministic EIP-712 signature by the wallet
+that already owns the organizer's elections (see `frontend/src/lib/organizerKey.ts`).
+A secret that is reproduced on demand has nothing to store, so the contract had
+nothing left to do and was deleted rather than left deployed and unused.
 
-Ownerless and self-service, like `OrganizerDomains` and for a related reason:
-the wallet is already the organizer's on-chain identity, since it owns their
-elections, so it is the right key and there is nobody to ask permission from.
-`msg.sender` writes only its own subtree.
-
-Two rules the contract keeps rather than trusts:
-
-- **`MAX_ENTRIES`, `MAX_BLOB_BYTES` and `MAX_CREDENTIAL_ID_BYTES`** bound what
-  one address can make `entriesOf` return in a single call.
-- **The last copy cannot be removed.** `LastEntry`. Removing it leaves an
-  organizer with elections whose key nothing can re-derive, a loss no later
-  action undoes, so it is enforced here rather than in a confirmation dialog.
+What forced the change was the platform, not a preference: Chrome and Firefox on
+Windows return a passkey's PRF secret when the credential is created and refuse
+to evaluate it on an assertion, so the vault could be written and never read
+there. `docs/dev/architecture.md`, under "Two roles, two anchors", has the
+measurements and what the change costs.
 
 ## Input bounds
 

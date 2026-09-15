@@ -1,13 +1,17 @@
 /**
  * Semaphore V4 identity + membership-proof helpers.
  *
- * Identity storage strategy (most secure first):
- *   1. PRF passkey: the secret scalar is derived on demand from a WebAuthn PRF
- *      secret sealed in the authenticator. NOTHING sensitive is stored at rest,
- *      so XSS cannot exfiltrate the voting key. The derived Identity is cached in
- *      memory for the session only.
- *   2. localStorage fallback: used only when the browser/authenticator has no
- *      PRF support. The raw secret is stored (XSS-exposed) and clearly marked.
+ * The identity is a pure function of a twelve-word RECOVERY PHRASE, so the same
+ * words rebuild the same voter on any device, with no server and no passkey.
+ * Where the phrase is kept differs, and only that:
+ *   1. Sealed under a passkey, in the on-chain vault: the phrase is derived on
+ *      demand from a WebAuthn PRF secret that never leaves the authenticator.
+ *      Nothing sensitive is at rest, so XSS cannot exfiltrate the voting key.
+ *   2. localStorage: the phrase itself, XSS-exposed and clearly marked. Used
+ *      where no authenticator can hold it, and kept alongside a sealed copy
+ *      until this device has PROVEN it can read one back (see passkeyPrf.ts).
+ *
+ * The derived Identity is cached in memory for the session either way.
  *
  * The commitment is deterministic per device, so the same identity is obtained at
  * World ID verification time (to register it on-chain) and later at vote time.
@@ -25,21 +29,86 @@ import {
   enrollPrfPasskey,
   hasPrfCredential,
   clearPrfCredential,
-  getCachedCredentialId,
+  clearPrfReadback,
+  notePrfReadbackFailed,
+  prfReadbackFailed,
+  prfReadbackProven,
   PasskeyAlreadyRegisteredError,
+  PasskeyCancelledError,
   type PrfAssertion,
 } from "./passkeyPrf";
+import { generateRecoveryPhrase, identityFromPhrase, normalizePhrase } from "./recoveryPhrase";
 import {
   fetchVault,
   putVaultEntry,
+  registerCommitment,
   recoverIdentity,
   unwrapSecret,
   wrapSecret,
   type VaultState,
 } from "./identityVault";
 
-const IDENTITY_STORAGE_KEY = "votain_semaphore_identity"; // fallback only (secret)
+const IDENTITY_STORAGE_KEY = "votain_recovery_phrase"; // the phrase, when no passkey can hold it
 const IDENTITY_MODE_KEY = "votain_identity_mode"; // "prf" | "local"
+
+/**
+ * The phrase is now sealed under a passkey. Keep the local copy until this
+ * device has PROVEN it can read one back, and no longer.
+ *
+ * The copy is the weaker store, exposed to anything that can run script here,
+ * so it is not kept a moment past its usefulness. It is also the only thing
+ * standing between a voter on Windows and a phrase they can no longer reach.
+ */
+/**
+ * The phrase lives on this device, in the clear.
+ *
+ * One operation with one meaning, written in five places before this existed
+ * and named in none of them except a closure inside `adoptRecoveryPhrase`. The
+ * two keys go together: the words are worth nothing to `getOrCreateIdentity`
+ * unless the mode says to read them, and a mode saying "local" with no words is
+ * a voter with no way in. `phraseIsUnprotected` is exactly this state seen from
+ * outside.
+ */
+function keepPhraseOnDevice(phrase: string): void {
+  localStorage.setItem(IDENTITY_STORAGE_KEY, phrase);
+  localStorage.setItem(IDENTITY_MODE_KEY, "local");
+}
+
+function noteSealed(phrase: string): void {
+  localStorage.setItem(IDENTITY_MODE_KEY, "prf");
+  if (prfReadbackProven()) {
+    localStorage.removeItem(IDENTITY_STORAGE_KEY);
+  } else {
+    localStorage.setItem(IDENTITY_STORAGE_KEY, phrase);
+  }
+}
+
+/**
+ * An assertion returned the sealed secret, so the vault is readable here and
+ * the local copy has no further use. `assertPrf` records the capability itself,
+ * at the one place it is ever proven; this only acts on it.
+ */
+function noteReadBack(): void {
+  localStorage.setItem(IDENTITY_MODE_KEY, "prf");
+  localStorage.removeItem(IDENTITY_STORAGE_KEY);
+}
+
+/**
+ * THE PHRASE IS NO LONGER ANNOUNCED TO A MODAL, and that is the point.
+ *
+ * It used to be published to an in-memory listener the instant it was minted,
+ * and a modal mounted near the router put it on screen. One variable, one
+ * moment, no second chance: any reload between minting and rendering (a dev
+ * server restarting, a phone evicting a backgrounded tab during a WebAuthn
+ * ceremony that goes through a QR code and another device) left a voter with an
+ * identity and no words, silently, and `noteSealed` had already removed the
+ * local copy. It happened in testing and nothing in the logs said so.
+ *
+ * A phrase is now something a voter walks THROUGH: `beginNewIdentity` mints and
+ * stores it, the setup screen shows it and will not move on until it has been
+ * copied, and only then does anything else happen. Coming back mid-way finds
+ * the same words rather than new ones.
+ */
 // The PUBLIC identity commitment: safe to persist (it is already on-chain in the
 // Semaphore group). Lets read-only UI (enrolled/voted status) work in PRF mode
 // after a reload without prompting the passkey. Never holds the secret scalar.
@@ -65,35 +134,107 @@ function remember(id: Identity): Identity {
  * available (prompting the authenticator), or falling back to a localStorage
  * identity. May prompt for a passkey: call from a user gesture.
  */
+/**
+ * What is about to happen to this voter's identity, decided BEFORE anything
+ * asks them for a fingerprint.
+ *
+ *   has-passkey  - the vault holds sealed copies, so a passkey can open it.
+ *   phrase-only  - registered, and no passkey ever held a copy. The twelve
+ *                  words are the only way back, which is the ordinary state on
+ *                  a device that can create a passkey and never evaluate one.
+ *   new          - no identity yet: one will be minted and shown to them.
+ *   unknown      - the vault could not be read. Not a state to act on.
+ *
+ * Reading the vault is a network call and nothing else: no authenticator, no
+ * prompt. That is the whole point. The passkey dialog used to appear as a side
+ * effect of signing in, with nothing said first, so a voter met it without
+ * knowing what it was for and dismissing it was a fright rather than a choice.
+ * Knowing the answer first is what lets the interface explain before it asks.
+ */
+export type IdentityState = "has-passkey" | "phrase-only" | "new" | "unknown";
+
+export async function inspectIdentity(): Promise<IdentityState> {
+  try {
+    const vault = await fetchVault();
+    if (!vault) return "unknown";
+    if (vault.entries.length > 0) return "has-passkey";
+    return vault.commitment ? "phrase-only" : "new";
+  } catch (error: unknown) {
+    console.warn("Could not read the identity vault before asking:", error);
+    return "unknown";
+  }
+}
+
 export async function getOrCreateIdentity(): Promise<Identity> {
   if (cachedIdentity) return cachedIdentity;
 
   // A pre-existing fallback identity must keep being used: its commitment is
   // already registered on-chain, switching to PRF would orphan it.
-  if (localStorage.getItem(IDENTITY_MODE_KEY) === "local") {
+  //
+  // "failed" joins it: this device has already been shown that it cannot read
+  // a sealed copy back, so asking again would summon an authenticator dialog
+  // that is guaranteed to end in an error, on every page load, forever. The
+  // phrase derives the same identity with no prompt at all.
+  if (localStorage.getItem(IDENTITY_MODE_KEY) === "local" || prfReadbackFailed()) {
     const stored = localStorage.getItem(IDENTITY_STORAGE_KEY);
-    if (stored) return remember(Identity.import(stored));
+    if (stored) return remember(await identityFromPhrase(stored));
   }
 
   const outcome = await resolveIdentityFromVault();
   if (outcome.status === "resolved") return outcome.identity;
 
+  // Nothing to resolve and nothing to fall back to: this human has never set
+  // an identity up. Said out loud so the caller can send them to the screen
+  // that does it, rather than having one made for them behind their back.
+  if (outcome.status === "new") throw new IdentityNotSetUpError();
+
   // The voter HAS an identity but this device could not open it (prompt
   // dismissed, or none of their passkeys reachable here). Falling through would
   // mint a second identity, which the registry would refuse and `enroll` would
-  // reject much later with an unrelated error. Fail loudly instead.
-  if (outcome.status === "locked") throw new IdentityLockedError();
+  // reject much later with an unrelated error.
+  if (outcome.status === "locked") {
+    // Unless the phrase is still here, which is the case this whole read-back
+    // dance exists for. It derives the SAME identity, so this is a fallback and
+    // never a fork. Recorded, so the next load goes straight to it.
+    const stored = localStorage.getItem(IDENTITY_STORAGE_KEY);
+    if (stored) {
+      notePrfReadbackFailed();
+      console.info(
+        "This device sealed the phrase under a passkey but cannot evaluate it on an " +
+          "assertion. Using the local copy from now on.",
+      );
+      return remember(await identityFromPhrase(stored));
+    }
+    throw new IdentityLockedError();
+  }
 
-  // Fallback: persisted random identity (XSS-exposed, no PRF on this device,
-  // and therefore no way to share it with the voter's other devices).
-  console.warn(
-    "WebAuthn PRF unavailable: storing the Semaphore identity in localStorage (less secure, single device).",
-  );
+  // A phrase already on this device is this voter, so it is used. The slot is
+  // read back by the branch at the top of this function, which reconstructs the
+  // voter by deriving from whatever it finds.
   const stored = localStorage.getItem(IDENTITY_STORAGE_KEY);
-  const id = stored ? Identity.import(stored) : new Identity();
-  if (!stored) localStorage.setItem(IDENTITY_STORAGE_KEY, id.export());
-  localStorage.setItem(IDENTITY_MODE_KEY, "local");
-  return remember(id);
+  if (stored) return remember(await identityFromPhrase(stored));
+
+  // AND OTHERWISE, NOTHING IS MINTED HERE. This used to generate a phrase,
+  // write it to disk and hand back an identity, trusting a modal somewhere to
+  // show the words. Every silent mint is a voter who can be locked out by one
+  // cleared browser without ever having been given the way back, so there is
+  // now exactly one place that mints (`beginNewIdentity`) and it is reached by
+  // a screen that does not move on until the words have been copied.
+  throw new IdentityNotSetUpError();
+}
+
+/**
+ * There is no identity yet, and making one is not this function's business.
+ *
+ * Caught by the identity step, which runs the setup a new voter has to go
+ * through. Anywhere else it means something asked for an identity before that
+ * screen had been past, which is a routing mistake and should look like one.
+ */
+export class IdentityNotSetUpError extends Error {
+  constructor() {
+    super("This voter has no identity yet: finish the setup at /voter/identity");
+    this.name = "IdentityNotSetUpError";
+  }
 }
 
 /** The voter has an identity, but this device could not unlock it. */
@@ -112,64 +253,10 @@ type VaultOutcome =
   | { status: "resolved"; identity: Identity }
   /** A vault exists but no passkey here opened it. Must NOT mint a new one. */
   | { status: "locked" }
+  /** Nobody by this name yet. The setup screen makes one; this does not. */
+  | { status: "new" }
   /** No session, no vault, or no PRF support: the caller may fall back. */
   | { status: "unavailable" };
-
-/**
- * Resolves the voter's single Semaphore identity through the encrypted vault.
- *
- * Existing voter: unlock the stored secret with any registered passkey. The
- * prompt lists every credential the voter has, so a synced passkey or their
- * phone (over WebAuthn's hybrid/QR transport) both work from a brand new device.
- *
- * New voter: mint the identity here, seal it under this device's passkey and
- * publish the commitment, which is what registers them on-chain.
- *
- * Returns null when this device cannot do PRF at all, so the caller falls back.
- */
-/**
- * Unlocks an identity from a backup file the voter is holding, with no network
- * at all.
- *
- * The complement to the on-chain vault rather than a replacement for it: that
- * one answers "what if this server disappears", this one answers "what if I
- * cannot reach the chain either, or my entry is gone". Same ciphertext, same
- * passkey, no third party in the path.
- *
- * The commitment in the file is checked against what the secret actually
- * derives to. A backup that opens but yields a different identity is a file
- * from another voter, or one that was edited, and enrolling with it would fail
- * later with an error pointing nowhere near the cause.
- */
-export async function importIdentityFromBackup(
-  entries: Array<{ credentialId: string; blob: string }>,
-  expectedCommitment: string,
-): Promise<Identity> {
-  const known = entries.map(e => e.credentialId);
-  const assertion = await assertPrf(known);
-  if (!assertion) throw new IdentityLockedError();
-
-  const ordered = [
-    ...entries.filter(e => e.credentialId === assertion.credentialId),
-    ...entries.filter(e => e.credentialId !== assertion.credentialId),
-  ];
-
-  for (const entry of ordered) {
-    const secret = await unwrapSecret(assertion.secret, entry.blob);
-    if (!secret) continue;
-
-    const identity = Identity.import(secret);
-    if (identity.commitment.toString() !== expectedCommitment) {
-      throw new BackupMismatchError();
-    }
-
-    localStorage.setItem(IDENTITY_MODE_KEY, "prf");
-    localStorage.removeItem(IDENTITY_STORAGE_KEY);
-    return remember(identity);
-  }
-
-  throw new IdentityLockedError();
-}
 
 /** The backup opened, but the identity inside is not the one it claims. */
 export class BackupMismatchError extends Error {
@@ -207,13 +294,18 @@ async function resolveIdentityFromVault(): Promise<VaultOutcome> {
     for (const entry of ordered) {
       const secret = await unwrapSecret(assertion.secret, entry.blob);
       if (secret) {
-        localStorage.setItem(IDENTITY_MODE_KEY, "prf");
-        localStorage.removeItem(IDENTITY_STORAGE_KEY);
-        const identity = Identity.import(secret);
+        // An assertion answered with the secret, so this device can read the
+        // vault and has no further use for a local copy.
+        noteReadBack();
+        // What the vault holds is the RECOVERY PHRASE, not an exported
+        // identity: the identity is a function of it, so the same words rebuild
+        // the same voter on a device that has no passkey at all.
+        const identity = await identityFromPhrase(secret);
         // A passkey that unlocked the vault but has no entry of its own is a
         // device the voter authenticated from remotely: give it local access.
+        // Sealing the same phrase that was just read out of the vault.
         if (!known.includes(assertion.credentialId)) {
-          await addPasskeyToVault(identity, assertion);
+          await sealPhraseForPasskey(secret, identity, assertion);
         }
         return { status: "resolved", identity: remember(identity) };
       }
@@ -223,60 +315,319 @@ async function resolveIdentityFromVault(): Promise<VaultOutcome> {
     return { status: "locked" };
   }
 
-  // First device for this voter.
-  const assertion = await enrollPrfPasskey();
-  if (!assertion) return { status: "unavailable" };
+  // REGISTERED, WITH NOTHING HERE TO OPEN IT. The vault knows the commitment
+  // this voter enrolled with, so an empty entry list does not mean "new": it
+  // means no passkey ever held a copy, which is the ordinary state on a device
+  // that can create a passkey and never evaluate it.
+  //
+  // Falling through to mint would hand them a DIFFERENT identity with a
+  // different commitment, silently, while the registry still points at the old
+  // one. Everything would look fine until an enrolment was refused for reasons
+  // that name none of this. The phrase is the only way back, and saying so is
+  // what `locked` means.
+  if (vault.commitment) return { status: "locked" };
 
-  const identity = new Identity();
-  await addPasskeyToVault(identity, assertion);
-  localStorage.setItem(IDENTITY_MODE_KEY, "prf");
-  localStorage.removeItem(IDENTITY_STORAGE_KEY);
-  return { status: "resolved", identity: remember(identity) };
+  // FIRST TIME FOR THIS HUMAN, and this function stops here on purpose.
+  //
+  // It used to mint the phrase, create a passkey, seal, register and announce,
+  // all inside one call that some screen had triggered for another reason
+  // entirely. The voter met an authenticator dialog they had not asked for and
+  // their twelve words arrived afterwards in a modal, as a notification about
+  // something already done to them.
+  //
+  // Setting up an identity is now a place the voter goes, not a side effect:
+  // see `beginNewIdentity` and the two steps that follow it.
+  return { status: "new" };
 }
 
-/** Seals `identity` under one passkey and publishes the entry. */
-async function addPasskeyToVault(identity: Identity, assertion: PrfAssertion): Promise<void> {
-  const blob = await wrapSecret(assertion.secret, identity.export());
+/**
+ * Mints the phrase a new voter's identity is built from, or returns the one
+ * this device already holds mid-setup.
+ *
+ * REUSED RATHER THAN REMINTED, because somebody who copied twelve words onto
+ * paper and then closed the tab must find the same twelve words when they come
+ * back. Minting afresh would quietly turn what they wrote down into a stranger's
+ * identity.
+ *
+ * Nothing is registered here. The chain hears about this voter when they finish
+ * the setup, with or without a passkey, so an abandoned screen leaves nothing
+ * behind but a phrase on one device.
+ */
+export async function beginNewIdentity(): Promise<{ phrase: string; identity: Identity }> {
+  const existing = localStorage.getItem(IDENTITY_STORAGE_KEY);
+  const phrase = existing ?? generateRecoveryPhrase();
+  if (!existing) keepPhraseOnDevice(phrase);
+  return { phrase, identity: await identityFromPhrase(phrase) };
+}
+
+/**
+ * What finishing the setup left behind.
+ *
+ *   sealed  - a passkey holds the phrase; the local copy is gone.
+ *   stored  - the phrase is on this device in the clear, which is the
+ *             documented fallback and the only way in on a platform that
+ *             cannot evaluate PRF.
+ */
+export type NewIdentityResult =
+  | { kept: "sealed" }
+  | { kept: "stored"; vaultWriteFailed?: true };
+
+/**
+ * Finishes the setup WITH a passkey: seals the phrase under it and registers.
+ *
+ * Throws `PasskeyCancelledError` when the prompt is dismissed, because that is
+ * a decision and not a limit: the screen keeps them where they are and offers
+ * the attempt again. Returns `kept: "stored"` when the authenticator genuinely
+ * cannot hold a secret, which is a different answer and gets different words.
+ */
+export async function completeWithPasskey(
+  phrase: string,
+  identity: Identity,
+): Promise<NewIdentityResult> {
+  const assertion = await enrollPrfPasskey("voter");
+  if (!assertion) {
+    // Created a credential and could not read it back, or could not create a
+    // PRF-capable one at all. Either way nothing can be sealed under it, so the
+    // phrase stays and the voter is told which of the two happened.
+    await ensureRegistered(identity);
+    return { kept: "stored" };
+  }
+
+  // The passkey working and the chain accepting the blob are two events, and
+  // only the first is about the passkey. A registrar out of gas must not read
+  // as a broken credential, and must not cost the voter their setup.
+  try {
+    await sealPhraseForPasskey(phrase, identity, assertion);
+    noteSealed(phrase);
+    await ensureRegistered(identity);
+    return { kept: "sealed" };
+  } catch (error: unknown) {
+    console.error("The passkey worked and the vault write did not:", error);
+    keepPhraseOnDevice(phrase);
+    noteVaultWritePending(assertion.credentialId);
+    await ensureRegistered(identity);
+    return { kept: "stored", vaultWriteFailed: true };
+  }
+}
+
+/**
+ * Finishes the setup WITHOUT one, which is a real answer and not a failure.
+ *
+ * The registration still happens. Being on the registry is what lets a voter
+ * enrol at all, and it does not depend on holding a passkey: welding the two
+ * together left anyone whose authenticator refused off the chain entirely, to
+ * find out weeks later when an enrolment was rejected.
+ */
+export async function completeWithoutPasskey(
+  phrase: string,
+  identity: Identity,
+): Promise<NewIdentityResult> {
+  keepPhraseOnDevice(phrase);
+  remember(identity);
+  await ensureRegistered(identity);
+  return { kept: "stored" };
+}
+
+/**
+ * A working passkey whose sealed copy never reached the chain.
+ *
+ * Kept on the device rather than in memory because the retry is not in this
+ * page's life: the voter is shown their phrase, carries on, and comes back to
+ * their profile later. Cleared as soon as a vault entry for this voter exists.
+ */
+const VAULT_PENDING_KEY = "votain_vault_entry_pending";
+
+function noteVaultWritePending(credentialId: string): void {
+  localStorage.setItem(VAULT_PENDING_KEY, credentialId);
+}
+
+export function vaultWritePending(): string | null {
+  return localStorage.getItem(VAULT_PENDING_KEY);
+}
+
+export function clearVaultWritePending(): void {
+  localStorage.removeItem(VAULT_PENDING_KEY);
+}
+
+/**
+ * Takes a typed phrase as this device's identity.
+ *
+ * The identity is a pure function of the words, so nothing is fetched and
+ * nothing has to agree: whoever types the right phrase reconstructs the same
+ * voter, which is what makes this work where no passkey can.
+ *
+ * The phrase is kept locally and, where an authenticator can hold it, sealed
+ * under a passkey as well, so this device stops asking after the first time.
+ * Sealing is best effort: failing to add the convenience must not fail the
+ * recovery it was meant to make easier.
+ */
+/**
+ * Where a phrase ended up on this device, which is not a detail.
+ *
+ *   sealed  - under a passkey; nothing readable at rest.
+ *   stored  - in the clear, because this platform cannot seal it. The
+ *             documented fallback: without it, Windows has no way in at all.
+ *   session - nowhere. The person was asked and said no, so this browser keeps
+ *             the identity in memory and forgets it on reload.
+ */
+export type PhraseAdoption = "sealed" | "stored" | "session";
+
+/**
+ * Takes on an identity from its twelve words, and reports what it kept.
+ *
+ * THE ORDER MATTERS AND IT USED TO BE WRONG. The phrase was written to
+ * localStorage first, unconditionally, and only then was a passkey offered. So
+ * dismissing that prompt left the words in the clear on disk while the screen
+ * showed a green "restored": the one outcome nobody would have chosen, reached
+ * by the one gesture that says they did not want it.
+ *
+ * Declining is now its own answer. Nothing is written, the identity lives for
+ * this session, and the caller is told so it can say it out loud. Somebody who
+ * dismisses that prompt on a shared computer means exactly what they did.
+ *
+ * A platform that CANNOT seal is a different case and keeps the old behaviour,
+ * because there the fallback is the only way back in.
+ */
+export async function adoptRecoveryPhrase(
+  phrase: string,
+): Promise<{ identity: Identity; kept: PhraseAdoption }> {
+  const identity = await identityFromPhrase(phrase);
+  const normalized = normalizePhrase(phrase);
+
+  const keepInTheClear = (): PhraseAdoption => {
+    keepPhraseOnDevice(normalized);
+    return "stored";
+  };
+
+  // Already known to be unable to read one back: no point asking again.
+  if (prfReadbackFailed()) return { identity: remember(identity), kept: keepInTheClear() };
+
+  let kept: PhraseAdoption;
+  try {
+    const assertion = await enrollPrfPasskey("voter");
+    if (assertion) {
+      await sealPhraseForPasskey(normalized, identity, assertion);
+      noteSealed(normalized);
+      kept = "sealed";
+    } else {
+      // No assertion and no error: the authenticator cannot do PRF.
+      kept = keepInTheClear();
+    }
+  } catch (error: unknown) {
+    if (error instanceof PasskeyCancelledError) {
+      kept = "session";
+    } else {
+      console.info("Recovered without sealing under a passkey:", error);
+      kept = keepInTheClear();
+    }
+  }
+
+  return { identity: remember(identity), kept };
+}
+
+
+/**
+ * The voter's recovery phrase, read from wherever this device keeps it.
+ *
+ * Always available to the voter by design: that is the entire point of the
+ * phrase being the root. It comes from localStorage where no passkey could hold
+ * it, and otherwise from the vault, which costs one authenticator prompt.
+ *
+ * Returns null when this device cannot reach it, which is a device that could
+ * not vote either, so the caller is already in the locked path.
+ */
+export async function revealRecoveryPhrase(): Promise<string | null> {
+  const local = localStorage.getItem(IDENTITY_STORAGE_KEY);
+  if (local) return local;
+
+  const vault = await fetchVault().catch(() => null);
+  if (!vault || vault.entries.length === 0) return null;
+
+  const assertion = await assertPrf(vault.entries.map(e => e.credentialId));
+  if (!assertion) return null;
+
+  for (const entry of vault.entries) {
+    const phrase = await unwrapSecret(assertion.secret, entry.blob);
+    if (phrase) return phrase;
+  }
+  return null;
+}
+
+/** Seals the recovery PHRASE under one passkey and publishes the entry. */
+async function sealPhraseForPasskey(
+  phrase: string,
+  identity: Identity,
+  assertion: PrfAssertion,
+): Promise<void> {
+  const blob = await wrapSecret(assertion.secret, phrase);
   await putVaultEntry({
     credentialId: assertion.credentialId,
     blob,
     commitment: identity.commitment.toString(),
   });
+  // A write got through, so whatever was owed is paid. Every path that seals
+  // comes past here, which is why the clearing lives here and not at each of
+  // them.
+  clearVaultWritePending();
 }
 
 /**
- * Recovery: mint a brand new identity on this device and rebind the voter to it.
+ * Recovery: mint a brand new PHRASE on this device and rebind the voter to it.
  *
- * For the case where every passkey that could open the old identity is gone. The
- * caller must supply a fresh World ID proof; the issuer rotates the on-chain
- * commitment and resets the vault around the new one.
+ * The last resort, for a voter who has lost the phrase AND every passkey that
+ * could open it. Anyone who still has the words wants `adoptRecoveryPhrase`
+ * instead, which costs nothing and keeps every enrolment; this rotates the
+ * on-chain commitment and cannot.
+ *
+ * The caller must supply a fresh World ID proof, because this rebinds the
+ * identity the voter votes with and a stolen session must not be enough to take
+ * someone's identity over.
  *
  * The voter comes back able to join elections they had not enrolled in, and
  * permanently unable to re-enter the ones they had. The chain cannot tell
  * whether they already voted there, so refusing is the only safe answer.
+ *
+ * What it returns them to is the state a new voter is in: a phrase that is the
+ * root, sealed under a passkey. Minting a bare identity here, as this used to,
+ * left them with no way back at all the second time.
+ *
+ * A passkey is REQUIRED on this path alone, and it is the contract that
+ * requires it: `PlatformRegistry.resetVault` rejects an empty vault entry, so
+ * the rotation has nothing to write without one. It costs less than it sounds
+ * like, because CREATING a credential is the half that works everywhere; it is
+ * evaluating it later that some platforms refuse, and the phrase covers that.
  */
-export async function recoverWithNewPasskey(
+export async function rotateToNewIdentity(
   worldIdProof: unknown,
-): Promise<{ commitment: bigint }> {
-  const assertion = await enrollPrfPasskey();
-  if (!assertion) {
-    throw new Error("This device cannot create a PRF-capable passkey");
-  }
+): Promise<{ phrase: string; identity: Identity }> {
+  // ALWAYS A FRESH PHRASE, and deliberately NOT `beginNewIdentity`, which
+  // reuses whatever is already on the device. Reuse is right for a first-time
+  // voter, who must find the words they copied; it is wrong here, where the
+  // words on this device are the ones being abandoned. Worse, they might not be
+  // theirs at all on a shared browser, and rotating onto a commitment whose
+  // phrase somebody else holds is the opposite of a recovery.
+  const phrase = generateRecoveryPhrase();
+  const identity = await identityFromPhrase(phrase);
 
-  const identity = new Identity();
-  const blob = await wrapSecret(assertion.secret, identity.export());
+  // NO PASSKEY HERE, and that is the change. Recovery used to demand one
+  // because it called `resetVault`, which the contract refuses to run with an
+  // empty entry, so the ONE screen that cannot fall back to the phrase was the
+  // one reached by people most likely to be on a borrowed machine or on an
+  // authenticator that creates credentials it will not evaluate. The rotation
+  // and the sealing are separate events and only the second needs a passkey.
   await recoverIdentity({
-    credentialId: assertion.credentialId,
-    blob,
     commitment: identity.commitment.toString(),
     worldIdProof,
   });
 
-  // Only adopt it locally once the issuer confirmed the rotation.
-  localStorage.setItem(IDENTITY_MODE_KEY, "prf");
-  localStorage.removeItem(IDENTITY_STORAGE_KEY);
+  // Only adopted locally once the issuer confirmed the rotation, and written
+  // rather than left alone: any older phrase in this slot belongs to the
+  // identity that was just revoked, and `getOrCreateIdentity` reads this slot
+  // first when the mode is "local". Leaving it would hand back the dead voter.
+  keepPhraseOnDevice(phrase);
+  clearPrfReadback();
   remember(identity);
-  return { commitment: identity.commitment };
+  return { phrase, identity };
 }
 
 /**
@@ -284,6 +635,60 @@ export async function recoverWithNewPasskey(
  * the device can vote on its own afterwards without reaching for another one.
  * Requires the identity to be unlocked already.
  */
+/**
+ * Puts this voter's commitment on the chain if it is not there already.
+ *
+ * Best effort, and deliberately so at its call sites: the voter has their
+ * phrase, so a backend that is briefly unreachable must not cost them the
+ * identity they just made. The failure heals on the next attempt, because
+ * `registerMember` is idempotent for a human already holding this commitment.
+ */
+export async function ensureRegistered(identity: Identity): Promise<boolean> {
+  try {
+    await registerCommitment(identity.commitment.toString());
+    return true;
+  } catch (error: unknown) {
+    console.warn("Could not register this identity on chain yet:", error);
+    return false;
+  }
+}
+
+/**
+ * Whether this voter's phrase is sitting on this device in the clear.
+ *
+ * True is not a fault: it is the documented fallback, and on a platform that
+ * cannot evaluate PRF on an assertion it is the only way back in. It is also
+ * not something to leave unsaid, which is what it was: a new voter was handed
+ * their words, the seal was attempted as a side effect nobody announced, and
+ * when it did not happen they were never told the copy was unprotected.
+ */
+export function phraseIsUnprotected(): boolean {
+  return (
+    localStorage.getItem(IDENTITY_MODE_KEY) === "local" &&
+    localStorage.getItem(IDENTITY_STORAGE_KEY) !== null
+  );
+}
+
+/**
+ * Seals the phrase under a passkey on this device, asked for out loud.
+ *
+ * The same work `enrollThisDevice` does, plus the bookkeeping that says the
+ * phrase now has a home other than localStorage. Only a PRF-capable passkey
+ * gets this far: `enrollPrfPasskey` returns nothing for an authenticator that
+ * cannot hold a secret, and that throws rather than pretending.
+ *
+ * The local copy MAY SURVIVE, and that is deliberate. It is dropped once this
+ * device has proven it can read a sealed copy back; until then, removing it
+ * would strand a voter on Windows, where a credential can be created and then
+ * refuse to be evaluated.
+ */
+export async function protectPhraseWithPasskey(): Promise<void> {
+  const result = await enrollThisDevice();
+  if (result.alreadyRegistered) return;
+  const phrase = localStorage.getItem(IDENTITY_STORAGE_KEY);
+  if (phrase) noteSealed(phrase);
+}
+
 export async function enrollThisDevice(): Promise<{
   credentialId: string;
   /** True when the authenticator already held a registered passkey. */
@@ -291,27 +696,49 @@ export async function enrollThisDevice(): Promise<{
 }> {
   const identity = await getOrCreateIdentity();
 
-  // Same machine, different browser is the case this handles. The authenticator
-  // is shared (one Windows Hello, one Touch ID) but localStorage is not, so this
-  // browser can have no cached credential id while the device is already
-  // registered. Minting a second passkey there would add a duplicate vault entry
-  // for a single authenticator, and Windows Hello can overwrite the first while
-  // doing it, quietly breaking the entry the voter already had.
+  // WHAT THE AUTHENTICATOR IS TOLD NOT TO DO, rather than what this function
+  // refuses to try. Passing the registered ids as `excludeCredentials` is how a
+  // duplicate is prevented: the authenticator knows what it holds, refuses with
+  // InvalidStateError, and the browser still offers everything else, a phone
+  // over the QR transport included.
+  //
+  // This used to return early when the id cached HERE was already registered,
+  // which answered a different question. It meant "this browser's own passkey
+  // is in the list" and was read as "there is nothing left to add", so pressing
+  // the button said "this device already holds one of your passkeys" and
+  // stopped, and a voter could never link a SECOND authenticator: not their
+  // phone, not a second laptop, not a security key. Linking another is the
+  // whole point of the list.
   const vault = await fetchVault();
   const known = vault?.entries.map(e => e.credentialId) ?? [];
-  const cached = getCachedCredentialId();
-  if (cached && known.includes(cached)) {
-    return { credentialId: cached, alreadyRegistered: true };
-  }
 
   try {
     // Nothing cached to compare against, so hand the ids to the authenticator:
     // it knows what it holds and refuses with InvalidStateError.
-    const assertion = await enrollPrfPasskey(known);
+    const assertion = await enrollPrfPasskey("voter", known);
     if (!assertion) {
       throw new Error("This device cannot create a PRF-capable passkey");
     }
-    await addPasskeyToVault(identity, assertion);
+    // What gets sealed is the phrase, so this passkey reconstructs the same
+    // identity rather than holding a copy of one.
+    //
+    // AND THIS IS WHERE ADDING A SECOND PASSKEY CAN STILL FAIL, on a machine
+    // whose own authenticator cannot evaluate PRF. The phrase lives either in
+    // localStorage or sealed under a credential ALREADY in the vault, and
+    // reading the sealed copy means asserting one of those, not the one that
+    // was just created somewhere else. Said out loud, because otherwise it
+    // arrives as a locked identity with no visible cause right after a
+    // successful-looking enrolment on the phone.
+    const phrase = await revealRecoveryPhrase();
+    if (!phrase) {
+      console.error(
+        "A passkey was created but the phrase could not be read back to seal " +
+          "under it: not on this device, and none of the credentials already " +
+          "in the vault could be asserted here.",
+      );
+      throw new IdentityLockedError();
+    }
+    await sealPhraseForPasskey(phrase, identity, assertion);
     return { credentialId: assertion.credentialId, alreadyRegistered: false };
   } catch (error: unknown) {
     if (!(error instanceof PasskeyAlreadyRegisteredError)) throw error;
@@ -353,16 +780,18 @@ export function getStoredVoteNullifier(electionAddress: string): bigint | null {
 
 /**
  * Synchronous best-effort read for informational UI (enrolled status, history).
- * Returns the in-memory identity, or the localStorage one in fallback mode. In
- * PRF mode after a page reload this returns null until `getOrCreateIdentity()`
- * re-derives it (an explicit passkey tap): by design, nothing is stored at rest.
+ *
+ * The in-memory identity or nothing. It used to fall back to localStorage with
+ * `Identity.import`, which now reads a RECOVERY PHRASE as though it were an
+ * exported key: that returns a perfectly valid identity belonging to nobody, and
+ * its nullifiers match no vote the voter ever cast, so the history would be
+ * silently empty rather than visibly unavailable. Deriving properly is
+ * asynchronous (HKDF), so it cannot happen here.
+ *
+ * Returning null until `getOrCreateIdentity()` has run is the honest answer, and
+ * every caller already treats it as "not yet".
  */
 export function getStoredIdentity(): Identity | null {
-  if (cachedIdentity) return cachedIdentity;
-  if (localStorage.getItem(IDENTITY_MODE_KEY) === "prf") return null;
-  const stored = localStorage.getItem(IDENTITY_STORAGE_KEY);
-  if (!stored) return null;
-  cachedIdentity = Identity.import(stored);
   return cachedIdentity;
 }
 
@@ -375,6 +804,7 @@ export function clearIdentity(): void {
   cachedIdentity = null;
   localStorage.removeItem(IDENTITY_STORAGE_KEY);
   localStorage.removeItem(IDENTITY_MODE_KEY);
+  clearPrfReadback();
   localStorage.removeItem(IDENTITY_COMMITMENT_KEY);
   // Drop this device's per-election vote records too.
   for (const k of Object.keys(localStorage)) {

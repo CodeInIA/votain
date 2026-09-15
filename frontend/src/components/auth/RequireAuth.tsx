@@ -12,7 +12,21 @@
 import type { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { signInRouteFor, signedOutOf } from '../../lib/activeRole';
 import { Spinner } from '../ui/Spinner';
+
+/**
+ * Where a guard sends someone who cannot be here.
+ *
+ * Straight after a sign-out, the screen for the role they just left, which is
+ * where they expect to be and where they would go next anyway. Otherwise the
+ * landing page: a bounce that is not deliberate should not strand anyone, and
+ * walking back through a history of protected routes used to mean one press
+ * per screen ever visited, each landing on a sign-in form again.
+ */
+function bounceTo(role: 'voter' | 'organizer'): string {
+  return signedOutOf() === role ? signInRouteFor(role) : '/';
+}
 
 function Checking() {
   return (
@@ -31,23 +45,18 @@ export function RequireVoter({ children }: { children: ReactNode }) {
   if (!sessionChecked && !voterLoggedIn) return <Checking />;
 
   if (!voterLoggedIn) {
-    // Landing, not the onboarding wizard: signing out re-renders this guard
-    // (the profile screen lives behind it), and that redirect races the
-    // caller's own navigate('/'). Pointing both at the landing page makes the
-    // outcome the same either way — and the landing page offers both "Log in"
-    // and "Register", so deep links still lead somewhere useful.
-    return <Navigate to="/" replace state={{ from: location.pathname }} />;
+    return <Navigate to={bounceTo('voter')} replace state={{ from: location.pathname }} />;
   }
   return <>{children}</>;
 }
 
-/** Requires an organizer session (passkey + connected wallet). */
+/** Requires an organizer session: a wallet this browser remembers. */
 export function RequireOrganizer({ children }: { children: ReactNode }) {
   const { organizerLoggedIn } = useAuth();
   const location = useLocation();
 
   if (!organizerLoggedIn) {
-    return <Navigate to="/organizer/auth" replace state={{ from: location.pathname }} />;
+    return <Navigate to={bounceTo('organizer')} replace state={{ from: location.pathname }} />;
   }
   return <>{children}</>;
 }

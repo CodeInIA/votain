@@ -19,7 +19,7 @@ Votain is a Bachelor's thesis project (TFG) demonstrating how modern cryptograph
 ## Architecture overview
 
 ```
-User (passkey + World ID)
+User (recovery phrase + World ID)
     ├── React 19 + Vite + Tailwind 4             ◄──── IPFS (Fleek)
     │
     ├── SD-JWT issuance ── Backend (Node + Express)  ◄──── Phala TEE

@@ -69,6 +69,53 @@ export function resolveActiveRole(sessions: RoleSessions, preferred: Role | null
 }
 
 /** Where each role's navigation goes home to. */
+/** Where each role signs in. The landing serves whoever has no role yet. */
+export function signInRouteFor(role: Role): string {
+  return role === "organizer" ? "/organizer/auth" : "/voter/signin";
+}
+
+/**
+ * The role someone has just signed out of, until they reach its sign-in screen.
+ *
+ * Signing out re-renders the route guard, which redirects before the screen
+ * holding the button can run its own navigate, and that screen then unmounts
+ * with its navigation still pending. So the guard is the only thing that can
+ * honour the intent, and this is how it learns of it.
+ *
+ * READING IT DOES NOT CHANGE IT. Guards read this while rendering, and React
+ * renders twice under StrictMode, so a read that consumed the value would be
+ * seen by one render and missed by the other. The sign-in screen clears it on
+ * arrival, which is when it has served its purpose.
+ *
+ * It also expires, because it describes a moment rather than a state: someone
+ * who signs out and closes the tab must not come back tomorrow to a redirect
+ * they no longer remember asking for.
+ */
+const SIGNED_OUT_KEY = "votain_just_signed_out";
+const SIGNED_OUT_WINDOW_MS = 30_000;
+
+export function noteSignedOutOf(role: Role): void {
+  sessionStorage.setItem(SIGNED_OUT_KEY, `${role}:${Date.now()}`);
+}
+
+/** Safe to call during render: it only reads. */
+export function signedOutOf(): Role | null {
+  const raw = sessionStorage.getItem(SIGNED_OUT_KEY);
+  if (!raw) return null;
+
+  const separator = raw.lastIndexOf(":");
+  const role = raw.slice(0, separator);
+  const at = Number(raw.slice(separator + 1));
+  if (!Number.isFinite(at) || Date.now() - at > SIGNED_OUT_WINDOW_MS) return null;
+
+  return role === "organizer" || role === "voter" ? role : null;
+}
+
+/** Called by a sign-in screen once it has been reached. */
+export function clearSignedOutMark(): void {
+  sessionStorage.removeItem(SIGNED_OUT_KEY);
+}
+
 export function homeRouteFor(role: Role): string {
   if (role === 'organizer') return '/organizer/dashboard';
   if (role === 'voter') return '/voter/elections';

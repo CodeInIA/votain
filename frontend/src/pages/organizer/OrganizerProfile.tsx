@@ -1,87 +1,31 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { KeyRound, Trash2, User, Wallet } from 'lucide-react';
+import { User, Wallet } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Card } from '../../components/ui/Card';
 import { OtherRoleCard } from '../../components/ui/OtherRoleCard';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { Modal } from '../../components/ui/Modal';
 import { SignOutActions } from '../../components/ui/SignOutActions';
 import { SiteLinksCard } from '../../components/layout/SiteLinksCard';
 import { LanguageSelector } from '../../components/ui/LanguageSelector';
-import { useToast } from '../../components/ui/useToast';
-import { useAuth } from '../../contexts/AuthContext';
 import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
 import { MyDomains } from '../../components/organizer/MyDomains';
-import { addPasskeyToVault } from '../../lib/organizerVault';
-import { getPasskeyInfo, clearPrfCredential } from '../../lib/passkeyPrf';
 import { getOrganizerName, setOrganizerName } from '../../lib/organizer';
 
 export default function OrganizerProfile() {
-  const navigate = useNavigate();
   const { t } = useTranslation();
-  const { toast } = useToast();
-  const { organizerSignOut } = useAuth();
   const wallet = useOrganizerWallet();
 
   const [displayName, setDisplayName] = useState(getOrganizerName);
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(displayName);
-  // The single passkey actually registered on this device (null if none).
-  const [passkey, setPasskey] = useState(() => getPasskeyInfo());
-  const [deleteModal, setDeleteModal] = useState(false);
-  const [addingPasskey, setAddingPasskey] = useState(false);
 
   const saveName = () => {
     const next = nameInput.trim() || displayName;
     setOrganizerName(next);
     setDisplayName(next);
     setEditingName(false);
-  };
-
-  /**
-   * Forgets the passkey ON THIS DEVICE and ends the session, since the passkey
-   * is the login credential. It does NOT delete anything from the authenticator,
-   * and must not: the Paillier tally key of every election created here is
-   * re-derived from this passkey rather than stored, so destroying it would make
-   * those results impossible to decrypt. `derivePrfSecret` asks the
-   * authenticator for an existing credential before minting a new one, which is
-   * what makes coming back from here safe.
-   */
-  /**
-   * Seals the tally master secret under a second passkey.
-   *
-   * The wallet signs the vault write, and the prompt that follows is the new
-   * authenticator being created: a phone over QR, a security key, or another
-   * profile in the same password manager. Afterwards that passkey derives the
-   * same Paillier keys this one does, which is the whole point.
-   */
-  const handleAddPasskey = async () => {
-    setAddingPasskey(true);
-    try {
-      if (wallet.wrongNetwork) await wallet.switchToAmoy();
-      await addPasskeyToVault(await wallet.getSigner());
-      toast({ title: t('profile.passkey_added'), variant: 'success' });
-    } catch (e) {
-      toast({
-        title: t('errors.generic_title'),
-        description: e instanceof Error ? e.message : String(e),
-        variant: 'error',
-      });
-    } finally {
-      setAddingPasskey(false);
-    }
-  };
-
-  const forgetPasskey = () => {
-    clearPrfCredential();
-    setPasskey(null);
-    setDeleteModal(false);
-    organizerSignOut();
-    toast({ title: t('profile.passkey_forgotten'), variant: 'info' });
-    setTimeout(() => navigate('/organizer/auth', { replace: true }), 600);
   };
 
   return (
@@ -130,61 +74,10 @@ export default function OrganizerProfile() {
         <MyDomains
           address={wallet.address}
           getSigner={() => wallet.getSigner()}
+          withWalletApp={wallet.withWalletApp}
         />
 
-        {/* Passkey: the real credential registered on this device */}
-        <Card className="p-5 mb-4">
-          <h2 className="text-sm font-semibold text-on-surface flex items-center gap-2 mb-4">
-            <KeyRound className="w-4 h-4 text-primary" />
-            {t('profile.passkeys')}
-          </h2>
-
-          {passkey ? (
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-surface-high/40">
-              <KeyRound className="w-4 h-4 text-on-surface-meta shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-on-surface">{t('profile.this_device')}</p>
-                <p className="text-xs text-on-surface-meta font-mono truncate">
-                  {passkey.id.slice(0, 16)}…
-                </p>
-                <p className="text-xs text-on-surface-meta mt-0.5">
-                  {t('profile.last_used')} {passkey.lastUsedAt.toLocaleDateString()}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setDeleteModal(true)}
-                className="text-error hover:text-error/70 transition-colors p-1 cursor-pointer"
-                aria-label={t('profile.forget_passkey_title')}
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          ) : (
-            <p className="text-sm text-on-surface-meta">{t('profile.no_passkey')}</p>
-          )}
-
-          {/* Adding the second one has to happen HERE, on a device that can
-              already open the vault, because sealing the master secret under a
-              new passkey needs the plaintext. Enrolling from the new machine
-              instead is the case the vault cannot serve, and the reason the
-              login screen asks whether a passkey already exists rather than
-              minting one. */}
-          <Button
-            variant="default"
-            className="w-full rounded-full mt-3 gap-2"
-            disabled={addingPasskey}
-            onClick={() => void handleAddPasskey()}
-          >
-            <KeyRound className="w-4 h-4" />
-            {t('profile.add_passkey')}
-          </Button>
-          <p className="text-xs text-on-surface-meta mt-2 leading-relaxed">
-            {t('profile.add_passkey_help')}
-          </p>
-        </Card>
-
-        {/* Linked wallet, used only to sign transactions */}
+        {/* The wallet: the organizer's identity, not an accessory to it */}
         <Card className="p-5 mb-4">
           <h2 className="text-sm font-semibold text-on-surface flex items-center gap-2 mb-3">
             <Wallet className="w-4 h-4 text-primary" />
@@ -221,25 +114,6 @@ export default function OrganizerProfile() {
         <Card className="p-5">
           <SignOutActions role="organizer" />
         </Card>
-
-        {/* Forget passkey modal */}
-        <Modal
-          open={deleteModal}
-          onClose={() => setDeleteModal(false)}
-          title={t('profile.forget_passkey_title')}
-          description={t('profile.forget_passkey_desc')}
-        >
-          <div className="flex gap-3 mt-2">
-            <Button variant="ghost" className="flex-1" onClick={() => setDeleteModal(false)}>{t('common.cancel')}</Button>
-            <Button
-              variant="default"
-              className="flex-1 border-error/30 text-error hover:bg-error/10"
-              onClick={forgetPasskey}
-            >
-              {t('profile.forget_passkey_confirm')}
-            </Button>
-          </div>
-        </Modal>
 
       </div>
     </PageLayout>

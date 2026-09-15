@@ -15,13 +15,8 @@
 import { Contract, type Signer } from "ethers";
 import { addresses } from "./deployments";
 import { getReadProvider } from "./contracts";
+import { backendBase } from "./backend";
 
-const BACKEND = import.meta.env.VITE_BACKEND_URL as string | undefined;
-
-function requireBackend(): string {
-  if (!BACKEND) throw new Error("VITE_BACKEND_URL is not configured");
-  return BACKEND;
-}
 
 export type DomainStatus =
   | "verified"
@@ -47,7 +42,7 @@ export interface DomainRecord {
 
 /** The exact TXT record to publish, ready to copy. */
 export async function fetchDomainRecord(address: string, domain: string): Promise<DomainRecord> {
-  const url = new URL(`${requireBackend()}/api/organizer/domain-record`);
+  const url = new URL(`${backendBase()}/api/organizer/domain-record`);
   url.searchParams.set("address", address);
   url.searchParams.set("domain", domain);
   const res = await fetch(url);
@@ -85,7 +80,7 @@ export async function fetchClaimedDomains(address: string): Promise<string[]> {
 
 /** The live DNS verdict for one pair. */
 async function checkOneDomain(address: string, domain: string): Promise<DomainCheck> {
-  const url = new URL(`${requireBackend()}/api/organizer/domain-status`);
+  const url = new URL(`${backendBase()}/api/organizer/domain-status`);
   url.searchParams.set("address", address);
   url.searchParams.set("domain", domain);
   const res = await fetch(url);
@@ -110,7 +105,7 @@ export async function addOrganizerDomain(
   address: string,
   domain: string,
 ): Promise<DomainCheck> {
-  const res = await fetch(`${requireBackend()}/api/organizer/domains`, {
+  const res = await fetch(`${backendBase()}/api/organizer/domains`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ address, domain }),
@@ -145,7 +140,7 @@ export async function checkElectionDomain(
   organizerAddress: string,
   domain: string,
 ): Promise<DomainCheck> {
-  const url = new URL(`${requireBackend()}/api/organizer/domain-status`);
+  const url = new URL(`${backendBase()}/api/organizer/domain-status`);
   url.searchParams.set("address", organizerAddress);
   url.searchParams.set("domain", domain);
   const res = await fetch(url);

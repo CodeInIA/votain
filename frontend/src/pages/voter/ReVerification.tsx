@@ -8,7 +8,11 @@ import { Card } from '../../components/ui/Card';
 import { Spinner } from '../../components/ui/Spinner';
 import { useToast } from '../../components/ui/useToast';
 import { requestWorldIdProof } from '../../lib/worldId';
-import { recoverWithNewPasskey } from '../../lib/semaphore';
+import { rotateToNewIdentity } from '../../lib/semaphore';
+import type { Identity } from '@semaphore-protocol/identity';
+import { WorldIdConnector } from '../../components/voter/WorldIdConnector';
+import { NewVoterSetup } from '../../components/voter/NewVoterSetup';
+import { SignOutActions } from '../../components/ui/SignOutActions';
 
 /**
  * Identity recovery: the way back in after losing every passkey that could
@@ -25,6 +29,16 @@ export default function ReVerification() {
   const { toast } = useToast();
   const [busy, setBusy] = useState(false);
   const [connectorUri, setConnectorUri] = useState<string | null>(null);
+  /**
+   * What the rotation produced, handed straight to the ordinary setup.
+   *
+   * Recovery mints a BRAND NEW phrase: the old identity is revoked on chain and
+   * these twelve words are the only thing that rebuilds the new one. Once the
+   * rotation is done the voter is in exactly the state a first-time voter is
+   * in, registered with no passkey, so they get the SAME two steps rather than
+   * a shorter version of them that would be free to drift.
+   */
+  const [minted, setMinted] = useState<{ phrase: string; identity: Identity } | null>(null);
 
   const handleRecover = async (): Promise<void> => {
     setBusy(true);
@@ -36,17 +50,24 @@ export default function ReVerification() {
         return;
       }
 
-      // Creates a passkey on THIS device, mints a fresh identity and asks the
-      // issuer to rotate the on-chain commitment onto it.
-      await recoverWithNewPasskey(proof);
+      // Mints a fresh identity and asks the issuer to rotate the on-chain
+      // commitment onto it. NO PASSKEY at this point: linking one is the second
+      // step below, and optional there, exactly as it is for a new voter.
+      setMinted(await rotateToNewIdentity(proof));
 
       toast({
         title: t('reverify.recovered'),
         description: t('reverify.recovered_desc'),
         variant: 'success',
       });
-      navigate('/voter/elections');
+      // NOT navigating yet: the setup below is now on screen and the voter has
+      // to get past their new twelve words. Leaving for the elections here
+      // would scroll their only way back off the page.
     } catch (error: unknown) {
+      // Only the rotation can fail here now. The passkey outcomes moved with
+      // the passkey itself, into the second step of the setup, where dismissing
+      // a prompt keeps the voter where they are and an authenticator that
+      // cannot hold a secret is a message rather than a dead end.
       toast({
         title: t('reverify.failed'),
         description: error instanceof Error ? error.message : undefined,
@@ -59,8 +80,40 @@ export default function ReVerification() {
   };
 
   return (
-    <PageLayout role="voter" showNav>
-      <div className="max-w-md mx-auto pt-10 pb-24 flex flex-col items-center text-center">
+    /* No nav and no footer, like the identity step and the phrase screen.
+       This is the most expensive decision a voter can take here: rotating the
+       commitment costs them every election they had already joined. A tab bar
+       offering the elections, the history and the profile in the middle of
+       that is the distraction those two screens removed for weaker reasons.
+       The BACK button below stays, and that is the difference: unlike those
+       two, the step behind this one is a place the voter can return to (their
+       profile, or the phrase screen), and backing out is the cheap, safe
+       answer we want within reach. */
+    <PageLayout role="voter" showNav={false} showFooter={false}>
+      {/* The same centred column as the identity step, because after the
+          rotation this IS the identity step: the card below it is the very same
+          component. It used to sit at the top of the page while the screen it
+          continues was centred, so finishing a recovery looked like arriving
+          somewhere else. `min-h-dvh` with `justify-center` centres what fits
+          and simply grows for the taller pre-rotation view. */}
+      <div className="min-h-dvh flex flex-col items-center justify-center gap-6 p-4">
+        {minted ? (
+          <>
+            <NewVoterSetup
+              minted={minted}
+              onDone={() => navigate('/voter/elections', { replace: true })}
+            />
+            {/* NOT "cancel sign-up", and the difference is not cosmetic. By the
+                time this shows, `rotateMember` has already run: the old identity
+                is revoked and the new commitment is on chain, so there is a
+                standing to leave rather than an attempt to abandon. What is
+                still unfinished is optional (linking a passkey), and the words
+                on screen are the only copy of the identity they just gained,
+                which is exactly what the sign-out confirmation says. */}
+            <SignOutActions role="voter" />
+          </>
+        ) : (
+        <div className="max-w-md w-full flex flex-col items-center text-center">
         <div className="relative mb-6">
           <div className="absolute inset-0 bg-warning/20 blur-[40px] rounded-full" />
           <div className="relative w-20 h-20 rounded-full bg-warning/10 border border-warning/20 flex items-center justify-center">
@@ -101,15 +154,7 @@ export default function ReVerification() {
 
         {connectorUri && (
           <Card className="p-5 mb-6 w-full">
-            <p className="text-sm text-on-surface-variant mb-3">{t('verify.qr_desc')}</p>
-            <a
-              href={connectorUri}
-              className="text-xs text-primary break-all hover:underline"
-              target="_blank"
-              rel="noreferrer"
-            >
-              {connectorUri}
-            </a>
+            <WorldIdConnector uri={connectorUri} />
           </Card>
         )}
 
@@ -137,6 +182,8 @@ export default function ReVerification() {
           <ShieldCheck className="w-4 h-4" />
           {t('reverify.one_identity_note')}
         </div>
+        </div>
+        )}
       </div>
     </PageLayout>
   );

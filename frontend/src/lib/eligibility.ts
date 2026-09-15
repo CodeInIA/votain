@@ -16,6 +16,7 @@
  * its published hash", so both sides keep their own copy of one small,
  * deliberately boring serialiser rather than trusting a shared endpoint.
  */
+import { backendBase } from "./backend";
 
 /**
  * How strongly the election insists the enrolling voter is a distinct human.
@@ -154,7 +155,6 @@ export function requiresNationalityReveal(policy: EligibilityPolicy): boolean {
 // Voter-side API
 // ────────────────────────────────────────────────
 
-const BACKEND = import.meta.env.VITE_BACKEND_URL as string | undefined;
 
 /**
  * Every eligibility call carries the voter's session cookie. Unlike the ballot
@@ -162,9 +162,8 @@ const BACKEND = import.meta.env.VITE_BACKEND_URL as string | undefined;
  * opened the challenge, and only that voter may claim its attestation.
  */
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  if (!BACKEND) throw new Error("VITE_BACKEND_URL is not configured");
 
-  const response = await fetch(`${BACKEND}${path}`, {
+  const response = await fetch(`${backendBase()}${path}`, {
     ...init,
     credentials: "include",
     headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },

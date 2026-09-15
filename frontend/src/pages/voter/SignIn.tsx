@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { WorldIdVerify } from '../../components/voter/WorldIdVerify';
+import { clearSignedOutMark } from '../../lib/activeRole';
 
 /**
  * World ID sign in, with no preamble.
@@ -16,6 +18,12 @@ import { WorldIdVerify } from '../../components/voter/WorldIdVerify';
  */
 export default function SignIn() {
   const navigate = useNavigate();
+
+  // A sign-out leaves a mark so the route guard sends the person here rather
+  // than to the landing page. Reaching here is what it was for, so it goes now:
+  // left behind, it would keep pulling every later bounce back to this screen.
+  useEffect(() => clearSignedOutMark(), []);
+
   // A direct link has nothing behind it, so home is the only sensible fallback.
   const goBack = () => (window.history.length > 1 ? navigate(-1) : navigate('/'));
   return <WorldIdVerify onBack={goBack} />;

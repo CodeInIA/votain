@@ -149,6 +149,37 @@ export async function putVaultEntry(
   return (await getVault(nullifier)) as VaultRecord;
 }
 
+/**
+ * Empties a human's vault, leaving the commitment alone.
+ *
+ * FOR A RECOVERY THAT HAS NO PASSKEY. `resetVault` is the cheap path and it
+ * refuses an empty entry (`EmptyVaultEntry` in the contract), which made a
+ * working passkey mandatory on the ONE screen that cannot fall back to the
+ * phrase: recovery, reached by people most likely to be on a borrowed machine
+ * or on Windows Hello.
+ *
+ * Leaving the old entries instead is not an option and would be worse than the
+ * requirement it removes. They seal the phrase whose commitment `rotateMember`
+ * has just revoked, so a browser would assert a passkey, open them, derive the
+ * DEAD identity and fail every enrolment afterwards for reasons naming none of
+ * it.
+ *
+ * Entry by entry because `removeVaultEntry` is what the contract offers and it
+ * carries no minimum: the "never remove the last one" rule is a decision of the
+ * route above, not of the chain. One transaction each, on a list that is a
+ * voter's passkeys, so single digits.
+ */
+export async function clearVault(nullifier: string): Promise<void> {
+  requireChain();
+  const current = await getVault(nullifier);
+  if (!current) return;
+  const registry = getRegistryWriter();
+  for (const entry of current.entries) {
+    const tx = await registry.removeVaultEntry(nullifier, toHex(entry.credentialId));
+    await tx.wait();
+  }
+}
+
 export async function removeVaultEntry(
   nullifier: string,
   credentialId: string,

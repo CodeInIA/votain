@@ -109,7 +109,8 @@ export interface Election {
   thresholdValue?: number;
   privacyQuorum: number;
   /** Public per-election salt for deriving the tally key from the organizer's
-   *  passkey. Present only on elections whose key is re-derivable (not stored). */
+   *  wallet signature. Present only on elections whose key is re-derivable
+   *  (not stored). */
   keyNonce?: string;
   isEnrolled?: boolean;
   hasVoted?: boolean;

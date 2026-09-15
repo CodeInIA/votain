@@ -13,6 +13,7 @@ import { DomainBadge } from '../../components/ui/DomainBadge';
 import { Modal } from '../../components/ui/Modal';
 import { useElections } from '../../hooks/useElections';
 import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
+import { useRefreshOnReturn } from '../../hooks/useRefreshOnReturn';
 import {
   getGasBalance,
   hasStoredOrganizerName,
@@ -35,13 +36,21 @@ const VOTE_COST = 0.03;
 export default function OrganizerDashboard() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { elections, loading, live } = useElections();
+  const { elections, loading, live, refresh } = useElections();
   const wallet = useOrganizerWallet();
   const [gasBalance, setGasBalance] = useState(live ? 0 : 2.5);
   // Set once the organizer has answered or dismissed the name prompt, so it
   // does not reopen on the next render.
   const [nameHandled, setNameHandled] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
+  const [reloadToken, setReloadToken] = useState(0);
+
+  // This screen is where an organizer lands after signing somewhere else, so
+  // it is the one most likely to be showing a state that no longer exists.
+  useRefreshOnReturn(() => {
+    void refresh();
+    setReloadToken(n => n + 1);
+  });
 
   // Real sponsored-gas balance for the connected organizer.
   useEffect(() => {
@@ -58,7 +67,7 @@ export default function OrganizerDashboard() {
       }
     })();
     return () => { cancelled = true; };
-  }, [live, wallet.address]);
+  }, [live, wallet.address, reloadToken]);
 
   // Live: only elections created by the connected organizer. Seed: first few.
   const myElections = live

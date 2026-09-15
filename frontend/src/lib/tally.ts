@@ -24,7 +24,7 @@ import {
   type SerializedKeyPair,
 } from "./paillier";
 import { deriveElectionKeys } from "./tallyKey";
-import { hasPrfCredential } from "./passkeyPrf";
+
 
 export interface TallyResult {
   /** Vote counts per option; the LAST entry is the blank vote. */
@@ -39,15 +39,16 @@ export interface TallyResult {
 }
 
 /**
- * Resolves the decryption keypair. A key stored locally: either the fallback
- * random key or one IMPORTED from an exported file: always wins, so a device
- * without the organizer's passkey can still tally after importing. Otherwise a
- * `keyNonce` election re-derives it from the passkey PRF. Null when unavailable.
+ * Resolves the decryption keypair. A key stored locally, either the fallback
+ * random key or one IMPORTED from an exported file, always wins, so a device
+ * that cannot reach the organizer's wallet can still tally after importing.
+ * Otherwise a `keyNonce` election re-derives it from the wallet signature.
+ * Null when unavailable.
  */
 export async function resolveTallyKey(
   address: string,
   keyNonce?: string,
-  /** Reaches the organizer vault, so a second passkey derives the same key. */
+  /** Signs the deterministic payload the tally master is derived from. */
   signer?: Signer,
 ): Promise<SerializedKeyPair | null> {
   const stored = loadElectionPrivateKey(address);
@@ -56,14 +57,15 @@ export async function resolveTallyKey(
 }
 
 /**
- * Best-effort check of whether this device can obtain the decryption key without
- * a passkey prompt-and-fail: an imported/stored key, or (for `keyNonce`
- * elections) a PRF passkey. Not a guarantee: enough to warn up front instead
- * of failing on the button press.
+ * Best-effort check of whether this device can obtain the decryption key: an
+ * imported or stored key, or a `keyNonce` election, whose key any organizer
+ * signed in here can derive, since deriving it needs only their wallet.
+ *
+ * Not a guarantee, and deliberately not a prompt: enough to warn up front
+ * instead of failing on the button press.
  */
 export function hasTallyKey(address: string, keyNonce?: string): boolean {
-  if (loadElectionPrivateKey(address)) return true;
-  return keyNonce ? hasPrfCredential() : false;
+  return Boolean(loadElectionPrivateKey(address)) || Boolean(keyNonce);
 }
 
 export class MissingTallyKeyError extends Error {
@@ -119,7 +121,7 @@ export async function computeTally(address: string, signer?: Signer): Promise<Ta
     keyNonce = meta.keyNonce;
   } catch { /* no metadata: treat as no quorum, no derivable key */ }
 
-  // Imported/stored key first, else re-derive from the passkey (prompts).
+  // Imported/stored key first, else re-derive (prompts for a wallet signature).
   const keys = await resolveTallyKey(address, keyNonce, signer);
   if (!keys) throw new MissingTallyKeyError();
 

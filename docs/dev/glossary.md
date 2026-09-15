@@ -66,11 +66,15 @@
 
 ## Frontend
 
-**Passkey (WebAuthn)**: passwordless authentication standard using device biometrics or PIN. In Votain it holds the voter Semaphore identity secret through the PRF extension, and gates the organizer login. It is not a wallet: transactions are relayed, never signed by it.
+**Passkey (WebAuthn)**: passwordless authentication standard using device biometrics or PIN. In Votain it is a CONVENIENCE and never a root: it holds a sealed copy of the voter's recovery phrase through the PRF extension, so a registered device votes without typing the words. It can also be required as a second factor on an organizer's tally key. It is not a wallet: voter transactions are relayed, never signed by it.
 
-**Identity vault**: the voter's single Semaphore secret, stored once per passkey, each copy sealed under HKDF-SHA256(WebAuthn PRF) with AES-256-GCM. Lets any of a voter's devices unlock the same identity, so multi-device never means multiple votable identities. The issuer holds only ciphertext.
+**Recovery phrase**: twelve words, generated on the voter's device, that the Semaphore identity is a pure function of. The root of the voter's identity: the same words rebuild the same voter anywhere, with no server, no passkey and no platform capability involved. Deliberately not BIP-39, because it is not a wallet and must not be typed into one.
 
-**WebAuthn PRF**: passkey extension that returns a stable 32-byte secret for a given (credential, salt), never leaving the authenticator. Used to derive the voter's Semaphore identity and the organizer's Paillier tally key.
+**Identity vault**: the voter's recovery phrase, stored once per passkey, each copy sealed under HKDF-SHA256(WebAuthn PRF) with AES-256-GCM. Lets any of a voter's devices unlock the same identity, so multi-device never means multiple votable identities. The issuer holds only ciphertext.
+
+**WebAuthn PRF**: passkey extension that returns a stable 32-byte secret for a given (credential, salt), never leaving the authenticator. Used to seal the voter's recovery phrase, and optionally to harden an organizer's tally key. Chrome and Firefox on Windows evaluate it at credential creation and refuse to on an assertion, which is why nothing depends on it alone.
+
+**Tally master secret**: the organizer's root for every election key they create, derived from a deterministic EIP-712 signature by their wallet (HKDF-SHA256 over the signature). Stored nowhere, reproducible on any device that can sign. Mixing a passkey into it was built and removed; see "The organizer's passkey, and why there is not one" in `docs/dev/architecture.md`.
 
 **Privacy Quorum**: minimum vote threshold for an election to be valid. If not reached, election enters `Voided` state and results are not revealed (individual privacy protection). Independent from the `VotingType` winner rule.
 

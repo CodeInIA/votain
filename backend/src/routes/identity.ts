@@ -14,6 +14,7 @@ import {
   getVault,
   putVaultEntry,
   removeVaultEntry,
+  clearVault,
   resetVault,
   CommitmentMismatchError,
   VaultUnavailableError,
@@ -82,19 +83,68 @@ router.post('/identity/vault', async (req: Request, res: Response) => {
     commitment?: string;
   };
 
-  if (!credentialId || !blob || !commitment) {
-    return res.status(400).json({ error: 'credentialId, blob and commitment are required' });
+  if (!commitment) {
+    return res.status(400).json({ error: 'commitment is required' });
   }
   if (!/^\d+$/.test(commitment)) {
     return res.status(400).json({ error: 'commitment must be a decimal string' });
   }
+  // Both or neither. One without the other is a caller bug, and accepting it
+  // would write half a vault entry that no assertion could ever open.
+  if (Boolean(credentialId) !== Boolean(blob)) {
+    return res.status(400).json({ error: 'credentialId and blob go together' });
+  }
 
-  const isFirstEntry = (await getVault(nullifier)) === null;
+  // Ahead of the read, not after it: `getVault` throws without a configured
+  // chain, so every 503 this route can return had to be decided before it.
+  if (!isRegistrarConfigured()) {
+    return res.status(503).json({
+      error: 'The identity vault needs a configured chain connection',
+      code: 'vault_unavailable',
+    });
+  }
+
+  const existing = await getVault(nullifier);
+  const isFirstEntry = existing === null;
+
+  // REGISTRATION IS NOT THE SAME FACT AS "HAS A PASSKEY", and this route used to
+  // treat them as one: it demanded a credential, so a voter whose authenticator
+  // refused to hold the secret was never written to the chain at all. They kept
+  // their twelve words, the screen said they were set up, and the first
+  // enrollment weeks later failed with NotPlatformVerified. Worse, the next
+  // device saw an empty vault, read it as "new voter", and minted a SECOND
+  // identity for the same human.
+  //
+  // `PlatformRegistry` already keeps the two apart: `registerMember` records the
+  // human and their commitment, `addVaultEntry` records one passkey that can
+  // open it and refuses to run before registration. A body with no credential
+  // therefore means exactly "register me, a passkey may follow".
+  if (!credentialId || !blob) {
+    if (existing && existing.commitment !== commitment) {
+      return res.status(409).json({
+        error: 'This voter already has a different identity commitment',
+        code: 'commitment_mismatch',
+      });
+    }
+    const probe = await registerOnChain(nullifier, commitment);
+    if (probe.boundToOtherIdentity) {
+      return res.status(409).json({ error: probe.error, code: 'bound_to_other_identity' });
+    }
+    if (!probe.registered) {
+      return res.status(502).json({ error: probe.error, code: 'registration_failed' });
+    }
+    return res.status(200).json({
+      commitment,
+      passkeyCount: existing?.entries.length ?? 0,
+      onchainRegistered: true,
+      registrationTx: probe.txHash,
+    });
+  }
 
   // Check the chain BEFORE writing. A human already bound to another commitment
   // would otherwise get an entry the chain will never honour, and every later
   // enroll would fail with an unrelated-looking NotPlatformVerified.
-  if (isFirstEntry && isRegistrarConfigured()) {
+  if (isFirstEntry) {
     const probe = await registerOnChain(nullifier, commitment);
     if (probe.boundToOtherIdentity) {
       return res.status(409).json({ error: probe.error, code: 'bound_to_other_identity' });
@@ -103,13 +153,31 @@ router.post('/identity/vault', async (req: Request, res: Response) => {
       return res.status(502).json({ error: probe.error, code: 'registration_failed' });
     }
 
-    const record = await putVaultEntry(nullifier, commitment, { credentialId, blob });
-    return res.status(200).json({
-      commitment: record.commitment,
-      passkeyCount: record.entries.length,
-      onchainRegistered: true,
-      registrationTx: probe.txHash,
-    });
+    // Registration went through and the vault entry is a SECOND transaction, so
+    // it can fail on its own: a registrar out of gas, a reverted call, an RPC
+    // that dropped. Outside the try below this used to surface as a bare 500
+    // with nothing in it, which is a poor thing to hand somebody asking why
+    // their working passkey never reached the chain. The voter is registered
+    // either way and their phrase still opens everything, so this reports what
+    // is missing rather than pretending the whole request failed.
+    try {
+      const record = await putVaultEntry(nullifier, commitment, { credentialId, blob });
+      return res.status(200).json({
+        commitment: record.commitment,
+        passkeyCount: record.entries.length,
+        onchainRegistered: true,
+        registrationTx: probe.txHash,
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('Registered, but the vault entry did not get written:', message);
+      return res.status(502).json({
+        error: message,
+        code: 'vault_write_failed',
+        onchainRegistered: true,
+        registrationTx: probe.txHash,
+      });
+    }
   }
 
   let record;
@@ -187,13 +255,16 @@ router.post('/identity/recover', recoverLimiter, async (req: Request, res: Respo
     worldIdProof?: WorldIdPayload;
   };
 
-  if (!credentialId || !blob || !commitment || !worldIdProof) {
-    return res
-      .status(400)
-      .json({ error: 'credentialId, blob, commitment and worldIdProof are required' });
+  if (!commitment || !worldIdProof) {
+    return res.status(400).json({ error: 'commitment and worldIdProof are required' });
   }
   if (!/^\d+$/.test(commitment)) {
     return res.status(400).json({ error: 'commitment must be a decimal string' });
+  }
+  // Both or neither, as on the vault route. Half an entry is a caller bug and
+  // writing it would leave a blob no assertion could ever open.
+  if (Boolean(credentialId) !== Boolean(blob)) {
+    return res.status(400).json({ error: 'credentialId and blob go together' });
   }
 
   const proof = await verifyWorldIdProof(worldIdProof);
@@ -207,7 +278,24 @@ router.post('/identity/recover', recoverLimiter, async (req: Request, res: Respo
   }
 
   // Only once the chain agrees: the old blobs seal a secret that no longer
-  // exists, so they are dropped rather than left to rot.
+  // exists, so they are dropped rather than left to rot. Dropping them is the
+  // part that is NOT optional, whatever comes after: they open the commitment
+  // `rotateMember` has just revoked, so a browser that found them would assert
+  // a passkey, derive the dead identity and fail every enrolment afterwards.
+  if (!credentialId || !blob) {
+    // NO PASSKEY, WHICH IS NOW A REAL ANSWER HERE. `resetVault` refuses an
+    // empty entry, and calling it unconditionally made a working passkey
+    // mandatory on the one screen that cannot fall back to the phrase, reached
+    // by exactly the people most likely to be on a borrowed machine or on an
+    // authenticator that creates credentials it will not evaluate.
+    await clearVault(proof.nullifier);
+    return res.status(200).json({
+      commitment,
+      passkeyCount: 0,
+      rotationTx: rotated.txHash,
+    });
+  }
+
   const record = await resetVault(proof.nullifier, commitment, { credentialId, blob });
 
   return res.status(200).json({

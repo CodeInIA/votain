@@ -14,6 +14,9 @@ import { voterViewHref } from '../../lib/electionViews';
 import { PERSONHOOD_LABEL_KEY } from '../../lib/chainElections';
 import { DomainBadge } from '../../components/ui/DomainBadge';
 import { Card } from '../../components/ui/Card';
+import { useRefreshOnReturn } from '../../hooks/useRefreshOnReturn';
+import { WalletAnswerLostError } from '../../lib/walletRequest';
+import { fetchElection } from '../../lib/chainElections';
 import { Modal } from '../../components/ui/Modal';
 import { Countdown } from '../../components/ui/Countdown';
 import { ResultBarChart } from '../../components/ui/BarChart';
@@ -30,6 +33,7 @@ import { cancelElection, closeVotingEarly, closeEnrollmentEarly, markVoided, pub
 import { computeTally, hasTallyKey, resolveTallyKey, importTallyKey, MissingTallyKeyError, type TallyResult } from '../../lib/tally';
 import { nextBoundary, PULSE_PHASES } from '../../lib/phase';
 import { explorerAddressUrl } from '../../lib/deployments';
+import { isUserRejection } from '../../lib/walletErrors';
 
 export default function ElectionManagement() {
   const { id } = useParams<{ id: string }>();
@@ -40,12 +44,25 @@ export default function ElectionManagement() {
   // Only to pick which voter view Discover would have led to.
   const { voterLoggedIn } = useAuth();
   const { election, loading, live, refresh } = useElection(id);
+
   // Above the early returns: hooks must run in the same order on every render.
   const policyRequirements = usePolicyRequirements(election?.eligibilityPolicy);
   const [cancelModal, setCancelModal] = useState(false);
   const [closeModal, setCloseModal]   = useState(false);
   const [tallyModal, setTallyModal]   = useState(false);
   const [busy, setBusy] = useState(false);
+
+  // Re-read whatever this screen draws, on returning from the wallet app.
+  //
+  // Not a recovery mechanism. The pending request settles on its own terms,
+  // against the chain if its reply was lost on the way back: see
+  // `withReturnDeadline`, which is where that is decided. This is only for what
+  // changed while nobody here was looking.
+  //
+  // `busy` is left alone, here and everywhere. Coming back to the browser is
+  // not evidence that the signing is over, and releasing the button early
+  // invites a second transaction for one intended action.
+  useRefreshOnReturn(() => void refresh());
   const [tallyPreview, setTallyPreview] = useState<TallyResult | null>(null);
   const [tallyError, setTallyError]     = useState<string | null>(null);
   const keyFileInput = useRef<HTMLInputElement>(null);
@@ -85,10 +102,33 @@ export default function ElectionManagement() {
     try {
       if (wallet.wrongNetwork) await wallet.switchToAmoy();
       const signer = await wallet.getSigner();
-      await fn(signer, election.contractAddress);
+      // Every action here moves the election to a different phase, so the phase
+      // it was in is what the chain is asked about afterwards. Which new phase
+      // it reached does not matter: any change is this action landing.
+      const phaseBefore = election.phase;
+      // The request first, the wallet app second: see withWalletApp.
+      await wallet.withWalletApp(
+        () => fn(signer, election.contractAddress),
+        () => toast({ title: t('errors.confirm_in_wallet_app'), variant: 'info' }),
+        async () => {
+          const fresh = await fetchElection(election.contractAddress);
+          return fresh.phase !== phaseBefore ? 'confirmed' : undefined;
+        },
+      );
       toast({ title: successLabel, variant: 'success' });
       void refresh();
     } catch (e) {
+      // Declining is an answer, not a fault. Reporting it as one hands back a
+      // red box about a decision they made on purpose.
+      if (isUserRejection(e)) {
+        toast({ title: t('errors.wallet_request_rejected'), variant: 'info' });
+        return;
+      }
+      if (e instanceof WalletAnswerLostError) {
+        void refresh();
+        toast({ title: t('errors.wallet_answer_lost'), variant: 'info' });
+        return;
+      }
       toast({ title: t('errors.generic_title'), description: e instanceof Error ? e.message : String(e), variant: 'error' });
     } finally {
       setBusy(false);
@@ -124,12 +164,25 @@ export default function ElectionManagement() {
     setBusy(true);
     setTallyError(null);
     try {
-      setTallyPreview(await computeTally(election.contractAddress, await wallet.getSigner()));
+      const signer = await wallet.getSigner();
+      setTallyPreview(
+        await wallet.withWalletApp(
+          () => computeTally(election.contractAddress, signer),
+          () => toast({ title: t('errors.confirm_in_wallet_app'), variant: 'info' }),
+        ),
+      );
     } catch (e) {
+      // A signature leaves nothing on chain to ask about, so a lost answer can
+      // only be reported and signed again. That is cheap: the signature is
+      // deterministic, so a second one derives the very same key.
       setTallyError(
         e instanceof MissingTallyKeyError
           ? t('election_mgmt.tally_key_missing')
-          : e instanceof Error ? e.message : String(e),
+          : isUserRejection(e)
+            ? t('errors.wallet_request_rejected')
+            : e instanceof WalletAnswerLostError
+              ? t('errors.wallet_answer_lost')
+              : e instanceof Error ? e.message : String(e),
       );
     } finally {
       setBusy(false);
@@ -143,10 +196,10 @@ export default function ElectionManagement() {
     setBusy(true);
     setTallyError(null);
     try {
-      const keys = await resolveTallyKey(
-        election.contractAddress,
-        election.keyNonce,
-        await wallet.getSigner(),
+      const signer = await wallet.getSigner();
+      const keys = await wallet.withWalletApp(
+        () => resolveTallyKey(election.contractAddress, election.keyNonce, signer),
+        () => toast({ title: t('errors.confirm_in_wallet_app'), variant: 'info' }),
       );
       if (!keys) { setTallyError(t('election_mgmt.tally_key_missing')); return; }
       const blob = new Blob([JSON.stringify(keys, null, 2)], { type: 'application/json' });
@@ -158,7 +211,11 @@ export default function ElectionManagement() {
       URL.revokeObjectURL(url);
       toast({ title: t('election_mgmt.key_exported'), variant: 'success' });
     } catch (e) {
-      setTallyError(e instanceof Error ? e.message : String(e));
+      setTallyError(
+        isUserRejection(e)
+          ? t('errors.wallet_request_rejected')
+          : e instanceof Error ? e.message : String(e),
+      );
     } finally {
       setBusy(false);
     }
@@ -188,11 +245,22 @@ export default function ElectionManagement() {
     try {
       if (wallet.wrongNetwork) await wallet.switchToAmoy();
       const signer = await wallet.getSigner();
-      await publishResults(signer, election.contractAddress, tallyPreview.counts);
+      // Publishing is a transaction like every other write here, and it was the
+      // one that never brought the wallet forward.
+      await wallet.withWalletApp(
+        () => publishResults(signer, election.contractAddress, tallyPreview.counts),
+        () => toast({ title: t('errors.confirm_in_wallet_app'), variant: 'info' }),
+      );
       toast({ title: t('election_mgmt.results_published'), variant: 'success' });
       closeTallyModal();
       void refresh();
     } catch (e) {
+      // Declining is an answer, not a fault. Reporting it as one hands back a
+      // red box about a decision they made on purpose.
+      if (isUserRejection(e)) {
+        toast({ title: t('errors.wallet_request_rejected'), variant: 'info' });
+        return;
+      }
       toast({ title: t('errors.generic_title'), description: e instanceof Error ? e.message : String(e), variant: 'error' });
     } finally {
       setBusy(false);

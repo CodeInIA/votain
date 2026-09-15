@@ -79,7 +79,10 @@ export function Modal({
                 )}
               </div>
             )}
-            <div className="px-6 pb-6">{children}</div>
+            {/* The top padding lives in the header block, so a modal that
+                draws its own heading instead of passing `title` had its content
+                flush against the top edge while the bottom kept its `pb-6`. */}
+            <div className={cn('px-6 pb-6', !(title || description) && 'pt-6')}>{children}</div>
           </motion.div>
         </motion.div>
       )}

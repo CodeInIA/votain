@@ -18,8 +18,8 @@
  */
 import { chainInfo, addresses } from "./deployments";
 import i18n from "../i18n/config";
+import { backendBase } from "./backend";
 
-const BACKEND = import.meta.env.VITE_BACKEND_URL as string | undefined;
 
 export const LOCAL_CHAIN_ID = 31337;
 
@@ -76,9 +76,8 @@ async function post(
   body: unknown,
   credentials: RequestCredentials,
 ): Promise<{ txHash: string }> {
-  if (!BACKEND) throw new Error("VITE_BACKEND_URL is not configured");
 
-  const res = await fetch(`${BACKEND}${path}`, {
+  const res = await fetch(`${backendBase()}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials,

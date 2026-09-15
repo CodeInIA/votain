@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { type IDKitResult } from '@worldcoin/idkit-core';
 import { useAuth } from '../contexts/AuthContext';
-import { getOrCreateIdentity } from '../lib/semaphore';
+
 import { requestWorldIdProof } from '../lib/worldId';
+import { backendUrl } from '../lib/backend';
 
 export function useWorldIdVerify() {
   const [isLoadingQr, setIsLoadingQr] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
   const [connectorURI, setConnectorURI] = useState<string | null>(null);
   const [qrError, setQrError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -23,7 +23,7 @@ export function useWorldIdVerify() {
       // has an identity (unlock it) or is brand new (mint one). Minting first
       // would hand a returning voter a second identity on every new device,
       // and a human with two identities can vote twice.
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/verify-human`, {
+      const res = await fetch(backendUrl('/api/verify-human'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -39,17 +39,20 @@ export function useWorldIdVerify() {
       const data = await res.json() as { nullifier?: string };
       if (data.nullifier) localStorage.setItem('voter_nullifier', data.nullifier);
 
-      // Unlocks the existing identity with any of the voter's passkeys, or
-      // creates it on first use. Prompts the authenticator; we are still inside
-      // the user gesture that started the verification.
-      await getOrCreateIdentity();
-
+      // Verification ends here. What happens to the voting identity is a
+      // separate question, asked on its own screen, so no authenticator dialog
+      // arrives on top of a flow the voter thinks has just finished.
       setVoterLoggedIn(true);
       setConnectorURI(null);
       setIsVerifying(false);
-      setIsSuccess(true);
-      setTimeout(() => navigate('/voter/elections'), 1500);
+      navigate('/voter/identity', { replace: true });
     } catch (error: unknown) {
+      // Verified, but this device cannot open the identity that World ID just
+      // proved belongs to this human: no passkey here can reach the vault, and
+      // no phrase is stored either. That is not a failed verification and must
+      // not be reported as one. The session is real, so the voter is signed in
+      // and sent to the one place that can finish the job.
+
       console.error('Verification failed:', error);
       setQrError(t('verify.error_backend'));
       setIsVerifying(false);
@@ -95,7 +98,6 @@ export function useWorldIdVerify() {
   return {
     isLoadingQr,
     isVerifying,
-    isSuccess,
     connectorURI,
     qrError,
     handleOpenWorldId,

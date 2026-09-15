@@ -15,15 +15,142 @@
  */
 
 const CRED_ID_KEY = "votain_prf_credential_id";
+/**
+ * Whether an assertion on THIS device has ever returned a PRF secret.
+ *
+ * "ok" is written by `assertPrf` and by nothing else, because an assertion
+ * that hands back a secret is the only proof that exists. Sealing proves
+ * nothing: Chrome and Firefox on Windows evaluate the extension while a
+ * credential is being created and refuse to on an assertion.
+ *
+ * It answers a question the WebAuthn API does not: when an assertion for a
+ * known credential id comes back empty, is that a platform that cannot
+ * evaluate PRF, or a credential the person has since deleted from their
+ * password manager? With "ok" on the record it can only be the second.
+ */
+const PRF_READBACK_KEY = "votain_prf_readback";
 const CRED_CREATED_KEY = "votain_prf_credential_created";
 const CRED_LAST_USED_KEY = "votain_prf_credential_last_used";
 const RP_NAME = "Votain";
+
+/**
+ * Which of the two roles a passkey belongs to.
+ *
+ * Somebody can hold both, and the app is built for that: the header switches
+ * between them. Creating every credential under one name left a password
+ * manager showing two identical "votain-user" entries with no way to tell which
+ * opens the voter identity and which opens the organizer's tally keys, and
+ * deleting the wrong one is not recoverable.
+ */
+export type PasskeyRole = "voter" | "organizer";
+
+/** The role part of the label. The date is appended when a credential is made. */
+const ROLE_LABEL: Record<PasskeyRole, { name: string; displayName: string }> = {
+  voter: { name: "votain-voter", displayName: "Votain voter" },
+  organizer: { name: "votain-organizer", displayName: "Votain organizer" },
+};
+
+/**
+ * What the authenticator stores and the password manager shows.
+ *
+ * THE MOMENT IS PART OF IT, because the role alone is not enough to tell two
+ * apart. Somebody with a passkey on two devices, or who enrolled a second one
+ * after clearing a browser, sees identical rows in their password manager and no
+ * way to know which is which. Deleting the wrong one is not recoverable.
+ *
+ * The date alone was not enough either, and the reason is this very project:
+ * clearing site data and enrolling again is a thing people do several times in
+ * one afternoon, and it produced a stack of rows all saying the same day. So the
+ * time goes in to the minute, which is as fine as it needs to be for a person
+ * deciding which row is the one they just made.
+ *
+ * LOCAL time, not UTC. The only reader is the person looking at the list, and an
+ * hour they did not live through helps nobody recognise anything.
+ *
+ * Baked in at creation because it has to be: WebAuthn writes these when the
+ * credential is made and offers nothing that renames one afterwards. The same
+ * reason they are not translated, since a translated name would freeze whatever
+ * language was selected that day and then disagree with the interface forever.
+ */
+export function passkeyLabel(
+  role: PasskeyRole,
+  when: Date = new Date(),
+): { name: string; displayName: string } {
+  const pad = (n: number): string => String(n).padStart(2, "0");
+  // YYYY-MM-DD, which sorts and reads anywhere, plus the wall clock.
+  const day = `${when.getFullYear()}-${pad(when.getMonth() + 1)}-${pad(when.getDate())}`;
+  const hhmm = `${pad(when.getHours())}:${pad(when.getMinutes())}`;
+
+  const base = ROLE_LABEL[role];
+  return {
+    // No colon in the machine name: it is written into the credential and read
+    // back by tooling that has no reason to cope with one.
+    name: `${base.name}-${day}-${hhmm.replace(":", "")}`,
+    displayName: `${base.displayName} (${day} ${hhmm})`,
+  };
+}
 
 // Fixed salt → the PRF output is stable for this purpose on a given credential.
 // Distinct salts yield independent secrets from the same passkey (domain
 // separation): identity for the voter's Semaphore key, tally for the
 // organizer's decryption key.
 const IDENTITY_SALT = new TextEncoder().encode("votain:semaphore-identity:v1");
+
+/**
+ * PRF secrets evaluated during THIS page's life, keyed by salt.
+ *
+ * Creating a credential returns the secret; asserting one returns it again, and
+ * on most platforms the second is how it is obtained whenever it is needed,
+ * which is why nothing is kept. Chrome with Windows Hello does the first and
+ * refuses the second: measured across seven combinations of residency,
+ * allowCredentials and user verification, over http://localhost and over HTTPS,
+ * always NotAllowedError. An organizer there could sign in and then not open
+ * their own tally vault, so creating an election failed on the device that had
+ * just created the passkey.
+ *
+ * So the value creation already handed us is kept instead of discarded. IN
+ * MEMORY ONLY: a reload clears it, which keeps the secret off disk and is the
+ * line this does not cross. It makes the session that enrols a passkey work
+ * end to end; it does not make the next one work, and on a platform that can
+ * re-derive it changes nothing, because the assertion below is tried first and
+ * succeeds.
+ */
+const sessionSecrets = new Map<string, Uint8Array>();
+
+const saltKey = (salt: Uint8Array) => bufToB64url(salt.buffer as ArrayBuffer);
+
+/** Remembers a secret the authenticator just produced, for this page's life. */
+function rememberSecret(salt: Uint8Array, secret: Uint8Array): void {
+  sessionSecrets.set(saltKey(salt), secret);
+}
+
+/** True once an assertion here has actually produced a secret. */
+export function prfReadbackProven(): boolean {
+  return localStorage.getItem(PRF_READBACK_KEY) === "ok";
+}
+
+/** True once an assertion here has been shown to come back without a secret. */
+export function prfReadbackFailed(): boolean {
+  return localStorage.getItem(PRF_READBACK_KEY) === "failed";
+}
+
+/** Recorded after an assertion comes back empty on a credential that exists. */
+export function notePrfReadbackFailed(): void {
+  if (!prfReadbackProven()) localStorage.setItem(PRF_READBACK_KEY, "failed");
+}
+
+/** Drops the verdict, so the next assertion measures again. */
+export function clearPrfReadback(): void {
+  localStorage.removeItem(PRF_READBACK_KEY);
+}
+
+/** Forgets every remembered secret. Called when a session ends. */
+export function clearSessionSecrets(): void {
+  sessionSecrets.clear();
+  // The attempt it belonged to is over with the session, and the next person
+  // at this browser must not be offered somebody else's half-made credential.
+  unprovenCredential = null;
+}
 
 function bufToB64url(buf: ArrayBuffer): string {
   const bytes = new Uint8Array(buf);
@@ -52,39 +179,23 @@ export function isWebAuthnAvailable(): boolean {
 }
 
 /**
- * Thrown when the ceremony fails on a device that has no built-in authenticator
- * configured at all. Distinguished from a generic failure because the fix is
- * completely different: the user has to go set up Windows Hello / Touch ID (or
- * bring a phone or security key), and no amount of retrying will help.
- */
-export class NoAuthenticatorError extends Error {
-  constructor() {
-    super(
-      "This device has no passkey authenticator set up. Configure a screen lock " +
-        "(Windows Hello PIN, Touch ID, or Android screen lock), or use a phone or " +
-        "security key instead.",
-    );
-    this.name = "NoAuthenticatorError";
-  }
-}
-
-/**
  * Thrown when the authenticator refuses to create a passkey because it already
  * holds one that is registered for this voter. Not a failure: the device is
  * already able to vote, and the caller should say so rather than report an error.
  */
-/** What a missing local credential id should be taken to mean. */
-export type PasskeyIntent = "existing" | "first";
-
 /**
- * Thrown when the authenticator offered nothing and the person had said they
- * already had a passkey. Distinct from a cancellation: the caller can offer to
- * create one instead of repeating the same prompt.
+ * The person dismissed the passkey prompt.
+ *
+ * Typed, and not folded into the failures around it, because it means the
+ * opposite of them: the device could have done this and was told not to.
+ * Somewhere that decides where a secret is kept, those two answers cannot share
+ * a branch, and they did: cancelling left a recovery phrase sitting in
+ * localStorage in the clear while the screen said it had been restored.
  */
-export class NoPasskeyFoundError extends Error {
-  constructor() {
-    super("No passkey was available on this device");
-    this.name = "NoPasskeyFoundError";
+export class PasskeyCancelledError extends Error {
+  constructor(cause?: unknown) {
+    super("Passkey creation was cancelled", { cause });
+    this.name = "PasskeyCancelledError";
   }
 }
 
@@ -119,6 +230,50 @@ function assertSecureContext(): void {
         `(current origin: ${window.location.origin})`,
     );
   }
+}
+
+/**
+ * A credential this device just made and cannot use, remembered for the screen.
+ *
+ * It is real: it exists in the authenticator, it will be offered forever, and
+ * it opens nothing here. Nobody asked for it and nobody can remove it but its
+ * owner, so the least this app can do is say it is there and that deleting it
+ * costs nothing.
+ *
+ * In memory only, and for this session. It describes what just happened, not a
+ * property of the machine: see the note where it is set for why that difference
+ * matters.
+ */
+let unusableCredential: string | null = null;
+
+export function passkeyLeftUnusable(): string | null {
+  return unusableCredential;
+}
+
+export function forgetUnusablePasskey(): void {
+  unusableCredential = null;
+}
+
+/**
+ * A credential created here whose read-back nobody answered.
+ *
+ * Not the same as unusable: it exists, it may well work, and the only thing
+ * missing is the one assertion that would prove it. It is kept so a RETRY can
+ * ask that credential again instead of minting a second one, which is what
+ * happened before: the credential is created first and the proof is asked for
+ * afterwards, so every dismissed prompt left an unused passkey behind and the
+ * next attempt left another. Somebody who hesitated three times ended up with
+ * three identical rows in their password manager and no way to tell which was
+ * which.
+ *
+ * In memory, for this page's life, like the session secrets it sits beside:
+ * it describes an attempt in progress, not a property of the device.
+ */
+let unprovenCredential: { credentialId: string; role: PasskeyRole; salt: string } | null = null;
+
+/** The credential a retry would re-use, if there is one. Exported for tests. */
+export function pendingUnprovenPasskey(): string | null {
+  return unprovenCredential?.credentialId ?? null;
 }
 
 /** A user cancellation/timeout must not be retried: it would double-prompt. */
@@ -160,9 +315,12 @@ function describe(e: unknown): string {
 export type CredentialTarget = "device" | "any";
 
 async function registerCredential(
+  role: PasskeyRole,
   salt: Uint8Array = IDENTITY_SALT,
   excludeCredentialIds: string[] = [],
   target: CredentialTarget = "device",
+  /** See the attempt chain below: false drops the `prf.eval` first attempt. */
+  evaluateAtCreation = true,
 ): Promise<{
   registered: boolean;
   prfEnabled: boolean;
@@ -177,10 +335,12 @@ async function registerCredential(
   const base: PublicKeyCredentialCreationOptions = {
     challenge: randomBytes(32),
     rp: { name: RP_NAME, id: window.location.hostname },
+    // A fresh id every time, so a second credential never replaces the first:
+    // an authenticator keys credentials by (rp.id, user.id), and reusing one
+    // would overwrite the passkey a voter still needs.
     user: {
       id: randomBytes(16),
-      name: "votain-user",
-      displayName: "Votain",
+      ...passkeyLabel(role),
     },
     pubKeyCredParams: [
       { type: "public-key", alg: -7 }, // ES256
@@ -224,7 +384,19 @@ async function registerCredential(
    * pass, where a security key or a phone over QR is still offered.
    */
   const extensionAttempts: Array<{ label: string; prf?: AuthenticationExtensionsClientInputs }> = [
-    { label: "prf.eval", prf: { prf: { eval: { first: salt } } } as AuthenticationExtensionsClientInputs },
+    // Asking for the value at creation is an OPTIMISATION, not the contract.
+    // W3C's explainer describes `prf: {}` at create() and the evaluation at
+    // get(); returning a secret from create() needs hmac-secret-mc, and an
+    // authenticator with plain hmac-secret answers it by running a second
+    // operation, which verifies the user a second time. Worth paying when the
+    // secret is used (a voter sealing their phrase, who would otherwise be
+    // prompted again on the next page load) and pure waste when it is not.
+    ...(evaluateAtCreation
+      ? [{
+          label: "prf.eval",
+          prf: { prf: { eval: { first: salt } } } as AuthenticationExtensionsClientInputs,
+        }]
+      : []),
     { label: "prf", prf: { prf: {} } as AuthenticationExtensionsClientInputs },
     { label: "no extensions" },
   ];
@@ -272,7 +444,7 @@ async function registerCredential(
       break;
     } catch (e) {
       if (isUserCancellation(e)) {
-        throw new Error("Passkey creation was cancelled", { cause: e });
+        throw new PasskeyCancelledError(e);
       }
       // The exclusion list matched: this authenticator already holds one of the
       // voter's passkeys. Retrying only prompts again and fails again.
@@ -335,14 +507,47 @@ export interface PrfAssertion {
  * Returns null when nothing is available or the user dismisses the prompt, so
  * callers can fall back to registering a fresh passkey.
  */
+/**
+ * What an assertion actually did, for the one caller that must tell the
+ * difference.
+ *
+ * DISMISSED IS NOT INCAPABLE. Both used to arrive as `null`, and the read-back
+ * proof in `enrollPrfPasskey` read that single value as a verdict on the
+ * authenticator: a person who closed the second prompt (which arrives
+ * unannounced on a phone, seconds after the first) had the passkey they had
+ * just created branded useless, was told to delete it, and had their phrase
+ * written to disk in the clear. The credential was fine.
+ *
+ *   ok        - a secret came back. This authenticator can do it.
+ *   cancelled - the prompt was dismissed, or the platform refused the ceremony.
+ *               Says NOTHING about the credential, so nothing may be concluded.
+ *   empty     - it answered and carried no secret. That is a real verdict.
+ */
+export type AssertOutcome =
+  | { status: "ok"; assertion: PrfAssertion }
+  | { status: "cancelled" }
+  | { status: "empty" };
+
 export async function assertPrf(
   credentialIds: string[] = [],
   salt: Uint8Array = IDENTITY_SALT,
 ): Promise<PrfAssertion | null> {
-  if (!isWebAuthnAvailable()) return null;
-  assertSecureContext();
+  const outcome = await assertPrfOutcome(credentialIds, salt);
+  return outcome.status === "ok" ? outcome.assertion : null;
+}
 
+export async function assertPrfOutcome(
+  credentialIds: string[] = [],
+  salt: Uint8Array = IDENTITY_SALT,
+): Promise<AssertOutcome> {
+  if (!isWebAuthnAvailable()) return { status: "empty" };
+
+  // Inside the try on purpose. This is a READ, and every other way of failing
+  // it returns null so the caller falls back; an origin that cannot do
+  // WebAuthn at all should not be the one exception that throws. Creating a
+  // credential still refuses loudly, because there the person asked for it.
   try {
+    assertSecureContext();
     const assertion = (await navigator.credentials.get({
       publicKey: {
         challenge: randomBytes(32),
@@ -358,21 +563,50 @@ export async function assertPrf(
       },
     })) as PublicKeyCredential | null;
 
-    if (!assertion) return null;
+    if (!assertion) {
+      console.warn("PRF assertion: the browser returned no credential at all");
+      return { status: "empty" };
+    }
 
-    const secret = (assertion.getClientExtensionResults() as {
-      prf?: { results?: { first?: ArrayBuffer } };
-    }).prf?.results?.first;
-    if (!secret) return null;
+    const ext = assertion.getClientExtensionResults() as {
+      prf?: { enabled?: boolean; results?: { first?: ArrayBuffer } };
+    };
+    const secret = ext.prf?.results?.first;
+    if (!secret) {
+      // SAY WHAT CAME BACK, because "empty" is a verdict on the authenticator
+      // and the three ways of reaching it are not the same problem. No `prf`
+      // key at all means the extension was dropped (a browser or a transport
+      // that does not carry it); `prf` present with no `results` means the
+      // authenticator took the request and declined to evaluate; `enabled:
+      // false` means it says it cannot. Reading the difference off a console
+      // line is the whole reason this is not a bare `return null`.
+      console.warn(
+        "PRF assertion answered without a secret.",
+        JSON.stringify({
+          prfPresent: ext.prf !== undefined,
+          enabled: ext.prf?.enabled,
+          hasResults: ext.prf?.results !== undefined,
+          credentialIdsAsked: credentialIds.length,
+        }),
+      );
+      return { status: "empty" };
+    }
 
     const credentialId = bufToB64url(assertion.rawId);
     localStorage.setItem(CRED_ID_KEY, credentialId);
     localStorage.setItem(CRED_LAST_USED_KEY, new Date().toISOString());
-    return { credentialId, secret: new Uint8Array(secret) };
+    // The only place this is ever written: an assertion that produced a secret.
+    localStorage.setItem(PRF_READBACK_KEY, "ok");
+    // Whatever was suspected before, this device has just read a secret back.
+    // The doubt was about one credential and one moment, and both are over.
+    forgetUnusablePasskey();
+    const evaluated = new Uint8Array(secret);
+    rememberSecret(salt, evaluated);
+    return { status: "ok", assertion: { credentialId, secret: evaluated } };
   } catch (e) {
-    if (isUserCancellation(e)) return null;
+    if (isUserCancellation(e)) return { status: "cancelled" };
     console.warn("PRF assertion failed:", describe(e));
-    return null;
+    return { status: "empty" };
   }
 }
 
@@ -381,29 +615,171 @@ export async function assertPrf(
  * wrap the voter's existing identity secret under it. Null when the
  * authenticator cannot do PRF, in which case this device cannot join the vault.
  *
- * The assertion is what decides, never `prf.enabled` from the creation. Windows
- * Hello does not evaluate PRF while creating a credential, so it reports
- * `enabled: false` and then answers the very next `get()` with a valid 32-byte
- * secret (w3c/webauthn#1857). Gating on that flag rejected every Windows Hello
- * passkey as PRF-incapable and silently dropped the voter into the single-device
- * localStorage fallback.
+ * NEVER TRUST `prf.enabled` FROM THE CREATION, in either direction. It has been
+ * wrong both ways on the same platform, a year apart.
+ *
+ * Older Windows Hello reported `enabled: false` and then answered the very next
+ * `get()` with a valid 32-byte secret (w3c/webauthn#1857); gating on the flag
+ * rejected every one of those passkeys as incapable and dropped the voter into
+ * the single-device fallback. Windows Hello with hmac-secret does the exact
+ * opposite: `enabled: true` AND a real secret at creation, and then
+ * NotAllowedError on every assertion that asks for one.
+ *
+ * Measured on 2026-09-15, isolated from this app: the same credential asserts
+ * fine with no `prf` in the request and fails with it, so the extension is what
+ * is refused rather than the assertion. That is not a bug this code can fix; it
+ * is why the creation secret is kept in memory (see `sessionSecrets`) and why a
+ * device is only believed once an assertion has actually returned one
+ * (`prfReadbackProven`).
  */
 export async function enrollPrfPasskey(
+  role: PasskeyRole,
   excludeCredentialIds: string[] = [],
   salt: Uint8Array = IDENTITY_SALT,
   /** Its callers are adding ANOTHER authenticator, so nothing is narrowed. */
   target: CredentialTarget = "any",
+  /** False spares a user verification when the creation secret is not wanted. */
+  evaluateAtCreation = true,
 ): Promise<PrfAssertion | null> {
+  /**
+   * THE RETRY ASKS THE CREDENTIAL THAT ALREADY EXISTS.
+   *
+   * A dismissed read-back leaves a real passkey on the authenticator, and going
+   * straight back to `registerCredential` minted a second one for the same
+   * person and the same salt. The retry is the same question as before, so it
+   * is put to the same credential: one prompt, no litter, and if it answers,
+   * the phrase seals under the passkey they made the first time.
+   *
+   * ONCE, and then never again for that credential. Dismissing the re-ask
+   * clears it, so the following attempt goes the ordinary way and offers every
+   * transport the browser has. Without that escape, somebody who cancelled on
+   * the laptop because they wanted to use their phone would be handed the
+   * laptop's credential on every press, with no way to reach the QR option.
+   */
+  const pending = unprovenCredential;
+  if (pending && pending.role === role && pending.salt === saltKey(salt)) {
+    unprovenCredential = null;
+    const again = await assertPrfOutcome([pending.credentialId], salt);
+    if (again.status === "ok") return again.assertion;
+    if (again.status === "cancelled") throw new PasskeyCancelledError();
+    // It answered, with nothing. That is the verdict the proof exists to get,
+    // and it belongs to this credential rather than to the machine: see the
+    // note where `unusableCredential` is set below.
+    unusableCredential = pending.credentialId;
+    console.info(
+      "The passkey created a moment ago answered an assertion without a PRF " +
+        "secret, so nothing can be sealed under it.",
+    );
+    return null;
+  }
+
   const { registered, prfEnabled, credentialId, prfSecret } = await registerCredential(
+    role,
     salt,
     excludeCredentialIds,
     target,
+    evaluateAtCreation,
   );
   if (!registered || !credentialId) return null;
   // The authenticator already evaluated the PRF while creating the credential,
   // so the voter is spared a second prompt. Same (credential, salt) pair, so
   // this is the same secret a later assertion would return.
-  if (prfSecret) return { credentialId, secret: prfSecret };
+  //
+  // ON WINDOWS HELLO THE PERSON IS ASKED FOR THEIR PIN TWICE ANYWAY, and it is
+  // worth knowing that this is the authenticator rather than anything here,
+  // because the obvious "fixes" all cost the same or more.
+  //
+  // CTAP has two ways to produce the secret while a credential is being made.
+  // `hmac-secret-mc` does it in ONE user interaction; the older arrangement
+  // needs the creation and then a separate operation to derive the secret, so
+  // it verifies the user twice. Windows Hello, which gained hmac-secret in the
+  // February 2026 cumulative update, does the second. Verified against a
+  // virtual authenticator that supports the single-interaction form: there,
+  // one call comes back with the secret and there is exactly one prompt.
+  //
+  // Dropping `prf.eval` from creation does not help. Creation would then cost
+  // one verification and the assertion below another: two again, on every
+  // authenticator rather than just this one. What is here is the better of the
+  // two, and it only ever affects creation, since signing in afterwards is a
+  // single assertion and a single prompt.
+  if (prfSecret) {
+    rememberSecret(salt, prfSecret);
+
+    // PROVE IT CAN BE READ BACK, ONCE PER DEVICE, BEFORE ANYTHING DEPENDS ON IT.
+    //
+    // The creation secret is real and usable for this session, and it says
+    // nothing about the next one. Windows Hello hands one over and then answers
+    // NotAllowedError to every assertion that asks for the same value: measured
+    // on 2026-09-15 against a credential that asserts perfectly well with no
+    // `prf` in the request. Sealing under a passkey like that writes a vault
+    // entry NOBODY can ever open, not that device and not another, because a
+    // PRF secret belongs to its authenticator.
+    //
+    // So it used to be discovered weeks later, by somebody who needed their
+    // phrase and could not have it. One assertion here turns that into an
+    // answer at the moment of the decision, and the honest one: this device can
+    // make a passkey and cannot use it to unlock, so the phrase stays the way
+    // back.
+    //
+    // IT USED TO BE SKIPPED once this device had proven itself, and that was
+    // wrong in the one case it mattered. `prfReadbackProven` is a fact about
+    // the authenticator this machine reaches by default; the credential just
+    // created may live somewhere else entirely, on a phone reached over the QR
+    // transport, which has proven nothing. So a voter adding a SECOND passkey
+    // got no read-back at all, and whatever the phone returned at creation was
+    // sealed on trust: exactly what this proof exists to refuse.
+    //
+    // The cost is one extra verification when a passkey is created. That is the
+    // price of never writing a vault entry nobody can open, and creating one is
+    // a deliberate, rare act. Signing in afterwards is still a single prompt.
+
+    const readBack = await assertPrfOutcome([credentialId], salt);
+    if (readBack.status === "ok") return readBack.assertion;
+
+    // DISMISSED, WHICH PROVES NOTHING. On a phone this second prompt arrives
+    // unannounced seconds after the first, and closing it used to brand the
+    // passkey that had just been created as useless: the modal told the voter
+    // to delete it and kept their phrase on disk in the clear, about a
+    // credential that worked perfectly.
+    //
+    // Nothing is sealed either, and that is the careful half. The creation
+    // secret is real for this session, but the whole reason this proof exists
+    // is that an authenticator can hand one over and then refuse every
+    // assertion (Windows Hello, measured 2026-09-15), and sealing under one of
+    // those writes a vault entry nobody can ever open. A dismissal does not
+    // tell the two apart, so nothing may be sealed on the strength of it.
+    //
+    // Reported as the cancellation it is, for the same reason the creation
+    // prompt is: from where the voter stands they closed a passkey dialog, and
+    // every screen already knows what to do with that. `/voter/identity` keeps
+    // them there with an offer to try again instead of moving on, and the seal
+    // offer in the phrase modal says "not linked" rather than "this device
+    // cannot", which would be a claim nobody has measured.
+    if (readBack.status === "cancelled") {
+      // Kept so the retry re-uses it instead of creating another. See the note
+      // at the top of this function.
+      unprovenCredential = { credentialId, role, salt: saltKey(salt) };
+      console.info(
+        "The read-back prompt was dismissed, so this passkey is unproven rather " +
+          "than unusable: nothing sealed under it, and nothing concluded about it.",
+      );
+      throw new PasskeyCancelledError();
+    }
+
+    // NOT `notePrfReadbackFailed()`, and the difference matters. That flag says
+    // THIS DEVICE cannot read a sealed copy back, and it stops the app from
+    // prompting on every page load for something guaranteed to fail. What just
+    // failed is narrower: ONE authenticator, the one they happened to pick.
+    // A phone offered over a QR code is a different authenticator entirely and
+    // may evaluate PRF perfectly, so blacklisting the machine would take away
+    // the option that still works.
+    unusableCredential = credentialId;
+    console.info(
+      "This authenticator returned a PRF secret while creating the passkey and " +
+        "refused to evaluate it on an assertion, so nothing is sealed under it.",
+    );
+    return null;
+  }
   if (!prfEnabled) {
     console.info("Authenticator reported prf.enabled=false at creation, trying the assertion anyway");
   }
@@ -444,8 +820,17 @@ export function getPasskeyInfo(): PasskeyInfo | null {
  * yet. Returns null when PRF is unsupported or the user cancels: callers must
  * fall back. Pass a distinct salt for an independent secret (e.g. the tally key).
  */
-export async function derivePrfSecret(salt: Uint8Array = IDENTITY_SALT): Promise<Uint8Array | null> {
+export async function derivePrfSecret(
+  role: PasskeyRole,
+  salt: Uint8Array = IDENTITY_SALT,
+): Promise<Uint8Array | null> {
   if (!isWebAuthnAvailable()) return null;
+
+  // Asserted or created earlier in this page's life. Checked before prompting,
+  // so a platform that cannot evaluate PRF on an assertion still works for as
+  // long as the session lasts, and one that can is spared a second prompt.
+  const remembered = sessionSecrets.get(saltKey(salt));
+  if (remembered) return remembered;
 
   try {
     let credId = localStorage.getItem(CRED_ID_KEY);
@@ -461,7 +846,7 @@ export async function derivePrfSecret(salt: Uint8Array = IDENTITY_SALT): Promise
 
       // Only `registered` is load-bearing: see enrollPrfPasskey on why
       // `prf.enabled` from a creation cannot be trusted to mean anything.
-      const { registered, prfSecret } = await registerCredential(salt);
+      const { registered, prfSecret } = await registerCredential(role, salt);
       if (!registered) return null; // fall back to stored identity
       if (prfSecret) return prfSecret; // evaluated at creation, no second prompt
       credId = localStorage.getItem(CRED_ID_KEY);
@@ -494,87 +879,13 @@ export async function derivePrfSecret(salt: Uint8Array = IDENTITY_SALT): Promise
   }
 }
 
-/**
- * Real passkey authentication gate: asserts an existing credential (biometric /
- * PIN prompt) and registers one only when the person says they have none.
- * Throws with a descriptive message when WebAuthn is unavailable or the user
- * cancels: the caller must NOT let the user through in that case.
- *
- * `intent` is what a missing local credential id means, because it does not
- * mean a missing passkey: it is only THIS browser's cache. An organizer on a
- * second browser, or one who cleared site data, still holds their credential in
- * the authenticator or synced through their password manager.
- *
- * Getting that wrong is not a login annoyance. The organizer's Paillier tally
- * keys are re-derived from the passkey's PRF output and stored nowhere, so a
- * silently minted second credential is a different key for every election they
- * ever created, discovered only when a result refuses to decrypt.
- * `derivePrfSecret` already asks the authenticator before minting; this is the
- * same rule on the login path, which is where the fork actually started.
- */
-export async function authenticatePasskey(intent: PasskeyIntent = "existing"): Promise<void> {
-  if (!isWebAuthnAvailable()) {
-    throw new Error("This browser does not support passkeys (WebAuthn)");
-  }
-  assertSecureContext();
-
-  const credId = localStorage.getItem(CRED_ID_KEY);
-
-  // Nothing cached: ask the authenticator what it has, unless the person has
-  // explicitly said this is their first passkey. The empty allowCredentials
-  // list is what reaches a synced passkey, and, over WebAuthn's hybrid
-  // transport, one that lives on their phone and answers by QR.
-  if (!credId && intent === "existing") {
-    const recovered = await assertPrf();
-    if (recovered) return;
-    throw new NoPasskeyFoundError();
-  }
-
-  if (!credId) {
-    try {
-      const { registered } = await registerCredential();
-      if (!registered) throw new Error("Passkey registration was cancelled");
-    } catch (e) {
-      // A device with no screen lock configured fails here with an opaque
-      // DOMException. Say what actually has to be done instead.
-      if (!(await hasPlatformAuthenticator())) throw new NoAuthenticatorError();
-      throw e;
-    }
-    return; // registration already proved user presence
-  }
-
-  // Cached id: assert that exact credential, which keeps the prompt narrow.
-  let assertion: PublicKeyCredential | null;
-  try {
-    assertion = (await navigator.credentials.get({
-      publicKey: {
-        challenge: randomBytes(32),
-        rpId: window.location.hostname,
-        allowCredentials: [{ id: b64urlToBuf(credId), type: "public-key" }],
-        userVerification: "preferred",
-        timeout: 60_000,
-      },
-    })) as PublicKeyCredential | null;
-  } catch (e) {
-    if (isUserCancellation(e)) {
-      throw new Error("Passkey authentication was cancelled", { cause: e });
-    }
-    // The stored credential may no longer exist on this authenticator (e.g. the
-    // user deleted it). Drop it so the next attempt can discover another.
-    clearPrfCredential();
-    throw new Error(`Passkey unavailable, please try again, ${describe(e)}`, { cause: e });
-  }
-
-  if (!assertion) throw new Error("Passkey authentication was cancelled");
-  localStorage.setItem(CRED_LAST_USED_KEY, new Date().toISOString());
-}
-
 /** Whether a PRF passkey has already been registered on this device. */
 export function hasPrfCredential(): boolean {
   return localStorage.getItem(CRED_ID_KEY) !== null;
 }
 
 export function clearPrfCredential(): void {
+  clearSessionSecrets();
   localStorage.removeItem(CRED_ID_KEY);
   localStorage.removeItem(CRED_CREATED_KEY);
   localStorage.removeItem(CRED_LAST_USED_KEY);

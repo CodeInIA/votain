@@ -7,6 +7,7 @@
  * and it takes effect at once.
  */
 import { useEffect, useState } from 'react';
+import { useRefreshOnReturn } from '../../hooks/useRefreshOnReturn';
 import { useTranslation } from 'react-i18next';
 import type { Signer } from 'ethers';
 import { Globe, Plus, Trash2, Copy, Check, AlertTriangle } from 'lucide-react';
@@ -23,10 +24,12 @@ import {
   type DomainCheck,
   type DomainRecord,
 } from '../../lib/organizerDomains';
+import { isUserRejection } from '../../lib/walletErrors';
 
 export function MyDomains({
   address,
   getSigner,
+  withWalletApp,
 }: {
   address?: string;
   /**
@@ -35,9 +38,14 @@ export function MyDomains({
    * to check any more, because there is no server holding the list.
    */
   getSigner: () => Promise<Signer>;
+  /** Sends the request, then brings the wallet app forward. See the hook. */
+  withWalletApp?: <T>(work: () => Promise<T>, onNoLink?: () => void) => Promise<T>;
 }) {
   const { t } = useTranslation();
   const { toast } = useToast();
+  // The profile hands this down from the wallet hook. Without it (a test, or a
+  // future caller with no wallet) the work simply runs.
+  const run = withWalletApp ?? (<T,>(work: () => Promise<T>) => work());
   const [domains, setDomains] = useState<DomainCheck[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -48,6 +56,18 @@ export function MyDomains({
   // flipped both rows to the tick at once, which reads as "copied both".
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
+
+  // Re-read whatever this screen draws, on returning from the wallet app.
+  //
+  // Not a recovery mechanism. The pending request settles on its own terms,
+  // against the chain if its reply was lost on the way back: see
+  // `withReturnDeadline`, which is where that is decided. This is only for what
+  // changed while nobody here was looking.
+  //
+  // `busy` is left alone, here and everywhere. Coming back to the browser is
+  // not evidence that the signing is over, and releasing the button early
+  // invites a second transaction for one intended action.
+  useRefreshOnReturn(() => setReloadToken(n => n + 1));
 
   useEffect(() => {
     let cancelled = false;
@@ -74,6 +94,11 @@ export function MyDomains({
     try {
       setRecord(await fetchDomainRecord(address, draft.trim()));
     } catch (error: unknown) {
+      // Declining is an answer, not a fault.
+      if (isUserRejection(error)) {
+        toast({ title: t('errors.wallet_request_rejected'), variant: 'info' });
+        return;
+      }
       toast({
         title: t('domain.invalid'),
         description: error instanceof Error ? error.message : undefined,
@@ -88,7 +113,11 @@ export function MyDomains({
     if (!address || !record) return;
     setBusy(true);
     try {
-      const result = await addOrganizerDomain(await getSigner(), address, draft.trim());
+      const signer = await getSigner();
+      const result = await run(
+        () => addOrganizerDomain(signer, address, draft.trim()),
+        () => toast({ title: t('errors.confirm_in_wallet_app'), variant: 'info' }),
+      );
       setOutcome(result);
       if (result.status === 'verified') {
         toast({ title: t('domain.verified'), variant: 'success' });
@@ -115,9 +144,18 @@ export function MyDomains({
       // The transaction comes from the organizer's own address, and the
       // contract only ever touches `claims[msg.sender]`, so nobody can drop a
       // competitor's domain.
-      await removeOrganizerDomain(await getSigner(), domain);
+      const signer = await getSigner();
+      await run(
+        () => removeOrganizerDomain(signer, domain),
+        () => toast({ title: t('errors.confirm_in_wallet_app'), variant: 'info' }),
+      );
       setReloadToken(n => n + 1);
     } catch (error: unknown) {
+      // Declining is an answer, not a fault.
+      if (isUserRejection(error)) {
+        toast({ title: t('errors.wallet_request_rejected'), variant: 'info' });
+        return;
+      }
       toast({
         title: t('domain.remove_failed'),
         description: error instanceof Error ? error.message : undefined,

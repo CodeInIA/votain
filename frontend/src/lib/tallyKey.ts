@@ -16,8 +16,7 @@ import { isProbablyPrime } from "bigint-crypto-utils";
 import { PublicKey, PrivateKey } from "paillier-bigint";
 import type { Signer } from "ethers";
 
-import { derivePrfSecret } from "./passkeyPrf";
-import { getTallyMasterSecret, TALLY_PRF_SALT, VaultUnavailableError } from "./organizerVault";
+import { organizerMasterSecret } from "./organizerKey";
 import { PAILLIER_KEY_BITS, type SerializedKeyPair } from "./paillier";
 
 // HKDF info for the per-election key stretch. NOT the PRF eval salt, which
@@ -197,30 +196,19 @@ export async function deriveElectionKeys(
   keyNonce: string,
   signer?: Signer,
 ): Promise<SerializedKeyPair | null> {
-  // With a wallet in hand the secret comes from the on-chain vault, which is
-  // what makes a second passkey derive the SAME key instead of a new one. The
-  // first copy in that vault seals this very PRF output, so the two agree on
-  // the device that created the election and only diverge where the old path
-  // was wrong.
-  if (signer) {
-    try {
-      const master = await getTallyMasterSecret(signer);
-      return deriveKeysFromSecret(master, keyNonce, PAILLIER_KEY_BITS);
-    } catch (e) {
-      // A deployment without the vault contract is the only tolerated miss:
-      // fall through to the old derivation, which is what those elections were
-      // created with anyway. A locked vault is NOT tolerated, because deriving
-      // from the raw PRF there would hand back a key that decrypts nothing.
-      if (!(e instanceof VaultUnavailableError)) throw e;
-    }
-  }
+  // No wallet, no key. The master is a function of a wallet signature, so a
+  // caller that cannot sign cannot derive, and returning null is how it learns
+  // to ask for the exported key file instead.
+  if (!signer) return null;
 
-  // No wallet: the raw PRF output, as before. Reached only by callers that
-  // cannot sign, and identical to the vault answer on the passkey that seeded
-  // it.
-  const secret = await derivePrfSecret(TALLY_PRF_SALT);
-  if (!secret) return null;
-  return deriveKeysFromSecret(secret, keyNonce, PAILLIER_KEY_BITS);
+  // TWO COSTS, and it is worth knowing which is which. The signature is a round
+  // trip to the wallet; the derivation that follows is 2048-bit Paillier key
+  // generation, which searches for two thousand-bit primes in this tab. On a
+  // phone that is seconds, not milliseconds, and it looks exactly like a hang.
+  // Anything that bounds a wallet request must not bound this: a deadline over
+  // the whole call once reported a lost wallet answer for a signature that had
+  // arrived perfectly and was merely being used slowly.
+  return deriveKeysFromSecret(await organizerMasterSecret(signer), keyNonce, PAILLIER_KEY_BITS);
 }
 
 /** Modular inverse via the extended Euclidean algorithm (deterministic integer math). */

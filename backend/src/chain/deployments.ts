@@ -44,14 +44,27 @@ let cache: Manifest[] | null = null;
 let warned = false;
 
 /**
- * Every manifest on disk, read once.
+ * Every manifest on disk.
+ *
+ * READ EVERY TIME IN DEVELOPMENT, cached otherwise. A deployed backend sits
+ * beside a manifest that cannot change under it, so reading once is right
+ * there. Locally the opposite holds: `deploy:local` rewrites the file whenever
+ * anyone redeploys, and a cached copy turns that into a backend quietly calling
+ * contracts that have moved. The symptom is the one this module exists to
+ * remove, `BAD_DATA ... value="0x"` from a call to an address with no code,
+ * and it cost four debugging sessions before the cache was the answer rather
+ * than the address.
+ *
+ * The read is a few kilobytes of local JSON per call and the alternative is
+ * remembering to restart a server, which nobody does until after the hour it
+ * costs.
  *
  * Missing or unreadable is not an error: a deployed backend may have no
  * `contracts/` directory beside it at all, and there the environment is
  * expected to carry the addresses anyway.
  */
 function manifests(): Manifest[] {
-  if (cache) return cache;
+  if (cache && process.env.NODE_ENV !== "development") return cache;
   try {
     cache = readdirSync(DEPLOYMENTS_DIR)
       .filter(f => f.endsWith('.json'))

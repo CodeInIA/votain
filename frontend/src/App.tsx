@@ -45,6 +45,8 @@ const ChangeVote = lazy(() => import('./pages/voter/ChangeVote'));
 const VoterHistory = lazy(() => import('./pages/voter/VoterHistory'));
 const VoterProfile = lazy(() => import('./pages/voter/VoterProfile'));
 const ReVerification = lazy(() => import('./pages/voter/ReVerification'));
+const RecoverPhrase = lazy(() => import('./pages/voter/RecoverPhrase'));
+const IdentityStepPage = lazy(() => import('./pages/voter/IdentityStep'));
 const OrganizerAuth = lazy(() => import('./pages/organizer/OrganizerAuth'));
 const OrganizerDashboard = lazy(() => import('./pages/organizer/OrganizerDashboard'));
 const CreateElection = lazy(() => import('./pages/organizer/CreateElection'));
@@ -81,6 +83,14 @@ export default function App() {
     <ToastProvider>
       <Router>
         <RouteMeta />
+        {/* The phrase modal that used to live here is gone. It was mounted above
+            the routes so that no entry point could mint an identity without
+            showing the words, but it held them in a module variable and put them
+            on screen once: a reload at the wrong instant (a phone evicting a
+            backgrounded tab mid-WebAuthn, a dev server restarting) skipped the
+            one moment a voter ever sees their phrase, silently. Minting now
+            happens in one place, behind a screen at /voter/identity that will
+            not move on until the words have been copied. */}
         <Suspense fallback={<Fallback />}>
         <Routes>
           {/* Landing */}
@@ -95,10 +105,30 @@ export default function App() {
           <Route path="/privacy"               element={<Privacy />} />
           <Route path="/verify-receipt"        element={<VerifyReceipt />} />
 
-          {/* Voter auth */}
+          {/* Voter auth. These two are the sign-in itself, so they are the only
+              voter routes that can be public: guarding them would leave nobody
+              a way to get a session in the first place. Everything else under
+              /voter/ is behind `RequireVoter`. */}
           <Route path="/voter/onboarding"   element={<Onboarding />} />
           <Route path="/voter/signin"       element={<SignIn />} />
-          <Route path="/voter/re-verify"    element={<ReVerification />} />
+          {/* Guarded, though the BACKEND deliberately does not authenticate
+              `/identity/recover` by cookie: rotating the identity a human votes
+              with must take a fresh World ID proof, so a stolen session is not
+              enough. That is untouched. This guard is the UI surface only, and
+              it costs nothing, because the only way anybody reaches this screen
+              is by verifying with World ID, which issues the session. Public, it
+              was a page that mints a passkey and rotates an on-chain commitment,
+              offered to visitors who had proven nothing yet. */}
+          <Route path="/voter/re-verify"    element={<RequireVoter><ReVerification /></RequireVoter>} />
+          {/* The identity step, between World ID answering and being able to
+              vote. Guarded for the same reason as recovery: without a session
+              there is nothing to inspect and nothing to attach an identity to. */}
+          <Route path="/voter/identity"     element={<RequireVoter><IdentityStepPage /></RequireVoter>} />
+          {/* Behind the guard: the only way here is a World ID session that
+              could not open its identity on this device, and the screen adopts
+              a phrase into that session. Public, it let anyone type words into
+              a browser with nothing to attach them to. */}
+          <Route path="/voter/recover"      element={<RequireVoter><RecoverPhrase /></RequireVoter>} />
 
           {/* Voter app — requires a voter session (httpOnly VC cookie) */}
           <Route path="/voter/elections"               element={<RequireVoter><VoterElections /></RequireVoter>} />

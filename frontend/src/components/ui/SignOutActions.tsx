@@ -25,11 +25,29 @@ import { Button } from './Button';
 import { Modal } from './Modal';
 import { useToast } from './useToast';
 import { useAuth } from '../../contexts/AuthContext';
-import { homeRouteFor } from '../../lib/activeRole';
+import { homeRouteFor, noteSignedOutOf, signInRouteFor } from '../../lib/activeRole';
 
 type Target = 'voter' | 'organizer' | 'both';
 
-export function SignOutActions({ role }: { role: 'voter' | 'organizer' }) {
+export function SignOutActions({
+  role,
+  /**
+   * There is no session to end yet, only an attempt to abandon.
+   *
+   * On the setup screen NOTHING has been registered: the commitment reaches
+   * PlatformRegistry when the flow finishes, so calling this "sign out" named
+   * something that had not happened and implied losing a standing the voter
+   * does not have. What it really does there is throw away a phrase minted on
+   * this device and end the World ID session, which is cancelling a sign-up.
+   *
+   * The work is identical either way; only the words change, and the words are
+   * what somebody decides on.
+   */
+  incomplete = false,
+}: {
+  role: 'voter' | 'organizer';
+  incomplete?: boolean;
+}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -44,11 +62,21 @@ export function SignOutActions({ role }: { role: 'voter' | 'organizer' }) {
     setPending(null);
     toast({ title: t('profile.signed_out'), variant: 'info' });
 
-    // Where to land depends on what is left. Sending someone to the landing
-    // page while they still hold a session would read as having signed them out
-    // of that one too.
+    // Where to land depends on what is left. Someone who still holds the other
+    // session goes to ITS home, since sending them to a sign-in screen would
+    // read as having signed them out of that one too. Someone with nothing left
+    // goes to the sign-in screen of the role they just closed.
     const left = target === 'voter' ? 'organizer' : target === 'organizer' ? 'voter' : null;
-    const to = left && holdsBoth ? homeRouteFor(left) : '/';
+    const keepsOther = Boolean(left) && holdsBoth;
+    const closed = target === 'both' ? 'voter' : target;
+
+    // The guard will redirect first and this screen will unmount with the
+    // navigation below still pending, so the intent is left where the guard
+    // reads it. The navigate stays for the case where nothing guards this
+    // screen, and both agree on the destination either way.
+    if (!keepsOther) noteSignedOutOf(closed);
+
+    const to = keepsOther ? homeRouteFor(left!) : signInRouteFor(closed);
     setTimeout(() => navigate(to, { replace: true }), 500);
   };
 
@@ -93,15 +121,35 @@ export function SignOutActions({ role }: { role: 'voter' | 'organizer' }) {
           onClick={() => setPending(role)}
         >
           <LogOut className="w-4 h-4" />
-          {t('profile.sign_out')}
+          {t(incomplete ? 'profile.cancel_signup' : 'profile.sign_out')}
         </Button>
       )}
 
       <Modal
         open={pending !== null}
         onClose={() => setPending(null)}
-        title={pending && holdsBoth ? label(pending) : t('profile.sign_out_title')}
-        description={pending ? t(`profile.sign_out_${pending}_desc`) : ''}
+        title={
+          incomplete
+            ? t('profile.cancel_signup_title')
+            : pending && holdsBoth
+              ? label(pending)
+              : t('profile.sign_out_title')
+        }
+        /* The title was already conditioned on holding both and the description
+           was not, so a voter who has never organized anything was told their
+           "organizer session is untouched": a sentence about something they do
+           not have. The single-session wording also says the part that actually
+           costs something, which the old one left out entirely: `clearIdentity`
+           removes the recovery phrase from this browser. */
+        description={
+          incomplete
+            ? t('profile.cancel_signup_desc')
+            : pending
+            ? holdsBoth
+              ? t(`profile.sign_out_${pending}_desc`)
+              : t(`profile.sign_out_${pending === 'both' ? 'voter' : pending}_only_desc`)
+            : ''
+        }
       >
         <div className="flex gap-3 mt-2">
           <Button variant="ghost" className="flex-1" onClick={() => setPending(null)}>
@@ -112,7 +160,7 @@ export function SignOutActions({ role }: { role: 'voter' | 'organizer' }) {
             className="flex-1 border-error/30 text-error hover:bg-error/10"
             onClick={() => pending && run(pending)}
           >
-            {t('profile.sign_out_confirm')}
+            {t(incomplete ? 'profile.cancel_signup' : 'profile.sign_out_confirm')}
           </Button>
         </div>
       </Modal>
