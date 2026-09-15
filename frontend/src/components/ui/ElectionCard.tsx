@@ -78,7 +78,16 @@ export function ElectionCard({ election, voterView = false, className }: Electio
       {/* Header row */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1.5 min-w-0">
+          {/* STACKED, NOT SIDE BY SIDE, and neither half can give way.
+              They shared a row, where the name carried `truncate` and the badge
+              carried no width limit at all, so an organizer with a domain saw
+              their name crushed to a single letter: "N... votain.app".
+              Truncating the badge instead would be worse. A half-shown domain
+              is exactly the laundering this badge exists to prevent, since
+              `votacion-oficial-gob...` reads like anything at all. So the
+              domain is never shortened, the name keeps its own line, and a card
+              with a verified domain is one line taller than one without. */}
+          <div className="mb-1.5 min-w-0">
             <p className="text-xs text-on-surface-meta truncate">{election.organizer}</p>
             <DomainBadge domain={election.organizerDomain} organizerAddress={election.organizerAddress} />
           </div>
@@ -106,13 +115,23 @@ export function ElectionCard({ election, voterView = false, className }: Electio
           <Badge variant={phaseVariant(election.phase)} dot={isLive}>
             {t(`phase.${election.phase}`)}
           </Badge>
-          {/* A card is where someone decides whether to open an election at
-              all, so the rules they would have to meet belong here rather than
-              three screens in. The rules themselves, not the word: "18+" and a
-              flag answer "do I qualify" where "Restricted" only asks it. */}
-          <EligibilityChips policy={election.eligibilityPolicy} className="justify-end" />
         </div>
       </div>
+
+      {/* A card is where someone decides whether to open an election at all, so
+          the rules they would have to meet belong here rather than three
+          screens in. The rules themselves, not the word: "18+" and a flag
+          answer "do I qualify" where "Restricted" only asks it.
+
+          ON ITS OWN ROW, because the column above is `shrink-0` and therefore
+          as wide as its widest child. These chips were that child, so an
+          election demanding an Orb, an age and a nationality made the whole
+          right column wide and took the width out of the organizer's name,
+          which truncates: the same organizer read "Notaria Perez y Asociados"
+          on one card and "Notaria Perez y ..." on another, and the only
+          difference between them was how many rules they had set. Down here the
+          chips have the full card to wrap into and compete with nothing. */}
+      <EligibilityChips policy={election.eligibilityPolicy} />
 
       {/* Description */}
       <p className="text-xs text-on-surface-variant leading-relaxed line-clamp-2 break-words">
