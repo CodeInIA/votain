@@ -444,7 +444,15 @@
     "amount_token": "금액 ({{currency}})",
     "withdraw": "출금",
     "history_empty": "가스 내역이 없습니다.",
-    "votes_remaining_other": "약 {{count}}표 남음"
+    "votes_remaining_other": "약 {{count}}표 남음",
+    "search_placeholder": "트랜잭션 해시로 검색…",
+    "from": "시작",
+    "to": "종료",
+    "no_matches": "이 필터와 일치하는 내역이 없습니다.",
+    "undated_hidden": "날짜로 거르는 동안 날짜를 읽을 수 없는 {{n}}건은 숨겨집니다.",
+    "view_on_explorer": "블록 탐색기에서 보기",
+    "copy_hash": "트랜잭션 해시 복사",
+    "showing": "{{total}}건 중 {{shown}}건 표시"
   },
   "members": {
     "title": "등록된 회원",

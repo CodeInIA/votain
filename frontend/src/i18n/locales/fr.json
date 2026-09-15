@@ -454,7 +454,15 @@
     "history_empty": "Aucun mouvement de gaz.",
     "votes_remaining_one": "~{{count}} vote restant",
     "votes_remaining_other": "~{{count}} votes restants",
-    "votes_remaining_many": "~{{count}} votes restants"
+    "votes_remaining_many": "~{{count}} votes restants",
+    "search_placeholder": "Rechercher par hash de transaction…",
+    "from": "Du",
+    "to": "Au",
+    "no_matches": "Aucun mouvement ne correspond à ces filtres.",
+    "undated_hidden": "{{n}} sans date lisible sont masqués pendant le filtrage par date.",
+    "view_on_explorer": "Voir dans l’explorateur de blocs",
+    "copy_hash": "Copier le hash de la transaction",
+    "showing": "Affichage de {{shown}} sur {{total}}"
   },
   "members": {
     "title": "Membres enregistrés",

@@ -8,7 +8,7 @@
  * passkey: see docs/dev/architecture.md.
  */
 import { type Signer } from "ethers";
-import { getFactory, getElection, getPaymaster } from "./contracts";
+import { getFactory, getElection, getPaymaster, getReadProvider } from "./contracts";
 import { queryLogsFrom } from "./logs";
 import { COUNTER_BASE, generateElectionKeys, type SerializedKeyPair } from "./paillier";
 import { deriveElectionKeys, newKeyNonce } from "./tallyKey";
@@ -350,14 +350,30 @@ export interface GasMovement {
   type: "deposit" | "withdraw" | "spent";
   /** Signed amount in the chain's native token (negative when it leaves the tank). */
   amount: number;
-  date: Date;
+  /**
+   * When it happened, or undefined when the block could not be read.
+   *
+   * Optional on purpose. This used to fall back to `new Date()`, which put an
+   * unreadable movement at TODAY on a list sorted by date: a failed network read
+   * became a payment that looked like it had just been made, at the top of a
+   * financial history. An unknown date now says so.
+   */
+  date?: Date;
   txHash: string;
+  /** True chain order, which is what the list is sorted by. */
+  blockNumber: number;
 }
 
 /**
  * Reads the organizer's real gas-tank movements from paymaster events
  * (Deposited / Withdrawn / VoteSponsored), newest first.
  */
+interface RawLog {
+  args?: Record<string, bigint>;
+  transactionHash: string;
+  blockNumber: number;
+}
+
 export async function fetchGasHistory(organizer: string): Promise<GasMovement[]> {
   const { formatEther } = await import("ethers");
   const paymaster = getPaymaster();
@@ -368,29 +384,46 @@ export async function fetchGasHistory(organizer: string): Promise<GasMovement[]>
     queryLogsFrom(paymaster, paymaster.filters.VoteSponsored(organizer)),
   ]);
 
-  const toMovement = (
-    type: GasMovement["type"],
-    sign: 1 | -1,
-    field: "amount" | "cost",
-  ) => async (e: { args?: Record<string, bigint>; transactionHash: string; getBlock: () => Promise<{ timestamp: number } | null> }) => {
-    let date = new Date();
-    try {
-      const block = await e.getBlock();
-      if (block) date = new Date(Number(block.timestamp) * 1000);
-    } catch { /* keep fallback */ }
-    return {
+  const logs = [...deposits, ...withdrawals, ...sponsored] as unknown as RawLog[];
+
+  /**
+   * ONE BLOCK READ PER BLOCK, not per movement.
+   *
+   * This is the heaviest list in the app and it was the least careful about it:
+   * `VoteSponsored` fires once per sponsored vote, so an election with two
+   * thousand voters left two thousand events, and asking each one for its block
+   * meant two thousand round trips just to open the gas page. Votes are mined in
+   * batches, so the distinct blocks are a small fraction of that.
+   */
+  const times = new Map<number, Date | undefined>();
+  await Promise.all(
+    [...new Set(logs.map(l => l.blockNumber))].map(async blockNumber => {
+      try {
+        const block = await getReadProvider().getBlock(blockNumber);
+        times.set(blockNumber, block ? new Date(Number(block.timestamp) * 1000) : undefined);
+      } catch {
+        times.set(blockNumber, undefined);
+      }
+    }),
+  );
+
+  const read = (source: RawLog[], type: GasMovement["type"], sign: 1 | -1, field: "amount" | "cost") =>
+    source.map(e => ({
       type,
       amount: sign * Number(formatEther(e.args?.[field] ?? 0n)),
-      date,
+      date: times.get(e.blockNumber),
       txHash: e.transactionHash,
-    };
-  };
+      blockNumber: e.blockNumber,
+    }));
 
-  const movements = await Promise.all([
-    ...deposits.map(e => toMovement("deposit", 1, "amount")(e as never)),
-    ...withdrawals.map(e => toMovement("withdraw", -1, "amount")(e as never)),
-    ...sponsored.map(e => toMovement("spent", -1, "cost")(e as never)),
-  ]);
+  const movements = [
+    ...read(deposits as unknown as RawLog[], "deposit", 1, "amount"),
+    ...read(withdrawals as unknown as RawLog[], "withdraw", -1, "amount"),
+    ...read(sponsored as unknown as RawLog[], "spent", -1, "cost"),
+  ];
 
-  return movements.sort((a, b) => b.date.getTime() - a.date.getTime());
+  // Sorted by the chain's own order rather than by the timestamp, which is the
+  // order things actually happened in: two movements in one block share a
+  // timestamp, and a movement whose block could not be read has none at all.
+  return movements.sort((a, b) => b.blockNumber - a.blockNumber);
 }

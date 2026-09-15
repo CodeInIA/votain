@@ -459,7 +459,15 @@
     "votes_remaining_many": "~{{count}} голосов осталось",
     "votes_remaining_one": "~{{count}} голос осталось",
     "votes_remaining_few": "~{{count}} голоса осталось",
-    "votes_remaining_other": "~{{count}} голоса осталось"
+    "votes_remaining_other": "~{{count}} голоса осталось",
+    "search_placeholder": "Поиск по хешу транзакции…",
+    "from": "С",
+    "to": "По",
+    "no_matches": "Ни одно движение не подходит под эти фильтры.",
+    "undated_hidden": "{{n}} без читаемой даты скрыты, пока включён фильтр по дате.",
+    "view_on_explorer": "Открыть в обозревателе блоков",
+    "copy_hash": "Скопировать хеш транзакции",
+    "showing": "Показано {{shown}} из {{total}}"
   },
   "members": {
     "title": "Зарегистрированные участники",

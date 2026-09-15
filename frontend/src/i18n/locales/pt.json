@@ -454,7 +454,15 @@
     "history_empty": "Ainda não há movimentos de gás.",
     "votes_remaining_one": "~{{count}} voto restante",
     "votes_remaining_other": "~{{count}} votos restantes",
-    "votes_remaining_many": "~{{count}} votos restantes"
+    "votes_remaining_many": "~{{count}} votos restantes",
+    "search_placeholder": "Pesquisar por hash da transação…",
+    "from": "De",
+    "to": "Até",
+    "no_matches": "Nenhum movimento corresponde a estes filtros.",
+    "undated_hidden": "{{n}} sem data legível ficam ocultos enquanto filtras por data.",
+    "view_on_explorer": "Ver no explorador de blocos",
+    "copy_hash": "Copiar hash da transação",
+    "showing": "A mostrar {{shown}} de {{total}}"
   },
   "members": {
     "title": "Membros Registrados",

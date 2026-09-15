@@ -449,7 +449,15 @@
     "withdraw": "Opname",
     "history_empty": "Nog geen gasbewegingen.",
     "votes_remaining_other": "~{{count}} stemmen resterend",
-    "votes_remaining_one": "~{{count}} stem resterend"
+    "votes_remaining_one": "~{{count}} stem resterend",
+    "search_placeholder": "Zoeken op transactiehash…",
+    "from": "Van",
+    "to": "Tot",
+    "no_matches": "Geen enkele mutatie voldoet aan deze filters.",
+    "undated_hidden": "{{n}} zonder leesbare datum zijn verborgen zolang je op datum filtert.",
+    "view_on_explorer": "Bekijken in de blockexplorer",
+    "copy_hash": "Transactiehash kopiëren",
+    "showing": "{{shown}} van {{total}} getoond"
   },
   "members": {
     "title": "Geregistreerde leden",

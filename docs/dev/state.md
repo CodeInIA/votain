@@ -9,7 +9,7 @@ issuer, voter + organizer flows and tally all wired and green.
 custom dark `DatePicker`, phase-aware voter/organizer/public screens, and shared phase helpers.
 **This pass**: WalletConnect works from a phone for every organizer action, and the voter's
 identity flow was rebuilt around the recovery phrase (see the milestone log).
-Tests: contracts 122/122, backend 107/107, frontend 275/275; prod build OK.
+Tests: contracts 122/122, backend 107/107, frontend 288/288; prod build OK.
 **Next milestone**: Live Amoy deployment (pending funding the deployer key),
 then Phase C (H10 IPFS/Fleek, H11 Phala TEE).
 
@@ -100,7 +100,7 @@ then Phase C (H10 IPFS/Fleek, H11 Phala TEE).
 | `@types/node` | 26.5.1 | Same: the `latest` tag lags at 22.x |
 
 **Build**: ✅ clean, no sourcemaps.
-**Tests**: 275/275 unit tests in 39 files passing (Vitest, jsdom), covering the voter identity lifecycle (minting, sealing, the PRF read-back proof, rotation, adding further passkeys), WalletConnect return handling, the Paillier ballot encoding, the i18n plural tables and how the lists are paged. Playwright E2E scaffold in `e2e/` (excluded from Vitest).
+**Tests**: 288/288 unit tests in 41 files passing (Vitest, jsdom), covering the voter identity lifecycle (minting, sealing, the PRF read-back proof, rotation, adding further passkeys), WalletConnect return handling, the Paillier ballot encoding, the i18n plural tables and how the lists are paged. Playwright E2E scaffold in `e2e/` (excluded from Vitest).
 
 **Reading lists** (2026-09-15): no screen hydrates the whole platform any more. Discover pages
 what it reads; the organizer's and the voter's lists resolve through the chain's own event

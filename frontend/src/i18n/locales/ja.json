@@ -444,7 +444,15 @@
     "amount_token": "金額 ({{currency}})",
     "withdraw": "出金",
     "history_empty": "ガスの履歴はまだありません。",
-    "votes_remaining_other": "残り約{{count}}票"
+    "votes_remaining_other": "残り約{{count}}票",
+    "search_placeholder": "トランザクションハッシュで検索…",
+    "from": "開始",
+    "to": "終了",
+    "no_matches": "この条件に一致する取引はありません。",
+    "undated_hidden": "日付で絞り込む間、日付を読めない {{n}} 件は非表示です。",
+    "view_on_explorer": "ブロックエクスプローラーで見る",
+    "copy_hash": "トランザクションハッシュをコピー",
+    "showing": "{{total}} 件中 {{shown}} 件を表示"
   },
   "members": {
     "title": "登録メンバー",

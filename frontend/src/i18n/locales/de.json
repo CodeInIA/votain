@@ -449,7 +449,15 @@
     "withdraw": "Auszahlung",
     "history_empty": "Noch keine Gas-Bewegungen.",
     "votes_remaining_other": "~{{count}} verbleibende Stimmen",
-    "votes_remaining_one": "~{{count}} verbleibende Stimme"
+    "votes_remaining_one": "~{{count}} verbleibende Stimme",
+    "search_placeholder": "Nach Transaktions-Hash suchen…",
+    "from": "Von",
+    "to": "Bis",
+    "no_matches": "Keine Bewegung entspricht diesen Filtern.",
+    "undated_hidden": "{{n}} ohne lesbares Datum sind bei aktivem Datumsfilter ausgeblendet.",
+    "view_on_explorer": "Im Block-Explorer ansehen",
+    "copy_hash": "Transaktions-Hash kopieren",
+    "showing": "{{shown}} von {{total}} werden angezeigt"
   },
   "members": {
     "title": "Registrierte Mitglieder",

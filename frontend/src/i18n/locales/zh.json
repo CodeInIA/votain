@@ -444,7 +444,15 @@
     "amount_token": "金额（{{currency}}）",
     "withdraw": "提现",
     "history_empty": "暂无 gas 变动。",
-    "votes_remaining_other": "剩余约 {{count}} 票"
+    "votes_remaining_other": "剩余约 {{count}} 票",
+    "search_placeholder": "按交易哈希搜索…",
+    "from": "起",
+    "to": "止",
+    "no_matches": "没有符合这些筛选条件的记录。",
+    "undated_hidden": "按日期筛选时，{{n}} 条日期无法读取的记录被隐藏。",
+    "view_on_explorer": "在区块浏览器中查看",
+    "copy_hash": "复制交易哈希",
+    "showing": "显示 {{total}} 条中的 {{shown}} 条"
   },
   "members": {
     "title": "已注册成员",

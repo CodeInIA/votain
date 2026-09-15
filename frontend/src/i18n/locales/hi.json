@@ -449,7 +449,15 @@
     "withdraw": "निकासी",
     "history_empty": "अभी तक कोई गैस लेनदेन नहीं।",
     "votes_remaining_one": "~{{count}} वोट शेष",
-    "votes_remaining_other": "~{{count}} वोट शेष"
+    "votes_remaining_other": "~{{count}} वोट शेष",
+    "search_placeholder": "लेनदेन हैश से खोजें…",
+    "from": "से",
+    "to": "तक",
+    "no_matches": "इन फ़िल्टरों से कोई लेनदेन मेल नहीं खाता।",
+    "undated_hidden": "तारीख़ से छानते समय {{n}} बिना पढ़ने योग्य तारीख़ के छिपे हैं।",
+    "view_on_explorer": "ब्लॉक एक्सप्लोरर में देखें",
+    "copy_hash": "लेनदेन हैश कॉपी करें",
+    "showing": "{{total}} में से {{shown}} दिख रहे हैं"
   },
   "members": {
     "title": "पंजीकृत सदस्य",

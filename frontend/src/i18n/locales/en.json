@@ -449,7 +449,15 @@
     "withdraw": "Withdrawal",
     "history_empty": "No gas movements yet.",
     "votes_remaining_other": "~{{count}} votes remaining",
-    "votes_remaining_one": "~{{count}} vote remaining"
+    "votes_remaining_one": "~{{count}} vote remaining",
+    "search_placeholder": "Search by transaction hash…",
+    "from": "From",
+    "to": "To",
+    "no_matches": "No movements match these filters.",
+    "undated_hidden": "{{n}} without a readable date are hidden while you filter by date.",
+    "view_on_explorer": "View on block explorer",
+    "copy_hash": "Copy transaction hash",
+    "showing": "Showing {{shown}} of {{total}}"
   },
   "members": {
     "title": "Registered Members",

@@ -469,7 +469,15 @@
     "votes_remaining_two": "صوتان متبقيان",
     "votes_remaining_few": "~{{count}} أصوات متبقية",
     "votes_remaining_many": "~{{count}} صوتًا متبقيًا",
-    "votes_remaining_other": "~{{count}} صوت متبقٍ"
+    "votes_remaining_other": "~{{count}} صوت متبقٍ",
+    "search_placeholder": "ابحث بهاش المعاملة…",
+    "from": "من",
+    "to": "إلى",
+    "no_matches": "لا توجد حركات تطابق هذه المرشحات.",
+    "undated_hidden": "{{n}} بدون تاريخ مقروء مخفية أثناء التصفية بالتاريخ.",
+    "view_on_explorer": "العرض في مستكشف الكتل",
+    "copy_hash": "نسخ هاش المعاملة",
+    "showing": "عرض {{shown}} من {{total}}"
   },
   "members": {
     "title": "الأعضاء المسجلون",
