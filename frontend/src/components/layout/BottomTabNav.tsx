@@ -37,7 +37,26 @@ export function BottomTabNav() {
                                              PUBLIC_TABS;
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-40 flex md:hidden bg-surface/80 backdrop-blur-xl border-t border-white/5 safe-area-pb"
+      /* NO `safe-area-pb` HERE, and that is not an oversight.
+       *
+       * The class was on this element and was defined nowhere: not in
+       * `index.css`, not in a Tailwind config (v4 has none, it configures
+       * through CSS), and zero occurrences in the built stylesheet. It read as
+       * safe-area handling and did nothing at all.
+       *
+       * Defining it was tried and reverted. `index.html` sets
+       * `viewport-fit=cover`, so the page does reach the physical edge and the
+       * padding makes this bar taller by the reported inset. On the phone it
+       * was checked against, that produced a band of empty bar below the labels
+       * and no system indicator drawn into it: space given away for nothing.
+       *
+       * So the false claim is removed rather than made true. What this leaves
+       * open, and it is worth knowing before anyone adds it back: on a device
+       * that does draw a home indicator, the labels sit under it. The fix then
+       * is padding driven by a real measurement on such a device, not by a
+       * class name that looked like it was already doing the job.
+       */
+      className="fixed bottom-0 left-0 right-0 z-40 flex md:hidden bg-surface/80 backdrop-blur-xl border-t border-white/5"
       aria-label="Main navigation"
     >
       {tabs.map(tab => (
