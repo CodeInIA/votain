@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Users, Calendar, ChevronRight, Clock } from 'lucide-react';
+import { Users, CalendarMinus, ChevronRight, Clock } from 'lucide-react';
 import { Badge } from './Badge';
 import { DomainBadge } from './DomainBadge';
 import { EligibilityChips } from './EligibilityChips';
@@ -242,7 +242,9 @@ export function ElectionCard({ election, view = 'public', className }: ElectionC
         <div className="col-span-2 row-start-2 grid grid-cols-2 gap-x-3 min-w-0">
           <CreatedOn date={election.createdAt} />
           <span className="flex items-center gap-1.5 min-w-0">
-            <Calendar className="w-3.5 h-3.5 shrink-0" />
+            {/* The other end of the pair. See `CreatedOn` for why these two
+                are a plus and a minus rather than two arrows. */}
+            <CalendarMinus className="w-3.5 h-3.5 shrink-0" />
             <span className="truncate">
               {t('election.ends_on', { date: election.voteEnd.toLocaleDateString() })}
             </span>

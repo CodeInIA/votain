@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, ExternalLink, Users, Calendar, Copy, Check, Lock } from 'lucide-react';
+import { AlertTriangle, ExternalLink, Users, CalendarMinus, Copy, Check, Lock } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { DomainBadge } from '../../components/ui/DomainBadge';
 import { Badge } from '../../components/ui/Badge';
@@ -417,7 +417,8 @@ export default function ElectionDetail() {
                 date read fine while it was the only one on the screen, and
                 stopped the moment a second date joined it. */}
             <span className="flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5" />
+              {/* Paired with the plus on the creation date. */}
+              <CalendarMinus className="w-3.5 h-3.5" />
               {t('election.ends_on', { date: election.voteEnd.toLocaleDateString() })}
             </span>
             {/* WHAT IS RESERVED, stated as a fact among the other facts rather

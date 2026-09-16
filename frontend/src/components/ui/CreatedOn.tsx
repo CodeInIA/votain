@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Sparkles } from 'lucide-react';
+import { CalendarPlus } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { formatDateTime } from '../../lib/datetime';
 
@@ -44,7 +44,19 @@ export function CreatedOn({ date, precise = false, className }: Props) {
   const exact = t('election.created_on', { date: formatDateTime(date) });
   return (
     <span className={cn('flex items-center gap-1.5 min-w-0', className)} title={exact}>
-      <Sparkles className="w-3.5 h-3.5 shrink-0" />
+      {/* A calendar with a plus: this entry was added on this date.
+          It was `Sparkles`, which in every interface shipped in the last two
+          years means "AI did something here". On a timestamp that is not a
+          decoration problem, it is a wrong claim about where the number came
+          from, and this one comes from the chain.
+
+          It pairs with the `CalendarMinus` on the closing date beside it, so
+          the two dates read as the two ends of something. The mark matters
+          more than the metaphor at this size: rendered at 14px against every
+          other calendar variant lucide offers, a plus and a minus are the
+          only two that stay legible, while the difference between an arrow
+          pointing up and one pointing down does not survive. */}
+      <CalendarPlus className="w-3.5 h-3.5 shrink-0" />
       <span className="truncate">
         {precise ? exact : t('election.created_on', { date: date.toLocaleDateString() })}
       </span>

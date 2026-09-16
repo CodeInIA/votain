@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Users, Calendar, Lock, ExternalLink } from 'lucide-react';
+import { Users, CalendarMinus, Lock, ExternalLink } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Badge } from '../../components/ui/Badge';
 import { EligibilityChips } from '../../components/ui/EligibilityChips';
@@ -206,7 +206,8 @@ export default function ElectionPreview() {
                 date read fine while it was the only one on the screen, and
                 stopped the moment a second date joined it. */}
             <span className="flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5" />
+              {/* Paired with the plus on the creation date. */}
+              <CalendarMinus className="w-3.5 h-3.5" />
               {t('election.ends_on', { date: election.voteEnd.toLocaleDateString() })}
             </span>
             {/* Public too: whether the dates can move is part of deciding
