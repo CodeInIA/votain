@@ -191,8 +191,14 @@ export function ElectionFilters({ value, onChange, open, onToggleOpen, searchPla
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex gap-3">
-        <div className="flex-1">
+      {/* WRAPS ON A PHONE. All three on one line meant the search box was
+          squeezed to about a third of the width and the order control was
+          cut to "Mas recie...", so the two things a reader is most likely to
+          touch were the two that had no room. The search takes the first
+          line to itself below `sm` and the two controls share the second,
+          which costs one row and gives all three their full size. */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="basis-full sm:basis-0 sm:flex-1 min-w-0">
           <Input
             placeholder={searchPlaceholder}
             value={value.query}
@@ -246,10 +252,9 @@ export function ElectionFilters({ value, onChange, open, onToggleOpen, searchPla
           // it, and one here would make the row two heights.
           labelHidden
           wrapperClassName="w-auto shrink-0"
-          className={cn(
-            'rounded-2xl px-3 sm:px-4 max-w-[9.5rem] sm:max-w-none',
-            TRIGGER_AS_TOOLBAR_BUTTON,
-          )}
+          // No width cap any more: it existed to stop the trigger crowding
+          // the search box on one line, and there is no longer one line.
+          className={cn('rounded-2xl px-4', TRIGGER_AS_TOOLBAR_BUTTON)}
           // Left to size itself: the trigger is as narrow as the current
           // value here, and a menu matching it would truncate every other
           // option to the length of whichever one happens to be chosen.
