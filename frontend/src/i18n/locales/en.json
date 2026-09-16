@@ -764,8 +764,8 @@
     "not_registered_desc": "The phrase is well formed, so the words are on the list, but the identity it rebuilds has never been registered. Check for a word in the wrong place.",
     "help": "The words are all lowercase and the order matters. Spaces and capitals do not.",
     "lost_phrase": "Lost the words as well?",
-    "restored_session": "Identity restored, not kept here",
-    "restored_session_desc": "You added no passkey, so your phrase was not saved on this device. Reloading will ask for it again.",
+    "kept_on_device": "Identity restored, phrase kept on this device",
+    "kept_on_device_desc": "Without a passkey your twelve words stay on this browser unencrypted. You can link one later from your profile.",
     "have_passkey": "I do have my passkey after all"
   },
   "identity_step": {

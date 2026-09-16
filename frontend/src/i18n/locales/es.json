@@ -770,8 +770,8 @@
     "not_registered_desc": "La frase esta bien formada, o sea que las palabras son de la lista, pero la identidad que reconstruye no esta registrada. Revisa si hay alguna palabra cambiada de sitio.",
     "help": "Las palabras van en minúscula y el orden importa. Los espacios y las mayúsculas no.",
     "lost_phrase": "¿Has perdido también las palabras?",
-    "restored_session": "Identidad restaurada, sin guardar aquí",
-    "restored_session_desc": "No añadiste una passkey, así que tu frase no se ha guardado en este dispositivo. Al recargar te la volverá a pedir.",
+    "kept_on_device": "Identidad restaurada, frase guardada en este dispositivo",
+    "kept_on_device_desc": "Sin passkey, tus doce palabras se quedan en este navegador sin cifrar. Puedes vincular una mas tarde desde tu perfil.",
     "have_passkey": "Sí tengo mi passkey a mano"
   },
   "identity_step": {

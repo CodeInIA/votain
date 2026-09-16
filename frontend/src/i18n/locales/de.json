@@ -764,8 +764,8 @@
     "not_registered_desc": "Die Phrase ist wohlgeformt, die Worter stammen also aus der Liste, aber die daraus entstehende Identitat wurde nie registriert. Prufen Sie, ob ein Wort an der falschen Stelle steht.",
     "help": "Die Wörter sind kleingeschrieben und die Reihenfolge zählt. Leerzeichen und Großschreibung nicht.",
     "lost_phrase": "Auch die Wörter verloren?",
-    "restored_session": "Identität wiederhergestellt, hier nicht gespeichert",
-    "restored_session_desc": "Du hast keinen Passkey hinzugefügt, deine Phrase wurde also nicht auf diesem Gerät gespeichert. Nach dem Neuladen wird erneut danach gefragt.",
+    "kept_on_device": "Identitat wiederhergestellt, Phrase auf diesem Gerat gespeichert",
+    "kept_on_device_desc": "Ohne Passkey bleiben Ihre zwolf Worter unverschlusselt in diesem Browser. Sie konnen spater im Profil einen verknupfen.",
     "have_passkey": "Ich habe meinen Passkey doch zur Hand"
   },
   "identity_step": {

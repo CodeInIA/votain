@@ -148,13 +148,21 @@ export default function RecoverPhrase() {
     }
   };
 
-  /** Step two, declined: the words stay on this device, in the clear. */
+  /**
+   * Step two, declined: the words stay on this device, in the clear.
+   *
+   * The message used to say the opposite, that nothing had been kept and a
+   * reload would ask again. That was true when declining meant a cancelled
+   * passkey prompt and no write at all; declining is now a choice that writes
+   * the phrase here, and a toast describing the old behaviour is worse than
+   * none, because it tells somebody their words are not on a device they are.
+   */
   const keepOnDevice = () => {
     keepRecoveredPhraseOnDevice(input);
     setAskingSkip(false);
     toast({
-      title: t('recover.restored_session'),
-      description: t('recover.restored_session_desc'),
+      title: t('recover.kept_on_device'),
+      description: t('recover.kept_on_device_desc'),
       variant: 'warning',
     });
     done();

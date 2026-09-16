@@ -770,8 +770,8 @@
     "not_registered_desc": "La phrase est bien formee, donc les mots viennent de la liste, mais l'identite qu'elle reconstruit n'a jamais ete enregistree. Verifiez si un mot est mal place.",
     "help": "Les mots sont en minuscules et l'ordre compte. Les espaces et les majuscules non.",
     "lost_phrase": "Vous avez perdu les mots aussi ?",
-    "restored_session": "Identité restaurée, non conservée ici",
-    "restored_session_desc": "Vous n’avez pas ajouté de passkey, votre phrase n’a donc pas été enregistrée sur cet appareil. Elle sera redemandée au rechargement.",
+    "kept_on_device": "Identite restauree, phrase conservee sur cet appareil",
+    "kept_on_device_desc": "Sans passkey, vos douze mots restent sur ce navigateur en clair. Vous pourrez en lier une plus tard depuis votre profil.",
     "have_passkey": "J’ai bien ma passkey sous la main"
   },
   "identity_step": {
