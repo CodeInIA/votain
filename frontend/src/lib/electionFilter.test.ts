@@ -162,22 +162,29 @@ describe('the two promises are not one promise', () => {
       phase: 'active', voteEnd: later, fixedSchedule: false, cancellable: true,
     });
 
-    expect(matches(movableAndFinal, { noCancel: true })).toBe(true);
-    expect(matches(movableAndStoppable, { noCancel: true })).toBe(false);
-    // The chip is off: it narrows nothing and both are still in the list.
-    expect(matches(movableAndStoppable, { noCancel: false })).toBe(true);
+    expect(matches(movableAndFinal, { cancel: 'no_cancel' })).toBe(true);
+    expect(matches(movableAndStoppable, { cancel: 'no_cancel' })).toBe(false);
+    // The other answer, which is a question someone auditing the platform
+    // asks and the panel could not express until it had both chips.
+    expect(matches(movableAndStoppable, { cancel: 'can_cancel' })).toBe(true);
+    expect(matches(movableAndFinal, { cancel: 'can_cancel' })).toBe(false);
+    // Neither chip on: it narrows nothing and both are still in the list.
+    expect(matches(movableAndStoppable, { cancel: null })).toBe(true);
   });
 
   it('leaves out the election that never answered the question', () => {
-    // `undefined` is not `false`. Deployed before the flag, it made no promise,
-    // and a filter for the promise must not collect it: `!election.cancellable`
-    // would have.
+    // `undefined` is not `false` and it is not `true` either. Deployed before
+    // the flag, it made no promise and declined none, so it belongs in
+    // neither answer: `!election.cancellable` would have collected it into
+    // the first.
     const unknown = election({ phase: 'active', voteEnd: later, cancellable: undefined });
-    expect(matches(unknown, { noCancel: true })).toBe(false);
+    expect(matches(unknown, { cancel: 'no_cancel' })).toBe(false);
+    expect(matches(unknown, { cancel: 'can_cancel' })).toBe(false);
   });
 
-  it('counts the cancel chip as narrowing the list', () => {
-    expect(isAnyFilterActive(filters({ noCancel: true }))).toBe(true);
+  it('counts either cancel chip as narrowing the list', () => {
+    expect(isAnyFilterActive(filters({ cancel: 'no_cancel' }))).toBe(true);
+    expect(isAnyFilterActive(filters({ cancel: 'can_cancel' }))).toBe(true);
   });
 });
 

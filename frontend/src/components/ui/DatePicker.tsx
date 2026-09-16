@@ -28,6 +28,17 @@ interface DatePickerProps {
   max?: string; // 'yyyy-mm-dd'
   /** Also pick an hour/minute. Election deadlines are timestamps, not whole days. */
   withTime?: boolean;
+  /**
+   * For the field itself, merged over the default look.
+   *
+   * The default is a filled box, which is right in the create wizard where
+   * every control on the page is one. In the filter panel everything around
+   * it is a transparent outlined chip, and a filled box there reads as a
+   * darker, heavier thing that does not belong with the rest.
+   */
+  className?: string;
+  /** For the label, so a compact caller can drop it to hint size. */
+  labelClassName?: string;
   id?: string;
 }
 
@@ -85,7 +96,8 @@ function useCoarsePointer() {
 }
 
 export function DatePicker({
-  label, hint, error, value, onChange, min, max, withTime = false, id,
+  label, hint, error, value, onChange, min, max, withTime = false,
+  className, labelClassName, id,
 }: DatePickerProps) {
   const { t, i18n } = useTranslation();
   const [open, setOpen] = React.useState(false);
@@ -180,6 +192,7 @@ export function DatePicker({
     'transition-all duration-200 hover:border-outline-variant/40',
     'focus:outline-none focus:border-primary/60 focus:shadow-[0_0_0_3px_rgba(79,142,247,0.15)]',
     error && 'border-error/60',
+    className,
   );
 
   // Touch devices: hand off to the OS picker instead of the custom calendar.
@@ -192,7 +205,10 @@ export function DatePicker({
     return (
       <div className="flex flex-col gap-1.5 w-full">
         {label && (
-          <label htmlFor={pickerId} className="text-sm font-medium text-on-surface-variant">
+          <label
+            htmlFor={pickerId}
+            className={cn('text-sm font-medium text-on-surface-variant', labelClassName)}
+          >
             {label}
           </label>
         )}
@@ -217,7 +233,10 @@ export function DatePicker({
   return (
     <div className="flex flex-col gap-1.5 w-full">
       {label && (
-        <label htmlFor={pickerId} className="text-sm font-medium text-on-surface-variant">
+        <label
+            htmlFor={pickerId}
+            className={cn('text-sm font-medium text-on-surface-variant', labelClassName)}
+          >
           {label}
         </label>
       )}

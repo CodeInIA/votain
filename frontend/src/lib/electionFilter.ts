@@ -65,16 +65,20 @@ export interface ElectionFilterState {
    */
   schedule: 'fixed' | 'movable' | null;
   /**
-   * Only elections the organizer gave up the power to call off.
+   * Whether the organizer kept the power to call the election off.
    *
-   * A toggle where the one above has three states, and for the same reason the
-   * verified-domain chip is a toggle: keeping the power to cancel is the
-   * default every election has ever been created with, so a chip for it would
-   * collect almost the whole list and read as a category of suspicion. The
-   * promise is the rare thing, and the rare thing is what is worth searching
-   * for.
+   * THREE STATES, LIKE THE ONE ABOVE, which it was not at first. It was a
+   * single toggle for the promise only, on the grounds that keeping the power
+   * is the default and a chip for it would collect almost the whole list.
+   * That is equally true of movable dates, which get their own chip, so the
+   * two controls were answering the same shape of question in two different
+   * shapes for no reason a reader could see.
+   *
+   * Both answers are worth asking for: one to find the elections that cannot
+   * be stopped, the other to audit the ones that can. An election from before
+   * the flag matches neither.
    */
-  noCancel: boolean;
+  cancel: 'no_cancel' | 'can_cancel' | null;
   /**
    * Created no earlier than this day, as 'yyyy-mm-dd' local, or empty.
    *
@@ -111,7 +115,7 @@ export const EMPTY_FILTERS: ElectionFilterState = {
   restrictedOnly: false,
   votingType: null,
   schedule: null,
-  noCancel: false,
+  cancel: null,
   createdFrom: '',
   createdTo: '',
   closingSoon: false,
@@ -132,7 +136,7 @@ export function isAnyFilterActive(filter: ElectionFilterState): boolean {
     filter.restrictedOnly ||
     Boolean(filter.votingType) ||
     Boolean(filter.schedule) ||
-    filter.noCancel ||
+    Boolean(filter.cancel) ||
     isCreatedFilterActive(filter) ||
     filter.closingSoon ||
     isEligibilityFilterActive(filter.eligibility)
@@ -224,9 +228,10 @@ export function matchesElectionFilter(
   // neither answer.
   if (filter.schedule === 'fixed' && election.fixedSchedule !== true) return false;
   if (filter.schedule === 'movable' && election.fixedSchedule !== false) return false;
-  // Again `=== false` and not `!`: an election from before the flag carries
-  // `undefined`, and it never made this promise either.
-  if (filter.noCancel && election.cancellable !== false) return false;
+  // Again compared against the two booleans and not truthiness: an election
+  // from before the flag carries `undefined` and answered neither way.
+  if (filter.cancel === 'no_cancel' && election.cancellable !== false) return false;
+  if (filter.cancel === 'can_cancel' && election.cancellable !== true) return false;
   if (!matchesCreated(election, filter)) return false;
   if (filter.closingSoon && !closingSoon(election)) return false;
   return matchesEligibilityFilter(election.eligibilityPolicy, filter.eligibility);

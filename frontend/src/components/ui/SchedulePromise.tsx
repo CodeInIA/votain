@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { CalendarCheck, CalendarClock, ShieldCheck } from 'lucide-react';
+import { CalendarCheck, CalendarClock, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 interface SchedulePromiseProps {
@@ -42,6 +42,11 @@ interface SchedulePromiseProps {
  * common, and for the same reason it should be visible. Neither is styled as an
  * alarm.
  *
+ * BOTH QUESTIONS GET BOTH ANSWERS. The cancel line used to show only the
+ * promise, on the grounds that keeping the power is the ordinary state and a
+ * line saying so would be noise. That is equally true of movable dates, which
+ * are shown, so it was an inconsistency rather than a rule.
+ *
  * Nothing at all is shown when the answer is unknown. An election deployed
  * before this existed cannot make the promise, and cannot be said to have
  * declined it either.
@@ -73,17 +78,33 @@ export function SchedulePromise({
           )}
         </span>
       )}
-      {/* Only the promise is shown, not its absence. Keeping the power to cancel
-          is the ordinary state of every election ever created here, and a line
-          on all of them saying so would be noise, where the badge above is a
-          choice made in both directions and worth reading either way. */}
-      {cancellable === false && (
+      {/* BOTH ANSWERS, the same as the dates above, which they did not used to
+          be. The argument for hiding the ordinary one was that "the organizer
+          can call it off" is true of almost every election and a line saying
+          so would be noise. That argument is exactly as true of movable dates,
+          which are also the default and are shown, so keeping one and not the
+          other was not a rule, it was an inconsistency: a reader who has never
+          seen the cancel badge cannot tell an election that promised nothing
+          from one they simply have not looked at closely.
+
+          Not styled as an alarm. Keeping the power to cancel is reasonable and
+          common, which is the whole reason it has to be legible rather than
+          implied. */}
+      {cancellable !== undefined && (
         <span
           className={cn('flex items-center gap-1.5', className)}
-          title={t('schedule.no_cancel_desc')}
+          title={t(cancellable ? 'schedule.can_cancel_desc' : 'schedule.no_cancel_desc')}
         >
-          <ShieldCheck className="w-3.5 h-3.5 shrink-0 text-success" />
-          {t('schedule.no_cancel')}
+          {cancellable
+            ? <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
+            : <ShieldCheck className="w-3.5 h-3.5 shrink-0 text-success" />}
+          {t(
+            cancellable
+              ? compact
+                ? 'schedule.can_cancel_short'
+                : 'schedule.can_cancel'
+              : 'schedule.no_cancel',
+          )}
         </span>
       )}
     </>

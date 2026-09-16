@@ -274,7 +274,11 @@ which is nothing anyone can check.
 than closing early, since it publishes no result and so cannot shape one, but it
 is still a veto: an organizer watching the turnout rise against them can deny the
 outcome by ending the election rather than losing it. So `cancellable` is its own
-immutable flag, on by default.
+immutable flag, on by default, and both of its answers are shown and filterable
+exactly like the schedule's. Showing only the promise was tried first, on the
+grounds that keeping the power is the ordinary state and a line saying so would
+be noise; that is equally true of movable dates, which are shown, so it was an
+inconsistency rather than a rule.
 
 Kept apart from `fixedSchedule` rather than folded into it, because coupling them
 would price the cheaper promise out of reach. An organizer who wanted fixed dates
@@ -303,8 +307,8 @@ thing, since "this was created an hour ago" is the most useful fact about a
 convincing copy of somebody else's election. It is shown on the cards and in all
 three election views, and both ends of a creation range can be filtered on.
 
-**Both answers are shown to the voter**, on the card, on the public preview and
-on the election itself. Showing only the reassuring one would make its absence
+**Both answers are shown to the voter**, for both promises, on the card, on the
+public preview and on the election itself. Showing only the reassuring one would make its absence
 unreadable, since nobody can tell a missing badge from a badge they have never
 seen, and keeping the power is a reasonable and common choice that deserves to be
 visible rather than hidden. Nothing at all is shown for an election deployed

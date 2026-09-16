@@ -231,13 +231,23 @@ export function ElectionCard({ election, view = 'public', className }: ElectionC
             too. A fact that appears on some cards and not others is worse
             than one that appears on none, because its absence reads as
             meaning something. */}
-        <CreatedOn date={election.createdAt} className="col-start-1 row-start-2" />
-        <span className="col-start-2 row-start-2 flex items-center gap-1.5 min-w-0">
-          <Calendar className="w-3.5 h-3.5 shrink-0" />
-          <span className="truncate">
-            {t('election.ends_on', { date: election.voteEnd.toLocaleDateString() })}
+        {/* THEIR OWN SUB-GRID, SPLIT EVENLY, not two cells of the grid above.
+            That grid is 1.35fr to 1fr because the first column carries the
+            voting rule, the longest label on the card. The dates inherited
+            those widths and did not want them: in Spanish "Termina el
+            25/9/2026" is wider than the narrow column, so it truncated to
+            "Termina el 25/..." and the date, the only part worth reading,
+            was the part cut off. Two equal halves fit both labels in every
+            language the app ships. */}
+        <div className="col-span-2 row-start-2 grid grid-cols-2 gap-x-3 min-w-0">
+          <CreatedOn date={election.createdAt} />
+          <span className="flex items-center gap-1.5 min-w-0">
+            <Calendar className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">
+              {t('election.ends_on', { date: election.voteEnd.toLocaleDateString() })}
+            </span>
           </span>
-        </span>
+        </div>
         {/* Its own row now, where it shared one with a date. Short enough
             that the empty cell beside it costs nothing, and it is the one
             number here that moves while somebody is reading the card. */}

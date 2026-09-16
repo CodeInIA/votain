@@ -413,7 +413,13 @@ export default function ElectionDetail() {
           </div>
           <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-white/5 text-xs text-on-surface-meta">
             <span className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5" />{election.totalEnrolled.toLocaleString()} {t('election.enrolled')}</span>
-            <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" />{election.voteEnd.toLocaleDateString()}</span>
+            {/* Labelled, like the creation date a line away from it. A bare
+                date read fine while it was the only one on the screen, and
+                stopped the moment a second date joined it. */}
+            <span className="flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5" />
+              {t('election.ends_on', { date: election.voteEnd.toLocaleDateString() })}
+            </span>
             {/* WHAT IS RESERVED, stated as a fact among the other facts rather
                 than as a banner.
                 The warning below the enrol button only speaks when something is

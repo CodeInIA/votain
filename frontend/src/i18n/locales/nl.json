@@ -157,8 +157,8 @@
     "candidates": "Kandidaten",
     "eligibility": "Verkiesbaarheid",
     "enrolled": "Ingeschreven",
-    "created_on": "Aangemaakt op {{date}}",
-    "ends_on": "Eindigt op {{date}}",
+    "created_on": "Aangemaakt {{date}}",
+    "ends_on": "Eindigt {{date}}",
     "votes_cast": "Uitgebrachte stemmen",
     "participation": "Deelname",
     "enrollment_closes": "Inschrijving sluit",
@@ -809,6 +809,7 @@
     "no_cancel": "Kan niet worden afgeblazen",
     "no_cancel_desc": "De organisator heeft bij het aanmaken afgezien van de mogelijkheid deze verkiezing te annuleren. Ze loopt tot het einde, hoe de opkomst er ook uitziet.",
     "can_cancel": "De organisator kan haar afblazen",
+    "can_cancel_short": "Kan worden afgelast",
     "can_cancel_desc": "De organisator kan deze verkiezing tussentijds annuleren. Er wordt dan geen uitslag gepubliceerd."
   },
   "funding": {

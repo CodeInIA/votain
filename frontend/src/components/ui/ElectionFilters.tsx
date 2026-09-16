@@ -21,6 +21,7 @@ import {
   CalendarCheck,
   CalendarClock,
   Ban,
+  ShieldAlert,
   ArrowDownWideNarrow,
   ArrowDownNarrowWide,
   Hourglass,
@@ -93,6 +94,25 @@ function FilterToggle({
     </button>
   );
 }
+
+/**
+ * A form field made to sit among the chips above.
+ *
+ * Kept next to `FilterToggle` because it exists to match it: same 1px
+ * outline over nothing, same corner radius, same text size. The height stays
+ * a touch taller than a chip, since a chip is read and a date field is aimed
+ * at.
+ */
+const FIELD_AS_CHIP =
+  'h-9 rounded-lg text-xs bg-transparent border-outline-variant/30 hover:border-outline-variant/50';
+
+/**
+ * Its label, at hint weight rather than heading weight.
+ *
+ * The band already has a caption above it. A second bold line under it made
+ * "From" and "To" look like two more bands rather than two ends of one range.
+ */
+const FIELD_LABEL_AS_HINT = 'text-[11px] font-medium text-on-surface-meta';
 
 /**
  * One band of filters, under the question it answers.
@@ -324,16 +344,29 @@ export function ElectionFilters({ value, onChange, open, onToggleOpen, searchPla
             >
               {t('schedule.movable_short')}
             </FilterToggle>
-            {/* Independent of the two beside it, not a third state of them:
-                the combinations are real, and "dates that can move on an
-                election that cannot be called off" is a set someone can ask
-                for here. */}
+            {/* Independent of the two beside them, not a third and fourth
+                state of the same control: the combinations are real, and
+                "dates that can move on an election that cannot be called
+                off" is a set someone can ask for here.
+
+                Both answers, matching the dates. This was one chip for the
+                promise alone, which left the panel offering two ways to ask
+                about the schedule and one way to ask about cancelling, and
+                nothing on screen explained the difference because there
+                was none. */}
             <FilterToggle
-              active={value.noCancel}
-              onClick={() => set({ noCancel: !value.noCancel })}
+              active={value.cancel === 'no_cancel'}
+              onClick={() => set({ cancel: value.cancel === 'no_cancel' ? null : 'no_cancel' })}
               icon={Ban}
             >
               {t('schedule.no_cancel')}
+            </FilterToggle>
+            <FilterToggle
+              active={value.cancel === 'can_cancel'}
+              onClick={() => set({ cancel: value.cancel === 'can_cancel' ? null : 'can_cancel' })}
+              icon={ShieldAlert}
+            >
+              {t('schedule.can_cancel_short')}
             </FilterToggle>
           </FilterGroup>
 
@@ -372,7 +405,14 @@ export function ElectionFilters({ value, onChange, open, onToggleOpen, searchPla
             {/* Boxed to a width each. `DatePicker` is `w-full` for the create
                 wizard, where it owns its column; here two of them at full
                 width became two stacked rows taller than every other band in
-                the panel. */}
+                the panel.
+
+                DRESSED AS CHIPS, which is the point of `FIELD_AS_CHIP`. The
+                default field is a filled box, right on a form where every
+                control is one, and here it sat among transparent outlined
+                chips reading as a darker, heavier thing from somewhere else.
+                Same outline, same corner, same text size; only the height
+                keeps a little more, because a date is a target you click. */}
             <div className="flex flex-wrap items-end gap-2">
               <div className="w-[9.5rem]">
                 <DatePicker
@@ -380,6 +420,8 @@ export function ElectionFilters({ value, onChange, open, onToggleOpen, searchPla
                   onChange={createdFrom => set({ createdFrom })}
                   label={t('discover.created_from')}
                   max={value.createdTo || undefined}
+                  className={FIELD_AS_CHIP}
+                  labelClassName={FIELD_LABEL_AS_HINT}
                   id="created-from"
                 />
               </div>
@@ -389,6 +431,8 @@ export function ElectionFilters({ value, onChange, open, onToggleOpen, searchPla
                   onChange={createdTo => set({ createdTo })}
                   label={t('discover.created_to')}
                   min={value.createdFrom || undefined}
+                  className={FIELD_AS_CHIP}
+                  labelClassName={FIELD_LABEL_AS_HINT}
                   id="created-to"
                 />
               </div>

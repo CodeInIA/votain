@@ -809,6 +809,7 @@
     "no_cancel": "Cannot be called off",
     "no_cancel_desc": "The organizer gave up the power to cancel this election when it was created. It will run to its end whatever the turnout looks like.",
     "can_cancel": "The organizer can call it off",
+    "can_cancel_short": "Can be called off",
     "can_cancel_desc": "The organizer may cancel this election while it runs. No result is published if they do."
   },
   "funding": {

@@ -158,8 +158,8 @@
     "candidates": "Candidatos",
     "eligibility": "Elegibilidad",
     "enrolled": "Inscritos",
-    "created_on": "Creada el {{date}}",
-    "ends_on": "Termina el {{date}}",
+    "created_on": "Creada {{date}}",
+    "ends_on": "Termina {{date}}",
     "votes_cast": "Votos emitidos",
     "participation": "Participación",
     "enrollment_closes": "Inscripción cierra",
@@ -815,6 +815,7 @@
     "no_cancel": "No se puede cancelar",
     "no_cancel_desc": "El organizador renunció a poder cancelar esta elección al crearla. Llegará hasta el final tenga la participación que tenga.",
     "can_cancel": "El organizador puede cancelarla",
+    "can_cancel_short": "Se puede cancelar",
     "can_cancel_desc": "El organizador puede cancelar esta elección mientras está en marcha. Si lo hace, no se publica ningún resultado."
   },
   "funding": {

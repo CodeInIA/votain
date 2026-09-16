@@ -157,8 +157,8 @@
     "candidates": "Kandidaten",
     "eligibility": "Wahlberechtigung",
     "enrolled": "Angemeldet",
-    "created_on": "Erstellt am {{date}}",
-    "ends_on": "Endet am {{date}}",
+    "created_on": "Erstellt {{date}}",
+    "ends_on": "Endet {{date}}",
     "votes_cast": "Abgegebene Stimmen",
     "participation": "Beteiligung",
     "enrollment_closes": "Anmeldung endet",
@@ -809,6 +809,7 @@
     "no_cancel": "Kann nicht abgesagt werden",
     "no_cancel_desc": "Der Veranstalter hat bei der Erstellung darauf verzichtet, diese Wahl abzusagen. Sie läuft bis zum Ende, wie die Beteiligung auch aussieht.",
     "can_cancel": "Der Veranstalter kann sie absagen",
+    "can_cancel_short": "Kann abgesagt werden",
     "can_cancel_desc": "Der Veranstalter kann diese Wahl während sie läuft absagen. Dann wird kein Ergebnis veröffentlicht."
   },
   "funding": {
