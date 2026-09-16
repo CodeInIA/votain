@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Download, Users, Filter } from 'lucide-react';
+import { Download, Users, Filter, Search, X } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -182,6 +182,21 @@ export default function MemberList() {
               placeholder={t('members.search_placeholder')}
               value={query}
               onChange={e => setQuery(e.target.value)}
+              leftIcon={<Search className="w-4 h-4" />}
+              /* A search with no way out: a commitment is 77 digits, so the
+                 usual way to leave a filtered list was to select a field full
+                 of them and delete it by hand. Same control the election
+                 filters carry, on the one search that lacked it. */
+              rightIcon={query ? (
+                <button
+                  type="button"
+                  onClick={() => setQuery('')}
+                  aria-label={t('common.clear')}
+                  className="cursor-pointer p-2 -m-2 hover:text-on-surface transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              ) : undefined}
             />
           </div>
           <div className="flex items-center gap-2 sm:w-64 min-w-0">

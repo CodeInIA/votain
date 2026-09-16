@@ -238,7 +238,7 @@ export function ElectionFilters({ value, onChange, open, onToggleOpen, searchPla
                 type="button"
                 onClick={() => set({ query: '' })}
                 aria-label={t('common.clear')}
-                className="cursor-pointer hover:text-on-surface transition-colors"
+                className="cursor-pointer p-2 -m-2 hover:text-on-surface transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>

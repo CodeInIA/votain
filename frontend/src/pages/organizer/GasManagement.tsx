@@ -6,6 +6,7 @@ import {
   ArrowUpRight,
   Lock,
   Search,
+  X,
   Copy,
   Check,
   ExternalLink,
@@ -527,15 +528,22 @@ export default function GasManagement() {
 
           {history.length > 0 && (
             <div className="flex flex-col gap-3 mb-4">
-              <div className="relative">
-                <Search className="w-4 h-4 text-on-surface-meta absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <Input
-                  className="pl-9"
-                  placeholder={t('gas.search_placeholder')}
-                  value={filters.query}
-                  onChange={e => setFilters(f => ({ ...f, query: e.target.value }))}
-                />
-              </div>
+              <Input
+                placeholder={t('gas.search_placeholder')}
+                value={filters.query}
+                onChange={e => setFilters(f => ({ ...f, query: e.target.value }))}
+                leftIcon={<Search className="w-4 h-4" />}
+                rightIcon={filters.query ? (
+                  <button
+                    type="button"
+                    onClick={() => setFilters(f => ({ ...f, query: '' }))}
+                    aria-label={t('common.clear')}
+                    className="cursor-pointer p-2 -m-2 hover:text-on-surface transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                ) : undefined}
+              />
               {/* One kind at a time, WRAPPED rather than scrolled sideways.
                   Six chips whose labels name a kind of movement do not fit one
                   row in most languages, and a horizontal scroll with no edge to
