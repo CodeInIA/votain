@@ -213,6 +213,15 @@ export function DatePicker({
           </label>
         )}
         <div className="relative flex items-center">
+          {/* NO ICON OF OUR OWN ON THIS BRANCH. A touch device gets a real
+              `<input type="date">` so the OS picker opens instead of the
+              custom calendar, and browsers draw their own indicator inside
+              that input. Chrome's is `::-webkit-calendar-picker-indicator`
+              and can be hidden; Firefox for Android draws one that cannot,
+              so ours sat next to theirs and the field showed two calendars.
+
+              Theirs is the one that works here, since it is what opens the
+              picker, so it is the one that stays. */}
           <input
             id={pickerId}
             type={nativeType}
@@ -220,9 +229,8 @@ export function DatePicker({
             min={toNativeBound(min)}
             max={toNativeBound(max)}
             onChange={e => onChange(e.target.value)}
-            className={cn(fieldClass, 'pr-10')}
+            className={cn(fieldClass, 'pr-3')}
           />
-          <CalendarIcon className="absolute right-3.5 w-4 h-4 text-on-surface-meta pointer-events-none" />
         </div>
         {error && <p className="text-xs text-error">{error}</p>}
         {!error && hint && <p className="text-xs text-on-surface-meta">{hint}</p>}
