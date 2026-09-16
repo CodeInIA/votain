@@ -33,7 +33,7 @@ import { useElectionFunding } from '../hooks/useElectionFunding';
 import { canFundOneVote } from '../lib/gasNeeds';
 import { useVoteCost } from '../hooks/useVoteCost';
 import { EligibilityCheck } from '../components/voter/EligibilityCheck';
-import { relayErrorMessage, type EnrollAttestationInput } from '../lib/relay';
+import { relayErrorMessage } from '../lib/relay';
 import { isEmptyPolicy } from '../lib/eligibility';
 import { getStoredCommitment } from '../lib/semaphore';
 import { useVoterIdentity } from '../hooks/useVoterIdentity';
@@ -272,9 +272,9 @@ export default function ElectionPage() {
           <EligibilityCheck
             election={election.contractAddress}
             policy={eligibilityPolicy}
-            onVerified={attestation => {
+            onVerified={sessionId => {
               setShowEligibility(false);
-              void submitEnrollment(attestation);
+              void submitEnrollment(sessionId);
             }}
             onCancel={() => setShowEligibility(false)}
           />
@@ -355,11 +355,11 @@ export default function ElectionPage() {
     setTimeout(() => setReferenceCopied(false), 2000);
   };
 
-  const submitEnrollment = async (attestation?: EnrollAttestationInput) => {
+  const submitEnrollment = async (sessionId?: string) => {
     setTxError(null);
     setTxState('pending');
     try {
-      await enrollInElection(election.contractAddress, attestation);
+      await enrollInElection(election.contractAddress, sessionId);
       setTxState('success');
       void refresh();
     } catch (e) {

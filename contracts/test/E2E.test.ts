@@ -20,7 +20,15 @@ import { Group } from "@semaphore-protocol/group";
 import { generateProof } from "@semaphore-protocol/proof";
 import { poseidon2 } from "poseidon-lite/poseidon2";
 import { PublicKey, PrivateKey, generateRandomKeys } from "paillier-bigint";
-import { deployPoseidonT3, POSEIDON_FQN, baseConfig, VotingType, Outcome, Phase } from "./fixtures.js";
+import {
+  deployPoseidonT3,
+  POSEIDON_FQN,
+  baseConfig,
+  signPrivateEnrollment,
+  VotingType,
+  Outcome,
+  Phase,
+} from "./fixtures.js";
 
 const { ethers, networkHelpers } = await network.create();
 
@@ -61,6 +69,13 @@ function voteMessage(ciphertext: string, nonce: bigint): bigint {
   return BigInt(ethers.solidityPackedKeccak256(["bytes", "uint256"], [ciphertext, nonce]));
 }
 
+interface Voter {
+  /** What the identity is derived from, both the platform one and per-election ones. */
+  seed: string;
+  identity: Identity;
+  nullifier: bigint;
+}
+
 interface Stack {
   registry: any;
   paymaster: any;
@@ -73,12 +88,13 @@ describe("E2E, real Groth16 proofs, real Paillier, relayed like production", () 
   let deployer: any;
   let organizer: any;
   let relayer: any;
+  let platform: any;
   let stack: Stack;
   let paillier: { publicKey: PublicKey; privateKey: PrivateKey };
 
   before(async function () {
     this.timeout(180_000);
-    [deployer, organizer, relayer] = await ethers.getSigners();
+    [deployer, organizer, relayer, platform] = await ethers.getSigners();
 
     const poseidon = await deployPoseidonT3(ethers);
 
@@ -103,6 +119,7 @@ describe("E2E, real Groth16 proofs, real Paillier, relayed like production", () 
       FORWARDER,
       await verifier.getAddress(),
       await registry.getAddress(),
+      platform.address,
     );
     await factory.waitForDeployment();
     await (await paymaster.setFactory(await factory.getAddress())).wait();
@@ -112,11 +129,63 @@ describe("E2E, real Groth16 proofs, real Paillier, relayed like production", () 
   });
 
   /** Registers a voter on the platform and returns their Semaphore identity. */
-  async function newVoter(seed: string): Promise<{ identity: Identity; nullifier: bigint }> {
+  async function newVoter(seed: string): Promise<Voter> {
     const identity = new Identity(seed);
     const worldIdNullifier = BigInt(ethers.keccak256(ethers.toUtf8Bytes("worldid:" + seed)));
     await (await stack.registry.registerMember(worldIdNullifier, identity.commitment)).wait();
-    return { identity, nullifier: worldIdNullifier };
+    return { seed, identity, nullifier: worldIdNullifier };
+  }
+
+  /**
+   * The identity a voter derives for ONE election, mirroring the frontend.
+   *
+   * The commitment that lands in this election's tree is computed from the
+   * voter's own secret and this election's address, so it is reproducible from
+   * their recovery phrase and matches nothing they use anywhere else. Their
+   * platform identity, the one the registry names, never appears on chain
+   * again after registration.
+   */
+  function electionIdentity(voter: Voter, electionAddress: string): Identity {
+    return new Identity(`${voter.seed}:${electionAddress.toLowerCase()}`);
+  }
+
+  /**
+   * What the platform derives to answer "has this person already enrolled
+   * here", and nothing else. In production a server-side key goes into this
+   * hash, so nobody who knows the World ID nullifier can recompute the tag and
+   * recognise the same person in another election.
+   */
+  function humanTag(voter: Voter, electionAddress: string): bigint {
+    return BigInt(
+      ethers.solidityPackedKeccak256(
+        ["string", "uint256", "address"],
+        ["test-pepper", voter.nullifier, electionAddress],
+      ),
+    );
+  }
+
+  /** Enrols a voter the way the dApp does, and returns the identity they vote with. */
+  async function enrolPrivately(election: any, voter: Voter): Promise<Identity> {
+    const address = await election.getAddress();
+    const identity = electionIdentity(voter, address);
+    const tag = humanTag(voter, address);
+    const deadline = (await networkHelpers.time.latest()) + 900;
+    const signature = await signPrivateEnrollment(
+      platform,
+      address,
+      (await ethers.provider.getNetwork()).chainId,
+      identity.commitment,
+      tag,
+      deadline,
+    );
+
+    await (
+      await stack.paymaster
+        .connect(relayer)
+        .relayEnrollPrivate(address, identity.commitment, tag, deadline, signature, "0x")
+    ).wait();
+
+    return identity;
   }
 
   async function createElection(overrides: Record<string, unknown> = {}, deposit = "2"): Promise<any> {
@@ -187,25 +256,39 @@ describe("E2E, real Groth16 proofs, real Paillier, relayed like production", () 
     const bob = await newVoter("bob");
     const carol = await newVoter("carol");
 
+    const voting = new Map<string, Identity>();
     for (const v of [alice, bob, carol]) {
-      await (await stack.paymaster.connect(relayer).relayEnroll(address, v.identity.commitment)).wait();
+      voting.set(v.seed, await enrolPrivately(election, v));
     }
     expect(await election.memberCount()).to.equal(3n);
 
-    const group = new Group([alice.identity.commitment, bob.identity.commitment, carol.identity.commitment]);
+    // NONE of these are the commitments the registry knows. That is the point:
+    // the tree says three verified humans joined, and nothing on chain says
+    // which three, nor what else they have joined.
+    for (const v of [alice, bob, carol]) {
+      expect(await election.hasMember(v.identity.commitment)).to.equal(false);
+      expect(await election.hasMember(voting.get(v.seed)!.commitment)).to.equal(true);
+    }
+
+    const group = new Group([
+      voting.get("alice")!.commitment,
+      voting.get("bob")!.commitment,
+      voting.get("carol")!.commitment,
+    ]);
     expect(BigInt(group.root)).to.equal(await election.merkleTreeRoot());
 
     // ── Voting ──
     await networkHelpers.time.increaseTo((await election.voteStart()) + 1n);
 
     const ballots: string[] = [];
-    ballots.push((await relayedVote(election, alice.identity, group, 0)).ciphertext);
-    ballots.push((await relayedVote(election, bob.identity, group, 0)).ciphertext);
+    ballots.push((await relayedVote(election, voting.get("alice")!, group, 0)).ciphertext);
+    ballots.push((await relayedVote(election, voting.get("bob")!, group, 0)).ciphertext);
 
     // Carol votes for option 2, then changes her mind: coercion resistance means
     // only her highest-nonce ballot may count.
-    const coerced = await relayedVote(election, carol.identity, group, 2);
-    const real = await relayedVote(election, carol.identity, group, 1);
+    const carolIdentity = voting.get("carol")!;
+    const coerced = await relayedVote(election, carolIdentity, group, 2);
+    const real = await relayedVote(election, carolIdentity, group, 1);
     expect(real.nullifier).to.equal(coerced.nullifier);
     expect(await election.nullifierNonces(real.nullifier)).to.equal(2n);
     ballots.push(real.ciphertext);
@@ -257,7 +340,7 @@ describe("E2E, real Groth16 proofs, real Paillier, relayed like production", () 
     const address = await election.getAddress();
 
     const member = await newVoter("member-only");
-    await (await stack.paymaster.connect(relayer).relayEnroll(address, member.identity.commitment)).wait();
+    await enrolPrivately(election, member);
     await networkHelpers.time.increaseTo((await election.voteStart()) + 1n);
 
     // An outsider builds a group containing only themselves: internally consistent,
@@ -293,13 +376,13 @@ describe("E2E, real Groth16 proofs, real Paillier, relayed like production", () 
     const election = await createElection();
     const address = await election.getAddress();
     const voter = await newVoter("tamper");
-    await (await stack.paymaster.connect(relayer).relayEnroll(address, voter.identity.commitment)).wait();
+    const voting = await enrolPrivately(election, voter);
     await networkHelpers.time.increaseTo((await election.voteStart()) + 1n);
 
-    const group = new Group([voter.identity.commitment]);
+    const group = new Group([voting.commitment]);
     const scope: bigint = await election.scope();
     const ciphertext = encryptBallot(paillier.publicKey, 0);
-    const proof = await generateProof(voter.identity, group, voteMessage(ciphertext, 0n), scope);
+    const proof = await generateProof(voting, group, voteMessage(ciphertext, 0n), scope);
     const p = proof.points.map(BigInt);
 
     const tankBefore = await stack.paymaster.gasBalance(organizer.address);
@@ -330,13 +413,13 @@ describe("E2E, real Groth16 proofs, real Paillier, relayed like production", () 
     const election = await createElection();
     const address = await election.getAddress();
     const voter = await newVoter("replay");
-    await (await stack.paymaster.connect(relayer).relayEnroll(address, voter.identity.commitment)).wait();
+    const voting = await enrolPrivately(election, voter);
     await networkHelpers.time.increaseTo((await election.voteStart()) + 1n);
 
-    const group = new Group([voter.identity.commitment]);
+    const group = new Group([voting.commitment]);
     const scope: bigint = await election.scope();
     const ciphertext = encryptBallot(paillier.publicKey, 0);
-    const proof = await generateProof(voter.identity, group, voteMessage(ciphertext, 0n), scope);
+    const proof = await generateProof(voting, group, voteMessage(ciphertext, 0n), scope);
     const p = proof.points.map(BigInt);
 
     const args = [
@@ -370,19 +453,18 @@ describe("E2E, real Groth16 proofs, real Paillier, relayed like production", () 
     });
     const address = await election.getAddress();
 
-    const voters = [];
+    const voters: Voter[] = [];
     for (const seed of ["s1", "s2", "s3"]) voters.push(await newVoter("two-thirds-" + seed));
-    for (const v of voters) {
-      await (await stack.paymaster.connect(relayer).relayEnroll(address, v.identity.commitment)).wait();
-    }
+    const voting: Identity[] = [];
+    for (const v of voters) voting.push(await enrolPrivately(election, v));
 
-    const group = new Group(voters.map(v => v.identity.commitment));
+    const group = new Group(voting.map(identity => identity.commitment));
     await networkHelpers.time.increaseTo((await election.voteStart()) + 1n);
 
     // 2 Yes (index 0), 1 No (index 1) => exactly 2/3.
-    await relayedVote(election, voters[0].identity, group, 0);
-    await relayedVote(election, voters[1].identity, group, 0);
-    await relayedVote(election, voters[2].identity, group, 1);
+    await relayedVote(election, voting[0], group, 0);
+    await relayedVote(election, voting[1], group, 0);
+    await relayedVote(election, voting[2], group, 1);
 
     await networkHelpers.time.increaseTo((await election.voteEnd()) + 1n);
     await (await election.connect(organizer).publishResults("QmTwoThirds", [2n, 1n, 0n])).wait();
@@ -397,20 +479,26 @@ describe("E2E, real Groth16 proofs, real Paillier, relayed like production", () 
     const address = await election.getAddress();
     const voter = await newVoter("unlinkable");
 
-    const enrollTx = await (
-      await stack.paymaster.connect(relayer).relayEnroll(address, voter.identity.commitment)
-    ).wait();
+    const voting = await enrolPrivately(election, voter);
+    const enrollTx = await (await election.queryFilter(election.filters.MemberEnrolled()))[0]
+      .getTransaction();
 
     await networkHelpers.time.increaseTo((await election.voteStart()) + 1n);
-    const group = new Group([voter.identity.commitment]);
-    await relayedVote(election, voter.identity, group, 0);
+    const group = new Group([voting.commitment]);
+    await relayedVote(election, voting, group, 0);
 
     const voteTx = await (await election.queryFilter(election.filters.VoteCast()))[0].getTransaction();
     const paymasterAddress = await stack.paymaster.getAddress();
 
     // Both operations were sent TO the paymaster, so the on-chain trace exposes
     // no address that belongs to this voter and links enrollment to ballot.
-    expect(enrollTx!.to).to.equal(paymasterAddress);
+    expect(enrollTx.to).to.equal(paymasterAddress);
     expect(voteTx.to).to.equal(paymasterAddress);
+
+    // And the leaf is not the voter's platform identity, so the enrolment
+    // cannot be matched against the registry either, nor against the same
+    // person's enrolment anywhere else.
+    expect(await election.hasMember(voter.identity.commitment)).to.equal(false);
+    expect(await stack.registry.nullifierOf(voting.commitment)).to.equal(0n);
   });
 });

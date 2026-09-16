@@ -10,10 +10,11 @@
  * Env:
  *   CHAIN_RPC_URL   RPC endpoint
  */
-import { Contract, JsonRpcProvider, isAddress } from 'ethers';
+import { Contract, JsonRpcProvider, ZeroAddress, isAddress } from 'ethers';
 import { parsePolicy, policyHash, type EligibilityPolicy } from '../eligibility/policy.js';
 
 const ELECTION_ABI = [
+  'function platformAttester() view returns (address)',
   'function eligibilityAttester() view returns (address)',
   'function eligibilityPolicyHash() view returns (bytes32)',
   'function metadataJson() view returns (string)',
@@ -83,6 +84,41 @@ export async function readElectionEligibility(
     enrollStart: Number(enrollStart),
     enrollEnd: Number(enrollEnd),
   };
+}
+
+export interface EnrolmentMode {
+  /** The key this election trusts for private enrolment, or zero for none. */
+  platformAttester: string;
+  /** The organizer's own gatekeeper, or zero when the election is ungated. */
+  eligibilityAttester: string;
+}
+
+/**
+ * Which door this election's enrolment goes through.
+ *
+ * Elections deployed before private enrolment existed answer zero for the
+ * platform attester and keep the public paths, where the voter's one platform
+ * commitment lands in the tree and the registry says publicly whose it is.
+ * Anything deployed since refuses those paths outright, so the two can never
+ * both be open on one election and give one human two leaves.
+ *
+ * `platformAttester` is read rather than assumed, because it is frozen into the
+ * election at deployment: a server that had rotated its key would otherwise
+ * sign attestations that election can never accept.
+ */
+export async function readEnrolmentMode(electionAddress: string): Promise<EnrolmentMode> {
+  if (!isAddress(electionAddress)) throw new Error('election must be a valid address');
+  if (!isChainConfigured()) throw new Error('CHAIN_RPC_URL not configured');
+
+  const election = new Contract(electionAddress, ELECTION_ABI, getProvider());
+  const [platformAttester, eligibilityAttester] = await Promise.all([
+    // An election deployed before this existed has no such function, and the
+    // call reverts rather than returning zero.
+    election.platformAttester().catch(() => ZeroAddress) as Promise<string>,
+    election.eligibilityAttester() as Promise<string>,
+  ]);
+
+  return { platformAttester, eligibilityAttester };
 }
 
 /**

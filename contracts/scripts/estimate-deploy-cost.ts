@@ -149,6 +149,8 @@ async function main(): Promise<void> {
     deployer.address,
     await verifier.getAddress(),
     await registry.getAddress(),
+    // The platform attester, which costs the same to store whoever it is.
+    deployer.address,
   );
   await factory.waitForDeployment();
   steps.push({

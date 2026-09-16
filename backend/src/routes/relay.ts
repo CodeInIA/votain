@@ -22,11 +22,14 @@ import rateLimit from 'express-rate-limit';
 import {
   relayEnroll,
   relayEnrollAttested,
+  relayEnrollPrivate,
   relayVote,
   isRelayerConfigured,
   type VoteCall,
 } from '../chain/relayer.js';
 import { verifySession } from '../auth/session.js';
+import { authorisePrivateEnrolment, isRefusal } from '../eligibility/enrolment.js';
+import { readEnrolmentMode } from '../chain/election.js';
 
 const router = Router();
 
@@ -47,18 +50,57 @@ router.post('/relay/enroll', relayLimiter, async (req: Request, res: Response) =
   const session = await verifySession(req.cookies?.voter_vc);
   if (!session) return res.status(401).json({ error: 'Not authenticated' });
 
-  const { election, identityCommitment, personhoodNullifier, deadline, signature } = req.body as {
-    election?: string;
-    identityCommitment?: string;
-    personhoodNullifier?: string;
-    deadline?: number;
-    signature?: string;
-  };
+  const { election, identityCommitment, personhoodNullifier, deadline, signature, sessionId } =
+    req.body as {
+      election?: string;
+      identityCommitment?: string;
+      personhoodNullifier?: string;
+      deadline?: number;
+      signature?: string;
+      sessionId?: string;
+    };
   if (!election || !identityCommitment) {
     return res.status(400).json({ error: 'election and identityCommitment are required' });
   }
   if (!/^\d+$/.test(identityCommitment)) {
     return res.status(400).json({ error: 'identityCommitment must be a decimal string' });
+  }
+
+  /**
+   * PRIVATE FIRST, where the election takes it.
+   *
+   * The commitment in the body is one the browser derived for this election
+   * alone, and the authorisation is produced here rather than passed in: the
+   * tag that says "this person, this election" is computed with a key only this
+   * server holds, and handing it to the browser would put it in reach of
+   * whoever the browser talks to next.
+   *
+   * The election decides, not the client. Asking the chain which door it has
+   * means a caller cannot request the weaker one for an election that offers
+   * both, because no election offers both.
+   */
+  const mode = await readEnrolmentMode(election).catch(() => null);
+  if (mode && mode.platformAttester !== '0x0000000000000000000000000000000000000000') {
+    const authorisation = await authorisePrivateEnrolment({
+      election,
+      identityCommitment,
+      voter: { nullifier: session.nullifier, personhood: session.personhood },
+      sessionId,
+    });
+    if (isRefusal(authorisation)) {
+      return res.status(authorisation.status).json({ error: authorisation.error });
+    }
+
+    const relayed = await relayEnrollPrivate(
+      election,
+      identityCommitment,
+      authorisation.humanTag,
+      authorisation.deadline,
+      authorisation.signature,
+      authorisation.eligibilitySignature,
+    );
+    if (!relayed.relayed) return res.status(400).json({ error: relayed.error });
+    return res.status(200).json({ txHash: relayed.txHash });
   }
 
   // An attestation turns this into the gated entry point. The contract decides

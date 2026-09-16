@@ -54,6 +54,11 @@ export const ELECTION_ABI = [
   // actions
   "function enroll(uint256 identityCommitment)",
   "function enrollAttested(uint256 identityCommitment, uint256 deadline, bytes signature)",
+  "function enrollPrivate(uint256 identityCommitment, uint256 humanTag, uint256 deadline, bytes platformSignature, bytes eligibilitySignature)",
+  /// Zero on elections deployed before private enrolment existed, which still
+  /// take the public paths. Anything the current factory deploys answers with
+  /// the platform's key and refuses those paths.
+  "function platformAttester() view returns (address)",
   "function eligibilityAttester() view returns (address)",
   "function eligibilityPolicyHash() view returns (bytes32)",
   "function personhood() view returns (uint8)",

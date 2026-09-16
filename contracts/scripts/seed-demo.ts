@@ -29,6 +29,7 @@ import { generateProof } from "@semaphore-protocol/proof";
 import { poseidon2 } from "poseidon-lite/poseidon2";
 import { generateRandomKeys, PublicKey } from "paillier-bigint";
 import type { Wallet } from "ethers";
+import { createHmac } from "node:crypto";
 
 const { ethers } = await network.getOrCreate();
 
@@ -260,6 +261,15 @@ function canonicalPolicyJson(policy: EligibilityPolicy): string {
   return JSON.stringify(canonicalPolicy(policy));
 }
 
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+
+/** A seeded voter: their platform identity, and the human behind it. */
+interface SeedVoter {
+  identity: Identity;
+  /** The World ID nullifier, which is what an enrolment tag is derived from. */
+  worldId: bigint;
+}
+
 const ENROLL_ATTESTATION_TYPES = {
   EnrollAttestation: [
     { name: "identityCommitment", type: "uint256" },
@@ -267,6 +277,64 @@ const ENROLL_ATTESTATION_TYPES = {
     { name: "deadline", type: "uint256" },
   ],
 } as const;
+
+const PRIVATE_ENROLLMENT_TYPES = {
+  PrivateEnrollment: [
+    { name: "identityCommitment", type: "uint256" },
+    { name: "humanTag", type: "uint256" },
+    { name: "deadline", type: "uint256" },
+  ],
+} as const;
+
+/**
+ * The identity a voter derives for ONE election.
+ *
+ * MIRRORS frontend/src/lib/electionIdentity.ts, and has to: a seeded voter and
+ * a real one are the same kind of thing, and a seed that derived differently
+ * would produce a chain the app cannot read itself into.
+ */
+async function electionIdentity(master: Identity, electionAddress: string): Promise<Identity> {
+  const ikm = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(String(master.privateKey)),
+    "HKDF",
+    false,
+    ["deriveBits"],
+  );
+  const bits = await crypto.subtle.deriveBits(
+    {
+      name: "HKDF",
+      hash: "SHA-256",
+      salt: new Uint8Array(32),
+      info: new TextEncoder().encode(
+        "votain/election-identity/v1:" + electionAddress.toLowerCase(),
+      ),
+    },
+    ikm,
+    256,
+  );
+  const seed = Array.from(new Uint8Array(bits), b => b.toString(16).padStart(2, "0")).join("");
+  return new Identity(seed);
+}
+
+/**
+ * The tag that says "this person, here", and nothing anywhere else.
+ *
+ * MIRRORS `humanTagFor` in backend/src/eligibility/attester.ts, including the
+ * key it is derived under. The two have to agree, because a voter seeded here
+ * may later enrol through the running dApp in the same election, and a second
+ * tag for the same human would be a second leaf and a second vote.
+ */
+function humanTagFor(worldIdNullifier: bigint, electionAddress: string): bigint {
+  if (!attesterKey) throw new Error("no attester key: cannot derive an enrolment tag");
+  const tagKey = createHmac("sha256", "votain/enrolment-tag/v1").update(attesterKey).digest();
+  return BigInt(
+    ethers.solidityPackedKeccak256(
+      ["bytes32", "uint256", "address"],
+      ["0x" + tagKey.toString("hex"), worldIdNullifier, ethers.getAddress(electionAddress)],
+    ),
+  );
+}
 
 /**
  * The wallet that signs enrolment attestations for gated elections.
@@ -335,14 +403,41 @@ async function main(): Promise<void> {
 
   // A pool of voters registered on the platform once, reused across elections.
   console.log("Registering demo voters on PlatformRegistry...");
-  const voters: Identity[] = [];
+  const voters: SeedVoter[] = [];
   for (let i = 0; i < 8; i++) {
     const identity = new Identity(`votain-demo-voter-${i}`);
     const worldId = BigInt(ethers.keccak256(ethers.toUtf8Bytes(`demo-worldid-${i}`)));
     if (!(await registry.verifiedMembers(identity.commitment))) {
       await (await registry.registerMember(worldId, identity.commitment)).wait();
     }
-    voters.push(identity);
+    // The World ID nullifier is kept now, where the old seed threw it away:
+    // private enrolment needs it to derive this person's tag for each election.
+    voters.push({ identity, worldId });
+  }
+
+  /**
+   * Which door the elections seeded here have.
+   *
+   * Frozen into every election by the factory, so it is read once. Zero means
+   * this chain was deployed without a platform key and the old public paths are
+   * what the contracts accept.
+   */
+  const platformAttester: string = await factory.platformAttester();
+  const enrolsPrivately = platformAttester !== ZERO_ADDRESS;
+  if (enrolsPrivately) {
+    if (!attesterWallet) {
+      throw new Error(
+        "This factory deploys elections that enrol privately, which needs the platform key. " +
+          "Put ELIGIBILITY_ATTESTER_PRIVATE_KEY in backend/.env (the deploy script reads the " +
+          "same value) or set SEED_ATTESTER_KEY.",
+      );
+    }
+    if ((attesterWallet as Wallet).address.toLowerCase() !== platformAttester.toLowerCase()) {
+      throw new Error(
+        `The key this seed holds (${(attesterWallet as Wallet).address}) is not the one the ` +
+          `factory names (${platformAttester}). Every enrolment would be refused.`,
+      );
+    }
   }
   console.log(`  ${voters.length} voters registered\n`);
 
@@ -484,9 +579,44 @@ async function main(): Promise<void> {
     step(`  enrolling ${enrolling} voters, ${spec.ballots.length} casting ballots`);
     await advanceTo(created + spec.enrollFrom + 60);
     const participants = voters.slice(0, enrolling);
+    /**
+     * Who votes here, under the name this election knows them by.
+     *
+     * A derived identity where the election enrols privately, the platform one
+     * where it does not, and from here on nothing cares which: the group, the
+     * proofs and the receipts all use whatever is in this list.
+     */
+    const voting: Identity[] = [];
+
     for (const v of participants) {
+      if (enrolsPrivately) {
+        const identity = await electionIdentity(v.identity, address);
+        const tag = humanTagFor(v.worldId, address);
+        const deadline = (await chainNow()) + 900;
+        const signature = await (attesterWallet as Wallet).signTypedData(
+          { name: "VotainElection", version: "1", chainId, verifyingContract: address },
+          PRIVATE_ENROLLMENT_TYPES as unknown as Record<string, Array<{ name: string; type: string }>>,
+          { identityCommitment: identity.commitment, humanTag: tag, deadline },
+        );
+        // The gated case needs the organizer's gatekeeper too, and the seed
+        // holds that key as well: same digest, same signer, same signature.
+        await (
+          await paymaster.relayEnrollPrivate(
+            address,
+            identity.commitment,
+            tag,
+            deadline,
+            signature,
+            spec.eligibility ? signature : "0x",
+          )
+        ).wait();
+        voting.push(identity);
+        continue;
+      }
+
+      voting.push(v.identity);
       if (!spec.eligibility) {
-        await (await paymaster.relayEnroll(address, v.commitment)).wait();
+        await (await paymaster.relayEnroll(address, v.identity.commitment)).wait();
         continue;
       }
 
@@ -498,17 +628,19 @@ async function main(): Promise<void> {
       // seeded voter, so each enrolls once and the contract's reuse check sees
       // the same shape it will see in production.
       const personhoodNullifier =
-        BigInt(ethers.keccak256(ethers.toUtf8Bytes(`seed-personhood-${address}-${v.commitment}`))) >> 8n;
+        BigInt(
+          ethers.keccak256(ethers.toUtf8Bytes(`seed-personhood-${address}-${v.identity.commitment}`)),
+        ) >> 8n;
 
       const signature = await (attesterWallet as Wallet).signTypedData(
         { name: "VotainElection", version: "1", chainId, verifyingContract: address },
         ENROLL_ATTESTATION_TYPES as unknown as Record<string, Array<{ name: string; type: string }>>,
-        { identityCommitment: v.commitment, personhoodNullifier, deadline },
+        { identityCommitment: v.identity.commitment, personhoodNullifier, deadline },
       );
       await (
         await paymaster.relayEnrollAttested(
           address,
-          v.commitment,
+          v.identity.commitment,
           personhoodNullifier,
           deadline,
           signature,
@@ -518,11 +650,11 @@ async function main(): Promise<void> {
 
     // Voting.
     await advanceTo(created + spec.voteFrom + 60);
-    const group = new Group(participants.map(v => v.commitment));
+    const group = new Group(voting.map(identity => identity.commitment));
     const scope: bigint = await election.scope();
 
     const castFor = async (voterIndex: number, option: number): Promise<void> => {
-      const identity = participants[voterIndex];
+      const identity = voting[voterIndex];
       const ciphertext = encryptBallot(keys.publicKey, option);
       const nonce: bigint = await election.nullifierNonces(voteNullifier(identity, scope));
       const proof = await generateProof(identity, group, voteMessage(ciphertext, nonce), scope);

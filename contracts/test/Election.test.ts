@@ -8,6 +8,7 @@ import {
   Phase,
   Outcome,
   DUMMY_PROOF,
+  ZERO_ADDRESS,
   type Stack,
 } from "./fixtures.js";
 
@@ -52,6 +53,7 @@ describe("ElectionV4, config validation", () => {
         FORWARDER,
         stack.verifier.getAddress(),
         stack.registry.getAddress(),
+        ZERO_ADDRESS,
         organizer.address,
         cfg,
       );
@@ -93,6 +95,7 @@ describe("ElectionV4, config validation", () => {
         FORWARDER,
         stack.verifier.getAddress(),
         stack.registry.getAddress(),
+        ZERO_ADDRESS,
         organizer.address,
         cfg,
       );
@@ -499,6 +502,7 @@ describe("ElectionV4, option ceiling", () => {
         FORWARDER,
         stack.verifier.getAddress(),
         stack.registry.getAddress(),
+        ZERO_ADDRESS,
         organizer.address,
         cfg,
       );

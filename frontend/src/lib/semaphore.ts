@@ -45,6 +45,7 @@ import {
   type PrfAssertion,
 } from "./passkeyPrf";
 import { generateRecoveryPhrase, identityFromPhrase, normalizePhrase } from "./recoveryPhrase";
+import { forgetElectionIdentities } from "./electionIdentity";
 import {
   fetchVault,
   putVaultEntry,
@@ -908,6 +909,9 @@ export function isIdentityLoaded(): boolean {
 }
 
 export function clearIdentity(): void {
+  // The per-election identities are derived from the secret being cleared, and
+  // their commitments are cached for badge-drawing. Both go with it.
+  forgetElectionIdentities();
   cachedIdentity = null;
   void clearPhraseOnDevice();
   localStorage.removeItem(IDENTITY_MODE_KEY);

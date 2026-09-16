@@ -118,6 +118,35 @@ contract ElectionV4 is ERC2771Context {
      */
     address public immutable eligibilityAttester;
 
+    /**
+     * @notice The platform's key, which authorises PRIVATE enrolment.
+     *
+     * WHAT IT IS FOR. Enrolling used to put the voter's one platform-wide
+     * identity commitment into this election's tree, and the registry names
+     * publicly which human each commitment belongs to. Anyone could therefore
+     * read every election a given person had joined, straight off the chain.
+     * The ballot was anonymous; the participation was not.
+     *
+     * With this set, a voter enrols a commitment DERIVED FOR THIS ELECTION,
+     * which appears nowhere else, and the platform signs an attestation that
+     * the commitment belongs to a verified human who has not already enrolled
+     * here. The "has not already" is carried by `humanTag`, a value the
+     * platform derives from the human and this election's address, so it is
+     * stable here and unrecognisable anywhere else.
+     *
+     * WHAT IT COSTS. This key can enrol commitments that no registry entry
+     * vouches for, which the registry check used to prevent. That is not new
+     * power: the platform owns the registry, so it could always register a
+     * commitment of its own making and enrol that. What changes is that the
+     * roll no longer proves to a third party which humans are on it, and the
+     * platform is the party that knows.
+     *
+     * address(0) is an election deployed before this existed, which keeps the
+     * old public paths. The two are mutually exclusive on purpose: a human
+     * able to use both would hold two leaves and two votes.
+     */
+    address public immutable platformAttester;
+
     /// @dev keccak256 of the canonical policy JSON published inside metadataJson.
     /// Enforcement lives off chain, so this is what makes the rules auditable:
     /// anyone can recompute it from the metadata and see which policy the
@@ -145,6 +174,14 @@ contract ElectionV4 is ERC2771Context {
     bytes32 private constant ENROLL_TYPEHASH =
         keccak256(
             "EnrollAttestation(uint256 identityCommitment,uint256 personhoodNullifier,uint256 deadline)"
+        );
+
+    /// @dev The private path's attestation. `humanTag` takes the place the
+    /// personhood nullifier held, and the difference is the whole point: the
+    /// nullifier is the same number in every election, the tag is not.
+    bytes32 private constant PRIVATE_ENROLL_TYPEHASH =
+        keccak256(
+            "PrivateEnrollment(uint256 identityCommitment,uint256 humanTag,uint256 deadline)"
         );
 
     /**
@@ -352,6 +389,12 @@ contract ElectionV4 is ERC2771Context {
     error AttestationExpired();
     error BadAttestation();
     error MissingPersonhoodNullifier();
+    /// @dev The public enrolment paths on an election that enrols privately.
+    error PrivateEnrollmentRequired();
+    /// @dev The private path on an election deployed before it existed.
+    error PrivateEnrollmentUnavailable();
+    /// @dev A tag of zero would let one attestation stand for every human.
+    error MissingHumanTag();
     error PersonhoodNullifierUsed();
     error TooManyOptions();
     error PrivacyQuorumNotMet();
@@ -380,6 +423,7 @@ contract ElectionV4 is ERC2771Context {
         address trustedForwarder,
         address _verifier,
         address _registry,
+        address _platformAttester,
         address _organizer,
         Config memory cfg
     ) ERC2771Context(trustedForwarder) {
@@ -433,6 +477,7 @@ contract ElectionV4 is ERC2771Context {
 
         verifier = ISemaphoreVerifier(_verifier);
         registry = IPlatformRegistry(_registry);
+        platformAttester = _platformAttester;
         organizer = _organizer;
 
         name = cfg.name;
@@ -531,6 +576,11 @@ contract ElectionV4 is ERC2771Context {
     /// nullifier the election would count both ballots without any way to link
     /// them. Resolving the commitment back to its World ID nullifier closes that.
     function enroll(uint256 identityCommitment) external notDecided {
+        // An election that enrols privately has exactly one door. Leaving this
+        // one open would let the same human hold two leaves, one under their
+        // platform commitment and one under the commitment derived for here,
+        // and nothing on chain could tell that those two are one person.
+        if (platformAttester != address(0)) revert PrivateEnrollmentRequired();
         // Gated elections must come through enrollAttested. Without this branch
         // the attribute policy would be decorative: anyone refused by the relay
         // could call enroll() straight from their own wallet and land in the
@@ -552,6 +602,7 @@ contract ElectionV4 is ERC2771Context {
         uint256 deadline,
         bytes calldata signature
     ) external notDecided {
+        if (platformAttester != address(0)) revert PrivateEnrollmentRequired();
         if (eligibilityAttester == address(0)) revert UnexpectedAttestation();
         if (block.timestamp > deadline) revert AttestationExpired();
 
@@ -577,6 +628,67 @@ contract ElectionV4 is ERC2771Context {
         _enroll(identityCommitment);
     }
 
+    /**
+     * @notice Enrol a commitment that exists only for this election.
+     *
+     * WHAT THE CALLER BRINGS. A commitment derived from their own secret and
+     * this election's address, so it is theirs, it is reproducible from their
+     * recovery phrase, and it matches nothing they use elsewhere. A `humanTag`
+     * and the platform's signature over both. When the organizer named an
+     * attribute attester as well, that attester signs the same digest, so a
+     * third-party gatekeeper keeps exactly the say it had before.
+     *
+     * WHAT THE CHAIN LEARNS. That some verified human enrolled here, and that
+     * they had not already. Not which human, and not what else they joined.
+     *
+     * @dev Callable by anyone, like the attested path: the signature is the
+     * authorisation, so a voter can pay their own gas or hand it to the relay.
+     * There is no registry lookup, because a per-election commitment is by
+     * definition not in the registry; the signature carries what the lookup
+     * used to establish.
+     */
+    function enrollPrivate(
+        uint256 identityCommitment,
+        uint256 humanTag,
+        uint256 deadline,
+        bytes calldata platformSignature,
+        bytes calldata eligibilitySignature
+    ) external notDecided {
+        if (platformAttester == address(0)) revert PrivateEnrollmentUnavailable();
+        if (block.timestamp > deadline) revert AttestationExpired();
+        if (humanTag == 0) revert MissingHumanTag();
+
+        bytes32 digest = privateEnrollmentDigest(identityCommitment, humanTag, deadline);
+        _requireSignature(digest, platformSignature, platformAttester);
+
+        // The organizer's own gatekeeper, where they named one. It signs the
+        // same digest rather than one of its own: two questions are being
+        // answered about one enrolment, and making them two structures would
+        // only add a second thing to keep in step.
+        if (eligibilityAttester != address(0)) {
+            _requireSignature(digest, eligibilitySignature, eligibilityAttester);
+        }
+
+        _insertMember(identityCommitment, humanTag);
+    }
+
+    /// @notice The EIP-712 digest the platform signs to authorise one private enrolment.
+    function privateEnrollmentDigest(
+        uint256 identityCommitment,
+        uint256 humanTag,
+        uint256 deadline
+    ) public view returns (bytes32) {
+        bytes32 structHash = keccak256(
+            abi.encode(PRIVATE_ENROLL_TYPEHASH, identityCommitment, humanTag, deadline)
+        );
+        return keccak256(abi.encodePacked(hex"1901", _domainSeparator(), structHash));
+    }
+
+    function _requireSignature(bytes32 digest, bytes calldata signature, address expected) private pure {
+        (address signer, ECDSA.RecoverError err, ) = ECDSA.tryRecover(digest, signature);
+        if (err != ECDSA.RecoverError.NoError || signer != expected) revert BadAttestation();
+    }
+
     /// @notice The EIP-712 digest an attester signs to authorise one enrollment.
     /// @dev Bound to this contract and this chain through the domain separator, so an
     /// attestation issued for one election cannot be replayed into another.
@@ -592,20 +704,43 @@ contract ElectionV4 is ERC2771Context {
     }
 
     function _enroll(uint256 identityCommitment) internal {
-        if (block.timestamp < enrollStart || block.timestamp >= enrollEnd) {
-            revert EnrollmentNotOpen();
-        }
+        _requireEnrollmentOpen();
         if (!registry.verifiedMembers(identityCommitment)) revert NotPlatformVerified();
-        if (membersTree._has(identityCommitment)) revert AlreadyEnrolled();
 
         uint256 human = registry.nullifierOf(identityCommitment);
         if (human == 0) revert NotPlatformVerified();
-        if (enrolledHumans[human]) revert AlreadyEnrolled();
+
+        _insertMember(identityCommitment, human);
+    }
+
+    /// @dev Checked before anything else either path looks at, so a voter who
+    /// arrived early is told that rather than being told they are not a member.
+    function _requireEnrollmentOpen() private view {
+        if (block.timestamp < enrollStart || block.timestamp >= enrollEnd) {
+            revert EnrollmentNotOpen();
+        }
+    }
+
+    /**
+     * @dev Puts one leaf in the tree, once per human.
+     *
+     * `humanKey` is whatever identifies the person for THIS election, and the
+     * two paths mean different things by it. The public one passes the World ID
+     * nullifier, which is the same number everywhere and is why that path is
+     * linkable. The private one passes a tag the platform derived from the
+     * human and this address, which answers "again?" here and says nothing
+     * anywhere else. Either way this is the only place a leaf is added, so the
+     * window check and the two duplicate checks cannot drift apart.
+     */
+    function _insertMember(uint256 identityCommitment, uint256 humanKey) private {
+        _requireEnrollmentOpen();
+        if (membersTree._has(identityCommitment)) revert AlreadyEnrolled();
+        if (enrolledHumans[humanKey]) revert AlreadyEnrolled();
 
         uint256 index = membersTree.size;
         uint256 newRoot = membersTree._insert(identityCommitment);
         rootTimestamps[newRoot] = block.timestamp;
-        enrolledHumans[human] = true;
+        enrolledHumans[humanKey] = true;
 
         emit MemberEnrolled(identityCommitment, index, newRoot);
     }

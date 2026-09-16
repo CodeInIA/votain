@@ -31,6 +31,7 @@ import {
 import {
   effectivePersonhood,
   isEmptyPolicy,
+  meetsPersonhood,
   type EligibilityPolicy,
 } from '../eligibility/policy.js';
 import type { CredentialLevel } from '../auth/worldId.js';
@@ -58,35 +59,6 @@ import {
 } from '../eligibility/sessions.js';
 
 const router = Router();
-
-/**
- * Whether the session clears the election's personhood bar.
- *
- * Only `orb` can fail here. `device` asks nothing beyond being signed in, and
- * `document` is proved by the Self scan this whole flow exists to run, so the
- * one level that needs a separate answer is the one World ID alone can give.
- *
- * The level is read from the credential issued at sign-in rather than from a
- * proof presented now, and that is the binding: the nullifier the session is
- * keyed by IS the World ID nullifier that credential was issued against. A
- * proof accepted at this point would prove that SOMEBODY has an Orb, with
- * nothing tying that somebody to the voter holding the cookie.
- *
- * An older credential carries no level at all. Treated as unmet, so the voter
- * signs in again and gets one, rather than being waved through on the strength
- * of a claim that was never made.
- *
- * The two vocabularies do not quite line up: a credential level is
- * `any | document | orb` and a policy level is `device | document | orb`. Only
- * `orb` is compared here, and it is spelled the same in both, but anything that
- * later wants to RANK one against the other has to map them first.
- */
-function meetsPersonhood(
-  policy: EligibilityPolicy,
-  session: { personhood?: CredentialLevel },
-): boolean {
-  return effectivePersonhood(policy) !== 'orb' || session.personhood === 'orb';
-}
 
 const eligibilityLimiter = rateLimit({
   windowMs: 60_000,

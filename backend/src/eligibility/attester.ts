@@ -24,7 +24,8 @@
  * Env:
  *   ELIGIBILITY_ATTESTER_PRIVATE_KEY   key whose address elections name as attester
  */
-import { Wallet } from 'ethers';
+import { Wallet, getAddress, solidityPackedKeccak256 } from 'ethers';
+import { createHmac } from 'node:crypto';
 
 /** Lifetime of an attestation. Long enough to submit, short enough that a
  * leaked one is worthless by the time anyone finds it. */
@@ -34,6 +35,14 @@ const EIP712_TYPES = {
   EnrollAttestation: [
     { name: 'identityCommitment', type: 'uint256' },
     { name: 'personhoodNullifier', type: 'uint256' },
+    { name: 'deadline', type: 'uint256' },
+  ],
+} as const;
+
+const PRIVATE_EIP712_TYPES = {
+  PrivateEnrollment: [
+    { name: 'identityCommitment', type: 'uint256' },
+    { name: 'humanTag', type: 'uint256' },
     { name: 'deadline', type: 'uint256' },
   ],
 } as const;
@@ -51,6 +60,94 @@ function getAttesterWallet(): Wallet {
 /** The address organizers must name when creating a gated election. */
 export function attesterAddress(): string {
   return getAttesterWallet().address;
+}
+
+/**
+ * The key that turns a human into a per-election tag, and nothing else.
+ *
+ * WHY IT IS SECRET. The tag has to be the same number every time this person
+ * enrols in this election, so the contract can refuse them twice, and a
+ * different number in every other election, or the chain is back to publishing
+ * who joined what. A plain hash of the World ID nullifier and the address
+ * fails the second half: those nullifiers are on chain, so anyone could
+ * recompute every tag and recognise the same person everywhere.
+ *
+ * Derived from the attester key rather than configured separately, so there is
+ * one platform secret to deploy and no way to have one of them and not the
+ * other. Different info string, so the two uses never produce related values.
+ */
+function tagKey(): Buffer {
+  const key = process.env.ELIGIBILITY_ATTESTER_PRIVATE_KEY;
+  if (!key) throw new Error('ELIGIBILITY_ATTESTER_PRIVATE_KEY not configured');
+  return createHmac('sha256', 'votain/enrolment-tag/v1').update(key).digest();
+}
+
+/**
+ * The value that answers "has this person already enrolled HERE".
+ *
+ * Deterministic, so a voter who retries lands on the same tag and is refused
+ * the second leaf. Unrecognisable outside this election, so the roll of one
+ * election says nothing about the roll of another.
+ */
+export function humanTagFor(worldIdNullifier: string, electionAddress: string): string {
+  const scoped = solidityPackedKeccak256(
+    ['bytes32', 'uint256', 'address'],
+    [
+      '0x' + tagKey().toString('hex'),
+      BigInt(worldIdNullifier),
+      getAddress(electionAddress),
+    ],
+  );
+  return BigInt(scoped).toString();
+}
+
+export interface PrivateEnrollment {
+  /** Decimal string, as the contract and the relay both expect it. */
+  humanTag: string;
+  deadline: number;
+  signature: string;
+}
+
+/**
+ * Signs one private enrolment.
+ *
+ * Says two things and no more: the commitment belongs to a human this platform
+ * has verified, and that human has not already enrolled in this election. It
+ * does not say which human, because the tag is the only thing carrying that and
+ * it means nothing outside this address.
+ */
+export async function signPrivateEnrollment(
+  electionAddress: string,
+  chainId: bigint,
+  identityCommitment: string,
+  humanTag: string,
+  nowSeconds: number = Math.floor(Date.now() / 1000),
+): Promise<PrivateEnrollment> {
+  const wallet = getAttesterWallet();
+  const deadline = nowSeconds + ATTESTATION_TTL_SECONDS;
+
+  // The contract refuses a zero tag, for the same reason it refuses a zero
+  // personhood nullifier: one attestation would otherwise stand for everybody.
+  if (!humanTag || BigInt(humanTag) === 0n) {
+    throw new Error('refusing to sign a private enrolment with no human tag');
+  }
+
+  const signature = await wallet.signTypedData(
+    {
+      name: 'VotainElection',
+      version: '1',
+      chainId,
+      verifyingContract: electionAddress,
+    },
+    PRIVATE_EIP712_TYPES as unknown as Record<string, Array<{ name: string; type: string }>>,
+    {
+      identityCommitment: BigInt(identityCommitment),
+      humanTag: BigInt(humanTag),
+      deadline,
+    },
+  );
+
+  return { humanTag, deadline, signature };
 }
 
 export interface EnrollAttestation {

@@ -90,6 +90,7 @@ describe("ElectionV4, eligibility config", () => {
         FORWARDER,
         stack.verifier.getAddress(),
         stack.registry.getAddress(),
+        ZERO_ADDRESS,
         organizer.address,
         cfg,
       );
@@ -114,6 +115,7 @@ describe("ElectionV4, eligibility config", () => {
       FORWARDER,
       stack.verifier.getAddress(),
       stack.registry.getAddress(),
+      ZERO_ADDRESS,
       organizer.address,
       cfg,
     );

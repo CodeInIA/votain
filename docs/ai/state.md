@@ -2261,3 +2261,54 @@ read the phrase back to seal under the new credential), against one while the
 phrase is still in localStorage. `resolveIdentityFromVault` holds the phrase in
 its hand when it opens the vault and drops it; keeping it for the session, as
 the PRF secrets already are, would remove the third.
+
+## Enrolling stopped announcing who was enrolling (2026-09-16)
+
+The ballot was anonymous and the participation was not. One voter holds one
+Semaphore identity; `PlatformRegistry.nullifierOf` is a public view binding its
+commitment to a World ID nullifier; and `enroll` put THAT commitment into every
+election's merkle tree. So the chain carried, for anyone who read it, the list
+of elections each person had joined. Measured on the seeded local chain before
+the change: one commitment in 17 of 38 elections, the registry naming its human
+for each of them.
+
+**The shape of the fix.** The commitment that enrols is derived from the voter's
+secret and the election's address (`frontend/src/lib/electionIdentity.ts`,
+HKDF-SHA256, hex seed, domain-separated per address), so it is reproducible from
+the recovery phrase, unusable anywhere else, and unconnected to the platform
+identity. Nothing vouches for it on chain, so `ElectionV4.enrollPrivate` takes
+an EIP-712 attestation from a `platformAttester` the FACTORY freezes into every
+election, plus a `humanTag` the server derives from (World ID nullifier,
+election address, a key only it holds). The tag is what refuses a second
+enrolment here and means nothing anywhere else; the key is what stops anyone
+recomputing it from the public nullifiers.
+
+**Both doors never open at once.** `enroll` and `enrollAttested` revert with
+`PrivateEnrollmentRequired` when a platform attester is set. A human who could
+use both paths would hold two leaves and two votes.
+
+**Where the code went.** Contracts: `enrollPrivate`, `privateEnrollmentDigest`,
+`_insertMember` (the one place a leaf is added, so the window and both duplicate
+checks cannot drift), `ElectionFactory` takes the attester,
+`ElectionPaymaster.relayEnrollPrivate`. Backend: `humanTagFor` and
+`signPrivateEnrollment` in `eligibility/attester.ts`, the decision in
+`eligibility/enrolment.ts`, `POST /enrolment/voucher` for the local-chain path
+where the browser submits its own transactions, and `/relay/enroll` taking the
+private door on its own when the election has one. Frontend: `electionIdentity`,
+`votingIdentity` in `voting.ts`, and `EligibilityCheck` handing back the passed
+SESSION instead of a claimed attestation, because that signature is over the
+platform commitment these elections must never see.
+
+**Correction to an older entry.** The note under "ERC-4337 dropped" says
+`/relay/enroll` requires a session because "enrollment is public anyway". It is
+not any more. The session is still required, and now it also carries the only
+answer to which human is enrolling.
+
+**What it costs.** The platform can link a voter to an enrolment: it signs both
+halves. It could always register a commitment of its own making, so the trust
+base did not grow; what changed is that the link is no longer published. The
+fully trustless version (prove platform membership in zero knowledge, reveal a
+per-election nullifier) fails on recovery: a re-issued identity after a lost
+phrase produces new nullifiers everywhere, so nothing on chain could stop that
+human enrolling twice where they had already voted. See `architecture.md`,
+"Who joined what, and why the chain no longer says it".

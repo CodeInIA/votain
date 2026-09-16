@@ -1,5 +1,5 @@
 import { network } from "hardhat";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import poseidon from "poseidon-solidity";
@@ -39,6 +39,34 @@ async function ensurePoseidonT3(deployer: any): Promise<string> {
   await (await deployer.sendTransaction({ to: proxy.address, data: PoseidonT3.data })).wait();
   console.log("PoseidonT3 deployed at:", PoseidonT3.address);
   return PoseidonT3.address;
+}
+
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+
+/**
+ * The key every election deployed here will trust for private enrolment.
+ *
+ * It has to be the address the BACKEND signs with, because it is frozen into
+ * each election: deploying with a different one produces elections that server
+ * can never let anyone into. Read from the backend's own .env for that reason,
+ * the same way the seed reads it, so the two cannot be made to disagree by
+ * hand. `PLATFORM_ATTESTER_ADDRESS` wins when set, which is what a deployment
+ * whose signer lives somewhere else (a TEE, a KMS) needs.
+ */
+function resolvePlatformAttester(): string {
+  const configured = process.env.PLATFORM_ATTESTER_ADDRESS;
+  if (configured) return ethers.getAddress(configured);
+
+  const backendEnv = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "backend", ".env");
+  try {
+    const line = readFileSync(backendEnv, "utf-8").match(
+      /^ELIGIBILITY_ATTESTER_PRIVATE_KEY=(.+)$/m,
+    );
+    const key = line?.[1].trim();
+    return key ? new ethers.Wallet(key).address : ZERO_ADDRESS;
+  } catch {
+    return ZERO_ADDRESS;
+  }
 }
 
 async function main() {
@@ -84,6 +112,18 @@ async function main() {
     console.warn("WARN: TRUSTED_FORWARDER not set, falling back to deployer address");
   }
 
+  const platformAttester = resolvePlatformAttester();
+  if (platformAttester === ZERO_ADDRESS) {
+    console.warn(
+      "No platform attester: elections deployed here will enrol the OLD way, with the " +
+        "voter's platform commitment in every tree, which publishes who joined what. " +
+        "Set PLATFORM_ATTESTER_ADDRESS, or put ELIGIBILITY_ATTESTER_PRIVATE_KEY in " +
+        "backend/.env so this script can derive it.",
+    );
+  } else {
+    console.log("Platform attester (private enrolment):", platformAttester);
+  }
+
   const Factory = await ethers.getContractFactory("ElectionFactory", {
     libraries: { PoseidonT3: poseidonAddress },
   });
@@ -92,6 +132,7 @@ async function main() {
     forwarder,
     await verifier.getAddress(),
     await registry.getAddress(),
+    platformAttester,
   );
   await factory.waitForDeployment();
   console.log("ElectionFactory:", await factory.getAddress());

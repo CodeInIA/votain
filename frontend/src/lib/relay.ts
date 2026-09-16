@@ -110,6 +110,7 @@ async function localRelay(functionName: string, args: unknown[]): Promise<{ txHa
     [
       "function relayEnroll(address election, uint256 identityCommitment)",
       "function relayEnrollAttested(address election, uint256 identityCommitment, uint256 personhoodNullifier, uint256 deadline, bytes signature)",
+      "function relayEnrollPrivate(address election, uint256 identityCommitment, uint256 humanTag, uint256 deadline, bytes platformSignature, bytes eligibilitySignature)",
       "function relayVote(address election, bytes voteCiphertext, uint256 nullifier, uint256 merkleRoot, uint256 merkleDepth, uint256[2] pA, uint256[2][2] pB, uint256[2] pC)",
       ...RELAY_ERROR_ABI,
     ],
@@ -307,6 +308,85 @@ export interface EnrollAttestationInput {
   personhoodNullifier: string;
   deadline: number;
   signature: string;
+}
+
+/**
+ * What the platform signs so a derived commitment may enrol.
+ *
+ * Fetched from the backend rather than built here: the tag that says "this
+ * person, this election" is computed with a key only the server holds, which
+ * is what stops anyone else recognising the same person in another election.
+ * The values themselves are public once the transaction lands, so carrying
+ * them through the browser gives nothing away.
+ */
+interface EnrolmentVoucher {
+  humanTag: string;
+  deadline: number;
+  signature: string;
+  eligibilitySignature: string;
+}
+
+async function fetchEnrolmentVoucher(
+  election: string,
+  identityCommitment: bigint,
+  sessionId?: string,
+): Promise<EnrolmentVoucher> {
+  const res = await fetch(`${backendBase()}/api/enrolment/voucher`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({
+      election,
+      identityCommitment: identityCommitment.toString(),
+      sessionId,
+    }),
+  });
+  if (!res.ok) {
+    const detail = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(detail.error ?? `Could not authorise the enrolment: ${res.status}`);
+  }
+  return (await res.json()) as EnrolmentVoucher;
+}
+
+/**
+ * Enrols a commitment derived for this election alone.
+ *
+ * `sessionId` is the attribute check, where the election asks for one: the
+ * server verifies and consumes it before signing, so the two questions (a
+ * verified human, and one who meets this election's rules) are answered in the
+ * same breath rather than by two signatures the caller could mix and match.
+ */
+export async function relayEnrollPrivate(
+  election: string,
+  identityCommitment: bigint,
+  sessionId?: string,
+): Promise<{ txHash: string }> {
+  if (isLocalChain()) {
+    // The browser submits the transaction on the local chain, but it cannot
+    // produce the platform's signature: that key lives in the backend, here as
+    // in production.
+    const voucher = await fetchEnrolmentVoucher(election, identityCommitment, sessionId);
+    return localRelay("relayEnrollPrivate", [
+      election,
+      identityCommitment,
+      BigInt(voucher.humanTag),
+      BigInt(voucher.deadline),
+      voucher.signature,
+      voucher.eligibilitySignature,
+    ]);
+  }
+
+  // In production the signature never leaves the server: one call authorises
+  // and relays.
+  return post(
+    "/api/relay/enroll",
+    {
+      election,
+      identityCommitment: identityCommitment.toString(),
+      sessionId,
+    },
+    "include",
+  );
 }
 
 export async function relayEnroll(

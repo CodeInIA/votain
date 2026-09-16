@@ -14,9 +14,12 @@ import { queryLogsFrom } from "./logs";
 import {
   ensureLocalRegistration,
   relayEnroll,
+  relayEnrollPrivate,
   relayVote,
   type EnrollAttestationInput,
 } from "./relay";
+import { identityForElection } from "./electionIdentity";
+import { claimAttestation } from "./eligibility";
 import { counterBaseFor, encryptBallot } from "./paillier";
 import {
   computeNullifier,
@@ -46,15 +49,69 @@ export interface VoteResult {
 }
 
 /**
- * Enrolls the voter's Semaphore identity into an election, via the relayer.
+ * Whether this election hands out its own commitments.
  *
- * `attestation` is required by elections that declare an attribute policy and
- * refused by those that do not, so the caller passes whichever the election
- * asked for. See `lib/eligibility.ts` for how one is obtained.
+ * Read from the election rather than assumed, because the answer was frozen
+ * into it at deployment: anything the current factory deploys enrols privately
+ * and refuses the public paths, while an election from before that keeps them.
+ * Cached per address, since it can never change.
+ */
+const privateEnrolment = new Map<string, boolean>();
+
+async function enrolsPrivately(electionAddress: string): Promise<boolean> {
+  const key = electionAddress.toLowerCase();
+  const known = privateEnrolment.get(key);
+  if (known !== undefined) return known;
+
+  let answer = false;
+  try {
+    const attester: string = await getElection(electionAddress).platformAttester();
+    answer = attester !== "0x0000000000000000000000000000000000000000";
+  } catch {
+    // An election deployed before the function existed reverts rather than
+    // answering zero. Same meaning: the old doors.
+    answer = false;
+  }
+  privateEnrolment.set(key, answer);
+  return answer;
+}
+
+/**
+ * The identity a voter uses in one election, which is not the one the platform
+ * knows them by.
+ *
+ * See `lib/electionIdentity`: the commitment that lands in an election's tree
+ * is derived from the voter's secret and that election's address, so the chain
+ * no longer shows that the same person joined two of them. Elections from
+ * before that keep using the platform identity, because that is the leaf that
+ * is already in their tree.
+ */
+export async function votingIdentity(electionAddress: string) {
+  const master = await getOrCreateIdentity();
+  return (await enrolsPrivately(electionAddress))
+    ? identityForElection(master, electionAddress)
+    : master;
+}
+
+/**
+ * Enrols the voter into an election, via the relayer.
+ *
+ * `sessionId` is the attribute check the voter just passed, for the elections
+ * that ask for one. What is done with it depends on the door:
+ *
+ *   private  the session goes to the server, which verifies it, consumes it and
+ *            signs one authorisation covering both questions, over a commitment
+ *            derived for this election alone.
+ *   public   an attestation is claimed here, over the voter's platform
+ *            commitment, which is what those elections already hold.
+ *
+ * The caller does not have to know which, and deliberately so: the two differ
+ * in what reaches the chain about the voter, and that is not a decision to
+ * spread across the interface.
  */
 export async function enrollInElection(
   electionAddress: string,
-  attestation?: EnrollAttestationInput,
+  sessionId?: string,
 ): Promise<{ txHash: string }> {
   const identity = await getOrCreateIdentity();
   await ensureLocalRegistration(identity.commitment); // no-op off the local chain
@@ -64,14 +121,29 @@ export async function enrollInElection(
   // to discover it here as `NotPlatformVerified`. Skipped for anyone whose
   // phrase a passkey already holds, since reaching the vault is what registered
   // them in the first place.
+  //
+  // Still the PLATFORM identity, on both paths: it is what the registry holds,
+  // and registering a per-election commitment would put the very link back that
+  // deriving one exists to remove.
   if (phraseIsUnprotected()) await ensureRegistered(identity);
+
+  if (await enrolsPrivately(electionAddress)) {
+    const enrolling = await identityForElection(identity, electionAddress);
+    return relayEnrollPrivate(electionAddress, enrolling.commitment, sessionId);
+  }
+
+  const attestation: EnrollAttestationInput | undefined = sessionId
+    ? await claimAttestation(electionAddress, sessionId, identity.commitment)
+    : undefined;
   return relayEnroll(electionAddress, identity.commitment, attestation);
 }
 
 /** Casts (or re-casts) a vote for `optionIndex` (blank = numOptions). */
 export async function castVote(electionAddress: string, optionIndex: number): Promise<VoteResult> {
-  // Re-derive from the passkey if the in-memory identity was lost (page reload).
-  const identity = await getOrCreateIdentity();
+  // Re-derive from the passkey if the in-memory identity was lost (page reload),
+  // then take the identity THIS election knows, which is a derived one wherever
+  // the election enrols privately.
+  const identity = await votingIdentity(electionAddress);
 
   const election = getElection(electionAddress);
   const [paillierPk, scope, metadataJson] = await Promise.all([

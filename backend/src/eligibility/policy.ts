@@ -263,3 +263,36 @@ export function checkAttributes(
 export function requiresNationalityReveal(policy: EligibilityPolicy): boolean {
   return (policy.allowedCountries?.length ?? 0) > 0;
 }
+
+/**
+ * Whether the session clears the election's personhood bar.
+ *
+ * Lives here rather than in the eligibility route, because the enrolment
+ * service needs the same answer and two copies of a rule about who may vote
+ * is one copy too many.
+ *
+ * Only `orb` can fail here. `device` asks nothing beyond being signed in, and
+ * `document` is proved by the Self scan this whole flow exists to run, so the
+ * one level that needs a separate answer is the one World ID alone can give.
+ *
+ * The level is read from the credential issued at sign-in rather than from a
+ * proof presented now, and that is the binding: the nullifier the session is
+ * keyed by IS the World ID nullifier that credential was issued against. A
+ * proof accepted at this point would prove that SOMEBODY has an Orb, with
+ * nothing tying that somebody to the voter holding the cookie.
+ *
+ * An older credential carries no level at all. Treated as unmet, so the voter
+ * signs in again and gets one, rather than being waved through on the strength
+ * of a claim that was never made.
+ *
+ * The two vocabularies do not quite line up: a credential level is
+ * `any | document | orb` and a policy level is `device | document | orb`. Only
+ * `orb` is compared here, and it is spelled the same in both, but anything that
+ * later wants to RANK one against the other has to map them first.
+ */
+export function meetsPersonhood(
+  policy: EligibilityPolicy,
+  session: { personhood?: string },
+): boolean {
+  return effectivePersonhood(policy) !== 'orb' || session.personhood === 'orb';
+}

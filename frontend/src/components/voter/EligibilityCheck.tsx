@@ -27,7 +27,6 @@ import { Spinner } from '../ui/Spinner';
 import {
   openEligibilitySession,
   pollEligibilitySession,
-  claimAttestation,
   requiresNationalityReveal,
   eligibilityErrorKey,
   eligibilityErrorIsRetryable,
@@ -35,8 +34,6 @@ import {
   type EligibilityPolicy,
 } from '../../lib/eligibility';
 import { usePolicyRequirements } from '../../hooks/usePolicyRequirements';
-import { getOrCreateIdentity } from '../../lib/semaphore';
-import type { EnrollAttestationInput } from '../../lib/relay';
 
 const POLL_INTERVAL_MS = 2500;
 
@@ -51,8 +48,17 @@ const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 interface Props {
   election: string;
   policy: EligibilityPolicy;
-  /** Handed the attestation once the check passes; the caller then enrolls. */
-  onVerified: (attestation: EnrollAttestationInput) => void;
+  /**
+   * Handed the PASSED SESSION once the check passes; the caller then enrols.
+   *
+   * It used to be handed a signed attestation, claimed here. That signature is
+   * over the voter's platform commitment, which is the value an election that
+   * enrols privately must never see: what enrols there is a commitment derived
+   * for that election alone, and the server signs the two answers together.
+   * Claiming for an older election still happens, one layer down, where the
+   * decision about which door this election has is already being made.
+   */
+  onVerified: (sessionId: string) => void;
   onCancel: () => void;
 }
 
@@ -114,27 +120,11 @@ export function EligibilityCheck({ election, policy, onVerified, onCancel }: Pro
 
         if (status === 'passed') {
           // The interval stops here, so from this point nothing will retry on
-          // our behalf: the claim needs its own terminal failure, or a cancelled
-          // passkey prompt or a refused signature would leave the voter on a
-          // spinner with no button to press.
+          // our behalf. The enrolment that follows carries its own failure to
+          // the voter, with a button to press.
           stop = true;
-          setStage('claiming');
-          try {
-            const identity = await getOrCreateIdentity();
-            const attestation = await claimAttestation(
-              election,
-              challenge.sessionId,
-              identity.commitment,
-            );
-            if (!cancelled.current) {
-              setStage('passed');
-              onVerifiedRef.current(attestation);
-            }
-          } catch (claimError: unknown) {
-            if (cancelled.current) return;
-            setReason(claimError instanceof Error ? claimError.message : String(claimError));
-            setStage('error');
-          }
+          setStage('passed');
+          if (!cancelled.current) onVerifiedRef.current(challenge.sessionId);
         } else if (status === 'failed') {
           stop = true;
           setReason(why ?? 'unknown');

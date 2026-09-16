@@ -46,6 +46,10 @@ contract ElectionPaymaster {
     /// relayEnrollAttested head: selector + address + 3 uint256 + bytes offset +
     /// length word, then the padded signature added at call time.
     uint256 private constant ATTESTED_ENROLL_CALLDATA_HEAD = 4 + 32 + (32 * 3) + 32 + 32;
+    /// @dev selector + election + (commitment, tag, deadline) + two dynamic
+    /// offsets + two lengths. The two signatures themselves are measured from
+    /// their own lengths, as the attested path does with its one.
+    uint256 private constant PRIVATE_ENROLL_CALLDATA_HEAD = 4 + 32 + (32 * 3) + (32 * 2) + (32 * 2);
     /// relayVote head: selector + address + bytes offset + 3 uint256 + pA + pB + pC,
     /// then the bytes tail (length word + padded contents) added at call time.
     uint256 private constant VOTE_CALLDATA_HEAD = 4 + 32 + 32 + (32 * 3) + 64 + 128 + 64 + 32;
@@ -375,6 +379,43 @@ contract ElectionPaymaster {
 
         uint256 billable =
             ATTESTED_ENROLL_CALLDATA_HEAD + ((signature.length + 31) / 32) * 32;
+        _reimburse(election, organizer, startGas, billable);
+    }
+
+    /**
+     * @notice Relay a private enrolment, reimbursed from the organizer's tank.
+     *
+     * The gasless half of the path that stopped publishing which elections a
+     * person joined. A voter without a wallet has to reach the chain through
+     * somebody, and doing it through here is what keeps the enrolment as
+     * unattributable as the rest of it: the transaction is ours, the commitment
+     * is theirs and is used nowhere else.
+     */
+    function relayEnrollPrivate(
+        address election,
+        uint256 identityCommitment,
+        uint256 humanTag,
+        uint256 deadline,
+        bytes calldata platformSignature,
+        bytes calldata eligibilitySignature
+    ) external nonReentrant {
+        uint256 startGas = gasleft();
+        address organizer = _organizerOrRevert(election);
+
+        ElectionV4(election).enrollPrivate(
+            identityCommitment,
+            humanTag,
+            deadline,
+            platformSignature,
+            eligibilitySignature
+        );
+
+        uint256 billable =
+            PRIVATE_ENROLL_CALLDATA_HEAD +
+            ((platformSignature.length + 31) / 32) *
+            32 +
+            ((eligibilitySignature.length + 31) / 32) *
+            32;
         _reimburse(election, organizer, startGas, billable);
     }
 

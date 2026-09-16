@@ -12,6 +12,19 @@ contract ElectionFactory {
     address public immutable forwarder;
     address public immutable verifier;
     address public immutable registry;
+    /**
+     * @notice The key every election deployed here trusts for private enrolment.
+     *
+     * IMPOSED, not chosen. An organizer who could name this key could sign
+     * their own roll: private enrolment replaces the registry lookup with a
+     * signature, so whoever holds the key decides who counts as a verified
+     * human. That has to be the platform's key for every election, or it is
+     * not a platform boundary at all.
+     *
+     * Zero deploys elections that enrol the old, publicly linkable way, which
+     * is what a chain with no platform attester can still do.
+     */
+    address public immutable platformAttester;
 
     address[] public elections;
 
@@ -25,7 +38,13 @@ contract ElectionFactory {
 
     error ZeroAddress();
 
-    constructor(address _paymaster, address _forwarder, address _verifier, address _registry) {
+    constructor(
+        address _paymaster,
+        address _forwarder,
+        address _verifier,
+        address _registry,
+        address _platformAttester
+    ) {
         if (
             _paymaster == address(0) ||
             _forwarder == address(0) ||
@@ -37,6 +56,7 @@ contract ElectionFactory {
         forwarder = _forwarder;
         verifier = _verifier;
         registry = _registry;
+        platformAttester = _platformAttester;
     }
 
     /**
@@ -53,7 +73,14 @@ contract ElectionFactory {
         ElectionV4.Config calldata cfg,
         uint256 fromBalance
     ) external payable returns (address) {
-        ElectionV4 newElection = new ElectionV4(forwarder, verifier, registry, msg.sender, cfg);
+        ElectionV4 newElection = new ElectionV4(
+            forwarder,
+            verifier,
+            registry,
+            platformAttester,
+            msg.sender,
+            cfg
+        );
         elections.push(address(newElection));
 
         // Binds the election to the tank that pays for its voters' gas. Without

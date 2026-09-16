@@ -70,8 +70,60 @@ export interface Stack {
   poseidonAddress: string;
 }
 
+/// EIP-712 payload the platform signs to authorise one PRIVATE enrollment.
+/// Mirrors PRIVATE_ENROLL_TYPEHASH in ElectionV4.
+export function privateEnrollmentTypedData(
+  electionAddress: string,
+  chainId: bigint,
+  identityCommitment: bigint,
+  humanTag: bigint,
+  deadline: number | bigint,
+) {
+  return {
+    domain: {
+      name: "VotainElection",
+      version: "1",
+      chainId,
+      verifyingContract: electionAddress,
+    },
+    types: {
+      PrivateEnrollment: [
+        { name: "identityCommitment", type: "uint256" },
+        { name: "humanTag", type: "uint256" },
+        { name: "deadline", type: "uint256" },
+      ],
+    },
+    value: { identityCommitment, humanTag, deadline },
+  };
+}
+
+/// Signs a private enrollment the way the platform does in production.
+export async function signPrivateEnrollment(
+  attester: any,
+  electionAddress: string,
+  chainId: bigint,
+  identityCommitment: bigint,
+  humanTag: bigint,
+  deadline: number | bigint,
+): Promise<string> {
+  const { domain, types, value } = privateEnrollmentTypedData(
+    electionAddress,
+    chainId,
+    identityCommitment,
+    humanTag,
+    deadline,
+  );
+  return attester.signTypedData(domain, types, value);
+}
+
 /// Deploys the full contract stack with the MockVerifier (unit tests only).
-export async function deployStack(ethers: any, forwarder: string): Promise<Stack> {
+/// `platformAttester` defaults to nobody, which deploys elections that enrol
+/// the old public way: the tests for the private path pass a key explicitly.
+export async function deployStack(
+  ethers: any,
+  forwarder: string,
+  platformAttester: string = ZERO_ADDRESS,
+): Promise<Stack> {
   const poseidonAddress = await deployPoseidonT3(ethers);
 
   const Registry = await ethers.getContractFactory("PlatformRegistry");
@@ -94,6 +146,7 @@ export async function deployStack(ethers: any, forwarder: string): Promise<Stack
     forwarder,
     await verifier.getAddress(),
     await registry.getAddress(),
+    platformAttester,
   );
   await factory.waitForDeployment();
 
@@ -186,6 +239,7 @@ export async function deployElection(
   forwarder: string,
   organizer: any,
   cfg: ElectionConfig,
+  platformAttester: string = ZERO_ADDRESS,
 ): Promise<any> {
   const Election = await ethers.getContractFactory("ElectionV4", {
     libraries: { [POSEIDON_FQN]: stack.poseidonAddress },
@@ -194,6 +248,7 @@ export async function deployElection(
     forwarder,
     await stack.verifier.getAddress(),
     await stack.registry.getAddress(),
+    platformAttester,
     organizer.address,
     cfg,
   );

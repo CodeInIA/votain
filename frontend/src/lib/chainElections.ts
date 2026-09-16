@@ -15,6 +15,7 @@ import { withDistinctNames } from "./ballotNames";
 // navigation does.
 import i18n from "../i18n/config";
 import { getStoredCommitment, getStoredVoteNullifier } from "./semaphore";
+import { storedElectionCommitment } from "./electionIdentity";
 import type { Candidate, Election, ElectionPhase, VotingType } from "../data/seed";
 import { getVoterPersonhood } from "./voterSession";
 import {
@@ -222,7 +223,11 @@ export async function fetchElection(address: string): Promise<Election> {
   // Voter-specific view state. The PUBLIC commitment is enough for the enrolled
   // check and, unlike the full identity, is readable in PRF mode without a
   // passkey prompt (so it survives reloads / new sessions).
-  const commitment = getStoredCommitment();
+  // The commitment THIS election would hold, which is a derived one wherever
+  // the election enrols privately: see `lib/electionIdentity`. Falls back to the
+  // platform commitment, which is what elections from before that carry, and
+  // which is also the answer for an election this device has never derived for.
+  const commitment = storedElectionCommitment(address) ?? getStoredCommitment();
   let isEnrolled: boolean | undefined;
   if (commitment !== null) {
     isEnrolled = await c.hasMember(commitment);

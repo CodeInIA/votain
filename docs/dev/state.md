@@ -9,7 +9,7 @@ issuer, voter + organizer flows and tally all wired and green.
 custom dark `DatePicker`, phase-aware voter/organizer/public screens, and shared phase helpers.
 **This pass**: WalletConnect works from a phone for every organizer action, and the voter's
 identity flow was rebuilt around the recovery phrase (see the milestone log).
-Tests: contracts 164/164, backend 107/107, frontend 410/410; prod build OK.
+Tests: contracts 176/176, backend 116/116, frontend 417/417; prod build OK.
 **Next milestone**: Live Amoy deployment (pending funding the deployer key),
 then Phase C (H10 IPFS/Fleek, H11 Phala TEE).
 

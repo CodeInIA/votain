@@ -26,6 +26,7 @@ import { contractAddress } from './deployments.js';
 const PAYMASTER_ABI = [
   'function relayEnroll(address election, uint256 identityCommitment)',
   'function relayEnrollAttested(address election, uint256 identityCommitment, uint256 personhoodNullifier, uint256 deadline, bytes signature)',
+  'function relayEnrollPrivate(address election, uint256 identityCommitment, uint256 humanTag, uint256 deadline, bytes platformSignature, bytes eligibilitySignature)',
   'function relayVote(address election, bytes voteCiphertext, uint256 nullifier, uint256 merkleRoot, uint256 merkleDepth, uint256[2] pA, uint256[2][2] pB, uint256[2] pC)',
   // Declared so a revert this contract interface decodes arrives with a NAME
   // rather than a bare four-byte selector, since the message built from it is
@@ -147,6 +148,48 @@ export async function relayEnrollAttested(
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     console.error('relayEnrollAttested failed:', message);
+    return { relayed: false, error: message };
+  }
+}
+
+/**
+ * Relays an enrolment that names nobody.
+ *
+ * The commitment was derived by the voter for this election alone and appears
+ * in no registry, so the contract has nothing to look it up in: the platform's
+ * signature is what says a verified human is behind it, and the tag is what
+ * says they have not already enrolled here. Neither is recognisable in any
+ * other election.
+ */
+export async function relayEnrollPrivate(
+  election: string,
+  commitment: string,
+  humanTag: string,
+  deadline: number,
+  platformSignature: string,
+  eligibilitySignature: string,
+): Promise<RelayResult> {
+  if (!isRelayerConfigured()) return { relayed: false, error: 'relayer not configured' };
+
+  try {
+    requireElection(election);
+    const paymaster = getPaymaster();
+    const args = [
+      election,
+      BigInt(commitment),
+      BigInt(humanTag),
+      BigInt(deadline),
+      platformSignature,
+      eligibilitySignature,
+    ] as const;
+    // Same reason as the other two: a revert still costs the relayer its gas.
+    await paymaster.relayEnrollPrivate.staticCall(...args);
+    const tx = await paymaster.relayEnrollPrivate(...args);
+    const receipt = await tx.wait();
+    return { relayed: true, txHash: receipt?.hash };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('relayEnrollPrivate failed:', message);
     return { relayed: false, error: message };
   }
 }

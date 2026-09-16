@@ -1103,3 +1103,82 @@ practices](https://consensysdiligence.github.io/smart-contract-best-practices/de
 [Use of tx.origin, Smart Contract Security Field Guide](https://scsfg.io/hackers/tx-origin/),
 [How to only allow the dapp to call a function, OpenZeppelin
 forum](https://forum.openzeppelin.com/t/how-to-only-allow-the-dapp-to-call-a-function/16189).
+
+## Who joined what, and why the chain no longer says it
+
+An anonymous ballot was never the whole promise. Until this change the chain
+also published, for anyone who cared to read it, the list of elections each
+person had taken part in.
+
+The mechanism was simple enough to miss. A voter holds one Semaphore identity;
+`PlatformRegistry` binds its commitment to their World ID nullifier and exposes
+`nullifierOf` as a public view; and enrolling put THAT commitment into the
+election's merkle tree, in every election they joined. So the same number
+appeared in several trees, and the registry named the human behind it. Measured
+on the seeded local chain before the fix: one commitment appeared in 17 of the
+38 elections, and the registry answered with its World ID nullifier for each.
+Nobody could tell how any of those ballots were cast. Everybody could tell who
+had shown up, and where.
+
+### What enrolling does now
+
+The commitment that lands in an election's tree is derived from the voter's own
+secret and that election's address (`frontend/src/lib/electionIdentity.ts`,
+HKDF-SHA256, domain-separated per address). It is theirs, nobody else can
+produce it, it is reproducible from the recovery phrase on any device, and it
+looks like an unrelated stranger in every other election. The platform identity
+appears on chain exactly once, at registration, and never again.
+
+Nothing in the registry vouches for a commitment nobody has ever seen, so the
+contract takes a signature instead. `ElectionV4.enrollPrivate` requires an
+EIP-712 attestation from a `platformAttester` frozen into the election by the
+factory, saying two things and no more: a verified human is behind this
+commitment, and they have not already enrolled here. The second half rides on a
+`humanTag` derived by the server from the voter's World ID nullifier, the
+election's address AND a key only the server holds. The key is what makes it
+work: those nullifiers are public, so a plain hash would let anyone recompute
+every tag for every election and match the same person across all of them.
+
+The old doors are shut on any election that has this one. `enroll` and
+`enrollAttested` revert with `PrivateEnrollmentRequired` when a platform
+attester is set, because a human able to use both would hold two leaves and
+therefore two votes. Elections deployed before this existed answer zero and keep
+the public paths; the frontend reads `platformAttester()` and follows whichever
+the election has.
+
+Gated elections keep their organizer's gatekeeper. `enrollPrivate` takes a
+second signature and checks it against `eligibilityAttester` whenever the
+election named one, over the same digest, so a third-party attester keeps
+exactly the say it had. Where the platform is also that attester, which is the
+normal deployment, the two signatures are the same bytes.
+
+### What it costs, stated plainly
+
+The platform can link a voter to an enrolment, because it signs both halves.
+Nobody else can, where before everybody could.
+
+That is not new trust. The same party owns `PlatformRegistry`, so it could
+always register a commitment of its own making and enrol it; what the registry
+check bought was never protection from the platform, only from everyone else,
+and the signature buys exactly the same thing. What changed is that the link is
+no longer PUBLISHED.
+
+### Why not the version with no trusted party
+
+The obvious improvement is to remove the signature: keep the platform's members
+in their own Semaphore group and have the voter PROVE membership at enrolment,
+revealing a per-election nullifier derived from their secret. No server would
+know anything. It does not work here, and the reason is worth writing down.
+
+Recovery. A voter who loses their phrase and every passkey is re-issued an
+identity by `rotateMember`, which is the only way back. A re-issued identity is
+a new secret, so it produces a different nullifier in every election, including
+the ones the old identity had already enrolled in. Nothing on chain could
+recognise the two as one person, and the human would be able to enrol and vote
+a second time wherever they had already voted. Today `nullifierOf` prevents
+exactly that, publicly, which is the cost this whole section is about.
+
+Unlinkability, recovery after total loss of the secret, and one-human-one-vote
+cannot all hold without some party that keeps the link. The choice is where to
+put it. This design puts it in the one party that already decides who becomes a
+member, and takes it off the public record.
