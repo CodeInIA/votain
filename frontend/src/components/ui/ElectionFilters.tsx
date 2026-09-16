@@ -115,6 +115,25 @@ const FIELD_AS_CHIP =
 const FIELD_LABEL_AS_HINT = 'text-[11px] font-medium text-on-surface-meta';
 
 /**
+ * A dropdown trigger made to sit beside the filter button in the toolbar.
+ *
+ * `SelectMenu` defaults to a form field: `bg-surface-lowest/60`, the darkest
+ * surface, which is right in a wizard where every control is a field on a
+ * card. In the toolbar its only neighbour is `Button`'s default variant, a
+ * lighter `bg-surface-high/40`, so the two sat side by side at visibly
+ * different weights and the order control read as the heavier, sunken one.
+ *
+ * These are `buttonVariants.default` written out. Not imported from it,
+ * because that string also carries `rounded-full` and the focus ring for a
+ * real button; only the surface is being matched here.
+ */
+const TRIGGER_AS_TOOLBAR_BUTTON = [
+  'bg-surface-high/40 border-outline-variant/10',
+  'hover:bg-surface-high/60 hover:border-outline-variant/10',
+  'text-on-surface-variant hover:text-on-surface',
+].join(' ');
+
+/**
  * One band of filters, under the question it answers.
  *
  * Everything used to sit in a single wrapping row: phase pills, then two
@@ -227,7 +246,10 @@ export function ElectionFilters({ value, onChange, open, onToggleOpen, searchPla
           // it, and one here would make the row two heights.
           labelHidden
           wrapperClassName="w-auto shrink-0"
-          className="rounded-2xl px-3 sm:px-4 max-w-[9.5rem] sm:max-w-none"
+          className={cn(
+            'rounded-2xl px-3 sm:px-4 max-w-[9.5rem] sm:max-w-none',
+            TRIGGER_AS_TOOLBAR_BUTTON,
+          )}
           // Left to size itself: the trigger is as narrow as the current
           // value here, and a menu matching it would truncate every other
           // option to the length of whichever one happens to be chosen.
