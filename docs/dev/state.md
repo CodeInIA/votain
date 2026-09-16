@@ -10,7 +10,11 @@ custom dark `DatePicker`, phase-aware voter/organizer/public screens, and shared
 **This pass**: WalletConnect works from a phone for every organizer action, and the voter's
 identity flow was rebuilt around the recovery phrase (see the milestone log).
 Tests: contracts 176/176, backend 116/116, frontend 417/417; prod build OK.
-**Next milestone**: Live Amoy deployment (pending funding the deployer key),
+**Next milestone**: Live Amoy deployment (pending funding the deployer key). It must carry
+`PLATFORM_ATTESTER_ADDRESS`, the key the backend signs enrolments with: without it the
+factory deploys elections that enrol the old, publicly linkable way, which looks entirely
+normal from every screen. `deploy.ts` now refuses to deploy off the local chain without it
+unless `ALLOW_PUBLIC_ENROLMENT=1` says so out loud.
 then Phase C (H10 IPFS/Fleek, H11 Phala TEE).
 
 > Detailed milestone-by-milestone log lives in `docs/ai/state.md`. This file tracks module status,

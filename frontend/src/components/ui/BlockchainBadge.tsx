@@ -51,10 +51,13 @@ interface IPFSBadgeProps {
 }
 
 export function IPFSBadge({ href, className }: IPFSBadgeProps) {
+  // The one string on the page that was never translated, while its
+  // translation sat in all thirteen locale files with nothing reading it.
+  const { t } = useTranslation();
   const content = (
     <>
       <Globe className="w-3.5 h-3.5 shrink-0" />
-      <span>Hosted on IPFS</span>
+      <span>{t('badge.ipfs')}</span>
       {href && <ExternalLink className="w-3 h-3 shrink-0 opacity-60" />}
     </>
   );

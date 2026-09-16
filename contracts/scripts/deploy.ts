@@ -114,12 +114,28 @@ async function main() {
 
   const platformAttester = resolvePlatformAttester();
   if (platformAttester === ZERO_ADDRESS) {
-    console.warn(
+    const complaint =
       "No platform attester: elections deployed here will enrol the OLD way, with the " +
-        "voter's platform commitment in every tree, which publishes who joined what. " +
-        "Set PLATFORM_ATTESTER_ADDRESS, or put ELIGIBILITY_ATTESTER_PRIVATE_KEY in " +
-        "backend/.env so this script can derive it.",
-    );
+      "voter's platform commitment in every tree, which publishes which elections each " +
+      "person joined. Set PLATFORM_ATTESTER_ADDRESS, or put " +
+      "ELIGIBILITY_ATTESTER_PRIVATE_KEY in backend/.env so this script can derive it.";
+
+    /**
+     * FATAL OFF THE LOCAL CHAIN, and only a warning on it.
+     *
+     * A real deployment that forgets this key still works: every screen looks
+     * right, voters enrol, ballots count. The only thing that changes is that
+     * the chain publishes who took part in what, which is precisely the thing
+     * nobody notices until somebody reads the chain. A warning scrolls past in
+     * a deploy log; this does not.
+     *
+     * The escape hatch is deliberate and has to be typed out: a chain deployed
+     * with no platform behind it can only use the public paths.
+     */
+    if (!isLocal && process.env.ALLOW_PUBLIC_ENROLMENT !== "1") {
+      throw new Error(complaint + " Set ALLOW_PUBLIC_ENROLMENT=1 if that is genuinely intended.");
+    }
+    console.warn(complaint);
   } else {
     console.log("Platform attester (private enrolment):", platformAttester);
   }

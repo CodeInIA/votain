@@ -1,7 +1,7 @@
 import { useState, useRef, type ChangeEvent } from 'react';
 import { Navigate, useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { XCircle, Clock, BarChart3, Users, KeyRound, CalendarCheck } from 'lucide-react';
+import { XCircle, Clock, BarChart3, Users, KeyRound } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Badge } from '../../components/ui/Badge';
 import { EligibilityChips } from '../../components/ui/EligibilityChips';
@@ -485,18 +485,12 @@ export default function ElectionManagement() {
         <Card className="p-5 flex flex-col gap-3">
           <h2 className="text-sm font-semibold text-on-surface mb-1">{t('election_mgmt.actions')}</h2>
 
-          {election.cancellable === false && (
-            <p className="text-xs text-on-surface-meta px-1 flex items-start gap-1.5">
-              <CalendarCheck className="w-3.5 h-3.5 shrink-0 mt-0.5 text-success" />
-              {t('schedule.no_cancel_desc_own')}
-            </p>
-          )}
-          {!scheduleMovable && (
-            <p className="text-xs text-on-surface-meta px-1 flex items-start gap-1.5">
-              <CalendarCheck className="w-3.5 h-3.5 shrink-0 mt-0.5 text-success" />
-              {t('schedule.fixed_desc_own')}
-            </p>
-          )}
+          {/* THE PROMISES ARE NOT REPEATED HERE. They used to be, as two lines
+              explaining why a button was missing, and that was worth it while
+              this page showed them nowhere else. It shows them at the top now,
+              in the same words and the same voice, with the sentence a press
+              away. The same paragraph twice on one short page teaches people
+              to skip both. */}
           {canOpen && (
             <Button variant="gradient" className="w-full rounded-2xl gap-2"
               onClick={() => setOpenModal(true)}>
