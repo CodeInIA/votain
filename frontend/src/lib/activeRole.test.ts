@@ -106,7 +106,12 @@ describe('where switching leaves you', () => {
   it('stays put on a page that reads the same for both roles', () => {
     // The bug this is for: flipping the switch on Discover threw the person to
     // a dashboard, losing their place for nothing.
-    for (const page of ['/discover', '/verify-receipt', '/how-it-works', '/election/0xabc']) {
+    //
+    // An election used to be in this list and is not any more. It was a
+    // public preview then, the same page for everybody; it shows the ballot
+    // to whoever has a session now, so it is role-specific and has its own
+    // cases below.
+    for (const page of ['/discover', '/verify-receipt', '/how-it-works']) {
       expect(switchDestination(page, 'organizer')).toBe(page);
       expect(switchDestination(page, 'voter')).toBe(page);
     }
@@ -124,9 +129,24 @@ describe('where switching leaves you', () => {
   });
 
   it('does not cross between the two views of one election', () => {
-    // The organizer view only loads for the wallet that owns it, so this would
-    // land on a page that refuses. `ViewAsSwitch` is where that crossing lives.
-    expect(switchDestination('/voter/election/0xabc', 'organizer')).toBe('/organizer/dashboard');
+    // The organizer view only loads for the wallet that owns it, and a header
+    // cannot know whether this one does without reading the election. So it
+    // goes to the dashboard, and `ViewAsSwitch`, which is on the page and has
+    // already read it, is where that crossing lives.
+    expect(switchDestination('/election/0xabc', 'organizer')).toBe('/organizer/dashboard');
+  });
+
+  it('stays on an election when switching to the role it is already showing', () => {
+    // `/election/:id` IS the voter's view of it: there is nowhere to go.
+    expect(switchDestination('/election/0xabc', 'voter')).toBe('/election/0xabc');
+  });
+
+  it('treats an election as role-specific despite its public path', () => {
+    // The trap this closes. The prefix rule below it only catches `/voter/`
+    // and `/organizer/`, and the election page moved out of both when the two
+    // copies were merged. Switching to organizer left the person where they
+    // stood, told they were acting as an organizer while looking at a ballot.
+    expect(switchDestination('/election/0xabc', 'organizer')).not.toBe('/election/0xabc');
   });
 });
 

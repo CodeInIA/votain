@@ -126,11 +126,7 @@ export function homeRouteFor(role: Role): string {
  * Pages that exist for both roles, paired by route.
  *
  * Only the pairs where the SAME page is being looked at from the other side.
- * An election is deliberately absent: `/election/:id` and
- * `/organizer/election/:id` are two views of one election, but the organizer
- * one only loads for the wallet that owns it, so sending someone there because
- * they flipped a switch in the header would land them on a page that refuses.
- * `ViewAsSwitch`, on the election itself, is where that crossing belongs.
+ * An election is deliberately absent, and `switchDestination` says why.
  */
 const EQUIVALENT: Record<string, Record<Role, string>> = {
   profile: {
@@ -153,6 +149,29 @@ const EQUIVALENT: Record<string, Record<Role, string>> = {
 export function switchDestination(pathname: string, to: Role): string {
   for (const pair of Object.values(EQUIVALENT)) {
     if (Object.values(pair).includes(pathname)) return pair[to];
+  }
+  /**
+   * An election reads as the voter's view of itself.
+   *
+   * `/election/:id` belongs to no role by its path, and until the two
+   * election pages were merged it did not have to: the voter's copy lived at
+   * `/voter/election/:id`, which the prefix rule below caught. Now the one
+   * page shows the ballot to whoever has a session, so switching to organizer
+   * while standing on it used to leave the person exactly where they were,
+   * being told they were acting as an organizer while looking at their own
+   * ballot.
+   *
+   * To the organizer's home, and deliberately not to the organizer's view of
+   * THIS election. That crossing needs to know whether this wallet owns it,
+   * and a header cannot know: it would have to read the election to find out,
+   * and offering it blindly would walk a non-owner into a management page for
+   * somebody else's vote. `ViewAsSwitch`, which is on the election and has
+   * already read it, is where that belongs and is already there.
+   *
+   * Switching TO voter stays put, because this page is that view.
+   */
+  if (pathname.startsWith('/election/')) {
+    return to === 'organizer' ? homeRouteFor(to) : pathname;
   }
   const belongsToARole = pathname.startsWith('/voter/') || pathname.startsWith('/organizer/');
   return belongsToARole ? homeRouteFor(to) : pathname;
