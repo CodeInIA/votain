@@ -47,6 +47,7 @@ const KEY = {
   createdFrom: 'from',
   createdTo: 'to',
   closingSoon: 'soon',
+  votedOnly: 'voted',
   sort: 'sort',
   minAgeFrom: 'age_from',
   minAgeTo: 'age_to',
@@ -84,6 +85,7 @@ export function filterToSearchParams(filter: ElectionFilterState): URLSearchPara
   set(KEY.createdFrom, filter.createdFrom);
   set(KEY.createdTo, filter.createdTo);
   if (filter.closingSoon) set(KEY.closingSoon, ON);
+  if (filter.votedOnly) set(KEY.votedOnly, ON);
   // The default order is the absence of the key, like every other default.
   if (filter.sort !== DEFAULT_SORT) set(KEY.sort, filter.sort);
 
@@ -130,6 +132,7 @@ export function filterFromSearchParams(params: URLSearchParams): ElectionFilterS
     createdFrom: params.get(KEY.createdFrom) ?? '',
     createdTo: params.get(KEY.createdTo) ?? '',
     closingSoon: params.get(KEY.closingSoon) === ON,
+    votedOnly: params.get(KEY.votedOnly) === ON,
     sort: oneOf<ElectionSort>(params.get(KEY.sort), SORT_OPTIONS) ?? DEFAULT_SORT,
     eligibility: {
       ...(minAgeFrom !== undefined && { minAgeFrom }),

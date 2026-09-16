@@ -12,23 +12,40 @@ import { usePageLimit } from '../../hooks/usePageLimit';
 import { useVoterIdentity } from '../../hooks/useVoterIdentity';
 import { useElectionFilterParams } from '../../hooks/useElectionFilterParams';
 import { ElectionFilters } from '../../components/ui/ElectionFilters';
-import { matchesQuery } from '../../lib/electionFilter';
+import { matchesQuery, PHASE_FILTERS } from '../../lib/electionFilter';
+import { Badge } from '../../components/ui/Badge';
+import { cn } from '../../lib/utils';
 import { sortElections } from '../../lib/electionSort';
 import { Button } from '../../components/ui/Button';
 import { isChainConfigured } from '../../lib/deployments';
 import type { ElectionPhase } from '../../data/seed';
 
-const TABS: { key: 'all' | ElectionPhase; labelKey: string }[] = [
-  { key: 'all',       labelKey: 'common.all'       },
-  { key: 'enrolling', labelKey: 'phase.enrolling'  },
-  { key: 'active',    labelKey: 'phase.active'      },
-  { key: 'voted',     labelKey: 'phase.voted'       },
-  { key: 'closed',    labelKey: 'phase.closed'      },
+/**
+ * WHICH SLICE, as the same chips every other list uses.
+ *
+ * It was five generic pills in the app's one accent colour, covering four of
+ * the eight phases: an election of theirs that was announced, waiting between
+ * windows, being counted, voided or called off fell into none of them and could
+ * only be found under "all". And the row said nothing about state, where the
+ * cards under it say it in colour, so the same election was yellow in the list
+ * and blue in the filter that selected it.
+ *
+ * `PHASE_FILTERS` is the whole set, in the order the contract moves through
+ * them, and each chip wears its own phase's colour. Two extras sit with them:
+ * everything, and the one slice that is about the reader rather than the
+ * election.
+ */
+type Slice = { key: 'all' | 'voted' | ElectionPhase; labelKey: string };
+
+const SLICES: Slice[] = [
+  { key: 'all', labelKey: 'common.all' },
+  ...PHASE_FILTERS.map(phase => ({ key: phase, labelKey: `phase.${phase}` })),
+  { key: 'voted', labelKey: 'phase.voted' },
 ];
 
 export default function VoterElections() {
   const { t } = useTranslation();
-  const [tab, setTab] = useState<'all' | ElectionPhase>('all');
+
   const live = isChainConfigured();
   const { ready: identityReady, unlocking, unlock } = useVoterIdentity(live);
   /**
@@ -68,6 +85,21 @@ export default function VoterElections() {
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   /**
+   * The chosen slice, IN THE URL with the rest of them.
+   *
+   * It used to be component state, so stepping into an election and back
+   * landed on "all" however the list had been narrowed: the search survived
+   * the trip and the phase beside it did not.
+   */
+  const slice: Slice['key'] = filters.votedOnly ? 'voted' : filters.phase ?? 'all';
+  const selectSlice = (key: Slice['key']) =>
+    setFilters({
+      ...filters,
+      phase: key === 'all' || key === 'voted' ? null : key,
+      votedOnly: key === 'voted',
+    });
+
+  /**
    * SHOWN WHENEVER THERE IS A LIST, and not above some number of rows.
    *
    * It was above five, on the argument that a toolbar over two rows is
@@ -79,9 +111,10 @@ export default function VoterElections() {
    */
   const worthSearching = myElections.length > 0;
 
-  const byTab = tab === 'all' ? myElections : myElections.filter(e => {
-    if (tab === 'voted') return e.hasVoted;
-    return e.phase === tab;
+  const byTab = myElections.filter(e => {
+    if (slice === 'all') return true;
+    if (slice === 'voted') return Boolean(e.hasVoted);
+    return e.phase === slice;
   });
   // The query alone, because the panel that sets everything else is not
   // offered here: running the whole matcher would let a hand-written URL
@@ -90,7 +123,7 @@ export default function VoterElections() {
   const filtered = sortElections(byTab.filter(e => matchesQuery(e, needle)), filters.sort);
   // Switching tab or searching starts a different list, so it starts at the
   // first page.
-  const { visible, hasMore, loadMore } = usePageLimit(filtered, undefined, tab + filters.query + filters.sort);
+  const { visible, hasMore, loadMore } = usePageLimit(filtered, undefined, slice + filters.query + filters.sort);
 
   const urgentCount = myElections.filter(e => endsSoon(e, now)).length;
 
@@ -111,21 +144,41 @@ export default function VoterElections() {
           )}
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-1 scrollbar-none">
-          {TABS.map(tab_ => (
+        {/* The same chips, the same colours and the same selected ring the
+            filter panels use, so a phase looks the same wherever it is read.
+            `all` is the one without a phase to wear, so it borrows the neutral
+            surface the unselected chips sit on. */}
+        {/* ONE SCROLLING ROW ON A PHONE, wrapped on a wide screen. Ten chips
+            wrap into five lines at 390px, which is more header than list
+            before anything is read; the same ten take two lines at desktop
+            width, where wrapping shows the whole set at once. */}
+        <div className="flex gap-2 mb-6 overflow-x-auto pb-1 scrollbar-none sm:flex-wrap sm:overflow-visible sm:pb-0">
+          {SLICES.map(option => (
             <button
-              key={tab_.key}
+              key={option.key}
               type="button"
-              onClick={() => setTab(tab_.key)}
-              className={[
-                'shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold border transition-all',
-                tab === tab_.key
-                  ? 'bg-primary/10 border-primary/30 text-primary-dim'
-                  : 'bg-surface-low/30 border-outline-variant/20 text-on-surface-meta hover:text-on-surface',
-              ].join(' ')}
+              onClick={() => selectSlice(option.key)}
+              className="shrink-0 transition-all cursor-pointer"
             >
-              {t(tab_.labelKey)}
+              {option.key === 'all' ? (
+                <span
+                  className={cn(
+                    'inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold',
+                    'bg-surface-high/50 text-on-surface-variant ring-1 ring-outline-variant/20',
+                    slice === 'all' ? 'ring-2 ring-primary/40' : 'opacity-60 hover:opacity-100',
+                  )}
+                >
+                  {t(option.labelKey)}
+                </span>
+              ) : (
+                <Badge
+                  variant={option.key as Parameters<typeof Badge>[0]['variant']}
+                  dot={option.key === 'active' || option.key === 'enrolling'}
+                  className={slice === option.key ? 'ring-2 ring-primary/40' : 'opacity-60 hover:opacity-100'}
+                >
+                  {t(option.labelKey)}
+                </Badge>
+              )}
             </button>
           ))}
         </div>

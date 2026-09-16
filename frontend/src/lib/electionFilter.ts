@@ -106,6 +106,16 @@ export interface ElectionFilterState {
    * to say one word would be the worse trade.
    */
   sort: ElectionSort;
+  /**
+   * Only the elections this voter has already cast a ballot in.
+   *
+   * A BOOLEAN BESIDE THE PHASE, not one of its values, because it is not one:
+   * `voted` describes the reader, not the election, and an election is
+   * `active` whether or not they have voted in it. It used to be a tab called
+   * "Voted" sitting in a row of phases, which made a personal state look like
+   * a stage of the contract and left the two impossible to combine.
+   */
+  votedOnly: boolean;
 }
 
 export const EMPTY_FILTERS: ElectionFilterState = {
@@ -121,6 +131,7 @@ export const EMPTY_FILTERS: ElectionFilterState = {
   closingSoon: false,
   eligibility: {},
   sort: DEFAULT_SORT,
+  votedOnly: false,
 };
 
 /**
@@ -139,6 +150,7 @@ export function isAnyFilterActive(filter: ElectionFilterState): boolean {
     Boolean(filter.cancel) ||
     isCreatedFilterActive(filter) ||
     filter.closingSoon ||
+    filter.votedOnly ||
     isEligibilityFilterActive(filter.eligibility)
   );
 }
@@ -239,6 +251,7 @@ export function matchesElectionFilter(
   isDomainVerified: (e: Election) => boolean,
 ): boolean {
   if (filter.phase && election.phase !== filter.phase) return false;
+  if (filter.votedOnly && !election.hasVoted) return false;
   if (!matchesQuery(election, filter.query.trim().toLowerCase())) return false;
   if (filter.domainOnly && !isDomainVerified(election)) return false;
   if (filter.restrictedOnly && !isRestricted(election)) return false;

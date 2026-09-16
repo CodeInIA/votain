@@ -29,6 +29,7 @@ describe('carrying the filters in the URL', () => {
       createdFrom: '2026-09-01T08:30',
       createdTo: '2026-09-30T20:00',
       closingSoon: true,
+      votedOnly: true,
       sort: 'closing',
       eligibility: {
         minAgeFrom: 18,
