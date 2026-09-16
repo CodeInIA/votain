@@ -160,6 +160,7 @@
     "created_on": "Erstellt {{date}}",
     "ends_on": "Endet {{date}}",
     "votes_cast": "Abgegebene Stimmen",
+    "reserved_ballots": "Reservierte Stimmen",
     "participation": "Beteiligung",
     "enrollment_closes": "Anmeldung endet",
     "voting_closes": "Abstimmung endet",

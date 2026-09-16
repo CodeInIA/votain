@@ -161,6 +161,7 @@
     "created_on": "Creada {{date}}",
     "ends_on": "Termina {{date}}",
     "votes_cast": "Votos emitidos",
+    "reserved_ballots": "Votos reservados",
     "participation": "Participación",
     "enrollment_closes": "Inscripción cierra",
     "voting_closes": "Votación cierra",

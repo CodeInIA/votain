@@ -160,6 +160,7 @@
     "created_on": "Created {{date}}",
     "ends_on": "Ends {{date}}",
     "votes_cast": "Votes cast",
+    "reserved_ballots": "Ballots reserved",
     "participation": "Participation",
     "enrollment_closes": "Enrollment closes",
     "voting_closes": "Voting closes",

@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Users, Lock } from 'lucide-react';
 import { Badge } from './Badge';
 import { BlockchainBadge } from './BlockchainBadge';
 import { Card } from './Card';
@@ -85,27 +84,79 @@ export function ElectionHeader({ election, extraBadges }: HeaderProps) {
   );
 }
 
+/** One figure and what it is, in the panel beside the schedule. */
+function Figure({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-lg font-bold text-on-surface tabular-nums leading-tight">{value}</p>
+      <p className="text-xs text-on-surface-meta">{label}</p>
+      {hint && <p className="text-[11px] text-on-surface-meta/80 leading-snug mt-0.5">{hint}</p>}
+    </div>
+  );
+}
+
 /**
- * Every date the election has, and the count of ballots while it is running.
+ * Every date the election has, and the numbers that go with them.
  *
- * Always drawn. A countdown to the next boundary used to sit here and could
- * say nothing about what came after, and on the public page it appeared only
- * while voting was open, so a closed or upcoming election showed no dates at
- * all on the one page a shared link opens.
+ * WHY THE FIGURES MOVED HERE. The schedule is a narrow list of rows, so on a
+ * wide screen it left half the card empty while the facts that belong next to
+ * it, how many people are in and how many ballots are paid for, were a line of
+ * small grey text further down the page among the promises. A count belongs
+ * beside the clock it is counting against.
+ *
+ * WHAT IS IN IT. Who is enrolled, how many have voted once there are any, how
+ * many ballots the reserve can still pay for, and the quorum. That last one
+ * has never been shown to a voter at all: it is set when the election is
+ * created and only the organizer's tally screen mentions it, yet it is a
+ * promise the voter is relying on, that no result appears until enough
+ * ballots exist for one to reveal nothing about any single person.
+ *
+ * ON A PHONE it wraps under the schedule and becomes a row of figures rather
+ * than a column, which is why the panel sets its own direction at `sm` rather
+ * than inheriting one.
  */
 export function ElectionSchedule({ election }: { election: Election }) {
   const { t } = useTranslation();
+  const funding = useElectionFunding(election.contractAddress);
+  const voteCost = useVoteCost();
+  const reservedBallots = Math.floor(funding.reserved / voteCost.matic);
+
+  // Ballots, not people: `castVotes` counts re-votes too, which is the whole
+  // point of being able to change your mind. `tallyTotal` is what a published
+  // result adds up to, and that is drawn elsewhere.
+  const showVotes = election.castVotes > 0;
+
   return (
-    <Card className="p-4 mb-4 flex items-start gap-4 flex-wrap">
-      <PhaseTimeline election={election} className="flex-1 min-w-[15rem]" />
-      {election.phase === 'active' && (
-        <div className="text-right ml-auto">
-          <p className="text-lg font-bold text-on-surface">
-            {election.castVotes.toLocaleString()}
-          </p>
-          <p className="text-xs text-on-surface-meta">{t('election.votes_cast')}</p>
-        </div>
-      )}
+    <Card className="p-4 mb-4 flex flex-col sm:flex-row items-start gap-4">
+      <PhaseTimeline election={election} className="flex-1 min-w-0 sm:min-w-[15rem]" />
+      <div
+        className="w-full sm:w-auto sm:min-w-[9.5rem] flex flex-row flex-wrap sm:flex-col gap-x-6 gap-y-3
+                   pt-3 sm:pt-0 border-t sm:border-t-0 sm:border-l border-white/5 sm:pl-4"
+      >
+        <Figure
+          label={t('election.enrolled')}
+          value={election.totalEnrolled.toLocaleString()}
+        />
+        {showVotes && (
+          <Figure
+            label={t('election.votes_cast')}
+            value={election.castVotes.toLocaleString()}
+          />
+        )}
+        {reservedBallots > 0 && (
+          <Figure
+            label={t('election.reserved_ballots')}
+            value={reservedBallots.toLocaleString()}
+          />
+        )}
+        {election.privacyQuorum > 0 && (
+          <Figure
+            label={t('create.privacy_quorum')}
+            value={election.privacyQuorum.toLocaleString()}
+            hint={t('create.quorum_hint')}
+          />
+        )}
+      </div>
     </Card>
   );
 }
@@ -120,9 +171,6 @@ export function ElectionSchedule({ election }: { election: Election }) {
  */
 export function ElectionAbout({ election }: { election: Election }) {
   const { t } = useTranslation();
-  const funding = useElectionFunding(election.contractAddress);
-  const voteCost = useVoteCost();
-  const reservedBallots = Math.floor(funding.reserved / voteCost.matic);
 
   return (
     <Card className="p-5 mb-4">
@@ -131,33 +179,14 @@ export function ElectionAbout({ election }: { election: Election }) {
       <div className="mt-4 pt-4 border-t border-white/5">
         <VotingRule type={election.votingType} thresholdValue={election.thresholdValue} />
       </div>
+      {/* The counts used to be here and are in the schedule card now, beside
+          the dates they are counted against. What is left is what no figure
+          can say: the two promises the organizer cannot take back. */}
       <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-white/5 text-xs text-on-surface-meta">
-        <span className="flex items-center gap-1.5">
-          <Users className="w-3.5 h-3.5" />
-          {election.totalEnrolled.toLocaleString()} {t('election.enrolled')}
-        </span>
-        {/* Together and last: the longest labels in the row, so wrapping
-            takes both at once. */}
         <SchedulePromise
           fixedSchedule={election.fixedSchedule}
           cancellable={election.cancellable}
         />
-        {/* WHAT IS RESERVED, stated as a fact among the other facts rather
-            than as a banner, and on both pages rather than only the voter's.
-            The reserve is a promise made on chain that the organizer cannot
-            revoke, and a promise nobody can see is worth a great deal less;
-            whether an election can pay for its own ballots is exactly what
-            someone reads a shared link to find out.
-
-            A line, not a coloured box: a box that appears when all is well on
-            every election is how people learn to stop reading the one that
-            appears when it is not. */}
-        {reservedBallots > 0 && (
-          <span className="flex items-center gap-1.5">
-            <Lock className="w-3.5 h-3.5" />
-            {t('funding.reserved_votes', { votes: reservedBallots })}
-          </span>
-        )}
       </div>
     </Card>
   );

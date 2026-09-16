@@ -160,6 +160,7 @@
     "created_on": "Aangemaakt {{date}}",
     "ends_on": "Eindigt {{date}}",
     "votes_cast": "Uitgebrachte stemmen",
+    "reserved_ballots": "Gereserveerde stemmen",
     "participation": "Deelname",
     "enrollment_closes": "Inschrijving sluit",
     "voting_closes": "Stemming sluit",

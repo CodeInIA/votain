@@ -162,6 +162,7 @@
     "created_on": "Создано {{date}}",
     "ends_on": "До {{date}}",
     "votes_cast": "Подано голосов",
+    "reserved_ballots": "Зарезервировано голосов",
     "participation": "Явка",
     "enrollment_closes": "Регистрация закрывается",
     "voting_closes": "Голосование закрывается",

@@ -161,6 +161,7 @@
     "created_on": "Creee {{date}}",
     "ends_on": "Fin {{date}}",
     "votes_cast": "Votes exprimés",
+    "reserved_ballots": "Bulletins reserves",
     "participation": "Participation",
     "enrollment_closes": "Clôture des inscriptions",
     "voting_closes": "Clôture du vote",
