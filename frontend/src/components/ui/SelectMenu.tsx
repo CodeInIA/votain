@@ -27,10 +27,30 @@ interface SelectMenuProps {
   onChange: (value: string) => void;
   options: SelectMenuOption[];
   label?: string;
+  /**
+   * Keep the label for a screen reader and take it off the screen.
+   *
+   * For a control in a toolbar, where the visible text would be a second row
+   * that nothing beside it has. Dropping the label instead would take the
+   * `aria-label` with it and leave a dropdown announced as nothing at all.
+   */
+  labelHidden?: boolean;
   hint?: string;
   error?: string;
   placeholder?: string;
   className?: string;
+  /**
+   * For the OPEN MENU, where `className` is for the trigger.
+   *
+   * The menu tracks the trigger's width by default, which is right for a
+   * dropdown filling a form row and wrong for a compact one sitting in a
+   * toolbar: there the trigger is as narrow as the current value and the menu
+   * would inherit that, so every other option arrives truncated. Such a caller
+   * passes `w-max` here.
+   */
+  contentClassName?: string;
+  /** Wraps the label, trigger and hint. `w-full` unless a caller says otherwise. */
+  wrapperClassName?: string;
   id?: string;
 }
 
@@ -39,10 +59,13 @@ export function SelectMenu({
   onChange,
   options,
   label,
+  labelHidden = false,
   hint,
   error,
   placeholder,
   className,
+  contentClassName,
+  wrapperClassName,
   id,
 }: SelectMenuProps) {
   const selectId = id ?? label?.toLowerCase().replace(/\s+/g, '-');
@@ -57,9 +80,15 @@ export function SelectMenu({
   // the side of the page. The truncation only engages once every ancestor is
   // allowed to be narrower than its text.
   return (
-    <div className="flex flex-col gap-1.5 w-full min-w-0">
+    <div className={cn('flex flex-col gap-1.5 w-full min-w-0', wrapperClassName)}>
       {label && (
-        <label htmlFor={selectId} className="text-sm font-medium text-on-surface-variant">
+        <label
+          htmlFor={selectId}
+          className={cn(
+            'text-sm font-medium text-on-surface-variant',
+            labelHidden && 'sr-only',
+          )}
+        >
           {label}
         </label>
       )}
@@ -110,6 +139,7 @@ export function SelectMenu({
             className={cn(
               'z-[100] w-[var(--radix-select-trigger-width)] p-1 rounded-2xl',
               'bg-surface-high border border-white/8 shadow-[0_8px_32px_rgba(0,0,0,0.5)]',
+              contentClassName,
             )}
           >
             <Select.Viewport className="max-h-72">

@@ -167,6 +167,38 @@ export function ElectionFilters({ value, onChange, open, onToggleOpen, searchPla
               on, the collapsed bar gave no sign the list was being filtered. */}
           {isAnyFilterActive(value) && <span className="w-2 h-2 rounded-full bg-primary" />}
         </Button>
+
+        {/* BESIDE THE FILTER BUTTON, NOT INSIDE THE PANEL IT OPENS, and the
+            reason is the one already written into `ElectionFilterState`: an
+            order is not a filter. Everything behind that button hides
+            something, and the dot on it means something is hidden. This shows
+            every election whichever value it has, so putting it in there
+            would have made it the one control in the panel that cannot
+            justify the panel's own warning, and it would have been two clicks
+            away for no reason.
+
+            A dropdown and not chips because the four are one exclusive choice
+            out of a set that will grow. The current value is always visible,
+            which is what a control outside a collapsed panel has to be. */}
+        <SelectMenu
+          value={value.sort}
+          onChange={sort => set({ sort: sort as ElectionSort })}
+          options={SORT_OPTIONS.map(s => ({
+            value: s,
+            label: t(`sort.${s}`),
+            icon: SORT_ICONS[s],
+          }))}
+          label={t('discover.group_order')}
+          // Announced, not drawn: nothing else in this row has a label above
+          // it, and one here would make the row two heights.
+          labelHidden
+          wrapperClassName="w-auto shrink-0"
+          className="rounded-2xl px-3 sm:px-4 max-w-[9.5rem] sm:max-w-none"
+          // Left to size itself: the trigger is as narrow as the current
+          // value here, and a menu matching it would truncate every other
+          // option to the length of whichever one happens to be chosen.
+          contentClassName="w-max"
+        />
       </div>
 
       {open && (
@@ -288,25 +320,6 @@ export function ElectionFilters({ value, onChange, open, onToggleOpen, searchPla
                 {t(votingTypeLabelKey(type))}
               </FilterToggle>
             ))}
-          </FilterGroup>
-
-          {/* A dropdown and not chips, which every other band here uses.
-              These four are one exclusive choice out of a set that will grow,
-              and four more chips in a panel that already holds nineteen would
-              read as four more things that can be on at once. It is also the
-              only control here that never hides anything, so it should not
-              look like the ones that do. */}
-          <FilterGroup label={t('discover.group_order')}>
-            <SelectMenu
-              value={value.sort}
-              onChange={sort => set({ sort: sort as ElectionSort })}
-              options={SORT_OPTIONS.map(s => ({
-                value: s,
-                label: t(`sort.${s}`),
-                icon: SORT_ICONS[s],
-              }))}
-              className="max-w-xs"
-            />
           </FilterGroup>
 
           {/* The only band that asks about the VOTER rather than the election:
