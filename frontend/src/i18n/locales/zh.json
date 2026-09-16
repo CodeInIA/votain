@@ -494,7 +494,7 @@
   },
   "profile": {
     "title": "个人资料",
-    "nullifier_hint": "你在 Votain 的标识符。World ID 仅为这个应用从你派生出它：它用来防止同一个人注册两次，你每次回来都相同，也不会透露你是谁。你的选票与它无关。",
+    "nullifier_hint": "你在 Votain 的匿名标识符。它防止重复注册，也不会透露你是谁或你投了什么。",
     "nullifier_show": "显示完整标识符",
     "display_name": "显示名称",
     "sign_out": "退出登录",

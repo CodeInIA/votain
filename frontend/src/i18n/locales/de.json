@@ -499,7 +499,7 @@
   },
   "profile": {
     "title": "Profil",
-    "nullifier_hint": "Ihre Kennung bei Votain. World ID leitet sie allein für diese Anwendung aus Ihnen ab: sie verhindert, dass sich eine Person zweimal registriert, sie ist bei jeder Rückkehr dieselbe, und sie sagt nichts darüber, wer Sie sind. Ihre Stimmzettel sind nicht mit ihr verknüpft.",
+    "nullifier_hint": "Ihre anonyme Kennung bei Votain. Sie verhindert eine zweite Anmeldung und verrät nichts über Sie oder Ihre Stimme.",
     "nullifier_show": "Vollständige Kennung anzeigen",
     "display_name": "Anzeigename",
     "sign_out": "Abmelden",

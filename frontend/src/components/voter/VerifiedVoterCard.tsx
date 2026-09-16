@@ -21,11 +21,11 @@ import { readOnDevice } from '../../lib/deviceSeal';
  * like an identifier, not enough to be one. A voter could neither tell what it
  * was nor do anything with it.
  *
- * WHY NOT IN FULL BY DEFAULT. Sixty-six characters is three lines of monospace
- * on a phone, in a card whose job is to say "verified" at a glance. It opens on
- * a press and copies from a button, which is what somebody actually wants it
- * for: checking their own registration on chain, or quoting it when asking for
- * help.
+ * WHOLE ON A WIDE SCREEN, cut on a phone. Sixty-six monospace characters fit
+ * across this card on a desktop and take three lines of a phone, so the phone
+ * gets an ellipsis and a press to open it. The cut is CSS, not a `slice`: the
+ * whole value is always in the page, which is what the copy button sends and
+ * what a screen reader reads out, and only its display is shortened.
  */
 export function VerifiedVoterCard() {
   const { t } = useTranslation();
@@ -76,10 +76,12 @@ export function VerifiedVoterCard() {
                   className={cn(
                     'min-w-0 text-left font-mono text-xs text-on-surface-variant',
                     'cursor-pointer hover:text-on-surface transition-colors',
-                    showFull ? 'break-all' : 'truncate',
+                    // `sm:break-all` regardless: there is room for all of it on
+                    // a wide screen, so nobody there has to press anything.
+                    showFull ? 'break-all' : 'truncate sm:break-all',
                   )}
                 >
-                  {showFull ? nullifier : `${nullifier.slice(0, 20)}…`}
+                  {nullifier}
                 </button>
                 <button
                   type="button"

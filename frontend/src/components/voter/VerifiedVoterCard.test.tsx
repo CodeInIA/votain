@@ -31,18 +31,20 @@ describe('the verified voter card', () => {
     expect(await screen.findByText('profile.nullifier_hint')).toBeInTheDocument();
   });
 
-  it('shows it short, and whole when asked', async () => {
+  it('keeps the whole value in the page, cut only by CSS', async () => {
     render(<VerifiedVoterCard />);
 
     const value = await screen.findByRole('button', { name: 'profile.nullifier_show' });
-    // Sixty-six characters is three lines of monospace on a phone, so the card
-    // opens with a stub and the whole thing is a press away.
+    // Shortened for the eye on a narrow screen and never in the DOM: what is
+    // read out, selected or copied is always the whole identifier.
+    expect(value.textContent).toBe(NULLIFIER);
+    expect(value.className).toContain('truncate');
     expect(value).toHaveAttribute('aria-expanded', 'false');
-    expect(value.textContent).not.toBe(NULLIFIER);
 
     fireEvent.click(value);
 
     expect(value).toHaveAttribute('aria-expanded', 'true');
+    expect(value.className).not.toContain('truncate');
     expect(value.textContent).toBe(NULLIFIER);
   });
 
