@@ -150,7 +150,10 @@
     "results_partial": "تم العثور على {{shown}} حتى الآن",
     "closing_soon": "يغلق خلال يوم",
     "group_commitments": "التزامات",
-    "group_order": "الترتيب"
+    "group_order": "الترتيب",
+    "group_created": "تاريخ الإنشاء",
+    "created_from": "من",
+    "created_to": "إلى"
   },
   "election": {
     "by": "بواسطة",
@@ -158,6 +161,7 @@
     "candidates": "المرشحون",
     "eligibility": "الأهلية",
     "enrolled": "المسجلون",
+    "created_on": "أُنشئت في {{date}}",
     "votes_cast": "الأصوات المدلى بها",
     "participation": "المشاركة",
     "enrollment_closes": "يغلق التسجيل",

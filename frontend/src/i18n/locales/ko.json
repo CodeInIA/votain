@@ -145,7 +145,10 @@
     "results_partial": "지금까지 {{shown}}개",
     "closing_soon": "하루 이내 마감",
     "group_commitments": "약속",
-    "group_order": "정렬"
+    "group_order": "정렬",
+    "group_created": "생성일",
+    "created_from": "시작",
+    "created_to": "종료"
   },
   "election": {
     "by": "주최:",
@@ -153,6 +156,7 @@
     "candidates": "후보자",
     "eligibility": "자격",
     "enrolled": "등록자",
+    "created_on": "{{date}} 생성",
     "votes_cast": "투표 수",
     "participation": "참여율",
     "enrollment_closes": "등록 마감",

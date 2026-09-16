@@ -29,6 +29,7 @@ import { hasPublishedResults, tallyTotal } from '../../data/seed';
 import { enrollInElection } from '../../lib/voting';
 import { FundingNotice } from '../../components/ui/FundingNotice';
 import { SchedulePromise } from '../../components/ui/SchedulePromise';
+import { CreatedOn } from '../../components/ui/CreatedOn';
 import { useElectionFunding } from '../../hooks/useElectionFunding';
 import { canFundOneVote } from '../../lib/gasNeeds';
 import { useVoteCost } from '../../hooks/useVoteCost';
@@ -428,6 +429,10 @@ export default function ElectionDetail() {
               fixedSchedule={election.fixedSchedule}
               cancellable={election.cancellable}
             />
+            {/* Beside the domain badge in spirit: both answer "should I
+                believe this", and an election deployed an hour ago that looks
+                exactly like a well known one is the case they answer. */}
+            <CreatedOn date={election.createdAt} precise />
             {reservedBallots > 0 && (
               <span className="flex items-center gap-1.5">
                 <Lock className="w-3.5 h-3.5" />

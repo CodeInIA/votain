@@ -291,6 +291,18 @@ enrolment closing and voting opening, could not be reached at all: an election
 advertising dates the organizer can shorten could not shorten that one.
 `openVotingEarly` closes it.
 
+**`createdAt` is the one date the organizer did not choose.** Every other
+timestamp on an election came out of the wizard and can be set to anything the
+validation allows, including dates in the past. This one is written by the chain
+at deployment, as a third immutable, so nobody can offer a different answer
+later. It answers a question none of the scheduled dates can: an election
+announced today for next March and one deployed last March that opens tomorrow
+are a year apart in age and adjacent in every date a list shows. That makes it
+part of the same job the domain badge does, deciding whether to believe the
+thing, since "this was created an hour ago" is the most useful fact about a
+convincing copy of somebody else's election. It is shown on the cards and in all
+three election views, and both ends of a creation range can be filtered on.
+
 **Both answers are shown to the voter**, on the card, on the public preview and
 on the election itself. Showing only the reassuring one would make its absence
 unreadable, since nobody can tell a missing badge from a badge they have never

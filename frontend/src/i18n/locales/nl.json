@@ -146,7 +146,10 @@
     "results_partial": "{{shown}} tot nu toe gevonden",
     "closing_soon": "Sluit binnen een dag",
     "group_commitments": "Toezeggingen",
-    "group_order": "Volgorde"
+    "group_order": "Volgorde",
+    "group_created": "Aangemaakt",
+    "created_from": "Van",
+    "created_to": "Tot"
   },
   "election": {
     "by": "door",
@@ -154,6 +157,7 @@
     "candidates": "Kandidaten",
     "eligibility": "Verkiesbaarheid",
     "enrolled": "Ingeschreven",
+    "created_on": "Aangemaakt op {{date}}",
     "votes_cast": "Uitgebrachte stemmen",
     "participation": "Deelname",
     "enrollment_closes": "Inschrijving sluit",

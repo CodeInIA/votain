@@ -13,6 +13,7 @@ import { ViewAsSwitch } from '../../components/ui/ViewAsSwitch';
 import { voterViewHref } from '../../lib/electionViews';
 import { PERSONHOOD_LABEL_KEY } from '../../lib/chainElections';
 import { DomainBadge } from '../../components/ui/DomainBadge';
+import { CreatedOn } from '../../components/ui/CreatedOn';
 import { Card } from '../../components/ui/Card';
 import { useRefreshOnReturn } from '../../hooks/useRefreshOnReturn';
 import { WalletAnswerLostError } from '../../lib/walletRequest';
@@ -398,6 +399,16 @@ export default function ElectionManagement() {
             often checking what the schedule actually was. */}
         <Card className="p-4 mb-4">
           <PhaseTimeline election={election} />
+          {/* Under the schedule and not in it: the schedule is the four
+              moments the organizer chose, and this is the one the chain
+              chose. Here rather than beside the description, because it is
+              the same kind of fact as the dates above it and this is the only
+              card on the page that is about dates. */}
+          <CreatedOn
+            date={election.createdAt}
+            precise
+            className="mt-3 pt-3 border-t border-white/5 text-xs text-on-surface-meta"
+          />
         </Card>
 
         {/* Results (if closed) */}

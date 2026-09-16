@@ -146,7 +146,10 @@
     "results_partial": "{{shown}} found so far",
     "closing_soon": "Closing within a day",
     "group_commitments": "Commitments",
-    "group_order": "Order"
+    "group_order": "Order",
+    "group_created": "Created",
+    "created_from": "From",
+    "created_to": "To"
   },
   "election": {
     "by": "by",
@@ -154,6 +157,7 @@
     "candidates": "Candidates",
     "eligibility": "Eligibility",
     "enrolled": "Enrolled",
+    "created_on": "Created {{date}}",
     "votes_cast": "Votes cast",
     "participation": "Participation",
     "enrollment_closes": "Enrollment closes",

@@ -720,6 +720,51 @@ describe("ElectionV4, enrollment opened early", () => {
  * Giving that power up at deployment turns a promise the organizer makes into
  * one the contract keeps.
  */
+/**
+ * The one date the organizer did not choose.
+ *
+ * Every other timestamp on an election came out of the wizard and can be set
+ * to anything the validation allows. This one is written by the chain at
+ * deployment, which is what makes it the honest answer to "how long has this
+ * been around" and therefore worth testing that nobody can supply it.
+ */
+describe("ElectionV4, when it was created", () => {
+  it("records the block it was deployed in, not a date it was handed", async () => {
+    const before = await networkHelpers.time.latest();
+    const election = await freshElection();
+    const createdAt = Number(await election.createdAt());
+
+    expect(createdAt).to.be.at.least(before);
+    expect(createdAt).to.be.at.most(await networkHelpers.time.latest());
+  });
+
+  it("does not move when the election does", async () => {
+    // An immutable, so it survives every phase change and cannot be rewritten
+    // by an organizer who would rather their election looked established.
+    const election = await freshElection();
+    const atDeploy = await election.createdAt();
+
+    await (await election.connect(organizer).closeEnrollmentEarly()).wait();
+    await networkHelpers.time.increase(3600);
+
+    expect(await election.createdAt()).to.equal(atDeploy);
+  });
+
+  it("is not any of the dates in the schedule", async () => {
+    // The whole reason it exists: an election announced now for next week is
+    // brand new and its first scheduled date is days away.
+    const now = await networkHelpers.time.latest();
+    const election = await freshElection({
+      enrollStart: now + 7 * 86400,
+      enrollEnd: now + 9 * 86400,
+      voteStart: now + 9 * 86400,
+      voteEnd: now + 11 * 86400,
+    });
+
+    expect(Number(await election.createdAt())).to.be.lessThan(now + 7 * 86400);
+  });
+});
+
 describe("ElectionV4, a fixed schedule", () => {
   it("is off by default, and the organizer keeps every lever", async () => {
     const election = await freshElection();

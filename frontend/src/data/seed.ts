@@ -153,6 +153,19 @@ export interface Election {
    * and anything deployed before the flag, which is not the same as false.
    */
   cancellable?: boolean;
+  /**
+   * When the election was deployed, from the chain's own clock.
+   *
+   * NOT ANY DATE IN THE SCHEDULE. An election announced today for next March
+   * and one deployed last March that opens tomorrow are a year apart in age
+   * and adjacent in every date the lists show. It is also the only date here
+   * the organizer did not choose: every other one came out of the wizard and
+   * can be set to anything, this one is written by the chain.
+   *
+   * Undefined for seed elections and anything deployed before the immutable
+   * existed, like the two promises above.
+   */
+  createdAt?: Date;
   /** Public per-election salt for deriving the tally key from the organizer's
    *  wallet signature. Present only on elections whose key is re-derivable
    *  (not stored). */

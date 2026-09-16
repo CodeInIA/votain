@@ -147,7 +147,10 @@
     "results_partial": "{{shown}} encontradas até agora",
     "closing_soon": "Fecha dentro de um dia",
     "group_commitments": "Compromissos",
-    "group_order": "Ordem"
+    "group_order": "Ordem",
+    "group_created": "Criada",
+    "created_from": "De",
+    "created_to": "Ate"
   },
   "election": {
     "by": "por",
@@ -155,6 +158,7 @@
     "candidates": "Candidatos",
     "eligibility": "Elegibilidade",
     "enrolled": "Inscritos",
+    "created_on": "Criada a {{date}}",
     "votes_cast": "Votos emitidos",
     "participation": "Participação",
     "enrollment_closes": "Inscrições encerram",

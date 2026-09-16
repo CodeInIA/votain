@@ -6,6 +6,7 @@ import { DomainBadge } from './DomainBadge';
 import { EligibilityChips } from './EligibilityChips';
 import { Countdown } from './Countdown';
 import { SchedulePromise } from './SchedulePromise';
+import { CreatedOn } from './CreatedOn';
 import { Button } from './Button';
 import { cn } from '../../lib/utils';
 import { endsSoon, nextBoundary } from '../../lib/phase';
@@ -222,6 +223,18 @@ export function ElectionCard({ election, view = 'public', className }: ElectionC
           <Calendar className="w-3.5 h-3.5 shrink-0" />
           <span className="truncate">{election.voteEnd.toLocaleDateString()}</span>
         </span>
+        {/* How long it has existed, which no date beside it answers. An
+            election deployed this morning and one that has been running for a
+            year look the same here otherwise, and "this was created an hour
+            ago" is the single most useful thing to know about a convincing
+            copy of somebody else's election.
+
+            In the turnout cell's place when there is no turnout to show, so
+            the grid keeps its shape: a phase where nobody has voted yet has
+            that cell empty anyway. */}
+        {!showsTurnout && (
+          <CreatedOn date={election.createdAt} className="col-start-1 row-start-2" />
+        )}
         {/* Full-width rows under the grid rather than cells of their own: these
             are the longest labels here in every language, and squeezed into one
             column they truncated to nothing. Auto-placement puts them on rows 3

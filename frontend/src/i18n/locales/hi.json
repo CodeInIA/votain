@@ -146,7 +146,10 @@
     "results_partial": "अब तक {{shown}} मिलीं",
     "closing_soon": "एक दिन में बंद",
     "group_commitments": "प्रतिबद्धताएँ",
-    "group_order": "क्रम"
+    "group_order": "क्रम",
+    "group_created": "निर्मित",
+    "created_from": "से",
+    "created_to": "तक"
   },
   "election": {
     "by": "द्वारा",
@@ -154,6 +157,7 @@
     "candidates": "उम्मीदवार",
     "eligibility": "पात्रता",
     "enrolled": "नामांकित",
+    "created_on": "{{date}} को बनाया गया",
     "votes_cast": "डाले गए वोट",
     "participation": "भागीदारी",
     "enrollment_closes": "नामांकन बंद होता है",

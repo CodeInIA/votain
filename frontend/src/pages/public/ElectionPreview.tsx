@@ -24,6 +24,7 @@ import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
 import { PULSE_PHASES } from '../../lib/phase';
 import { explorerAddressUrl } from '../../lib/deployments';
 import { SchedulePromise } from '../../components/ui/SchedulePromise';
+import { CreatedOn } from '../../components/ui/CreatedOn';
 import { ExpandableText } from '../../components/ui/ExpandableText';
 import { VotingRule } from '../../components/ui/VotingRule';
 import { usePageMeta } from '../../seo/usePageMeta';
@@ -209,6 +210,10 @@ export default function ElectionPreview() {
               fixedSchedule={election.fixedSchedule}
               cancellable={election.cancellable}
             />
+            {/* Public too, and most useful here: this is the page a link in a
+                message opens, which is exactly where a copy of somebody
+                else's election gets read. */}
+            <CreatedOn date={election.createdAt} precise />
           </div>
         </Card>
 

@@ -75,6 +75,19 @@ export interface ElectionFilterState {
    * for.
    */
   noCancel: boolean;
+  /**
+   * Created no earlier than this day, as 'yyyy-mm-dd' local, or empty.
+   *
+   * SEPARATE FROM EVERY OTHER DATE HERE, which is why it is worth a control.
+   * An election announced today for next March and one deployed last March
+   * that opens tomorrow are a year apart in age and adjacent in every date a
+   * list shows. It is also the only date the organizer did not choose, so it
+   * is the one worth narrowing by when the question is "what appeared
+   * recently" rather than "what is happening soon".
+   */
+  createdFrom: string;
+  /** Created no later than the END of this day. See `matchesElectionFilter`. */
+  createdTo: string;
   /** Its next deadline falls within a day, whatever that deadline is. */
   closingSoon: boolean;
   eligibility: EligibilityFilter;
@@ -99,6 +112,8 @@ export const EMPTY_FILTERS: ElectionFilterState = {
   votingType: null,
   schedule: null,
   noCancel: false,
+  createdFrom: '',
+  createdTo: '',
   closingSoon: false,
   eligibility: {},
   sort: DEFAULT_SORT,
@@ -118,9 +133,54 @@ export function isAnyFilterActive(filter: ElectionFilterState): boolean {
     Boolean(filter.votingType) ||
     Boolean(filter.schedule) ||
     filter.noCancel ||
+    isCreatedFilterActive(filter) ||
     filter.closingSoon ||
     isEligibilityFilterActive(filter.eligibility)
   );
+}
+
+/** Whether either end of the creation range is set. */
+export function isCreatedFilterActive(filter: ElectionFilterState): boolean {
+  return Boolean(filter.createdFrom || filter.createdTo);
+}
+
+/** A whole day, for running an upper bound to the end of the one that was picked. */
+const DAY_MS = 86_400_000;
+
+/** 'yyyy-mm-dd' is local time by specification, which is what the picker gives. */
+function parseLocalDay(value: string): number | null {
+  if (!value) return null;
+  const [y, m, d] = value.split('-').map(Number);
+  if (!y || !m || !d) return null;
+  const at = new Date(y, m - 1, d).getTime();
+  return Number.isNaN(at) ? null : at;
+}
+
+/**
+ * Whether the election was created inside the range asked for.
+ *
+ * THE UPPER BOUND RUNS TO THE END OF ITS DAY, the same rule the gas history
+ * settled on for minutes. Someone who puts the same day at both ends is asking
+ * for that day, and compared against midnight at its start that is an empty
+ * window: the honest-looking answer to a reasonable question would be "no
+ * elections".
+ *
+ * AN ELECTION WITH NO CREATION DATE IS DROPPED, not kept. It was deployed
+ * before the chain recorded one, so it cannot be placed in time and no range
+ * can honestly claim it. Keeping it would put an election of unknown age
+ * inside "created this week", which is the one claim this filter exists to
+ * make reliably.
+ */
+function matchesCreated(election: Election, filter: ElectionFilterState): boolean {
+  const from = parseLocalDay(filter.createdFrom);
+  const to = parseLocalDay(filter.createdTo);
+  if (from === null && to === null) return true;
+  if (!election.createdAt) return false;
+
+  const at = election.createdAt.getTime();
+  if (from !== null && at < from) return false;
+  if (to !== null && at >= to + DAY_MS) return false;
+  return true;
 }
 
 /**
@@ -167,6 +227,7 @@ export function matchesElectionFilter(
   // Again `=== false` and not `!`: an election from before the flag carries
   // `undefined`, and it never made this promise either.
   if (filter.noCancel && election.cancellable !== false) return false;
+  if (!matchesCreated(election, filter)) return false;
   if (filter.closingSoon && !closingSoon(election)) return false;
   return matchesEligibilityFilter(election.eligibilityPolicy, filter.eligibility);
 }

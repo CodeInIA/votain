@@ -180,3 +180,36 @@ describe('the two promises are not one promise', () => {
     expect(isAnyFilterActive(filters({ noCancel: true }))).toBe(true);
   });
 });
+
+describe('narrowing by the date nobody chose', () => {
+  const on = (iso: string) => new Date(`${iso}T12:00:00`);
+  const made = (iso?: string) =>
+    election({ phase: 'active', createdAt: iso ? on(iso) : undefined });
+
+  it('keeps what falls inside the range', () => {
+    expect(matches(made('2026-09-10'), { createdFrom: '2026-09-01', createdTo: '2026-09-30' })).toBe(true);
+    expect(matches(made('2026-08-31'), { createdFrom: '2026-09-01' })).toBe(false);
+  });
+
+  it('runs the upper bound to the END of its day', () => {
+    // The same day at both ends means that day. Compared against midnight at
+    // its start it would be an empty window, and "no elections" would be the
+    // honest-looking answer to a perfectly reasonable question.
+    expect(matches(made('2026-09-10'), { createdFrom: '2026-09-10', createdTo: '2026-09-10' })).toBe(true);
+    expect(matches(made('2026-09-11'), { createdTo: '2026-09-10' })).toBe(false);
+  });
+
+  it('drops an election whose age the chain never recorded', () => {
+    // Deployed before the immutable existed. It cannot be placed in time, and
+    // putting it inside "created this week" is the one claim this filter
+    // exists to make reliably.
+    expect(matches(made(), { createdFrom: '2026-09-01' })).toBe(false);
+    // With no range asked for it is not being placed in time at all.
+    expect(matches(made(), {})).toBe(true);
+  });
+
+  it('counts as narrowing the list from either end alone', () => {
+    expect(isAnyFilterActive(filters({ createdFrom: '2026-09-01' }))).toBe(true);
+    expect(isAnyFilterActive(filters({ createdTo: '2026-09-01' }))).toBe(true);
+  });
+});

@@ -148,7 +148,10 @@
     "results_partial": "Пока найдено: {{shown}}",
     "closing_soon": "Закрывается в течение дня",
     "group_commitments": "Обязательства",
-    "group_order": "Порядок"
+    "group_order": "Порядок",
+    "group_created": "Создано",
+    "created_from": "С",
+    "created_to": "По"
   },
   "election": {
     "by": "организовано",
@@ -156,6 +159,7 @@
     "candidates": "Кандидаты",
     "eligibility": "Право голоса",
     "enrolled": "Зарегистрировано",
+    "created_on": "Создано {{date}}",
     "votes_cast": "Подано голосов",
     "participation": "Явка",
     "enrollment_closes": "Регистрация закрывается",

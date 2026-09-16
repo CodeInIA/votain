@@ -145,7 +145,10 @@
     "results_partial": "現在 {{shown}} 件",
     "closing_soon": "1日以内に締切",
     "group_commitments": "約束",
-    "group_order": "並び順"
+    "group_order": "並び順",
+    "group_created": "作成日",
+    "created_from": "開始",
+    "created_to": "終了"
   },
   "election": {
     "by": "主催:",
@@ -153,6 +156,7 @@
     "candidates": "候補者",
     "eligibility": "資格",
     "enrolled": "登録者数",
+    "created_on": "{{date}} 作成",
     "votes_cast": "投票数",
     "participation": "参加率",
     "enrollment_closes": "登録締切",

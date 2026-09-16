@@ -45,6 +45,7 @@ export const ELECTION_ABI = [
   "function privacyQuorum() view returns (uint256)",
   "function fixedSchedule() view returns (bool)",
   "function cancellable() view returns (bool)",
+  "function createdAt() view returns (uint256)",
   "function resultsPublished() view returns (bool)",
   "function resultsCid() view returns (string)",
   "function tally() view returns (uint256[])",

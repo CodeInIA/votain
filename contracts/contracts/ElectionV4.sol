@@ -230,6 +230,27 @@ contract ElectionV4 is ERC2771Context {
      * signed.
      */
     bool public immutable cancellable;
+    /**
+     * @notice When this election was deployed, as a block timestamp. Immutable.
+     *
+     * NOT THE SAME AS ANY DATE IN THE SCHEDULE, which is why it is worth its own
+     * slot. An election announced today for next March and one deployed last
+     * March that opens tomorrow are a year apart in age and adjacent in every
+     * date the interface shows, and only this tells them apart.
+     *
+     * It is also the one date the organizer did not choose. Every other
+     * timestamp here came out of the wizard and can be set to anything the
+     * validation allows, including dates in the past; this one is written by
+     * the chain at deployment and no one can offer a different answer later.
+     * That makes it the honest reference for "how long has this been around",
+     * which is what someone deciding whether an election is a hastily made
+     * imitation of another actually wants to know.
+     *
+     * An immutable and not a storage slot: it is written once at construction
+     * and read many times, so it lives in the code rather than costing a SLOAD
+     * on every read.
+     */
+    uint256 public immutable createdAt;
     bool public resultsPublished;
 
     LeanIMTData internal membersTree;
@@ -431,6 +452,11 @@ contract ElectionV4 is ERC2771Context {
         eligibilityAttester = cfg.eligibilityAttester;
         eligibilityPolicyHash = cfg.eligibilityPolicyHash;
         personhood = cfg.personhood;
+
+        // The chain's own answer, never the caller's. A `createdAt` taken from
+        // the config would be one more field an organizer could set to whatever
+        // made their election look established.
+        createdAt = block.timestamp;
 
         _cachedChainId = block.chainid;
         _cachedDomainSeparator = _buildDomainSeparator();

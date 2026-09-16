@@ -146,7 +146,10 @@
     "results_partial": "Bisher {{shown}} gefunden",
     "closing_soon": "Schließt binnen eines Tages",
     "group_commitments": "Zusagen",
-    "group_order": "Reihenfolge"
+    "group_order": "Reihenfolge",
+    "group_created": "Erstellt",
+    "created_from": "Von",
+    "created_to": "Bis"
   },
   "election": {
     "by": "von",
@@ -154,6 +157,7 @@
     "candidates": "Kandidaten",
     "eligibility": "Wahlberechtigung",
     "enrolled": "Angemeldet",
+    "created_on": "Erstellt am {{date}}",
     "votes_cast": "Abgegebene Stimmen",
     "participation": "Beteiligung",
     "enrollment_closes": "Anmeldung endet",
