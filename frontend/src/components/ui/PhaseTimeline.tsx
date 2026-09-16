@@ -3,6 +3,7 @@ import { Check, Circle, Dot, X } from 'lucide-react';
 import { Countdown } from './Countdown';
 import { cn } from '../../lib/utils';
 import { phaseTimeline, type TimelineStep, type TimelineStatus } from '../../lib/phase';
+import { CreatedOn } from './CreatedOn';
 import { useChainNow } from '../../hooks/useChainNow';
 import { formatDateTime } from '../../lib/datetime';
 import type { Election } from '../../data/seed';
@@ -114,7 +115,10 @@ function Step({ step, last }: { step: TimelineStep; last: boolean }) {
 }
 
 interface Props {
-  election: Pick<Election, 'phase' | 'enrollStart' | 'enrollEnd' | 'voteStart' | 'voteEnd'>;
+  election: Pick<
+    Election,
+    'phase' | 'createdAt' | 'enrollStart' | 'enrollEnd' | 'voteStart' | 'voteEnd'
+  >;
   className?: string;
 }
 
@@ -140,6 +144,20 @@ export function PhaseTimeline({ election, className }: Props) {
   const { nowMs } = useChainNow();
   const steps = phaseTimeline(election, nowMs);
   const abandoned = steps[0]?.status === 'abandoned';
+  /**
+   * Whether the schedule already opens with the moment of creation.
+   *
+   * The announced step runs from `createdAt`, so when it is there the date is
+   * on the first row and a second copy anywhere near it is noise. It is not
+   * always there: an election deployed with enrolment already open has no
+   * announced window, and then nothing in the schedule says how old it is.
+   *
+   * The two cases used to be handled by each page bolting a line on, which
+   * meant the views disagreed about when it was redundant. Deciding it here
+   * is the only way the component can promise to carry every date exactly
+   * once.
+   */
+  const startsAtCreation = steps.some(step => step.key === 'announced');
 
   return (
     <div className={className}>
@@ -154,6 +172,15 @@ export function PhaseTimeline({ election, className }: Props) {
           dates it is explaining. */}
       {abandoned && (
         <p className="text-[11px] text-on-surface-meta mt-2">{t('timeline.abandoned')}</p>
+      )}
+      {/* Only when the schedule does not already begin with it. See
+          `startsAtCreation`. */}
+      {!startsAtCreation && (
+        <CreatedOn
+          date={election.createdAt}
+          precise
+          className="mt-3 pt-3 border-t border-white/5 text-[11px] text-on-surface-meta"
+        />
       )}
     </div>
   );

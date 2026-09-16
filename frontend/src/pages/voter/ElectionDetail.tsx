@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, ExternalLink, Users, CalendarMinus, Copy, Check, Lock } from 'lucide-react';
+import { AlertTriangle, ExternalLink, Users, Copy, Check, Lock } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { DomainBadge } from '../../components/ui/DomainBadge';
 import { Badge } from '../../components/ui/Badge';
@@ -29,7 +29,6 @@ import { hasPublishedResults, tallyTotal } from '../../data/seed';
 import { enrollInElection } from '../../lib/voting';
 import { FundingNotice } from '../../components/ui/FundingNotice';
 import { SchedulePromise } from '../../components/ui/SchedulePromise';
-import { CreatedOn } from '../../components/ui/CreatedOn';
 import { useElectionFunding } from '../../hooks/useElectionFunding';
 import { canFundOneVote } from '../../lib/gasNeeds';
 import { useVoteCost } from '../../hooks/useVoteCost';
@@ -413,27 +412,18 @@ export default function ElectionDetail() {
           </div>
           <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-white/5 text-xs text-on-surface-meta">
             <span className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5" />{election.totalEnrolled.toLocaleString()} {t('election.enrolled')}</span>
-            {/* Labelled, like the creation date a line away from it. A bare
-                date read fine while it was the only one on the screen, and
-                stopped the moment a second date joined it. */}
-            <span className="flex items-center gap-1.5">
-              {/* Paired with the plus on the creation date. */}
-              <CalendarMinus className="w-3.5 h-3.5" />
-              {t('election.ends_on', { date: election.voteEnd.toLocaleDateString() })}
-            </span>
-            {/* NEXT TO THE CLOSING DATE, because the two dates are one thought
-                and the two promises below are another. It used to sit after
-                both promises, which put a date at the end of a run of
-                commitments and left the row reading as four unrelated facts
-                in a line. Same grouping the card uses.
+            {/* NO DATES HERE. The schedule card above this one lists every
+                one of them, to the minute, with the phase each belongs to.
+                Repeating the closing date and the creation date underneath
+                it said the same two things a second time and less precisely,
+                which is how a reader learns that one of the two places is
+                not worth reading.
 
-                Beside the domain badge in spirit: both answer "should I
-                believe this", and an election deployed an hour ago that looks
-                exactly like a well known one is the case they answer. */}
-            <CreatedOn date={election.createdAt} precise />
-            {/* The two promises, together and last: they are the longest
-                labels in the row, so wrapping takes both at once instead of
-                splitting a date away from its pair. */}
+                The public preview still shows them, and should: it has a
+                countdown rather than the schedule, so there they are the
+                only statement of when this happens. */}
+            {/* What is left is what the schedule does not say: who is in,
+                and what the organizer gave up. */}
             <SchedulePromise
               fixedSchedule={election.fixedSchedule}
               cancellable={election.cancellable}
