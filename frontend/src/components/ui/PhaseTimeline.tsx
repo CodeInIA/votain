@@ -3,7 +3,6 @@ import { Check, Circle, Dot, X } from 'lucide-react';
 import { Countdown } from './Countdown';
 import { cn } from '../../lib/utils';
 import { phaseTimeline, type TimelineStep, type TimelineStatus } from '../../lib/phase';
-import { CreatedOn } from './CreatedOn';
 import { useChainNow } from '../../hooks/useChainNow';
 import { formatDateTime } from '../../lib/datetime';
 import type { Election } from '../../data/seed';
@@ -103,7 +102,10 @@ function Step({ step, last }: { step: TimelineStep; last: boolean }) {
             than mid-timestamp, and each timestamp stays unbroken. */}
         <p className="text-[11px] text-on-surface-meta tabular-nums flex flex-wrap gap-x-1">
           <span className="whitespace-nowrap">
-            {step.end ? start : t('timeline.from_date', { date: start })}
+            {/* "From" only for a step that has not finished. A step with no
+                end that is a MOMENT, which is what creation is, says the
+                moment: "from 16/9 19:43 onwards" is not what happened. */}
+            {step.end || !step.openEnded ? start : t('timeline.from_date', { date: start })}
           </span>
           {step.end && (
             <span className="whitespace-nowrap">{'- '}{formatDateTime(step.end)}</span>
@@ -144,20 +146,6 @@ export function PhaseTimeline({ election, className }: Props) {
   const { nowMs } = useChainNow();
   const steps = phaseTimeline(election, nowMs);
   const abandoned = steps[0]?.status === 'abandoned';
-  /**
-   * Whether the schedule already opens with the moment of creation.
-   *
-   * The announced step runs from `createdAt`, so when it is there the date is
-   * on the first row and a second copy anywhere near it is noise. It is not
-   * always there: an election deployed with enrolment already open has no
-   * announced window, and then nothing in the schedule says how old it is.
-   *
-   * The two cases used to be handled by each page bolting a line on, which
-   * meant the views disagreed about when it was redundant. Deciding it here
-   * is the only way the component can promise to carry every date exactly
-   * once.
-   */
-  const startsAtCreation = steps.some(step => step.key === 'announced');
 
   return (
     <div className={className}>
@@ -172,15 +160,6 @@ export function PhaseTimeline({ election, className }: Props) {
           dates it is explaining. */}
       {abandoned && (
         <p className="text-[11px] text-on-surface-meta mt-2">{t('timeline.abandoned')}</p>
-      )}
-      {/* Only when the schedule does not already begin with it. See
-          `startsAtCreation`. */}
-      {!startsAtCreation && (
-        <CreatedOn
-          date={election.createdAt}
-          precise
-          className="mt-3 pt-3 border-t border-white/5 text-[11px] text-on-surface-meta"
-        />
       )}
     </div>
   );

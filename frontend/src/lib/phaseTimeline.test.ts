@@ -212,16 +212,42 @@ describe('the stretch before enrollment opens', () => {
     expect(steps.find(s => s.key === 'enrolling')?.status).toBe('current');
   });
 
-  it('is left out when the election was deployed with enrollment already open', () => {
-    // `createdAt` after `enrollStart`, which is most of the seeded chain.
-    // Putting it first would draw a timeline that runs backwards, and its
-    // creation is not a stage of that election's schedule anyway.
-    const late = election('enrolling', { createdAt: at(1), enrollStart: at(-4) });
-    expect(phaseTimeline(late, now).map(s => s.key)).not.toContain('announced');
+  it('becomes the instant of creation when enrollment was already open', () => {
+    // `createdAt` after `enrollStart`. The wizard cannot produce this, since
+    // it bounds the enrolment start to the chain's clock, but the factory
+    // takes it and the seed backdates windows to stage elections already in
+    // flight. There is no window to draw, so the step is the moment rather
+    // than a range that would run backwards.
+    const late = phaseTimeline(election('enrolling', { createdAt: at(1), enrollStart: at(-4) }), now);
+    const first = late[0];
+
+    expect(first.key).toBe('announced');
+    expect(first.labelKey).toBe('timeline.created');
+    expect(first.start).toEqual(at(1));
+    expect(first.end).toBeNull();
+    // Not open ended: an election coming into existence is an instant, and
+    // "from this date onwards" is what the results step means, not this.
+    expect(first.openEnded).toBe(false);
   });
 
-  it('is left out when the chain never recorded a creation date', () => {
-    // Deployed before the immutable existed. The step would have no start.
+  it('is a window whenever the election existed before enrollment opened', () => {
+    // Which is every election created through the product.
+    const normal = phaseTimeline(announced(), now);
+    expect(normal[0].labelKey).toBe('timeline.announced');
+    expect(normal[0].end).toEqual(at(2));
+  });
+
+  it('is the only step that can be a moment rather than a span', () => {
+    // The results step also has no end, and means the opposite: still going.
+    const steps = phaseTimeline(announced(), now);
+    const results = steps.find(s => s.key === 'results');
+    expect(results?.end).toBeNull();
+    expect(results?.openEnded).toBe(true);
+  });
+
+  it('is left out only when the chain never recorded a creation date', () => {
+    // Deployed before the immutable existed. The step would have no start,
+    // and nothing else on the election can be turned into one.
     const steps = phaseTimeline(election('upcoming', { enrollStart: at(2) }), now);
     expect(steps.map(s => s.key)).not.toContain('announced');
     // And the clock still finds enrollment, which is the fallback that

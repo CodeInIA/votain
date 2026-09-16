@@ -107,8 +107,18 @@ export interface TimelineStep {
   /** i18n key for the step's name. */
   labelKey: string;
   start: Date;
-  /** The results step runs until the organizer publishes, so it has no end. */
+  /** Null for a step with no scheduled end. See `openEnded`. */
   end: Date | null;
+  /**
+   * No end because it has not finished, as opposed to no end because it is a
+   * moment.
+   *
+   * The two both carry `end: null` and read completely differently. Counting
+   * runs from the close of voting until the organizer publishes, which is
+   * "from this date onwards". An election coming into existence is an
+   * instant, and "from 16/9 19:43 onwards" is not what happened.
+   */
+  openEnded: boolean;
   status: TimelineStatus;
   /**
    * The step finished well before the date beside it.
@@ -227,35 +237,41 @@ export function phaseTimeline(
 
   // The fields the loop below derives are left off here: what the schedule IS,
   // and where the election has got to in it, are two different questions.
-  type Window = Pick<TimelineStep, "key" | "labelKey" | "start" | "end">;
+  type Window = Pick<TimelineStep, "key" | "labelKey" | "start" | "end" | "openEnded">;
   const steps: Window[] = [];
 
   /**
    * DEPLOYED AND WAITING: the stretch between the election existing and
    * enrolment opening.
    *
-   * It gives UPCOMING a row of its own, which it never had. The timeline
-   * began at enrolment, so an election announced for next week showed its
-   * first step greyed out with nothing to say that it was already real and
-   * already public, which is exactly the state a voter planning around it is
-   * in.
+   * ALWAYS THE FIRST STEP, whenever the chain recorded a creation date. It
+   * was conditional at first, which left the creation date homeless on the
+   * elections that lacked the step and forced a second line under the
+   * schedule to carry it. One list that always has the same shape is worth
+   * more than that: the schedule now accounts for every moment of an
+   * election's life, from existing to published, and nothing else has to.
    *
-   * ONLY WHEN IT PRECEDES ENROLMENT. An election can be deployed with its
-   * enrolment window already open, which most of the seeded ones are, and
-   * then `createdAt` falls after `enrollStart`: putting it first would draw a
-   * timeline that runs backwards. Its creation is not a stage of that
-   * election's schedule, it is metadata, and the line under the schedule
-   * already carries it.
+   * TWO SHAPES, because of one case that cannot happen through the product.
+   * The wizard bounds `enrollStart` to the chain's clock, so an election
+   * created in Votain always exists before its enrolment opens and this is a
+   * window. The factory itself imposes no such rule, and the seed calls it
+   * directly with backdated windows to produce demo elections already in
+   * flight; there `createdAt` falls after `enrollStart` and there is no
+   * window to draw, so the step becomes the instant of creation instead of a
+   * range that would run backwards.
    *
-   * Dropped as well when the chain never recorded a creation date, which is
-   * an election deployed before the immutable existed.
+   * Absent only when the chain never recorded a creation date, which is an
+   * election deployed before the immutable existed. There is nothing to show
+   * and nothing to guess from.
    */
-  if (e.createdAt && e.enrollStart.getTime() > e.createdAt.getTime()) {
+  if (e.createdAt) {
+    const openedLater = e.enrollStart.getTime() > e.createdAt.getTime();
     steps.push({
       key: "announced",
-      labelKey: "timeline.announced",
+      labelKey: openedLater ? "timeline.announced" : "timeline.created",
       start: e.createdAt,
-      end: e.enrollStart,
+      end: openedLater ? e.enrollStart : null,
+      openEnded: false,
     });
   }
 
@@ -264,13 +280,21 @@ export function phaseTimeline(
     labelKey: "timeline.enrollment",
     start: e.enrollStart,
     end: e.enrollEnd,
+    openEnded: false,
   });
   if (e.voteStart.getTime() > e.enrollEnd.getTime()) {
-    steps.push({ key: "pending_vote", labelKey: "timeline.gap", start: e.enrollEnd, end: e.voteStart });
+    steps.push({
+      key: "pending_vote",
+      labelKey: "timeline.gap",
+      start: e.enrollEnd,
+      end: e.voteStart,
+      openEnded: false,
+    });
   }
   steps.push(
-    { key: "active", labelKey: "timeline.voting", start: e.voteStart, end: e.voteEnd },
-    { key: "results", labelKey: "timeline.results", start: e.voteEnd, end: null },
+    { key: "active", labelKey: "timeline.voting", start: e.voteStart, end: e.voteEnd, openEnded: false },
+    // The one genuinely open-ended step: counting runs until it is published.
+    { key: "results", labelKey: "timeline.results", start: e.voteEnd, end: null, openEnded: true },
   );
 
   /**

@@ -815,6 +815,7 @@
   },
   "timeline": {
     "title": "时间安排",
+    "created": "已创建",
     "announced": "已公布，报名尚未开放",
     "enrollment": "报名",
     "gap": "报名与投票之间",

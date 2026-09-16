@@ -821,6 +821,7 @@
   },
   "timeline": {
     "title": "Zeitplan",
+    "created": "Erstellt",
     "announced": "Angekundigt, Anmeldung noch nicht offen",
     "enrollment": "Anmeldung",
     "gap": "Zwischen Anmeldung und Abstimmung",

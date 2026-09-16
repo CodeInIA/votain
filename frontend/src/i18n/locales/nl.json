@@ -821,6 +821,7 @@
   },
   "timeline": {
     "title": "Tijdlijn",
+    "created": "Aangemaakt",
     "announced": "Aangekondigd, inschrijving nog niet open",
     "enrollment": "Inschrijving",
     "gap": "Tussen inschrijving en stemming",
