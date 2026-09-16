@@ -1207,6 +1207,112 @@ async function main(): Promise<void> {
     tags: ["closed", "revote", "coercion-resistance"],
   });
 
+
+  // ────────────────────────────────────────────────
+  // Every combination of the two promises an election can make, plus the phase
+  // that had no way out of it. All under Hardhat #0, the account the browser
+  // connects with, so each control can be pressed during a demo.
+  //
+  // The pair is deliberately not one switch: an election can keep its dates and
+  // still be stoppable, or be unstoppable with dates that move. Seeding all four
+  // is the only way to see whether the two badges read clearly side by side.
+  // ────────────────────────────────────────────────
+
+  // FIXED DATES AND NO WAY BACK. The strongest thing an organizer can promise
+  // here: published dates, no early close, no cancellation.
+  await build({
+    name: "Referendum Estatutario - Compromiso Total",
+    organizerName: "Fundacion Civica Aragonesa",
+    description:
+      "Announced dates that cannot move and no power to call it off. Whatever the turnout looks like, this election runs exactly as published, which is the strongest commitment the platform lets an organizer make.",
+    votingType: VotingType.SUPERMAJORITY_TWO_THIRDS,
+    thresholdValue: 0n,
+    candidates: [{ name: "Aprobar la reforma" }, { name: "Mantener los estatutos" }],
+    enrollFrom: -HOUR,
+    enrollTo: 4 * DAY,
+    voteFrom: 4 * DAY,
+    voteTo: 8 * DAY,
+    fixedSchedule: true,
+    cancellable: false,
+    tags: ["enrolling", "fixed-schedule", "no-cancel"],
+  });
+
+  // MOVABLE DATES, NO WAY BACK. The half nobody expects: the organizer can still
+  // shorten a period, but cannot call the whole thing off.
+  await build({
+    name: "Mesa Sectorial - Sin Marcha Atras",
+    organizerName: "Mesa Sectorial del Transporte",
+    description:
+      "The organizer may bring a date forward if everyone is ready, and cannot cancel. The two promises are separate on purpose, and this is the combination that shows why.",
+    votingType: VotingType.ABSOLUTE_MAJORITY,
+    thresholdValue: 0n,
+    candidates: [{ name: "Aceptar la propuesta" }, { name: "Volver a negociar" }],
+    enrollFrom: -2 * HOUR,
+    enrollTo: 3 * DAY,
+    voteFrom: 3 * DAY,
+    voteTo: 6 * DAY,
+    fixedSchedule: false,
+    cancellable: false,
+    tags: ["enrolling", "no-cancel"],
+  });
+
+  // THE GAP. Enrolment closed, voting not yet due: the phase every early
+  // function refused until `openVotingEarly` existed.
+  await build({
+    name: "Consejo Escolar - Entre Plazos",
+    organizerName: "Consejo Escolar Ramon y Cajal",
+    description:
+      "Enrolment has closed and voting is not due for another day. Nothing could reach this gap before: an election offering dates the organizer can shorten could not shorten this one, and they could only wait it out.",
+    votingType: VotingType.SIMPLE_PLURALITY,
+    thresholdValue: 0n,
+    candidates: [
+      { name: "Candidatura Familias" },
+      { name: "Candidatura Docentes" },
+      { name: "Candidatura Alumnado" },
+    ],
+    enrollFrom: -2 * HOUR,
+    enrollTo: -HOUR,
+    voteFrom: DAY,
+    voteTo: 4 * DAY,
+    tags: ["pending-vote", "gap"],
+  });
+
+  // THE GAP, FIXED. The same phase on an election that cannot be hurried, so
+  // the two panels can be compared side by side.
+  await build({
+    name: "Camara Agraria - Entre Plazos y Fija",
+    organizerName: "Camara Agraria Provincial",
+    description:
+      "Also waiting between the two windows, but with a schedule the organizer gave up moving. The panel offers nothing to press, and says why.",
+    votingType: VotingType.SIMPLE_PLURALITY,
+    thresholdValue: 0n,
+    candidates: [{ name: "Lista A" }, { name: "Lista B" }],
+    enrollFrom: -2 * HOUR,
+    enrollTo: -HOUR,
+    voteFrom: 2 * DAY,
+    voteTo: 5 * DAY,
+    fixedSchedule: true,
+    tags: ["pending-vote", "fixed-schedule"],
+  });
+
+  // UPCOMING AND UNFUNDED, which the voter sees before they can act on it: the
+  // two warnings meeting on one election.
+  await build({
+    name: "Ateneo Cultural - Anunciada sin Fondos",
+    organizerName: "Ateneo Cultural de Teruel",
+    description:
+      "Announced for next week with no gas reserved yet. Nothing is wrong with the election, and the organizer has time to fund it before enrolment opens.",
+    votingType: VotingType.SIMPLE_PLURALITY,
+    thresholdValue: 0n,
+    candidates: [{ name: "Ciclo de cine" }, { name: "Ciclo de teatro" }],
+    enrollFrom: 3 * DAY,
+    enrollTo: 6 * DAY,
+    voteFrom: 6 * DAY,
+    voteTo: 9 * DAY,
+    deposit: "0",
+    tags: ["upcoming", "unfunded"],
+  });
+
   console.log(`\nTotal elections on chain: ${await factory.electionsCount()}`);
   console.log(`Main organizer   (Hardhat #0): ${signers[0].address}`);
   console.log(`Other organizers (Hardhat #2/#3/#4): ${signers[2].address}, ${signers[3].address}, ${signers[4].address}`);
