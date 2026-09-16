@@ -119,6 +119,8 @@ export interface ElectionConfig {
   eligibilityPolicyHash: string;
   personhood: number;
   privacyQuorum: bigint;
+  /** The organizer gives up the power to move any deadline. */
+  fixedSchedule: boolean;
 }
 
 export const VotingType = {
@@ -166,6 +168,9 @@ export function baseConfig(now: number, overrides: Partial<ElectionConfig> = {})
     eligibilityPolicyHash: ZERO_HASH,
     personhood: 0,
     privacyQuorum: 0n,
+    // Off by default, so the existing tests keep exercising the early-close
+    // paths. The tests for the promise turn it on explicitly.
+    fixedSchedule: false,
     ...overrides,
   };
 }

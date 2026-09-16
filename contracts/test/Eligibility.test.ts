@@ -565,6 +565,7 @@ describe("ElectionPaymaster, attested relaying", () => {
         eligibilityPolicyHash: POLICY_HASH,
         personhood: 1,
       }),
+      0n,
       { value: ethers.parseEther("1") },
     );
     const receipt = await tx.wait();
@@ -594,13 +595,21 @@ describe("ElectionPaymaster, attested relaying", () => {
       deadline,
     );
 
-    const before = await stack.paymaster.gasBalance(organizer.address);
+    // Both pots, because relaying now spends the election's own reserve before
+    // the organizer's free balance, and a test watching only `gasBalance` sees
+    // a charge of zero and concludes nothing was billed.
+    const funding = async (): Promise<bigint> => {
+      const [reserved, free] = await stack.paymaster.electionFunding(electionAddress);
+      return reserved + free;
+    };
+
+    const before = await funding();
     await (
       await stack.paymaster
         .connect(outsider)
         .relayEnrollAttested(electionAddress, commitment, personhood, deadline, sig)
     ).wait();
-    const after = await stack.paymaster.gasBalance(organizer.address);
+    const after = await funding();
 
     const election = await ethers.getContractAt("ElectionV4", electionAddress);
     expect(await election.hasMember(commitment)).to.equal(true);
@@ -616,6 +625,7 @@ describe("ElectionPaymaster, attested relaying", () => {
         eligibilityPolicyHash: POLICY_HASH,
         personhood: 1,
       }),
+      0n,
       { value: ethers.parseEther("1") },
     );
     const receipt = await tx.wait();

@@ -636,3 +636,159 @@ describe("ElectionV4, publishResults & outcomes", () => {
     expect(stored.map((x: bigint) => x)).to.deep.equal([7n, 8n, 9n, 1n]);
   });
 });
+
+/**
+ * Bringing enrollment forward, and the state that used to be reachable by
+ * trying to close it before it had opened.
+ */
+describe("ElectionV4, enrollment opened early", () => {
+  let election: any;
+
+  beforeEach(async () => {
+    const now = await networkHelpers.time.latest();
+    // Announced for tomorrow: UPCOMING right now.
+    election = await freshElection({
+      enrollStart: now + 86_400,
+      enrollEnd: now + 3 * 86_400,
+      voteStart: now + 3 * 86_400,
+      voteEnd: now + 5 * 86_400,
+    });
+  });
+
+  it("starts in UPCOMING and takes nobody until it opens", async () => {
+    expect(await election.phase()).to.equal(Phase.UPCOMING);
+    await expect(election.enroll(1n)).to.be.revertedWithCustomError(
+      election,
+      "EnrollmentNotOpen",
+    );
+  });
+
+  it("lets the organizer open it now, without moving the closing date", async () => {
+    const closesAt = await election.enrollEnd();
+
+    await expect(election.connect(organizer).openEnrollmentEarly()).to.emit(
+      election,
+      "EnrollmentOpenedEarly",
+    );
+
+    expect(await election.phase()).to.equal(Phase.ENROLLING);
+    // Opening only adds a chance to take part. Taking one away is the other
+    // function, and it is not what this one does.
+    expect(await election.enrollEnd()).to.equal(closesAt);
+  });
+
+  it("is the organizer's to open, nobody else's", async () => {
+    await expect(
+      election.connect(voter).openEnrollmentEarly(),
+    ).to.be.revertedWithCustomError(election, "NotOrganizer");
+  });
+
+  it("refuses to open enrollment that is already open", async () => {
+    await (await election.connect(organizer).openEnrollmentEarly()).wait();
+    await expect(
+      election.connect(organizer).openEnrollmentEarly(),
+    ).to.be.revertedWithCustomError(election, "WrongPhase");
+  });
+
+  it("refuses to close enrollment that never opened", async () => {
+    // This used to be allowed, and it pinned the election in UPCOMING for good:
+    // `enrollEnd` moved to now while `enrollStart` stayed in the future, so the
+    // window had closed before it opened and no vote could ever be reached.
+    await expect(
+      election.connect(organizer).closeEnrollmentEarly(),
+    ).to.be.revertedWithCustomError(election, "WrongPhase");
+
+    expect(await election.phase()).to.equal(Phase.UPCOMING);
+    expect(await election.enrollStart()).to.be.lessThan(await election.enrollEnd());
+  });
+
+  it("still lets an unstarted election be cancelled, which is the honest way out", async () => {
+    await (await election.connect(organizer).cancelElection()).wait();
+    expect(await election.phase()).to.equal(Phase.CANCELLED);
+  });
+});
+
+/**
+ * A schedule the organizer cannot move.
+ *
+ * `closeEnrollmentEarly` and `closeVotingEarly` read as conveniences until you
+ * notice what the organizer can see while using them: `memberCount` and
+ * `distinctVoters` are public and rise in real time. So the roll can be cut off
+ * at the moment it suits, and the vote ended at the moment the result does.
+ * Neither leaves a trace saying what it was for.
+ *
+ * Giving that power up at deployment turns a promise the organizer makes into
+ * one the contract keeps.
+ */
+describe("ElectionV4, a fixed schedule", () => {
+  it("is off by default, and the organizer keeps every lever", async () => {
+    const election = await freshElection();
+    expect(await election.fixedSchedule()).to.equal(false);
+    await (await election.connect(organizer).closeEnrollmentEarly()).wait();
+    expect(await election.phase()).to.equal(Phase.ACTIVE);
+  });
+
+  it("refuses to close enrollment early once it has been given up", async () => {
+    const election = await freshElection({ fixedSchedule: true });
+    expect(await election.fixedSchedule()).to.equal(true);
+
+    await expect(
+      election.connect(organizer).closeEnrollmentEarly(),
+    ).to.be.revertedWithCustomError(election, "ScheduleIsFixed");
+  });
+
+  it("refuses to end voting early once it has been given up", async () => {
+    const now = await networkHelpers.time.latest();
+    const election = await freshElection({
+      fixedSchedule: true,
+      enrollStart: now - 20,
+      enrollEnd: now - 10,
+      voteStart: now - 10,
+      voteEnd: now + 1000,
+    });
+    expect(await election.phase()).to.equal(Phase.ACTIVE);
+
+    await expect(
+      election.connect(organizer).closeVotingEarly(),
+    ).to.be.revertedWithCustomError(election, "ScheduleIsFixed");
+  });
+
+  it("refuses to bring enrollment forward either", async () => {
+    // Opening early is the harmless direction, and it is still refused: the
+    // promise was that the published dates are the dates, not that they only
+    // move in the reader's favour.
+    const now = await networkHelpers.time.latest();
+    const election = await freshElection({
+      fixedSchedule: true,
+      enrollStart: now + 86_400,
+      enrollEnd: now + 3 * 86_400,
+      voteStart: now + 3 * 86_400,
+      voteEnd: now + 5 * 86_400,
+    });
+
+    await expect(
+      election.connect(organizer).openEnrollmentEarly(),
+    ).to.be.revertedWithCustomError(election, "ScheduleIsFixed");
+  });
+
+  it("still lets the election be cancelled", async () => {
+    // Cancelling produces no result, so it cannot shape one. It is terminal and
+    // public, and it is the one honest way out of an election that should not go
+    // ahead: an organizer who could neither adjust nor stop would be forced to
+    // carry a broken vote to its end.
+    const election = await freshElection({ fixedSchedule: true });
+    await (await election.connect(organizer).cancelElection()).wait();
+    expect(await election.phase()).to.equal(Phase.CANCELLED);
+  });
+
+  it("cannot be switched on or off after deployment", async () => {
+    // Immutable, or it promises nothing: a flag the organizer could flip when it
+    // became inconvenient is exactly the promise they were making before.
+    const election = await freshElection({ fixedSchedule: true });
+    expect(Object.keys(election.interface.fragments
+      .filter((f: any) => f.type === 'function')
+      .map((f: any) => f.name)
+      .filter((n: string) => /fixedSchedule|setSchedule/i.test(n))))
+      .to.have.lengthOf(1); // the getter, and nothing that writes it
+  });
+});

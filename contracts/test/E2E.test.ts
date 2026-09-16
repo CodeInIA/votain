@@ -130,7 +130,7 @@ describe("E2E, real Groth16 proofs, real Paillier, relayed like production", () 
       ...overrides,
     });
     await (
-      await stack.factory.connect(organizer).createElection(cfg, { value: ethers.parseEther(deposit) })
+      await stack.factory.connect(organizer).createElection(cfg, 0n, { value: ethers.parseEther(deposit) })
     ).wait();
     const count = await stack.factory.electionsCount();
     return ethers.getContractAt("ElectionV4", await stack.factory.elections(count - 1n));

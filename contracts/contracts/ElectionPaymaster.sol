@@ -65,8 +65,26 @@ contract ElectionPaymaster {
     /// never move more than a bounded slice of an organizer's balance.
     uint256 public maxRelayGas;
 
-    /// @dev organizer => sponsored gas balance (wei)
+    /// @dev organizer => sponsored gas that is free to move (wei)
     mapping(address => uint256) public gasBalance;
+    /**
+     * @dev election => gas committed to THAT election and nothing else.
+     *
+     * The tank used to be one pot per organizer, which made two promises
+     * impossible to keep at once. First, an organizer could call `withdraw`
+     * mid-election and empty it: the relayer can no longer be reimbursed, and
+     * since voters hold no wallet by design, voting simply stops. Turnout is
+     * public while an election runs, so that is a shutdown switch available to
+     * whoever dislikes how it is going. Second, a balance shared between
+     * elections cannot be reported honestly to a voter, because two of them
+     * would each claim the same money and "enough for 300 votes" would be a
+     * false statement made twice.
+     *
+     * Reserved gas cannot be withdrawn. It is spent by this election's own
+     * relays and returns to the organizer once the election can no longer take
+     * a vote.
+     */
+    mapping(address => uint256) public reservedFor;
     /// @dev election => the organizer whose tank pays for it
     mapping(address => address) public organizerOf;
 
@@ -75,6 +93,8 @@ contract ElectionPaymaster {
     event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event Deposited(address indexed organizer, address indexed from, uint256 amount);
+    event ElectionFunded(address indexed election, address indexed from, uint256 amount);
+    event ReserveReleased(address indexed election, address indexed organizer, uint256 amount);
     event Withdrawn(address indexed organizer, uint256 amount);
     event VoteSponsored(address indexed organizer, uint256 cost, address indexed chargedBy);
     event ElectionRegistered(address indexed election, address indexed organizer);
@@ -94,6 +114,10 @@ contract ElectionPaymaster {
     error ReimbursementFailed();
     error UnknownElection();
     error AlreadyRegistered();
+    error ElectionStillOpen();
+    error NothingReserved();
+    /// @dev Only the organizer an election was registered to may spend their balance on it.
+    error NotElectionOrganizer();
     error ZeroAddress();
     error Reentrancy();
 
@@ -168,7 +192,124 @@ contract ElectionPaymaster {
         emit Deposited(organizer, msg.sender, msg.value);
     }
 
-    /// @notice Withdraw unused gas funds back to the organizer.
+    /**
+     * @notice Commit POL to one election, where it cannot be withdrawn.
+     *
+     * THE ORGANIZER'S ONLY, though it was open to anyone at first, on the
+     * reasoning that a third party might want an election to go ahead. That was
+     * wrong, and what shows it is where the money goes afterwards:
+     * `releaseReserve` returns the unspent part to the ORGANIZER. So a stranger
+     * funding an election was making the organizer a gift of everything the
+     * voters did not use, with no way to ask for it back and nothing on screen
+     * warning them.
+     *
+     * Paying for an election is not a donation to the election. It is taking on
+     * the organizer's obligation, and the refund is what proves it.
+     *
+     * Someone who genuinely wants to help still can, through `depositFor`, which
+     * is open to anyone: there the money lands in the organizer's balance, where
+     * it is plainly a gift and is never mistaken for a reserve.
+     *
+     * The factory is allowed because it forwards value on behalf of the very
+     * account creating the election, which is that election's organizer.
+     */
+    function depositForElection(address election) external payable {
+        address organizer = organizerOf[election];
+        if (organizer == address(0)) revert UnknownElection();
+        if (msg.sender != organizer && msg.sender != factory) revert NotElectionOrganizer();
+
+        reservedFor[election] += msg.value;
+        emit ElectionFunded(election, msg.sender, msg.value);
+    }
+
+    /**
+     * @notice Move gas you already hold into one of your elections.
+     *
+     * THE MISSING HALF. `releaseReserve` brings an ended election's leftovers
+     * back to the free balance, but nothing could send them the other way:
+     * funding an election meant sending new value from the wallet, so an
+     * organizer holding five and wanting to commit two had to send two more and
+     * withdraw two afterwards. Money came back through one door and could only
+     * leave through another.
+     *
+     * With this the wallet is touched in exactly two places, `deposit` and
+     * `withdraw`, and everything else is the balance moving between two columns
+     * of the same tank.
+     *
+     * ONLY THE ORGANIZER OF THAT ELECTION, unlike `depositForElection`, and the
+     * difference is the point: there you are committing your own money and
+     * anyone may want an election to go ahead, here you are spending someone's
+     * balance and only they may decide that.
+     */
+    function reserveFromBalance(address election, uint256 amount) external {
+        if (organizerOf[election] != msg.sender) revert NotElectionOrganizer();
+        if (gasBalance[msg.sender] < amount) revert InsufficientBalance();
+
+        gasBalance[msg.sender] -= amount;
+        reservedFor[election] += amount;
+        emit ElectionFunded(election, msg.sender, amount);
+    }
+
+    /**
+     * @notice The same move, made by the factory while an election is created.
+     *
+     * So that funding a new election is ONE signature even when it draws on
+     * both sources: the factory forwards whatever came with the transaction and
+     * asks for the rest from the balance. Without it the organizer would create,
+     * then reserve, and a wizard that leaves money uncommitted between two
+     * transactions is a wizard that leaves elections unfunded when the second
+     * one is rejected.
+     *
+     * Factory-only, and it spends the balance of whoever the factory says is
+     * creating. That is safe for the same reason `registerElection` is: the
+     * factory is the only contract this one trusts, and it passes its own
+     * caller.
+     */
+    function reserveFromBalanceFor(address election, address organizer, uint256 amount) external {
+        if (msg.sender != factory) revert NotFactory();
+        if (gasBalance[organizer] < amount) revert InsufficientBalance();
+
+        gasBalance[organizer] -= amount;
+        reservedFor[election] += amount;
+        emit ElectionFunded(election, organizer, amount);
+    }
+
+    /**
+     * @notice Return what an election did not spend to its organizer.
+     *
+     * Only once it can no longer take a vote, which is the whole point of the
+     * reserve. Cancelled and voided elections release at once, because neither
+     * will ever relay anything again and holding the money would punish
+     * stopping an election that ought to be stopped.
+     *
+     * Deliberately callable by anyone. It moves money in exactly one direction,
+     * to the organizer the factory recorded, so there is nobody to protect it
+     * from, and leaving it open means a stuck organizer can be helped along
+     * instead of stranded.
+     */
+    function releaseReserve(address election) external nonReentrant {
+        address organizer = organizerOf[election];
+        if (organizer == address(0)) revert UnknownElection();
+
+        ElectionV4 e = ElectionV4(election);
+        // `voteEnd` moves when voting is closed early, so this follows it.
+        bool over = e.cancelled() || e.voided() || block.timestamp > e.voteEnd();
+        if (!over) revert ElectionStillOpen();
+
+        uint256 amount = reservedFor[election];
+        if (amount == 0) revert NothingReserved();
+
+        reservedFor[election] = 0;
+        gasBalance[organizer] += amount;
+        emit ReserveReleased(election, organizer, amount);
+    }
+
+    /**
+     * @notice Withdraw unused gas funds back to the organizer.
+     *
+     * Reaches the free balance only. Gas reserved for a running election is not
+     * the organizer's to take back while voters are still relying on it.
+     */
     function withdraw(uint256 amount) external nonReentrant {
         if (gasBalance[msg.sender] < amount) revert InsufficientBalance();
         gasBalance[msg.sender] -= amount;
@@ -192,7 +333,7 @@ contract ElectionPaymaster {
         // transaction with it: a relayer is never paid for work that failed.
         ElectionV4(election).enroll(identityCommitment);
 
-        _reimburse(organizer, startGas, ENROLL_CALLDATA);
+        _reimburse(election, organizer, startGas, ENROLL_CALLDATA);
     }
 
     /// @notice Relay an enrollment into an election that declares an attribute
@@ -219,7 +360,7 @@ contract ElectionPaymaster {
 
         uint256 billable =
             ATTESTED_ENROLL_CALLDATA_HEAD + ((signature.length + 31) / 32) * 32;
-        _reimburse(organizer, startGas, billable);
+        _reimburse(election, organizer, startGas, billable);
     }
 
     /// @notice Relay a voter's ballot, reimbursed from the organizer's tank.
@@ -252,7 +393,7 @@ contract ElectionPaymaster {
 
         // Derived from the ciphertext length, never from msg.data.length.
         uint256 billable = VOTE_CALLDATA_HEAD + ((voteCiphertext.length + 31) / 32) * 32;
-        _reimburse(organizer, startGas, billable);
+        _reimburse(election, organizer, startGas, billable);
     }
 
     function _organizerOrRevert(address election) private view returns (address organizer) {
@@ -264,20 +405,65 @@ contract ElectionPaymaster {
     /// Execution gas is measured directly; the transaction base and calldata come
     /// from `billableCalldata`, an exact size derived from the arguments. See
     /// VOTE_CALLDATA_HEAD for why `msg.data.length` must never be used here.
-    function _reimburse(address organizer, uint256 startGas, uint256 billableCalldata) private {
+    function _reimburse(
+        address election,
+        address organizer,
+        uint256 startGas,
+        uint256 billableCalldata
+    ) private {
         uint256 price = tx.gasprice < maxGasPrice ? tx.gasprice : maxGasPrice;
         uint256 used = startGas - gasleft() + baseOverheadGas + billableCalldata * calldataGasPerByte;
         if (used > maxRelayGas) used = maxRelayGas;
         uint256 cost = used * price;
 
-        uint256 balance = gasBalance[organizer];
-        if (balance < cost) revert InsufficientBalance();
-        gasBalance[organizer] = balance - cost;
+        /**
+         * THE RESERVE PAYS FIRST, then whatever the organizer has free.
+         *
+         * That order, and not the other way round, because the reserve exists
+         * to be spent on this election: spending the free balance while a
+         * reserve sits untouched would leave money committed to an election
+         * that is already over and drain the funds every other election of
+         * theirs depends on.
+         *
+         * Falling back to the free balance costs nothing and buys liveness. An
+         * organizer who under-reserved but has funds keeps their election
+         * running, and no promise is broken, since the free balance was never
+         * promised to anyone.
+         */
+        uint256 reserve = reservedFor[election];
+        if (reserve >= cost) {
+            reservedFor[election] = reserve - cost;
+        } else {
+            uint256 short = cost - reserve;
+            uint256 free = gasBalance[organizer];
+            if (free < short) revert InsufficientBalance();
+            if (reserve > 0) reservedFor[election] = 0;
+            gasBalance[organizer] = free - short;
+        }
 
         emit VoteSponsored(organizer, cost, msg.sender);
 
         (bool ok, ) = payable(msg.sender).call{value: cost}("");
         if (!ok) revert ReimbursementFailed();
+    }
+
+    /**
+     * @notice What is behind one election's sponsored gas, in both senses.
+     *
+     * Two numbers rather than a total, because they are different promises.
+     * `reserved` cannot be taken away while the election can still take a vote.
+     * `organizerFree` will be spent if the reserve runs out, and can also be
+     * withdrawn at any moment. A screen that added them together would be
+     * telling a voter that the second kind is as good as the first.
+     */
+    function electionFunding(address election)
+        external
+        view
+        returns (uint256 reserved, uint256 organizerFree)
+    {
+        address organizer = organizerOf[election];
+        if (organizer == address(0)) revert UnknownElection();
+        return (reservedFor[election], gasBalance[organizer]);
     }
 
     /// @notice Hand control to another address.

@@ -23,7 +23,7 @@ describe("ElectionFactory", () => {
     const balanceBefore = await stack.paymaster.gasBalance(organizer.address);
     const countBefore = await stack.factory.electionsCount();
 
-    const tx = await stack.factory.connect(organizer).createElection(cfg, { value: funding });
+    const tx = await stack.factory.connect(organizer).createElection(cfg, 0n, { value: funding });
     const receipt = await tx.wait();
 
     // Event with the organizer and config data
@@ -37,8 +37,12 @@ describe("ElectionFactory", () => {
     expect(events[0].args.organizer).to.equal(organizer.address);
     expect(events[0].args.electionAddress).to.not.equal(ethers.ZeroAddress);
 
-    // Deposit landed in the organizer's gas tank
-    expect(await stack.paymaster.gasBalance(organizer.address)).to.equal(balanceBefore + funding);
+    // Deposit landed BEHIND THIS ELECTION, not in the shared tank. Money
+    // attached to the creation of an election is plainly meant for it, and
+    // leaving it withdrawable let an organizer defund their own voters
+    // mid-vote.
+    expect(await stack.paymaster.reservedFor(events[0].args.electionAddress)).to.equal(funding);
+    expect(await stack.paymaster.gasBalance(organizer.address)).to.equal(balanceBefore);
 
     // Election registered and enumerable
     expect(await stack.factory.electionsCount()).to.equal(countBefore + 1n);
@@ -59,7 +63,7 @@ describe("ElectionFactory", () => {
 
     for (let i = 0; i < 3; i++) {
       await (
-        await stack.factory.connect(organizer).createElection(baseConfig(now, { name: `Paginated ${i}` }))
+        await stack.factory.connect(organizer).createElection(baseConfig(now, { name: `Paginated ${i}` }), 0n)
       ).wait();
     }
 

@@ -119,12 +119,17 @@ async function main() {
     eligibilityAttester: attester.address,
     eligibilityPolicyHash: policyHash,
     personhood: 1,
+    // Both of these were missing, which this script could not have run without:
+    // `privacyQuorum` since it was added to the config, `fixedSchedule` since
+    // today. A script nobody runs rots quietly.
+    privacyQuorum: 1n,
+    fixedSchedule: false,
   };
 
   console.log("1. Creating a restricted election");
   const createTx = await factory
     .connect(organizer)
-    .createElection(cfg, { value: ethers.parseEther("1") });
+    .createElection(cfg, 0n, { value: ethers.parseEther("1") });
   const receipt = await createTx.wait();
   const created = receipt!.logs
     .map((log: any) => {
@@ -297,7 +302,7 @@ async function main() {
   };
   const openTx = await factory
     .connect(organizer)
-    .createElection(openCfg, { value: ethers.parseEther("1") });
+    .createElection(openCfg, 0n, { value: ethers.parseEther("1") });
   const openReceipt = await openTx.wait();
   const openCreated = openReceipt!.logs
     .map((log: any) => {

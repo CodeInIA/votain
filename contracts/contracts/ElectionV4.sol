@@ -72,6 +72,7 @@ contract ElectionV4 is ERC2771Context {
         bytes32 eligibilityPolicyHash; // keccak256 of the policy declared in metadataJson
         PersonhoodLevel personhood;    // how distinct a human each voter must prove to be
         uint256 privacyQuorum;         // fewest distinct voters a publishable result may rest on
+        bool fixedSchedule;            // organizer gives up the power to move any deadline
     }
 
     // ────────────────────────────────────────────────
@@ -182,6 +183,28 @@ contract ElectionV4 is ERC2771Context {
 
     bool public cancelled;
     bool public voided;
+    /**
+     * @notice The organizer gave up the power to move any deadline. Immutable.
+     *
+     * WHAT IT IS FOR. `closeEnrollmentEarly` and `closeVotingEarly` are ordinary
+     * conveniences until you notice what the organizer can see while using
+     * them: `memberCount` and `distinctVoters` are public and rise in real time.
+     * So an organizer can watch the electorate assemble and cut enrolment off at
+     * the moment the roll suits them, or watch turnout and end the vote at the
+     * moment the result does. Neither leaves a trace that says what it was for,
+     * and neither is visible to a voter deciding whether to take part.
+     *
+     * Setting this at deployment turns that into a promise the contract keeps
+     * instead of a promise the organizer makes: the deadlines published when the
+     * election was created are the deadlines it will run to.
+     *
+     * CANCELLING IS STILL ALLOWED, and deliberately. Cancelling produces no
+     * result, so it cannot shape one; it is terminal, public, and the one honest
+     * way out of an election that should not go ahead. An organizer who could
+     * neither adjust nor stop would be forced to carry a broken vote to its end,
+     * which serves nobody.
+     */
+    bool public immutable fixedSchedule;
     bool public resultsPublished;
 
     LeanIMTData internal membersTree;
@@ -237,6 +260,7 @@ contract ElectionV4 is ERC2771Context {
 
     event MemberEnrolled(uint256 indexed identityCommitment, uint256 index, uint256 merkleTreeRoot);
     event VoteCast(uint256 indexed nullifier, bytes voteCiphertext, uint256 nonce, uint256 timestamp);
+    event EnrollmentOpenedEarly(uint256 newEnrollStart);
     event EnrollmentClosedEarly(uint256 newEnrollEnd, uint256 newVoteStart);
     event VotingClosedEarly(uint256 newVoteEnd);
     event ElectionCancelled(address indexed by);
@@ -272,6 +296,8 @@ contract ElectionV4 is ERC2771Context {
     error InvalidProof();
     error InvalidTally();
     error WrongPhase();
+    /// @dev The organizer gave up the power to move deadlines when this was deployed.
+    error ScheduleIsFixed();
     error AttestationRequired();
     error UnexpectedAttestation();
     error AttestationExpired();
@@ -365,6 +391,7 @@ contract ElectionV4 is ERC2771Context {
         thresholdValue = cfg.thresholdValue;
         numOptions = cfg.numOptions;
         privacyQuorum = cfg.privacyQuorum;
+        fixedSchedule = cfg.fixedSchedule;
         enrollStart = cfg.enrollStart;
         enrollEnd = cfg.enrollEnd;
         voteStart = cfg.voteStart;
@@ -595,8 +622,38 @@ contract ElectionV4 is ERC2771Context {
         emit ElectionCancelled(_msgSender());
     }
 
-    /// @notice Close enrollment now and start the voting period immediately.
+    /**
+     * @notice Open enrollment now, ahead of the date it was announced for.
+     *
+     * The counterpart of closing early, and the safer of the two: closing takes
+     * away a chance to take part, while opening only adds one. Nobody is
+     * enrolled yet, the closing date does not move, and a voter who was told
+     * enrollment opens on Friday is not harmed by finding it open on Thursday.
+     *
+     * Without it an organizer who mistyped a date, or who is simply ready, had
+     * to wait it out or cancel and deploy again.
+     */
+    function openEnrollmentEarly() external onlyOrganizer notDecided {
+        if (fixedSchedule) revert ScheduleIsFixed();
+        if (block.timestamp >= enrollStart) revert WrongPhase();
+        enrollStart = block.timestamp;
+        emit EnrollmentOpenedEarly(enrollStart);
+    }
+
+    /**
+     * @notice Close enrollment now and start the voting period immediately.
+     *
+     * REFUSED BEFORE ENROLLMENT HAS OPENED, which it used to allow. From
+     * UPCOMING this set `enrollEnd` to now while `enrollStart` stayed in the
+     * future, leaving `enrollStart > enrollEnd`: `phase()` reads the start
+     * first, so the election was pinned in UPCOMING for good, with an enrollment
+     * window that had closed before it opened and no way to reach a vote. An
+     * organizer who wants to stop an election that has not started has
+     * `cancelElection`, which says so and is terminal on purpose.
+     */
     function closeEnrollmentEarly() external onlyOrganizer notDecided {
+        if (fixedSchedule) revert ScheduleIsFixed();
+        if (block.timestamp < enrollStart) revert WrongPhase();
         if (block.timestamp >= enrollEnd) revert WrongPhase();
         enrollEnd = block.timestamp;
         if (voteStart > block.timestamp) voteStart = block.timestamp;
@@ -605,6 +662,7 @@ contract ElectionV4 is ERC2771Context {
 
     /// @notice End the voting period now, moving the election into tallying.
     function closeVotingEarly() external onlyOrganizer notDecided {
+        if (fixedSchedule) revert ScheduleIsFixed();
         if (block.timestamp < voteStart || block.timestamp > voteEnd) revert WrongPhase();
         voteEnd = block.timestamp;
         emit VotingClosedEarly(voteEnd);

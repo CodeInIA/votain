@@ -101,8 +101,38 @@ function voteMessage(ciphertext: string, nonce: bigint): bigint {
   return BigInt(ethers.solidityPackedKeccak256(["bytes", "uint256"], [ciphertext, nonce]));
 }
 
+/**
+ * The time the NEXT block will carry, not the time the last one did.
+ *
+ * WHY THE DIFFERENCE MATTERS HERE. Every window this script builds is written
+ * relative to this number, and then a transaction opens it. Hardhat stamps a
+ * new block from the wall clock, so if the node has been sitting idle the last
+ * block can be minutes old: the window gets written around a moment that has
+ * already passed, and the election is created after its own enrolment closed.
+ * The first one then fails with `EnrollmentNotOpen`, which reads like a timing
+ * budget that is too tight and is nothing of the kind. Running deploy and seed
+ * back to back hid it, and a pause between them was enough to show it.
+ *
+ * The raw call because `provider.getBlock("pending")` throws in ethers v6: a
+ * pending block has `number: null` and the parser refuses it. The wall clock is
+ * in the maximum as a floor, since a node with no pending block answers with
+ * the latest one.
+ *
+ * The backend had exactly this bug in `attestationBaseTime`, where enrolment
+ * attestations came out already expired. Same cause, same fix.
+ */
 async function chainNow(): Promise<number> {
-  return (await ethers.provider.getBlock("latest"))!.timestamp;
+  const latest = (await ethers.provider.getBlock("latest"))!.timestamp;
+  let pending = 0;
+  try {
+    const raw = (await ethers.provider.send("eth_getBlockByNumber", ["pending", false])) as
+      | { timestamp?: string }
+      | null;
+    if (raw?.timestamp) pending = Number(BigInt(raw.timestamp));
+  } catch {
+    // No pending block on this node: the two below still answer.
+  }
+  return Math.max(latest, pending, Math.floor(Date.now() / 1000));
 }
 
 async function advanceTo(target: number): Promise<void> {
@@ -125,6 +155,15 @@ interface Spec {
   enrollTo: number;
   voteFrom: number;
   voteTo: number;
+  /**
+   * The organizer gave up the power to move any deadline.
+   *
+   * Set on some of the seeded elections and not others, so both answers are
+   * visible in the interface. Showing only the reassuring one would make its
+   * absence unreadable: nobody can tell a missing badge from a badge they have
+   * never seen.
+   */
+  fixedSchedule?: boolean;
   /// Which option each seeded voter picks. Length = number of voters who VOTE.
   ballots?: number[];
   /**
@@ -137,10 +176,31 @@ interface Spec {
   enrollCount?: number;
   /// One voter changes their mind: [voterIndex, replacementOption].
   revote?: [number, number];
+  /**
+   * Fewest distinct voters a publishable result may rest on.
+   *
+   * Per election because the contract stores it per election, and because the
+   * seed needs one that can publish a result resting on a single voter: the
+   * re-vote accounting is only visible when the number of BALLOTS and the
+   * number of VOTERS differ, and the smaller both are the plainer the
+   * difference reads. `publishResults` reverts below this, so the default of
+   * three makes that election impossible to seed.
+   */
+  privacyQuorum?: number;
   /// What to do once voting closes.
   finish?: "publish" | "leave-tallying" | "void";
   cancelImmediately?: boolean;
   organizerAccount?: number;
+  /**
+   * Native token reserved for this election, as a decimal string.
+   *
+   * Attached at creation, so it lands in the election's own reserve and cannot
+   * be withdrawn until it ends. Set to "0" for the ones that exist to show what
+   * an unfunded election looks like to a voter: no relay can be paid, so they
+   * are told before they spend two minutes on a proof. Those specs must cast no
+   * ballots, since seeding one would need the gas that is deliberately absent.
+   */
+  deposit?: string;
   /**
    * Attribute policy. Present means the election is gated: the contract refuses
    * plain `enroll` and the seed has to sign an attestation for each voter, the
@@ -361,7 +421,7 @@ async function main(): Promise<void> {
         description: spec.description,
         organizerName: spec.organizerName,
         candidates: spec.candidates,
-        privacyQuorum: SEED_PRIVACY_QUORUM,
+        privacyQuorum: spec.privacyQuorum ?? SEED_PRIVACY_QUORUM,
         counterBase: COUNTER_BASE.toString(),
         ...(spec.eligibility ? { eligibility: canonicalPolicy(spec.eligibility) } : {}),
         tags: spec.tags ?? ["demo"],
@@ -377,11 +437,15 @@ async function main(): Promise<void> {
       personhood: spec.eligibility ? PERSONHOOD_ENUM[effectiveLevel(spec.eligibility)] : 0,
       // The same number the metadata declares. Two copies that disagree would
       // put the interface and the contract on different sides of the same rule.
-      privacyQuorum: BigInt(SEED_PRIVACY_QUORUM),
+      privacyQuorum: BigInt(spec.privacyQuorum ?? SEED_PRIVACY_QUORUM),
+      // Immutable in the contract: this is the only moment it can be decided.
+      fixedSchedule: spec.fixedSchedule ?? false,
     };
 
     const receipt = await (
-      await factory.connect(organizer).createElection(cfg, { value: ethers.parseEther("2") })
+      await factory
+        .connect(organizer)
+        .createElection(cfg, 0n, { value: ethers.parseEther(spec.deposit ?? "2") })
     ).wait();
     const address = receipt!.logs
       .map(l => {
@@ -681,6 +745,7 @@ async function main(): Promise<void> {
   // whose enrollment is still open.
   await build({
     name: "Madrid City Council - District 5 Representative",
+    fixedSchedule: true,
     organizerName: "Madrid Municipal Authority",
     description: "Voting is OPEN and ballots are already in. Enrollment for this one has closed.",
     votingType: VotingType.SIMPLE_PLURALITY,
@@ -722,6 +787,7 @@ async function main(): Promise<void> {
 
   await build({
     name: "UB Student Union - Board Election",
+    fixedSchedule: true,
     organizerName: "Universidad de Barcelona",
     description: "Enrollment is OPEN. Join now; voting starts in two days.",
     votingType: VotingType.SIMPLE_PLURALITY,
@@ -787,6 +853,7 @@ async function main(): Promise<void> {
 
   await build({
     name: "Elecciones Generales - Circunscripcion Madrid",
+    fixedSchedule: true,
     organizerName: "Junta Electoral Central",
     description:
       "Restricted to adults holding Spanish nationality. Enrolment requires proving both from an identity document. The proof reveals neither the date of birth nor anything beyond the nationality being on the allowed list.",
@@ -879,6 +946,7 @@ async function main(): Promise<void> {
   // recorded in the voter's own credential at sign-in.
   await build({
     name: "Colegio de Medicos - Orb Verified Board Election",
+    fixedSchedule: true,
     organizerName: "Colegio Oficial de Medicos",
     description:
       "Enrollment is open and demands the strongest personhood available: an identity document plus an Orb-verified World ID. Nothing about age or nationality is asked.",
@@ -918,6 +986,7 @@ async function main(): Promise<void> {
 
   await build({
     name: "Notarial Deed - Restricted Witnesses",
+    fixedSchedule: true,
     organizerName: "Notaria Perez y Asociados",
     description:
       "A witness threshold with an age requirement, confirming the attested enrolment path works for every voting type and not only for plain plurality.",
@@ -964,6 +1033,172 @@ async function main(): Promise<void> {
     eligibility: { minAge: 18, blockedCountries: ["PRK", "IRN"] },
     organizerAccount: 4,
     tags: ["restricted", "blocklist", "other-organizer"],
+  });
+
+
+  // ────────────────────────────────────────────────
+  // Cases the interface has to handle and the set above never produced.
+  //
+  // All of these belong to Hardhat #0, the account the browser connects with,
+  // so every control on them can actually be pressed during a demo.
+  // ────────────────────────────────────────────────
+
+  // UPCOMING, and the organizer kept the lever: the only election where
+  // "Open enrollment now" appears at all.
+  await build({
+    name: "Asamblea Vecinal - Convocatoria de Marzo",
+    organizerName: "Asociacion Vecinal Delicias",
+    description:
+      "Announced for next week and not yet open. The organizer kept the power to bring enrolment forward, so the button to do it is on their panel.",
+    votingType: VotingType.SIMPLE_PLURALITY,
+    thresholdValue: 0n,
+    candidates: [
+      { name: "Carmen Ibanez", description: "Current secretary" },
+      { name: "Rafael Montes", description: "Sports section" },
+    ],
+    enrollFrom: 2 * DAY,
+    enrollTo: 5 * DAY,
+    voteFrom: 5 * DAY,
+    voteTo: 8 * DAY,
+    tags: ["upcoming", "movable"],
+  });
+
+  // UPCOMING with the schedule given up: the same screen with the lever gone,
+  // which is what makes the promise legible side by side with the one above.
+  await build({
+    name: "Junta Arbitral - Laudo Vinculante",
+    organizerName: "Camara de Arbitraje de Zaragoza",
+    description:
+      "Announced with dates the organizer can no longer move. Nothing about this election can be brought forward or cut short, which is the whole point of an arbitration timetable.",
+    votingType: VotingType.SUPERMAJORITY_TWO_THIRDS,
+    thresholdValue: 0n,
+    candidates: [{ name: "Uphold the award" }, { name: "Set it aside" }],
+    enrollFrom: DAY,
+    enrollTo: 4 * DAY,
+    voteFrom: 4 * DAY,
+    voteTo: 7 * DAY,
+    fixedSchedule: true,
+    tags: ["upcoming", "fixed-schedule"],
+  });
+
+  // ENROLLING with a fixed schedule: closing enrolment early is refused by the
+  // contract, so the panel offers nothing to press.
+  await build({
+    name: "Colegio de Arquitectos - Renovacion de Junta",
+    organizerName: "Colegio Oficial de Arquitectos",
+    description:
+      "Enrolment is open and closes on the published date, whatever the roll looks like by then. The organizer gave up the power to cut it short when the election was created.",
+    votingType: VotingType.ABSOLUTE_MAJORITY,
+    thresholdValue: 0n,
+    candidates: [
+      { name: "Lista Continuidad" },
+      { name: "Lista Renovacion" },
+      { name: "Lista Independiente" },
+    ],
+    enrollFrom: -HOUR,
+    enrollTo: 5 * DAY,
+    voteFrom: 5 * DAY,
+    voteTo: 9 * DAY,
+    fixedSchedule: true,
+    // No `ballots`, and none intended: an empty array is not the same as
+    // absent here. It reads as truthy, so the window compression for elections
+    // that already voted would fire and crush the five-day enrolment this spec
+    // exists to show, and the enrolment loop returns early on it anyway.
+    tags: ["enrolling", "fixed-schedule"],
+  });
+
+  // ACTIVE with a fixed schedule: voting runs to its published end, and the
+  // organizer cannot end it once the count starts looking a certain way.
+  await build({
+    name: "Sindicato del Metal - Ratificacion del Convenio",
+    organizerName: "Sindicato del Metal",
+    description:
+      "A ratification ballot whose closing time was fixed at deployment. Turnout is public while it runs, and being unable to react to it is exactly what the fixed schedule is for.",
+    votingType: VotingType.ABSOLUTE_MAJORITY,
+    thresholdValue: 0n,
+    candidates: [{ name: "Ratify" }, { name: "Reject" }],
+    enrollFrom: -2 * HOUR,
+    enrollTo: HOUR,
+    voteFrom: HOUR,
+    voteTo: 4 * DAY,
+    fixedSchedule: true,
+    enrollCount: 5,
+    ballots: [0, 0, 1],
+    tags: ["active", "fixed-schedule"],
+  });
+
+  // ENROLLING with NOTHING behind it. A voter is told before they start that no
+  // relay can be paid, and the enrol button is refused rather than failing after
+  // the proof. Casts no ballots, because seeding one would need the gas this
+  // election exists to be missing.
+  await build({
+    name: "Club Ciclista - Votacion sin Fondos",
+    organizerName: "Club Ciclista Ebro",
+    description:
+      "Created without reserving any gas. Every ballot here is paid for by the organizer, so until they top it up nobody can enrol or vote, and the app says so instead of failing halfway.",
+    votingType: VotingType.SIMPLE_PLURALITY,
+    thresholdValue: 0n,
+    candidates: [{ name: "Ruta del Moncayo" }, { name: "Ruta del Ebro" }],
+    enrollFrom: -HOUR,
+    enrollTo: 6 * DAY,
+    voteFrom: 6 * DAY,
+    voteTo: 9 * DAY,
+    deposit: "0",
+    tags: ["enrolling", "unfunded"],
+  });
+
+  // Funded, but not for everyone who enrolled: the warning between the two,
+  // which no other election on the chain produces. Roughly three ballots of gas
+  // against five people who have not voted.
+  await build({
+    name: "Cooperativa Agricola - Fondos Ajustados",
+    organizerName: "Cooperativa Agricola del Jalon",
+    description:
+      "There is gas reserved here, but not enough for everyone still expected to vote. The election works and says so, which is a different thing from being empty.",
+    votingType: VotingType.SIMPLE_PLURALITY,
+    thresholdValue: 0n,
+    candidates: [{ name: "Ampliar la nave" }, { name: "Reparar la existente" }],
+    enrollFrom: -2 * HOUR,
+    enrollTo: HOUR,
+    voteFrom: HOUR,
+    voteTo: 5 * DAY,
+    deposit: "0.1",
+    enrollCount: 5,
+    ballots: [0],
+    tags: ["active", "underfunded"],
+  });
+
+
+  // The re-vote, on its own, with nothing else in the way.
+  //
+  // One voter, two ballots, one counted vote. It exists because four different
+  // screens draw the same bar chart and two of them used to divide by BALLOTS:
+  // this election read 100% on the organizer's panel and 50% on the voter's,
+  // for the same single vote. The coercion-resistant re-vote is the only thing
+  // that makes those two numbers differ, so it is the only thing that catches
+  // it, and nothing else on this chain produces the case.
+  await build({
+    name: "Comite de Etica - Voto Reemplazado",
+    organizerName: "Comite de Etica Profesional",
+    description:
+      "A single voter who voted, thought better of it, and voted again. The chain holds two ballots and one vote: the later one replaces the earlier, which is what makes a coerced vote recoverable. The published tally counts one.",
+    votingType: VotingType.SIMPLE_PLURALITY,
+    thresholdValue: 0n,
+    candidates: [
+      { name: "Archivar el expediente" },
+      { name: "Abrir investigacion" },
+    ],
+    enrollFrom: -HOUR,
+    enrollTo: HOUR,
+    voteFrom: HOUR,
+    voteTo: 2 * HOUR,
+    ballots: [0],
+    revote: [0, 1],
+    // One voter cannot publish anything under the default of three, and one
+    // voter is the entire point here.
+    privacyQuorum: 1,
+    finish: "publish",
+    tags: ["closed", "revote", "coercion-resistance"],
   });
 
   console.log(`\nTotal elections on chain: ${await factory.electionsCount()}`);

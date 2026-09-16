@@ -179,10 +179,14 @@ async function main(): Promise<void> {
     eligibilityAttester: "0x0000000000000000000000000000000000000000",
     eligibilityPolicyHash: "0x" + "00".repeat(32),
     personhood: 0,
+    // Both were missing and the script could not have run: `privacyQuorum` has
+    // been in the config for a while, `fixedSchedule` since today.
+    privacyQuorum: 0n,
+    fixedSchedule: false,
   };
   steps.push({
     label: "factory.createElection (per election)",
-    gas: await gasOf(factory.connect(organizer).createElection(cfg)),
+    gas: await gasOf(factory.connect(organizer).createElection(cfg, 0n)),
     organizerPays: true,
   });
 

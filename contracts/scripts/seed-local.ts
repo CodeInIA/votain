@@ -100,10 +100,14 @@ async function main() {
       }),
       eligibilityAttester: "0x0000000000000000000000000000000000000000",
       eligibilityPolicyHash: "0x" + "00".repeat(32),
-    personhood: 0,
+      personhood: 0,
+      // The same number the metadata declares. Was missing entirely, so this
+      // script could not have run since `privacyQuorum` joined the config.
+      privacyQuorum: 3n,
+      fixedSchedule: false,
     };
 
-    const tx = await factory.createElection(cfg, { value: ethers.parseEther("1") });
+    const tx = await factory.createElection(cfg, 0n, { value: ethers.parseEther("1") });
     const receipt = await tx.wait();
     const created = receipt!.logs
       .map(l => { try { return factory.interface.parseLog(l); } catch { return null; } })

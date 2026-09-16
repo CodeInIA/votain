@@ -39,18 +39,47 @@ contract ElectionFactory {
         registry = _registry;
     }
 
-    /// @notice Deploy a new election. Any attached MATIC funds the organizer's gas tank.
-    function createElection(ElectionV4.Config calldata cfg) external payable returns (address) {
-        if (msg.value > 0) {
-            paymaster.depositFor{value: msg.value}(msg.sender);
-        }
-
+    /**
+     * @notice Deploy a new election, reserving gas for its voters.
+     *
+     * Funded from two places at once, in one signature: `fromBalance` is taken
+     * from what the organizer already holds in the paymaster, and anything
+     * attached to the call covers the rest. A wizard that had to create first
+     * and reserve second would leave the election unfunded whenever the second
+     * transaction was rejected, which is the moment an organizer is most likely
+     * to walk away.
+     */
+    function createElection(
+        ElectionV4.Config calldata cfg,
+        uint256 fromBalance
+    ) external payable returns (address) {
         ElectionV4 newElection = new ElectionV4(forwarder, verifier, registry, msg.sender, cfg);
         elections.push(address(newElection));
 
         // Binds the election to the tank that pays for its voters' gas. Without
         // this the paymaster cannot relay for it (see ElectionPaymaster).
         paymaster.registerElection(address(newElection), msg.sender);
+
+        /**
+         * RESERVED, NOT DEPOSITED, and it happens after the registration above
+         * because the reserve is keyed on an address that does not exist until
+         * the election is deployed.
+         *
+         * This used to land in the organizer's shared balance, which they could
+         * withdraw at any moment, including while their own voters were in the
+         * middle of voting. Money attached to the creation of an election is
+         * plainly meant for that election, so that is where it goes, and it
+         * stays there until the election can no longer take a vote.
+         */
+        if (msg.value > 0) {
+            paymaster.depositForElection{value: msg.value}(address(newElection));
+        }
+        // Reverts if they do not hold it, which is the right answer: an
+        // election created with less behind it than was asked for is worse than
+        // one that was not created.
+        if (fromBalance > 0) {
+            paymaster.reserveFromBalanceFor(address(newElection), msg.sender, fromBalance);
+        }
 
         emit ElectionCreated(address(newElection), msg.sender, cfg.name, cfg.votingType, cfg.scope);
         return address(newElection);

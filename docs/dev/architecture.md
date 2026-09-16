@@ -110,7 +110,7 @@
 |----------|---------|
 | `ElectionV4.sol` | Single election: ERC-2771, Semaphore V4, Paillier, coercion resistance |
 | `ElectionFactory.sol` | ElectionV4 deployment, paymaster fund management |
-| `ElectionPaymaster.sol` | ERC-4337 Paymaster: sponsors gas for verified voters |
+| `ElectionPaymaster.sol` | Relay hub and gas tank: sponsors every enrolment and ballot, with gas reserved per election so it cannot be withdrawn from under the voters |
 | `PlatformRegistry.sol` | Identity commitment registry with owner access control |
 
 ### backend/
@@ -163,6 +163,126 @@ Backend modules: `sd/issuer.ts` (SD-JWT issue/verify), `status/statusList.ts`
 **Shared**:
 - Screen 21: Error & Empty States (14 variants)
 - Screen 22: Transaction Pending Modal
+
+## Who pays for a vote, and who can stop paying
+
+Voters here hold no wallet, by design: an address of their own would tie their
+enrolment to their ballot. So every enrolment and every ballot is relayed and
+reimbursed out of the organizer's deposit, and a relay nobody can reimburse is
+not a delay. The vote does not happen.
+
+That made the deposit a control surface, and for a while it was an unguarded
+one. The paymaster held one balance per ORGANIZER and `withdraw` had no
+conditions, so an organizer could empty it while their own election was open.
+Turnout is public while an election runs, and in plenty of real settings turnout
+correlates with the outcome, so that was a shutdown switch in the hands of the
+one party with a reason to use it. Ballot secrecy does not help: they do not need
+to know who is voting, only how many.
+
+It also made an honest statement to the voter impossible. A balance shared
+between elections cannot be reported per election, because two of them would
+each claim the same money, and "enough for 300 votes" would be a false statement
+made twice.
+
+**Gas is reserved per election.** `reservedFor[election]` holds money committed
+to one election, which cannot be withdrawn. Anything attached to
+`createElection` lands there, `depositForElection` adds to it, relays spend it
+before touching anything else, and `releaseReserve` returns what is left once the
+election can no longer take a vote: past `voteEnd`, or at once if it was
+cancelled or voided, because neither will ever relay again and holding the money
+would punish stopping an election that ought to be stopped.
+
+The organizer's free balance still exists and is still withdrawable. It is spent
+when a reserve runs out, which costs nothing and buys liveness, and it breaks no
+promise because it was never promised to anyone. That is why the two are reported
+apart and never added together: only the first kind is a guarantee.
+
+**One door to the wallet.** Money enters the paymaster at `depositFor` and leaves
+at `withdraw`, both on the gas screen, and nowhere else. Everything in between
+moves between the two columns of the same tank: `reserveFromBalance` sends some
+of the free balance into an election, `releaseReserve` brings the unspent part
+back. Creating an election takes both at once, through a second argument on
+`createElection`, so funding it from the balance and topping up the difference
+from the wallet is one signature: creating first and reserving second would leave
+the election unfunded whenever the second transaction was rejected, at the moment
+an organizer is most likely to give up.
+
+That symmetry was missing at first, and the gap is worth recording. The release
+path existed from the start while nothing could send a balance the other way, so
+an organizer holding five and wanting to commit two had to send two more from the
+wallet and withdraw two afterwards.
+
+**Only the organizer may fund their own election**, though `depositForElection`
+was open to anyone at first, on the reasoning that a third party might want an
+election to go ahead. Where the money goes afterwards is what shows that to be
+wrong: the leftovers are released to the ORGANIZER, so a stranger funding an
+election was making them a gift of everything the voters did not spend, with no
+way to ask for it back. Paying for an election is not a donation to the election;
+it is taking on the organizer's obligation, and the refund proves it. Someone who
+does want to help still can, through `depositFor`, where the money lands in the
+organizer's balance and is plainly a gift.
+
+**What a ballot costs is measured, not assumed.** Every figure quoted in ballots
+used to rest on a constant of 0.03, written once in a source file and a second
+time into the deposit hint of all thirteen locales. On the development chain the
+real figure is 0.000129, so "about 66 ballots are reserved" was wrong by a factor
+of two hundred, and it was wrong in the one place a voter reads it as a promise.
+`lib/voteCost.ts` reads it instead: `VoteSponsored` carries the exact
+reimbursement, each sample is divided by the gas price of its own transaction to
+recover the gas UNITS a ballot takes, and those are repriced at today's rate.
+Enrolments are excluded, since the same event covers both kinds of relay and an
+enrolment is a fraction of a vote. The median is used rather than the mean, and
+the contract's own two ceilings are applied, so an estimate can never promise
+more ballots than a relayer would be reimbursed for.
+
+**The voter is told before they commit.** `electionFunding` answers what is
+behind one election, and the enrolment screen asks before the voter starts.
+Being turned away before enrolling is recoverable, since they can come back when
+the organizer has topped up; being enrolled and then unable to vote, possibly on
+the last day, is a vote lost. At the ballot itself it warns rather than blocks: a
+balance read when the page loaded may have changed, and refusing a vote that
+would have gone through is its own kind of failure.
+
+What is NOT solved: an organizer who simply never funds an election, or funds it
+too thinly, can still leave voters unable to vote. No contract can make someone
+spend money. What the reserve removes is the ability to promise and then take it
+back, and what the interface adds is that the voter can see which of the two
+they are being offered.
+
+## A power an organizer can give up
+
+Closing enrolment or voting early reads as an ordinary convenience until you
+notice what the organizer can see while doing it. `memberCount` and
+`distinctVoters` are public and rise in real time, so the roll can be cut off at
+the moment it suits and the vote ended at the moment the result does, and neither
+leaves any trace of why. Ballot secrecy does not help here: nobody needs to know
+who voted, only how many.
+
+`ElectionV4` therefore carries an immutable `fixedSchedule`, chosen once when the
+election is created. With it set, `openEnrollmentEarly`, `closeEnrollmentEarly`
+and `closeVotingEarly` all revert, and the dates published at creation are the
+dates it runs to. Immutable because a flag the organizer could turn off when it
+became inconvenient would promise exactly what they can already promise in words,
+which is nothing anyone can check.
+
+**Cancelling stays available** and that is deliberate. Cancelling produces no
+result, so it cannot shape one; it is terminal and public, and it is the only
+honest way out of an election that should not go ahead. An organizer able neither
+to adjust nor to stop would be forced to carry a broken vote to its end.
+
+**Both answers are shown to the voter**, on the card, on the public preview and
+on the election itself. Showing only the reassuring one would make its absence
+unreadable, since nobody can tell a missing badge from a badge they have never
+seen, and keeping the power is a reasonable and common choice that deserves to be
+visible rather than hidden. Nothing at all is shown for an election deployed
+before the flag existed: it made no promise and declined none.
+
+`openEnrollmentEarly` is the counterpart added at the same time, and the safer of
+the pair, since opening only adds a chance to take part while closing takes one
+away. Adding it surfaced a reachable bad state: `closeEnrollmentEarly` used to be
+callable from UPCOMING, which set `enrollEnd` while `enrollStart` stayed in the
+future and pinned the election in UPCOMING for good, with an enrolment window
+that had closed before it opened.
 
 ## How a list is read
 
