@@ -145,7 +145,8 @@
     "group_eligibility": "क्या मैं पात्र हूँ",
     "results_partial": "अब तक {{shown}} मिलीं",
     "closing_soon": "एक दिन में बंद",
-    "group_commitments": "प्रतिबद्धताएँ"
+    "group_commitments": "प्रतिबद्धताएँ",
+    "group_order": "क्रम"
   },
   "election": {
     "by": "द्वारा",
@@ -820,5 +821,12 @@
     "from_date": "{{date}} से",
     "ended_early": "पहले ही समाप्त",
     "abandoned": "यह चुनाव रोक दिया गया, इसलिए यह समय-सारणी अंत तक पूरी नहीं हुई।"
+  },
+  "sort": {
+    "newest": "नवीनतम पहले",
+    "oldest": "सबसे पुराने पहले",
+    "closing": "सबसे पहले बंद होने वाले",
+    "enrolled": "सबसे अधिक नामांकित",
+    "partial_notice": "अब तक पढ़े गए के आधार पर क्रमित"
   }
 }

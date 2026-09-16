@@ -145,7 +145,8 @@
     "group_eligibility": "Erfülle ich die Kriterien",
     "results_partial": "Bisher {{shown}} gefunden",
     "closing_soon": "Schließt binnen eines Tages",
-    "group_commitments": "Zusagen"
+    "group_commitments": "Zusagen",
+    "group_order": "Reihenfolge"
   },
   "election": {
     "by": "von",
@@ -820,5 +821,12 @@
     "from_date": "Ab {{date}}",
     "ended_early": "Vorzeitig beendet",
     "abandoned": "Diese Wahl wurde gestoppt, dieser Zeitplan wurde daher nicht bis zum Ende eingehalten."
+  },
+  "sort": {
+    "newest": "Neueste zuerst",
+    "oldest": "Alteste zuerst",
+    "closing": "Endet am fruhesten",
+    "enrolled": "Meiste Anmeldungen",
+    "partial_notice": "sortiert uber das bisher Gelesene"
   }
 }

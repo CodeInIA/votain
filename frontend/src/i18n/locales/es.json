@@ -146,7 +146,8 @@
     "group_eligibility": "Cumplo los requisitos",
     "results_partial": "{{shown}} encontradas hasta ahora",
     "closing_soon": "Cierra en menos de un día",
-    "group_commitments": "Compromisos"
+    "group_commitments": "Compromisos",
+    "group_order": "Orden"
   },
   "election": {
     "by": "por",
@@ -826,5 +827,12 @@
     "from_date": "Desde el {{date}}",
     "ended_early": "Se acorto",
     "abandoned": "Esta eleccion se detuvo, asi que este calendario no se cumplio hasta el final."
+  },
+  "sort": {
+    "newest": "Mas recientes primero",
+    "oldest": "Mas antiguas primero",
+    "closing": "Las que cierran antes",
+    "enrolled": "Con mas inscritos",
+    "partial_notice": "ordenadas sobre lo leido hasta ahora"
   }
 }

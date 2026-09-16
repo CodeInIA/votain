@@ -144,7 +144,8 @@
     "group_eligibility": "我是否符合",
     "results_partial": "目前找到 {{shown}} 个",
     "closing_soon": "一天内截止",
-    "group_commitments": "承诺"
+    "group_commitments": "承诺",
+    "group_order": "排序"
   },
   "election": {
     "by": "由",
@@ -814,5 +815,12 @@
     "from_date": "自 {{date}} 起",
     "ended_early": "提前结束",
     "abandoned": "本次选举已中止，因此该时间安排并未执行到底。"
+  },
+  "sort": {
+    "newest": "最新优先",
+    "oldest": "最早优先",
+    "closing": "最快结束",
+    "enrolled": "报名最多",
+    "partial_notice": "按目前已读取的内容排序"
   }
 }

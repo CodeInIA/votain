@@ -144,7 +144,8 @@
     "group_eligibility": "자격 여부",
     "results_partial": "지금까지 {{shown}}개",
     "closing_soon": "하루 이내 마감",
-    "group_commitments": "약속"
+    "group_commitments": "약속",
+    "group_order": "정렬"
   },
   "election": {
     "by": "주최:",
@@ -814,5 +815,12 @@
     "from_date": "{{date}}부터",
     "ended_early": "조기 종료",
     "abandoned": "이 선거는 중단되어 이 일정이 끝까지 진행되지 않았습니다."
+  },
+  "sort": {
+    "newest": "최신순",
+    "oldest": "오래된순",
+    "closing": "마감 임박순",
+    "enrolled": "등록자 많은순",
+    "partial_notice": "지금까지 읽어온 범위 기준 정렬"
   }
 }

@@ -21,11 +21,16 @@ import {
   CalendarCheck,
   CalendarClock,
   Ban,
+  ArrowDownWideNarrow,
+  ArrowDownNarrowWide,
+  Hourglass,
+  Users,
 } from 'lucide-react';
 import { Badge } from './Badge';
 import { Button } from './Button';
 import { Input } from './Input';
 import { EligibilityFilterControls } from './EligibilityFilterControls';
+import { SelectMenu } from './SelectMenu';
 import { cn } from '../../lib/utils';
 import { VOTING_TYPE_ICONS, VOTING_TYPES, votingTypeLabelKey } from '../../lib/votingTypes';
 import {
@@ -34,6 +39,15 @@ import {
   isAnyFilterActive,
   type ElectionFilterState,
 } from '../../lib/electionFilter';
+import { SORT_OPTIONS, type ElectionSort } from '../../lib/electionSort';
+
+/** One icon per ordering, so the trigger says which is on without being read. */
+const SORT_ICONS: Record<ElectionSort, typeof Globe> = {
+  newest: ArrowDownWideNarrow,
+  oldest: ArrowDownNarrowWide,
+  closing: Hourglass,
+  enrolled: Users,
+};
 
 /**
  * A property filter: verified domain, has requirements.
@@ -274,6 +288,25 @@ export function ElectionFilters({ value, onChange, open, onToggleOpen, searchPla
                 {t(votingTypeLabelKey(type))}
               </FilterToggle>
             ))}
+          </FilterGroup>
+
+          {/* A dropdown and not chips, which every other band here uses.
+              These four are one exclusive choice out of a set that will grow,
+              and four more chips in a panel that already holds nineteen would
+              read as four more things that can be on at once. It is also the
+              only control here that never hides anything, so it should not
+              look like the ones that do. */}
+          <FilterGroup label={t('discover.group_order')}>
+            <SelectMenu
+              value={value.sort}
+              onChange={sort => set({ sort: sort as ElectionSort })}
+              options={SORT_OPTIONS.map(s => ({
+                value: s,
+                label: t(`sort.${s}`),
+                icon: SORT_ICONS[s],
+              }))}
+              className="max-w-xs"
+            />
           </FilterGroup>
 
           {/* The only band that asks about the VOTER rather than the election:

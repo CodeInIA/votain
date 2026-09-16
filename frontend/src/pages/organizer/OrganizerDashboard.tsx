@@ -30,6 +30,7 @@ import {
   EMPTY_FILTERS,
   type ElectionFilterState,
 } from '../../lib/electionFilter';
+import { sortElections } from '../../lib/electionSort';
 import { useVerifiedDomains } from '../../hooks/useVerifiedDomains';
 
 
@@ -38,6 +39,11 @@ export default function OrganizerDashboard() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const wallet = useOrganizerWallet();
+  const [filters, setFilters] = useState<ElectionFilterState>(EMPTY_FILTERS);
+  // Which end of the creation order the pager reads from. Declared up here
+  // because the hook below takes it, and the rest of the filter state is only
+  // needed further down.
+  const sortOrder = filters.sort === 'oldest' ? 'oldest' : 'newest';
   // Measured from past relays; the widget below quotes it as votes remaining.
   const voteCost = useVoteCost();
   /**
@@ -59,6 +65,7 @@ export default function OrganizerDashboard() {
     organizer: wallet.address ?? null,
     hydrateAll: true,
     keep: e => e.organizerAddress.toLowerCase() === wallet.address?.toLowerCase(),
+    order: sortOrder,
   });
   const { loading, live, refresh, error } = pages;
   const [gasBalance, setGasBalance] = useState(live ? 0 : 2.5);
@@ -119,14 +126,17 @@ export default function OrganizerDashboard() {
     setOrganizerName(trimmed);
     setNameHandled(true);
   };
-  const [filters, setFilters] = useState<ElectionFilterState>(EMPTY_FILTERS);
   const [showFilters, setShowFilters] = useState(false);
   const isDomainVerified = useVerifiedDomains(myElections);
 
   // The stat tiles above count EVERY election, not the filtered view: a search
   // box should narrow what you are looking at, not silently restate the totals.
-  const visibleElections = myElections.filter(e =>
-    matchesElectionFilter(e, filters, isDomainVerified),
+  // Every ordering is exact here, unlike on Discover: `hydrateAll` means the
+  // whole scope is read before anything is drawn, so "closing soonest" is the
+  // soonest there is and not the soonest of the first page.
+  const visibleElections = sortElections(
+    myElections.filter(e => matchesElectionFilter(e, filters, isDomainVerified)),
+    filters.sort,
   );
   // Narrowing the filters is a different list, so it starts at the first page.
   const { visible, hasMore, loadMore } = usePageLimit(

@@ -145,7 +145,8 @@
     "group_eligibility": "Voldoe ik",
     "results_partial": "{{shown}} tot nu toe gevonden",
     "closing_soon": "Sluit binnen een dag",
-    "group_commitments": "Toezeggingen"
+    "group_commitments": "Toezeggingen",
+    "group_order": "Volgorde"
   },
   "election": {
     "by": "door",
@@ -820,5 +821,12 @@
     "from_date": "Vanaf {{date}}",
     "ended_early": "Eerder gesloten",
     "abandoned": "Deze verkiezing is gestopt, dus deze tijdlijn is niet tot het einde gevolgd."
+  },
+  "sort": {
+    "newest": "Nieuwste eerst",
+    "oldest": "Oudste eerst",
+    "closing": "Sluit het eerst",
+    "enrolled": "Meeste inschrijvingen",
+    "partial_notice": "gesorteerd over wat tot nu toe is gelezen"
   }
 }

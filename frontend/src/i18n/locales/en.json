@@ -145,7 +145,8 @@
     "group_eligibility": "Would I qualify",
     "results_partial": "{{shown}} found so far",
     "closing_soon": "Closing within a day",
-    "group_commitments": "Commitments"
+    "group_commitments": "Commitments",
+    "group_order": "Order"
   },
   "election": {
     "by": "by",
@@ -820,5 +821,12 @@
     "from_date": "From {{date}}",
     "ended_early": "Ended early",
     "abandoned": "This election was stopped, so this schedule was not followed to the end."
+  },
+  "sort": {
+    "newest": "Newest first",
+    "oldest": "Oldest first",
+    "closing": "Closing soonest",
+    "enrolled": "Most enrolled",
+    "partial_notice": "ordered over what has been read so far"
   }
 }

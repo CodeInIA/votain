@@ -146,7 +146,8 @@
     "group_eligibility": "Ho i requisiti",
     "results_partial": "{{shown}} trovate finora",
     "closing_soon": "Chiude entro un giorno",
-    "group_commitments": "Impegni"
+    "group_commitments": "Impegni",
+    "group_order": "Ordine"
   },
   "election": {
     "by": "di",
@@ -826,5 +827,12 @@
     "from_date": "Dal {{date}}",
     "ended_early": "Chiusa in anticipo",
     "abandoned": "Questa elezione e stata interrotta, quindi questo calendario non e stato rispettato fino alla fine."
+  },
+  "sort": {
+    "newest": "Piu recenti prima",
+    "oldest": "Piu vecchie prima",
+    "closing": "In chiusura prima",
+    "enrolled": "Piu iscritti",
+    "partial_notice": "ordinate su quanto letto finora"
   }
 }

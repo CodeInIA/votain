@@ -146,7 +146,8 @@
     "group_eligibility": "Suis-je éligible",
     "results_partial": "{{shown}} trouvées pour l’instant",
     "closing_soon": "Se clôture sous un jour",
-    "group_commitments": "Engagements"
+    "group_commitments": "Engagements",
+    "group_order": "Tri"
   },
   "election": {
     "by": "par",
@@ -826,5 +827,12 @@
     "from_date": "A partir du {{date}}",
     "ended_early": "Ecourte",
     "abandoned": "Cette election a ete interrompue, ce calendrier n'a donc pas ete suivi jusqu'au bout."
+  },
+  "sort": {
+    "newest": "Les plus recentes d'abord",
+    "oldest": "Les plus anciennes d'abord",
+    "closing": "Cloture la plus proche",
+    "enrolled": "Le plus d'inscrits",
+    "partial_notice": "triees sur ce qui a ete lu jusqu'ici"
   }
 }

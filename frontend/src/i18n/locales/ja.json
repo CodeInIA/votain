@@ -144,7 +144,8 @@
     "group_eligibility": "参加できるか",
     "results_partial": "現在 {{shown}} 件",
     "closing_soon": "1日以内に締切",
-    "group_commitments": "約束"
+    "group_commitments": "約束",
+    "group_order": "並び順"
   },
   "election": {
     "by": "主催:",
@@ -814,5 +815,12 @@
     "from_date": "{{date}} から",
     "ended_early": "早期終了",
     "abandoned": "この選挙は中止されたため、このスケジュールは最後まで実行されていません。"
+  },
+  "sort": {
+    "newest": "新しい順",
+    "oldest": "古い順",
+    "closing": "締切が近い順",
+    "enrolled": "登録者が多い順",
+    "partial_notice": "これまでに読み込んだ範囲での並び順"
   }
 }

@@ -16,6 +16,7 @@ import {
   EMPTY_FILTERS,
   type ElectionFilterState,
 } from '../../lib/electionFilter';
+import { sortElections, sortNeedsEverything } from '../../lib/electionSort';
 
 /** Always true: the domain filter is applied after paging, not inside it. */
 const IGNORE_DOMAINS = () => true;
@@ -46,14 +47,31 @@ export default function Discover() {
     useElectionPages({
       keep: e => matchesElectionFilter(e, filters, IGNORE_DOMAINS),
       filterKey: JSON.stringify(filters),
+      // Creation order is settled by which end of the address list the pager
+      // walks, not by sorting what came back: see `order` on the hook.
+      order: filters.sort === 'oldest' ? 'oldest' : 'newest',
     });
 
   const isDomainVerified = useVerifiedDomains(elections);
 
-  const filtered = useMemo(
-    () => (filters.domainOnly ? elections.filter(isDomainVerified) : elections),
-    [elections, filters.domainOnly, isDomainVerified],
-  );
+  const filtered = useMemo(() => {
+    const kept = filters.domainOnly ? elections.filter(isDomainVerified) : elections;
+    // A no-op for the two creation orders, which the pager has already
+    // delivered. See `sortElections`.
+    return sortElections(kept, filters.sort);
+  }, [elections, filters.domainOnly, filters.sort, isDomainVerified]);
+
+  /**
+   * The order covers what has been read, not what exists.
+   *
+   * Said out loud because it cannot be fixed here. "Closing soonest" reads a
+   * date that only exists once an election is hydrated, and this page hydrates
+   * a page at a time on purpose, so an election closing in an hour can be
+   * sitting unread below one closing in three days. The two creation orders
+   * are exact at any point, because the pager walks the addresses from the
+   * right end instead.
+   */
+  const partialOrder = !complete && sortNeedsEverything(filters.sort);
 
   /**
    * Whether the number below is a total or a running tally.
@@ -129,6 +147,12 @@ export default function Discover() {
               {exactCount
                 ? t('discover.results_count', { count: all.length })
                 : t('discover.results_partial', { shown: filtered.length })}
+              {partialOrder && (
+                <>
+                  {' · '}
+                  {t('sort.partial_notice')}
+                </>
+              )}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filtered.map(e => (

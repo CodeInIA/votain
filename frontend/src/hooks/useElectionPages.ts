@@ -87,6 +87,17 @@ export interface ElectionPagesOptions {
    * so "everything" means theirs.
    */
   hydrateAll?: boolean;
+  /**
+   * Which end of the creation order to read from.
+   *
+   * HERE AND NOT IN THE COMPONENT, which is the whole point. Every address is
+   * known after one cheap call while the elections themselves are hydrated a
+   * page at a time, so reversing the ADDRESS list makes "oldest first" exact
+   * from the first page. Sorting the hydrated elections instead would put the
+   * oldest of the twelve that happened to be read at the top and call it the
+   * oldest there is.
+   */
+  order?: 'newest' | 'oldest';
 }
 
 export interface ElectionPagesState {
@@ -137,6 +148,7 @@ export function useElectionPages(options: ElectionPagesOptions = {}): ElectionPa
     keep,
     filterKey,
     hydrateAll = false,
+    order = 'newest',
   } = options;
   const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE;
   const live = isChainConfigured();
@@ -181,7 +193,10 @@ export function useElectionPages(options: ElectionPagesOptions = {}): ElectionPa
       try {
         const list = await resolveScope(scope, organizer);
         if (cancelled) return;
-        setAddresses(list);
+        // Every `fetchElection*Addresses` hands these back newest first, so
+        // the other order is one reversal and the pager needs to know nothing
+        // about it.
+        setAddresses(order === 'oldest' ? [...list].reverse() : list);
         setHydrated([]);
         setConsumed(0);
         setError(null);
@@ -199,7 +214,7 @@ export function useElectionPages(options: ElectionPagesOptions = {}): ElectionPa
     return () => {
       cancelled = true;
     };
-  }, [live, scope, organizer, waitingForScope, reloadToken]);
+  }, [live, scope, organizer, waitingForScope, order, reloadToken]);
 
   // Filling the page: hydrate in chunks until there are enough MATCHES.
   useEffect(() => {

@@ -10,6 +10,7 @@
 import { matchesEligibilityFilter, isEligibilityFilterActive, type EligibilityFilter } from './eligibilityFilter';
 import { type Election, type ElectionPhase, type VotingType } from '../data/seed';
 import { closingSoon } from './phase';
+import { DEFAULT_SORT, type ElectionSort } from './electionSort';
 import { isEmptyPolicy } from './eligibility';
 
 /**
@@ -77,6 +78,17 @@ export interface ElectionFilterState {
   /** Its next deadline falls within a day, whatever that deadline is. */
   closingSoon: boolean;
   eligibility: EligibilityFilter;
+  /**
+   * The order, which is not a filter and lives here anyway.
+   *
+   * It hides nothing, so `matchesElectionFilter` never reads it and
+   * `isAnyFilterActive` never counts it: an order is not a reason to show the
+   * dot that warns a list is being narrowed. It sits in this object because it
+   * is the same control panel, the same "clear" button and the same key the
+   * pager resets on, and a second piece of state threaded through both pages
+   * to say one word would be the worse trade.
+   */
+  sort: ElectionSort;
 }
 
 export const EMPTY_FILTERS: ElectionFilterState = {
@@ -89,6 +101,7 @@ export const EMPTY_FILTERS: ElectionFilterState = {
   noCancel: false,
   closingSoon: false,
   eligibility: {},
+  sort: DEFAULT_SORT,
 };
 
 /**

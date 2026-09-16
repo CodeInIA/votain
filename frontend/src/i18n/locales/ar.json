@@ -149,7 +149,8 @@
     "group_eligibility": "هل تنطبق عليّ الشروط",
     "results_partial": "تم العثور على {{shown}} حتى الآن",
     "closing_soon": "يغلق خلال يوم",
-    "group_commitments": "التزامات"
+    "group_commitments": "التزامات",
+    "group_order": "الترتيب"
   },
   "election": {
     "by": "بواسطة",
@@ -844,5 +845,12 @@
     "from_date": "من {{date}}",
     "ended_early": "انتهى مبكرا",
     "abandoned": "تم إيقاف هذه الانتخابات، لذلك لم يُستكمل هذا الجدول الزمني حتى نهايته."
+  },
+  "sort": {
+    "newest": "الأحدث أولا",
+    "oldest": "الأقدم أولا",
+    "closing": "الأقرب إلى الإغلاق",
+    "enrolled": "الأكثر تسجيلا",
+    "partial_notice": "مرتبة حسب ما تمت قراءته حتى الآن"
   }
 }
