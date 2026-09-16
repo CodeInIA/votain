@@ -214,15 +214,25 @@ export default function VoterHistory() {
 
         {loading ? (
           <div className="flex justify-center py-20"><Spinner /></div>
-        ) : rows.length === 0 ? (
+        ) : shown.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <span className="text-4xl mb-3">📜</span>
-            {/* "You have not voted yet" is a claim, and without the identity it
-                is one this page cannot make: it has only looked at what this
-                browser wrote down. The note below the list says what it did
-                look at, and that is the whole truth available here. */}
-            {identityReady && (
-              <p className="text-on-surface-variant text-sm">{t('history.empty')}</p>
+            {/* A SEARCH THAT FINDS NOTHING IS NOT AN EMPTY HISTORY. This
+                branch used to ask `rows`, the unfiltered list, so typing a
+                word that matched no receipt fell through to the list below and
+                drew nothing at all: a blank page with the search box still
+                full. Asking `shown` catches both, and the two are told apart
+                by whether there was anything to hide. */}
+            {rows.length > 0 ? (
+              <p className="text-on-surface-variant text-sm">{t('history.no_results')}</p>
+            ) : (
+              /* "You have not voted yet" is a claim, and without the identity
+                 it is one this page cannot make: it has only looked at what
+                 this browser wrote down. The note below the list says what it
+                 did look at, and that is the whole truth available here. */
+              identityReady && (
+                <p className="text-on-surface-variant text-sm">{t('history.empty')}</p>
+              )
             )}
           </div>
         ) : (

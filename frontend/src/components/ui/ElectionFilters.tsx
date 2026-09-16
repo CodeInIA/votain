@@ -26,6 +26,9 @@ import {
   ArrowDownNarrowWide,
   Hourglass,
   Users,
+  UserCheck,
+  CheckCheck,
+  Vote,
 } from 'lucide-react';
 import { Badge } from './Badge';
 import { Button } from './Button';
@@ -217,26 +220,34 @@ interface Props {
    * A list the reader is already part of wants a different subset: age,
    * nationality, voting rule and the two promises are there to help somebody
    * CHOOSE an election, and on "my elections" they narrow a handful of rows by
-   * properties the voter accepted when they joined. Which state each one is in
-   * is the question that survives, so that page asks for `status` alone.
+   * properties the voter accepted when they joined. What survives there is
+   * state: the election's own, and the reader's part in it, so that page asks
+   * for `status` and `participation`.
    *
    * An empty list leaves the panel, and the button that opens it, out entirely.
    */
   groups?: FilterGroupName[];
-  /**
-   * Whether the state band offers "I have already voted".
-   *
-   * OFF unless a page asks, because it is a statement about the reader and
-   * most readers of a public list have not got one: for a visitor with no
-   * session `hasVoted` is unknown everywhere, so the chip would empty the list
-   * and say nothing about why. On the voter's own elections it is exactly the
-   * slice they came for.
-   */
-  showVotedFilter?: boolean;
 }
 
 export type FilterGroupName =
   | 'status'
+  /**
+   * WHERE THE READER STANDS: enrolled, voted, still to vote.
+   *
+   * ITS OWN BAND, AND NOT PART OF `status`, which is where the voted chip
+   * started. A band is a question, and these two are different questions: one
+   * asks what the election is doing, the other what this person has done about
+   * it. Under one caption the reader has to work out, chip by chip, which of
+   * the two a word belongs to, and "active" and "voted" sitting in one row
+   * suggest they are alternatives when in truth they are usually both true.
+   *
+   * OFF UNLESS A PAGE ASKS. Every chip here is a statement about the reader,
+   * and most readers of a public list have not got one: for a visitor with no
+   * session, and on a locked device, `isEnrolled` and `hasVoted` are unknown
+   * everywhere, so the chips would empty the list and explain nothing. On the
+   * voter's own elections they are the slice they came for.
+   */
+  | 'participation'
   | 'properties'
   | 'commitments'
   | 'voting_type'
@@ -259,7 +270,6 @@ export function ElectionFilters({
   onToggleOpen,
   searchPlaceholder,
   groups = ALL_GROUPS,
-  showVotedFilter = false,
 }: Props) {
   const { t } = useTranslation();
   const set = (patch: Partial<ElectionFilterState>) => onChange({ ...value, ...patch });
@@ -369,25 +379,43 @@ export function ElectionFilters({
                 </Badge>
               </button>
             ))}
-            {/* ABOUT THE READER, NOT THE ELECTION, and it sits here anyway:
-                somebody narrowing by state is asking "where do things stand",
-                and "I have already voted" is one of the answers they mean. An
-                election is `active` whether or not they voted in it, so this
-                is a toggle beside the phases rather than one of them. */}
-            {showVotedFilter && (
-            <button
-              type="button"
-              onClick={() => set({ votedOnly: !value.votedOnly })}
-              className="transition-all cursor-pointer"
+          </FilterGroup>
+          )}
+
+          {shows('participation') && (
+          <FilterGroup label={t('discover.group_participation')} first={firstShown === 'participation'}>
+            {/* ICON CHIPS, NOT PHASE PILLS, though the voted one was a pill
+                when it lived in the band above. The rule this file already
+                keeps is that a rounded-full uppercase pill is a PHASE of the
+                election; wearing that shape under a caption about the reader
+                is the exact confusion the split was made to end.
+
+                The words are the badges' own, `phase.enrolled` and
+                `phase.voted`, so a chip cannot come to say something
+                different from the label on the card it filters for. */}
+            <FilterToggle
+              active={value.enrolledOnly}
+              onClick={() => set({ enrolledOnly: !value.enrolledOnly })}
+              icon={UserCheck}
             >
-              <Badge
-                variant="voted"
-                className={value.votedOnly ? 'ring-2 ring-primary/40' : 'opacity-60 hover:opacity-100'}
-              >
-                {t('phase.voted')}
-              </Badge>
-            </button>
-            )}
+              {t('phase.enrolled')}
+            </FilterToggle>
+            {/* Enrolled, open and unvoted: the one slice that can be acted on
+                this minute, which is what a voter opens this list to find. */}
+            <FilterToggle
+              active={value.canVoteNow}
+              onClick={() => set({ canVoteNow: !value.canVoteNow })}
+              icon={Vote}
+            >
+              {t('discover.pending_vote_only')}
+            </FilterToggle>
+            <FilterToggle
+              active={value.votedOnly}
+              onClick={() => set({ votedOnly: !value.votedOnly })}
+              icon={CheckCheck}
+            >
+              {t('phase.voted')}
+            </FilterToggle>
           </FilterGroup>
           )}
 

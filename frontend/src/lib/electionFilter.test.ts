@@ -238,3 +238,45 @@ describe('narrowing by the date nobody chose', () => {
     expect(isAnyFilterActive(filters({ createdTo: '2026-09-01' }))).toBe(true);
   });
 });
+
+/**
+ * The band about the reader, which is the one that can contradict the app.
+ *
+ * A chip promising "still to vote" has to mean the same thing as the button on
+ * the election it lists, or the list sends somebody to a page with nothing to
+ * do on it.
+ */
+describe('where the reader stands, beside where the election does', () => {
+  const open = { phase: 'active' as const, isEnrolled: true, hasVoted: false };
+
+  it('offers the elections that can be voted in right now', () => {
+    expect(matches(election(open), { canVoteNow: true })).toBe(true);
+    // Voted already: the ballot screen has nothing left to offer.
+    expect(matches(election({ ...open, hasVoted: true }), { canVoteNow: true })).toBe(false);
+    // Not enrolled: there is no ballot to cast in it at all.
+    expect(matches(election({ ...open, isEnrolled: false }), { canVoteNow: true })).toBe(false);
+    // Enrolled and waiting. The election is not open yet, so nothing can be
+    // done about it today, which is exactly what this chip promises to hide.
+    expect(matches(election({ ...open, phase: 'enrolling' }), { canVoteNow: true })).toBe(false);
+  });
+
+  it('keeps enrolment and the ballot apart', () => {
+    const enrolledNotVoted = election({ ...open, phase: 'enrolling' });
+    expect(matches(enrolledNotVoted, { enrolledOnly: true })).toBe(true);
+    expect(matches(enrolledNotVoted, { votedOnly: true })).toBe(false);
+  });
+
+  it('is not a phase, so it combines with one', () => {
+    // The question a voter actually asks: of the elections being counted, the
+    // ones I took part in. Neither half can express it alone.
+    const counted = election({ phase: 'tallying', isEnrolled: true, hasVoted: true });
+    expect(matches(counted, { phase: 'tallying', votedOnly: true })).toBe(true);
+    expect(matches(election({ ...counted, hasVoted: false }), { phase: 'tallying', votedOnly: true })).toBe(false);
+  });
+
+  it('counts as narrowing the list, so the list says it is narrowed', () => {
+    expect(isAnyFilterActive(filters({ enrolledOnly: true }))).toBe(true);
+    expect(isAnyFilterActive(filters({ canVoteNow: true }))).toBe(true);
+    expect(isAnyFilterActive(filters({ votedOnly: true }))).toBe(true);
+  });
+});

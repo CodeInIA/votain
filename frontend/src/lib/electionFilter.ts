@@ -107,15 +107,26 @@ export interface ElectionFilterState {
    */
   sort: ElectionSort;
   /**
-   * Only the elections this voter has already cast a ballot in.
+   * WHERE THE READER STANDS, which is a different question from where the
+   * election does.
    *
-   * A BOOLEAN BESIDE THE PHASE, not one of its values, because it is not one:
-   * `voted` describes the reader, not the election, and an election is
-   * `active` whether or not they have voted in it. It used to be a tab called
-   * "Voted" sitting in a row of phases, which made a personal state look like
-   * a stage of the contract and left the two impossible to combine.
+   * Three booleans rather than values of `phase`, because they are not phases:
+   * an election is `active` whether or not this person enrolled in it, voted
+   * in it, or still owes it a ballot. Keeping them apart is also what lets the
+   * two be combined, "active elections I have not voted in" being the one a
+   * voter opens the app for.
+   *
+   * Independent toggles, so "enrolled" and "can vote now" together is a
+   * narrower question and not a contradiction.
    */
+  enrolledOnly: boolean;
   votedOnly: boolean;
+  /**
+   * Enrolled, voting open, no ballot cast yet: the slice that can be acted on
+   * this minute. Not the `pending_vote` PHASE, which is the election waiting
+   * for its own window to open and says nothing about the reader.
+   */
+  canVoteNow: boolean;
 }
 
 export const EMPTY_FILTERS: ElectionFilterState = {
@@ -131,7 +142,9 @@ export const EMPTY_FILTERS: ElectionFilterState = {
   closingSoon: false,
   eligibility: {},
   sort: DEFAULT_SORT,
+  enrolledOnly: false,
   votedOnly: false,
+  canVoteNow: false,
 };
 
 /**
@@ -150,7 +163,9 @@ export function isAnyFilterActive(filter: ElectionFilterState): boolean {
     Boolean(filter.cancel) ||
     isCreatedFilterActive(filter) ||
     filter.closingSoon ||
+    filter.enrolledOnly ||
     filter.votedOnly ||
+    filter.canVoteNow ||
     isEligibilityFilterActive(filter.eligibility)
   );
 }
@@ -244,6 +259,17 @@ export function matchesQuery(election: Election, needle: string): boolean {
   );
 }
 
+/**
+ * Enrolled, open, and still owing a ballot.
+ *
+ * Read from the election the same way the ballot screen decides whether to
+ * offer a vote, so a filter promising "you can vote now" cannot disagree with
+ * the button the voter finds when they arrive.
+ */
+export function canVoteNow(election: Election): boolean {
+  return election.phase === 'active' && Boolean(election.isEnrolled) && !election.hasVoted;
+}
+
 export function matchesElectionFilter(
   election: Election,
   filter: ElectionFilterState,
@@ -251,7 +277,9 @@ export function matchesElectionFilter(
   isDomainVerified: (e: Election) => boolean,
 ): boolean {
   if (filter.phase && election.phase !== filter.phase) return false;
+  if (filter.enrolledOnly && !election.isEnrolled) return false;
   if (filter.votedOnly && !election.hasVoted) return false;
+  if (filter.canVoteNow && !canVoteNow(election)) return false;
   if (!matchesQuery(election, filter.query.trim().toLowerCase())) return false;
   if (filter.domainOnly && !isDomainVerified(election)) return false;
   if (filter.restrictedOnly && !isRestricted(election)) return false;

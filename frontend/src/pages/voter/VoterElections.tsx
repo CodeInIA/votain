@@ -12,7 +12,7 @@ import { usePageLimit } from '../../hooks/usePageLimit';
 import { useVoterIdentity } from '../../hooks/useVoterIdentity';
 import { useElectionFilterParams } from '../../hooks/useElectionFilterParams';
 import { ElectionFilters, ClearFilters } from '../../components/ui/ElectionFilters';
-import { matchesQuery } from '../../lib/electionFilter';
+import { matchesQuery, canVoteNow } from '../../lib/electionFilter';
 import { sortElections } from '../../lib/electionSort';
 import { Button } from '../../components/ui/Button';
 import { isChainConfigured } from '../../lib/deployments';
@@ -74,14 +74,16 @@ export default function VoterElections() {
   /**
    * The filters this screen offers, and only those.
    *
-   * The panel is asked for the status band alone, so running the whole
-   * matcher would let a hand-written URL narrow the list by rules with no
-   * control on screen. Clearing still resets everything, so a stray parameter
-   * is inert rather than stuck.
+   * The panel is asked for two bands, so running the whole matcher would let a
+   * hand-written URL narrow the list by rules with no control on screen.
+   * Clearing still resets everything, so a stray parameter is inert rather
+   * than stuck.
    */
   const byTab = myElections.filter(e => {
     if (filters.phase && e.phase !== filters.phase) return false;
+    if (filters.enrolledOnly && !e.isEnrolled) return false;
     if (filters.votedOnly && !e.hasVoted) return false;
+    if (filters.canVoteNow && !canVoteNow(e)) return false;
     return true;
   });
   // The query alone, because the panel that sets everything else is not
@@ -94,7 +96,7 @@ export default function VoterElections() {
   const { visible, hasMore, loadMore } = usePageLimit(
     filtered,
     undefined,
-    `${filters.phase ?? ''}${filters.votedOnly}${filters.query}${filters.sort}`,
+    `${filters.phase ?? ''}${filters.enrolledOnly}${filters.votedOnly}${filters.canVoteNow}${filters.query}${filters.sort}`,
   );
 
   const urgentCount = myElections.filter(e => endsSoon(e, now)).length;
@@ -121,16 +123,13 @@ export default function VoterElections() {
           )}
         </div>
 
-        {/* The same chips, the same colours and the same selected ring the
-            filter panels use, so a phase looks the same wherever it is read.
-            `all` is the one without a phase to wear, so it borrows the neutral
-            surface the unselected chips sit on. */}
         {/* Search, the state filters and the order, in the bar every other
             list uses. The nine phase chips used to sit open above the list,
             which at a phone's width was five rows of header before a single
             election; behind the button they are one row of a panel nobody has
-            to look at. Only the status band is asked for: the rest of that
-            panel is for choosing an election to join. */}
+            to look at. Two bands are asked for, the election's own state and
+            the reader's part in it; the rest of that panel is there to help
+            somebody choose an election to join. */}
         {worthSearching && (
           <div className="mb-4">
             <ElectionFilters
@@ -139,8 +138,7 @@ export default function VoterElections() {
               open={filtersOpen}
               onToggleOpen={() => setFiltersOpen(open => !open)}
               searchPlaceholder={t('voter_elections.search_placeholder')}
-              groups={['status']}
-              showVotedFilter
+              groups={['status', 'participation']}
             />
           </div>
         )}
@@ -153,24 +151,41 @@ export default function VoterElections() {
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <span className="text-4xl mb-3">📋</span>
-            <p className="text-on-surface-variant text-sm">{t('voter_elections.empty')}</p>
-            {/* EMPTY CAN MEAN LOCKED. Each election holds a commitment derived
-                from the voter's secret, so finding their own elections needs
-                that secret: a browser that has not unlocked it reads an empty
-                list and cannot tell that from having joined nothing. Offered
-                rather than done on load, because opening the secret summons an
-                authenticator, and that is not something to do to somebody who
-                was only looking. */}
-            {live && !identityReady && (
-              <Button
-                variant="ghost"
-                className="mt-4 gap-2 rounded-2xl h-11"
-                disabled={unlocking}
-                onClick={() => { void unlock().then(() => refresh()); }}
-              >
-                <KeyRound className="w-4 h-4" />
-                {unlocking ? t('common.loading') : t('election.check_enrolment')}
-              </Button>
+            {/* TWO WAYS TO BE EMPTY, and they need different sentences. With
+                filters on, "you have not joined any election" is simply false:
+                the voter has some, and the screen is hiding them. It said that
+                anyway, and offered a passkey prompt to fix a problem the
+                reader did not have. The words are Discover's, because it is
+                the same situation and it already answers it. Clearing is the
+                link beside the count, which is on screen throughout. */}
+            {myElections.length > 0 ? (
+              <>
+                <p className="text-on-surface-variant text-sm">{t('discover.empty_title')}</p>
+                <p className="text-on-surface-meta text-xs mt-1">{t('discover.empty_desc')}</p>
+              </>
+            ) : (
+              <>
+                <p className="text-on-surface-variant text-sm">{t('voter_elections.empty')}</p>
+                {/* EMPTY CAN MEAN LOCKED. Each election holds a commitment
+                    derived from the voter's secret, so finding their own
+                    elections needs that secret: a browser that has not
+                    unlocked it reads an empty list and cannot tell that from
+                    having joined nothing. Offered rather than done on load,
+                    because opening the secret summons an authenticator, and
+                    that is not something to do to somebody who was only
+                    looking. */}
+                {live && !identityReady && (
+                  <Button
+                    variant="ghost"
+                    className="mt-4 gap-2 rounded-2xl h-11"
+                    disabled={unlocking}
+                    onClick={() => { void unlock().then(() => refresh()); }}
+                  >
+                    <KeyRound className="w-4 h-4" />
+                    {unlocking ? t('common.loading') : t('election.check_enrolment')}
+                  </Button>
+                )}
+              </>
             )}
           </div>
         ) : (
