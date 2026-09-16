@@ -249,6 +249,7 @@
   "voter_elections": {
     "title": "Minhas Eleições",
     "subtitle": "Eleições nas quais você está inscrito",
+    "search_placeholder": "Pesquisar nas suas eleições…",
     "empty": "Você ainda não se inscreveu em nenhuma eleição.",
     "ends_soon": "Encerra em breve",
     "urgent_one": "{{count}} termina em breve",
@@ -282,9 +283,12 @@
   "history": {
     "title": "Histórico de votos",
     "subtitle": "Todas as eleições em que você participou",
+    "search_placeholder": "Pesquisar por eleição ou referência…",
     "export": "Exportar CSV",
     "empty": "Você ainda não votou em nenhuma eleição.",
     "verify": "Verificar este recibo",
+    "open": "Abrir esta eleição",
+    "cast_at": "Quando este boletim ficou registado na cadeia",
     "see_all": "Ver todos os meus votos",
     "partial_view": "Mostram-se os votos que este navegador conhece: os feitos aqui, mais os encontrados por um desbloqueio anterior. Desbloqueia para procurar os feitos noutro dispositivo."
   },

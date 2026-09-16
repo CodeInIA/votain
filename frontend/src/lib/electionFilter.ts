@@ -223,7 +223,7 @@ function isRestricted(election: Election): boolean {
  * domain, so typing "gob.es" finds the elections published under it and typing
  * an organizer's name finds theirs.
  */
-function matchesQuery(election: Election, needle: string): boolean {
+export function matchesQuery(election: Election, needle: string): boolean {
   if (!needle) return true;
   return (
     election.title.toLowerCase().includes(needle) ||

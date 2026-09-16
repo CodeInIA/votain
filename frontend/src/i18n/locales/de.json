@@ -247,6 +247,7 @@
   "voter_elections": {
     "title": "Meine Wahlen",
     "subtitle": "Wahlen, für die Sie angemeldet sind",
+    "search_placeholder": "In Ihren Wahlen suchen…",
     "empty": "Sie sind noch bei keiner Wahl angemeldet.",
     "ends_soon": "Endet bald",
     "urgent_other": "{{count}} enden bald",
@@ -279,9 +280,12 @@
   "history": {
     "title": "Abstimmungsverlauf",
     "subtitle": "Alle Wahlen, an denen Sie teilgenommen haben",
+    "search_placeholder": "Nach Wahl oder Referenz suchen…",
     "export": "CSV exportieren",
     "empty": "Sie haben noch bei keiner Wahl abgestimmt.",
     "verify": "Diese Quittung prüfen",
+    "open": "Diese Wahl öffnen",
+    "cast_at": "Wann dieser Stimmzettel auf der Kette erfasst wurde",
     "see_all": "Alle meine Stimmen anzeigen",
     "partial_view": "Angezeigt werden die Stimmen, die dieser Browser kennt: die hier abgegebenen und alle, die ein früheres Entsperren gefunden hat. Entsperren Sie, um nach Stimmen von anderen Geräten zu suchen."
   },

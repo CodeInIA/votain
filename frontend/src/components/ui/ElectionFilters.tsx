@@ -211,9 +211,26 @@ interface Props {
   open: boolean;
   onToggleOpen: () => void;
   searchPlaceholder: string;
+  /**
+   * Whether to offer the panel of discovery filters.
+   *
+   * Off for a list the reader is already part of. Age, nationality, voting
+   * rule and the two promises are there to help somebody CHOOSE an election;
+   * on "my elections" they narrow a handful of rows the voter already joined,
+   * by properties they accepted when they joined. Search and order are the two
+   * that still earn their place, so those stay.
+   */
+  showFilterButton?: boolean;
 }
 
-export function ElectionFilters({ value, onChange, open, onToggleOpen, searchPlaceholder }: Props) {
+export function ElectionFilters({
+  value,
+  onChange,
+  open,
+  onToggleOpen,
+  searchPlaceholder,
+  showFilterButton = true,
+}: Props) {
   const { t } = useTranslation();
   const set = (patch: Partial<ElectionFilterState>) => onChange({ ...value, ...patch });
 
@@ -245,6 +262,7 @@ export function ElectionFilters({ value, onChange, open, onToggleOpen, searchPla
             ) : undefined}
           />
         </div>
+        {showFilterButton && (
         <Button
           onClick={onToggleOpen}
           className="gap-2 h-11 px-4 rounded-2xl text-sm text-on-surface-variant hover:text-on-surface"
@@ -260,6 +278,7 @@ export function ElectionFilters({ value, onChange, open, onToggleOpen, searchPla
               on, the collapsed bar gave no sign the list was being filtered. */}
           {isAnyFilterActive(value) && <span className="w-2 h-2 rounded-full bg-primary" />}
         </Button>
+        )}
 
         {/* BESIDE THE FILTER BUTTON, NOT INSIDE THE PANEL IT OPENS, and the
             reason is the one already written into `ElectionFilterState`: an
@@ -296,7 +315,7 @@ export function ElectionFilters({ value, onChange, open, onToggleOpen, searchPla
         />
       </div>
 
-      {open && (
+      {open && showFilterButton && (
         <div className="flex flex-col gap-3">
           <FilterGroup label={t('discover.group_status')} first>
             {PHASE_FILTERS.map(p => (

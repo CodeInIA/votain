@@ -249,6 +249,7 @@
   "voter_elections": {
     "title": "Mis Elecciones",
     "subtitle": "Elecciones en las que estás inscrito",
+    "search_placeholder": "Busca en tus elecciones…",
     "empty": "Aún no te has inscrito en ninguna elección.",
     "ends_soon": "Termina pronto",
     "urgent_other": "{{count}} finalizan pronto",
@@ -282,9 +283,12 @@
   "history": {
     "title": "Historial de votos",
     "subtitle": "Todas las elecciones en las que has participado",
+    "search_placeholder": "Busca por elección o referencia…",
     "export": "Exportar CSV",
     "empty": "Aún no has votado en ninguna elección.",
     "verify": "Verificar este recibo",
+    "open": "Abrir esta elección",
+    "cast_at": "Cuándo quedó registrada esta papeleta en la cadena",
     "see_all": "Ver todos mis votos",
     "partial_view": "Se muestran los votos que conoce este navegador: los emitidos aquí, más los que encontrara un desbloqueo anterior. Desbloquea para buscar los emitidos desde otro dispositivo."
   },

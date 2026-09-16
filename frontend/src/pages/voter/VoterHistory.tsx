@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronRight, Download, Copy, Check, ShieldCheck, Lock } from 'lucide-react';
+import { ChevronRight, Download, Copy, Check, ShieldCheck, Lock, Search, X, ArrowDown, ArrowUp } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
@@ -11,6 +11,9 @@ import { useElectionDigests } from '../../hooks/useElectionDigests';
 import { fetchVoteHistory, fetchLocalVoteHistory } from '../../lib/voting';
 import { useVoterIdentity } from '../../hooks/useVoterIdentity';
 import { shortenReference } from '../../lib/utils';
+import { formatDateTime } from '../../lib/datetime';
+import { Input } from '../../components/ui/Input';
+import { SelectMenu } from '../../components/ui/SelectMenu';
 
 interface HistoryRow {
   electionId: string;
@@ -21,6 +24,9 @@ interface HistoryRow {
   referenceNumber: string;
   nullifier: string;
 }
+
+/** How many ballots there are before a search box earns its place. */
+const SEARCH_FROM = 5;
 
 export default function VoterHistory() {
   const navigate = useNavigate();
@@ -75,6 +81,45 @@ export default function VoterHistory() {
   }, [live, elections, identityReady]);
 
   const [copied, setCopied] = useState<string | null>(null);
+
+  /**
+   * SEARCH AND ORDER, in the query string.
+   *
+   * A row opens the election or its results, so the trip out and back has to
+   * bring the search with it, the same way the other lists do. Two parameters
+   * and no panel: a receipt has a name and a date, and there is nothing else
+   * here to narrow by.
+   */
+  const [params, setParams] = useSearchParams();
+  const query = params.get('q') ?? '';
+  const oldestFirst = params.get('order') === 'oldest';
+
+  const setSearch = (next: { q?: string; order?: string }) => {
+    const merged = new URLSearchParams(params);
+    for (const [key, value] of Object.entries(next)) {
+      if (value) merged.set(key, value);
+      else merged.delete(key);
+    }
+    // Replace, so searching does not fill the back button with keystrokes.
+    setParams(merged, { replace: true });
+  };
+
+  /**
+   * OFFERED ONLY WHEN THERE IS A LIST TO SEARCH, measured against everything
+   * this browser knows rather than what is on screen: narrowing to one row
+   * must not remove the box that narrowed it.
+   */
+  const worthSearching = rows.length > SEARCH_FROM;
+
+  const needle = query.trim().toLowerCase();
+  const shown = (worthSearching
+    ? rows.filter(v =>
+        v.electionTitle.toLowerCase().includes(needle) ||
+        v.referenceNumber.toLowerCase().includes(needle))
+    : rows
+  ).slice().sort((a, b) =>
+    oldestFirst ? a.date.getTime() - b.date.getTime() : b.date.getTime() - a.date.getTime(),
+  );
 
   const copy = (value: string) => {
     void navigator.clipboard.writeText(value);
@@ -135,6 +180,42 @@ export default function VoterHistory() {
           )}
         </div>
 
+        {worthSearching && !loading && (
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <div className="basis-full sm:basis-0 sm:flex-1 min-w-0">
+              <Input
+                placeholder={t('history.search_placeholder')}
+                value={query}
+                onChange={e => setSearch({ q: e.target.value })}
+                leftIcon={<Search className="w-4 h-4" />}
+                rightIcon={query ? (
+                  <button
+                    type="button"
+                    onClick={() => setSearch({ q: '' })}
+                    aria-label={t('common.clear')}
+                    className="cursor-pointer p-2 -m-2 hover:text-on-surface transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                ) : undefined}
+              />
+            </div>
+            <SelectMenu
+              value={oldestFirst ? 'oldest' : 'newest'}
+              onChange={order => setSearch({ order: order === 'oldest' ? 'oldest' : '' })}
+              options={[
+                { value: 'newest', label: t('sort.newest'), icon: ArrowDown },
+                { value: 'oldest', label: t('sort.oldest'), icon: ArrowUp },
+              ]}
+              label={t('discover.group_order')}
+              labelHidden
+              wrapperClassName="w-auto shrink-0"
+              className="rounded-2xl px-4 h-11"
+              contentClassName="w-max"
+            />
+          </div>
+        )}
+
         {loading ? (
           <div className="flex justify-center py-20"><Spinner /></div>
         ) : rows.length === 0 ? (
@@ -150,7 +231,7 @@ export default function VoterHistory() {
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {rows.map(v => (
+            {shown.map(v => (
               <div
                 key={v.referenceNumber}
                 className="group flex items-center gap-4 p-4 rounded-2xl border border-white/5 bg-surface-low/30 backdrop-blur-xl hover:border-white/10 hover:bg-surface-low/40 transition-all"
@@ -179,7 +260,15 @@ export default function VoterHistory() {
                   </div>
                 </button>
                 <div className="flex flex-col items-end gap-1.5 shrink-0">
-                  <p className="text-xs text-on-surface-meta">{v.date.toLocaleDateString()}</p>
+                  {/* WHEN THE BALLOT WAS RECORDED, to the minute, from the
+                      block that carries it. The day alone answered almost
+                      nothing a receipt is read for: two ballots in the same
+                      election on the same day are a vote and the vote that
+                      replaced it, and only the time tells them apart. Same
+                      format as the schedule and the gas history. */}
+                  <p className="text-xs text-on-surface-meta whitespace-nowrap" title={t('history.cast_at')}>
+                    {formatDateTime(v.date)}
+                  </p>
                   <div className="flex items-center gap-1">
                     {/* A receipt nobody can copy is a receipt nobody can use.
                         Nothing on this page offered the reference in a form the
@@ -204,7 +293,20 @@ export default function VoterHistory() {
                     >
                       <ShieldCheck className="w-3.5 h-3.5" />
                     </button>
-                    <ChevronRight className="w-4 h-4 text-on-surface-meta group-hover:text-on-surface transition-colors" />
+                    {/* A BUTTON NOW, which is what it always looked like.
+                        It sat between two working ones, changed colour with
+                        the row, and did nothing when pressed: the row opens
+                        from its title, and on a touch screen there is no hover
+                        to suggest that. It leads where the title leads. */}
+                    <button
+                      type="button"
+                      onClick={() => navigate(destinationFor(v))}
+                      aria-label={t('history.open')}
+                      title={t('history.open')}
+                      className="p-1.5 rounded-lg text-on-surface-meta hover:text-on-surface hover:bg-white/5 transition-colors cursor-pointer"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               </div>

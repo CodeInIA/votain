@@ -10,9 +10,22 @@ import { ListError } from '../../components/ui/ListError';
 import { useElectionPages } from '../../hooks/useElectionPages';
 import { usePageLimit } from '../../hooks/usePageLimit';
 import { useVoterIdentity } from '../../hooks/useVoterIdentity';
+import { useElectionFilterParams } from '../../hooks/useElectionFilterParams';
+import { ElectionFilters } from '../../components/ui/ElectionFilters';
+import { matchesQuery } from '../../lib/electionFilter';
+import { sortElections } from '../../lib/electionSort';
 import { Button } from '../../components/ui/Button';
 import { isChainConfigured } from '../../lib/deployments';
 import type { ElectionPhase } from '../../data/seed';
+
+/**
+ * How many of their own elections a voter has before a search box helps.
+ *
+ * A number rather than "always", because a toolbar over two rows is furniture,
+ * and rather than "never", because the list grows and nothing else in this
+ * screen scales with it.
+ */
+const SEARCH_FROM = 5;
 
 const TABS: { key: 'all' | ElectionPhase; labelKey: string }[] = [
   { key: 'all',       labelKey: 'common.all'       },
@@ -48,12 +61,43 @@ export default function VoterElections() {
   // need second-by-second accuracy; Countdown handles the ticking).
   const [now] = useState(() => Date.now());
 
-  const filtered = tab === 'all' ? myElections : myElections.filter(e => {
+  /**
+   * SEARCH AND ORDER, and not the panel behind the filter button.
+   *
+   * Those filters are for choosing an election to join: age, nationality,
+   * voting rule, the two promises. Here the voter has already joined, and the
+   * one axis they narrow by is which phase, which the tabs above do faster
+   * than a panel could. What a growing list does need is a name to search for
+   * and a way to put the soonest deadline first.
+   *
+   * In the query string like every other list, so stepping into an election
+   * and back brings the search with it.
+   */
+  const [filters, setFilters] = useElectionFilterParams();
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  /**
+   * OFFERED ONLY WHEN THERE IS A LIST TO SEARCH.
+   *
+   * Measured against the unfiltered set, so narrowing it to one row never
+   * removes the box that narrowed it. Three elections do not need a toolbar;
+   * fifteen do, and the voter with fifteen is the one who cannot find the one
+   * closing tonight.
+   */
+  const worthSearching = myElections.length > SEARCH_FROM;
+
+  const byTab = tab === 'all' ? myElections : myElections.filter(e => {
     if (tab === 'voted') return e.hasVoted;
     return e.phase === tab;
   });
-  // Switching tab starts a different list, so it starts at the first page.
-  const { visible, hasMore, loadMore } = usePageLimit(filtered, undefined, tab);
+  // The query alone, because the panel that sets everything else is not
+  // offered here: running the whole matcher would let a hand-written URL
+  // narrow this list by rules the screen gives no way to see or clear.
+  const needle = worthSearching ? filters.query.trim().toLowerCase() : '';
+  const filtered = sortElections(byTab.filter(e => matchesQuery(e, needle)), filters.sort);
+  // Switching tab or searching starts a different list, so it starts at the
+  // first page.
+  const { visible, hasMore, loadMore } = usePageLimit(filtered, undefined, tab + filters.query + filters.sort);
 
   const urgentCount = myElections.filter(e => endsSoon(e, now)).length;
 
@@ -92,6 +136,21 @@ export default function VoterElections() {
             </button>
           ))}
         </div>
+
+        {/* Search and order, above the list and below the tabs: the tabs pick
+            which slice, this searches inside it. */}
+        {worthSearching && (
+          <div className="mb-4">
+            <ElectionFilters
+              value={filters}
+              onChange={setFilters}
+              open={filtersOpen}
+              onToggleOpen={() => setFiltersOpen(open => !open)}
+              searchPlaceholder={t('voter_elections.search_placeholder')}
+              showFilterButton={false}
+            />
+          </div>
+        )}
 
         {/* List */}
         {loading ? (

@@ -245,6 +245,7 @@
   "voter_elections": {
     "title": "내 선거",
     "subtitle": "등록한 선거",
+    "search_placeholder": "내 선거 검색…",
     "empty": "아직 선거에 등록하지 않았습니다.",
     "ends_soon": "곧 종료",
     "urgent_other": "{{count}}개 곧 종료"
@@ -276,9 +277,12 @@
   "history": {
     "title": "투표 기록",
     "subtitle": "참여한 모든 선거",
+    "search_placeholder": "선거 또는 참조번호로 검색…",
     "export": "CSV 내보내기",
     "empty": "아직 어떤 선거에도 투표하지 않았습니다.",
     "verify": "이 영수증 확인",
+    "open": "이 선거 열기",
+    "cast_at": "이 표가 체인에 기록된 시각",
     "see_all": "내 투표 모두 보기",
     "partial_view": "이 브라우저가 알고 있는 투표를 표시합니다. 여기에서 한 투표와 이전 잠금 해제로 찾은 투표입니다. 다른 기기에서 한 투표를 찾으려면 잠금을 해제하세요."
   },

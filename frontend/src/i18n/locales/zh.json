@@ -245,6 +245,7 @@
   "voter_elections": {
     "title": "我的选举",
     "subtitle": "您已报名的选举",
+    "search_placeholder": "搜索你的选举…",
     "empty": "您尚未报名任何选举。",
     "ends_soon": "即将结束",
     "urgent_other": "{{count}} 即将结束"
@@ -276,9 +277,12 @@
   "history": {
     "title": "投票历史",
     "subtitle": "您参与的所有选举",
+    "search_placeholder": "按选举或参考号搜索…",
     "export": "导出 CSV",
     "empty": "您尚未参与任何选举投票。",
     "verify": "验证此回执",
+    "open": "打开这场选举",
+    "cast_at": "这张选票记录到链上的时间",
     "see_all": "查看我的全部投票",
     "partial_view": "显示此浏览器已知的投票：在这里投出的，以及上次解锁时找到的。若要查找在其他设备上投出的票，请解锁。"
   },

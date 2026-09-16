@@ -247,6 +247,7 @@
   "voter_elections": {
     "title": "My Elections",
     "subtitle": "Elections you are enrolled in",
+    "search_placeholder": "Search your elections…",
     "empty": "You haven't enrolled in any elections yet.",
     "ends_soon": "Ends soon",
     "urgent_other": "{{count}} ending soon",
@@ -279,9 +280,12 @@
   "history": {
     "title": "Vote history",
     "subtitle": "All elections you have participated in",
+    "search_placeholder": "Search by election or reference…",
     "export": "Export CSV",
     "empty": "You haven't voted in any elections yet.",
     "verify": "Verify this receipt",
+    "open": "Open this election",
+    "cast_at": "When this ballot was recorded on chain",
     "see_all": "See all my votes",
     "partial_view": "Showing the ballots this browser knows about: the ones cast here, plus any found by a previous unlock. Unlock to check for ballots cast on another device since."
   },
