@@ -18,7 +18,6 @@ import {
   Globe,
   ShieldCheck,
   Clock,
-  BarChart3,
   CalendarCheck,
   CalendarClock,
 } from 'lucide-react';
@@ -212,17 +211,6 @@ export function ElectionFilters({ value, onChange, open, onToggleOpen, searchPla
               {t('discover.closing_soon')}
             </FilterToggle>
 
-            {/* Deliberately not the same as the `closed` phase above: an
-                election can sit closed for weeks with nothing published, and
-                someone looking for something to READ would find it and leave
-                empty handed. */}
-            <FilterToggle
-              active={value.withResults}
-              onClick={() => set({ withResults: !value.withResults })}
-              icon={BarChart3}
-            >
-              {t('discover.with_results')}
-            </FilterToggle>
           </FilterGroup>
 
           {/* BOTH ANSWERS, unlike the verified-domain chip above, and for the

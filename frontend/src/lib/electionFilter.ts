@@ -8,12 +8,31 @@
  * are standing.
  */
 import { matchesEligibilityFilter, isEligibilityFilterActive, type EligibilityFilter } from './eligibilityFilter';
-import { hasPublishedResults, type Election, type ElectionPhase, type VotingType } from '../data/seed';
+import { type Election, type ElectionPhase, type VotingType } from '../data/seed';
 import { closingSoon } from './phase';
 import { isEmptyPolicy } from './eligibility';
 
-/** Phases worth offering as a chip. Draft and terminal states are not useful filters. */
-export const PHASE_FILTERS: ElectionPhase[] = ['enrolling', 'active', 'tallying', 'closed'];
+/**
+ * Every phase an election on chain can be in, in the order it passes through
+ * them, with the two that end it early at the end.
+ *
+ * All of them, where this used to offer four on the grounds that "draft and
+ * terminal states are not useful filters". UPCOMING is what a voter plans
+ * around, PENDING_VOTE is a state they are left sitting in, and cancelled and
+ * voided are exactly what someone auditing a platform comes looking for. The
+ * panel wraps and is collapsed by default, so the cost of a chip is small and
+ * the cost of a missing one is a question that cannot be asked.
+ */
+export const PHASE_FILTERS: ElectionPhase[] = [
+  'upcoming',
+  'enrolling',
+  'pending_vote',
+  'active',
+  'tallying',
+  'closed',
+  'voided',
+  'cancelled',
+];
 
 export interface ElectionFilterState {
   query: string;
@@ -46,14 +65,6 @@ export interface ElectionFilterState {
   schedule: 'fixed' | 'movable' | null;
   /** Its next deadline falls within a day, whatever that deadline is. */
   closingSoon: boolean;
-  /**
-   * Results are published and readable.
-   *
-   * Not the same as the `closed` phase, which is why it is its own filter: an
-   * election can be closed for weeks with nothing published, and someone
-   * looking for something to read would find it and leave empty handed.
-   */
-  withResults: boolean;
   eligibility: EligibilityFilter;
 }
 
@@ -65,7 +76,6 @@ export const EMPTY_FILTERS: ElectionFilterState = {
   votingType: null,
   schedule: null,
   closingSoon: false,
-  withResults: false,
   eligibility: {},
 };
 
@@ -83,7 +93,6 @@ export function isAnyFilterActive(filter: ElectionFilterState): boolean {
     Boolean(filter.votingType) ||
     Boolean(filter.schedule) ||
     filter.closingSoon ||
-    filter.withResults ||
     isEligibilityFilterActive(filter.eligibility)
   );
 }
@@ -130,6 +139,5 @@ export function matchesElectionFilter(
   if (filter.schedule === 'fixed' && election.fixedSchedule !== true) return false;
   if (filter.schedule === 'movable' && election.fixedSchedule !== false) return false;
   if (filter.closingSoon && !closingSoon(election)) return false;
-  if (filter.withResults && !hasPublishedResults(election)) return false;
   return matchesEligibilityFilter(election.eligibilityPolicy, filter.eligibility);
 }

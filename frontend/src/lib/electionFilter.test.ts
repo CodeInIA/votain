@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import {
   EMPTY_FILTERS,
+  PHASE_FILTERS,
   isAnyFilterActive,
   matchesElectionFilter,
   type ElectionFilterState,
@@ -88,15 +89,23 @@ describe('the new properties a reader can narrow by', () => {
     expect(matches(at('closed', soon), { closingSoon: true })).toBe(false);
   });
 
-  it('separates published results from a closed election', () => {
-    // The distinction this filter exists for: closed is not readable, and
-    // someone looking for something to READ would otherwise find it and leave
-    // empty handed.
-    const noTally = at('closed', later, { candidates: [{ id: 'a', name: 'A' }] });
-    const published = at('closed', later, { candidates: [{ id: 'a', name: 'A', votes: 3 }] });
+  it('offers every phase an election on chain can be in', () => {
+    // A "results published" filter used to sit beside these, until the contract
+    // settled it: `phase()` returns CLOSED only when `resultsPublished` is set,
+    // so the two asked the same question and one of them had to go.
+    expect(PHASE_FILTERS).toContain('upcoming');
+    expect(PHASE_FILTERS).toContain('pending_vote');
+    expect(PHASE_FILTERS).toContain('cancelled');
+    expect(PHASE_FILTERS).toContain('voided');
+    // In the order an election passes through them, with the early endings last.
+    expect(PHASE_FILTERS.indexOf('enrolling')).toBeGreaterThan(PHASE_FILTERS.indexOf('upcoming'));
+    expect(PHASE_FILTERS.indexOf('closed')).toBeGreaterThan(PHASE_FILTERS.indexOf('active'));
+  });
 
-    expect(matches(noTally, { withResults: true })).toBe(false);
-    expect(matches(published, { withResults: true })).toBe(true);
+  it('narrows to one phase at a time', () => {
+    expect(matches(at('upcoming', later), { phase: 'upcoming' })).toBe(true);
+    expect(matches(at('active', later), { phase: 'upcoming' })).toBe(false);
+    expect(matches(at('pending_vote', later), { phase: 'pending_vote' })).toBe(true);
   });
 
   it('tells a promise from a refusal from a silence', () => {
@@ -119,7 +128,6 @@ describe('the new properties a reader can narrow by', () => {
     // The dot on the collapsed bar and the "clear filters" link both read this,
     // and a filter missing from it is one the reader cannot tell is on.
     expect(isAnyFilterActive(filters({ closingSoon: true }))).toBe(true);
-    expect(isAnyFilterActive(filters({ withResults: true }))).toBe(true);
     expect(isAnyFilterActive(filters({ schedule: 'fixed' }))).toBe(true);
     expect(isAnyFilterActive(EMPTY_FILTERS)).toBe(false);
   });
