@@ -18,15 +18,6 @@ import { Button } from '../../components/ui/Button';
 import { isChainConfigured } from '../../lib/deployments';
 import type { ElectionPhase } from '../../data/seed';
 
-/**
- * How many of their own elections a voter has before a search box helps.
- *
- * A number rather than "always", because a toolbar over two rows is furniture,
- * and rather than "never", because the list grows and nothing else in this
- * screen scales with it.
- */
-const SEARCH_FROM = 5;
-
 const TABS: { key: 'all' | ElectionPhase; labelKey: string }[] = [
   { key: 'all',       labelKey: 'common.all'       },
   { key: 'enrolling', labelKey: 'phase.enrolling'  },
@@ -77,14 +68,16 @@ export default function VoterElections() {
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   /**
-   * OFFERED ONLY WHEN THERE IS A LIST TO SEARCH.
+   * SHOWN WHENEVER THERE IS A LIST, and not above some number of rows.
    *
-   * Measured against the unfiltered set, so narrowing it to one row never
-   * removes the box that narrowed it. Three elections do not need a toolbar;
-   * fifteen do, and the voter with fifteen is the one who cannot find the one
-   * closing tonight.
+   * It was above five, on the argument that a toolbar over two rows is
+   * furniture. That argument loses to a worse cost: Discover and the
+   * organizer's dashboard show this bar whatever the count, so a threshold
+   * makes two of the four lists behave differently, by a rule nobody can see
+   * and everybody has to learn. Empty is the one case that stays bare, where
+   * the screen is already saying there is nothing here.
    */
-  const worthSearching = myElections.length > SEARCH_FROM;
+  const worthSearching = myElections.length > 0;
 
   const byTab = tab === 'all' ? myElections : myElections.filter(e => {
     if (tab === 'voted') return e.hasVoted;
@@ -93,7 +86,7 @@ export default function VoterElections() {
   // The query alone, because the panel that sets everything else is not
   // offered here: running the whole matcher would let a hand-written URL
   // narrow this list by rules the screen gives no way to see or clear.
-  const needle = worthSearching ? filters.query.trim().toLowerCase() : '';
+  const needle = filters.query.trim().toLowerCase();
   const filtered = sortElections(byTab.filter(e => matchesQuery(e, needle)), filters.sort);
   // Switching tab or searching starts a different list, so it starts at the
   // first page.

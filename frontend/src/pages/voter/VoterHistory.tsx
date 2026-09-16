@@ -25,9 +25,6 @@ interface HistoryRow {
   nullifier: string;
 }
 
-/** How many ballots there are before a search box earns its place. */
-const SEARCH_FROM = 5;
-
 export default function VoterHistory() {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -105,19 +102,18 @@ export default function VoterHistory() {
   };
 
   /**
-   * OFFERED ONLY WHEN THERE IS A LIST TO SEARCH, measured against everything
-   * this browser knows rather than what is on screen: narrowing to one row
-   * must not remove the box that narrowed it.
+   * SHOWN WHENEVER THERE IS A LIST. See `VoterElections`: a threshold makes
+   * this screen behave unlike the other three, by a rule nobody can see.
    */
-  const worthSearching = rows.length > SEARCH_FROM;
+  const worthSearching = rows.length > 0;
 
   const needle = query.trim().toLowerCase();
-  const shown = (worthSearching
-    ? rows.filter(v =>
-        v.electionTitle.toLowerCase().includes(needle) ||
-        v.referenceNumber.toLowerCase().includes(needle))
-    : rows
-  ).slice().sort((a, b) =>
+  const shown = rows
+    .filter(v =>
+      v.electionTitle.toLowerCase().includes(needle) ||
+      v.referenceNumber.toLowerCase().includes(needle))
+    .slice()
+    .sort((a, b) =>
     oldestFirst ? a.date.getTime() - b.date.getTime() : b.date.getTime() - a.date.getTime(),
   );
 
