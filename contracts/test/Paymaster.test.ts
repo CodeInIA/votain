@@ -18,7 +18,7 @@ before(async () => {
 });
 
 describe("ElectionPaymaster, gas tank", () => {
-  it("accepts deposits via receive() and depositFor()", async () => {
+  it("accepts deposits via receive() and deposit()", async () => {
     const paymaster = stack.paymaster;
 
     await (
@@ -29,12 +29,14 @@ describe("ElectionPaymaster, gas tank", () => {
     ).wait();
     expect(await paymaster.gasBalance(organizer.address)).to.equal(ethers.parseEther("1.0"));
 
+    // Each deposit credits WHOEVER SENT IT. This used to take an address and
+    // fill anyone's tank, which put money in a balance its owner never chose to
+    // hold and a row in their history they could not account for.
     await (
-      await paymaster
-        .connect(stranger)
-        .depositFor(organizer.address, { value: ethers.parseEther("0.5") })
+      await paymaster.connect(stranger).deposit({ value: ethers.parseEther("0.5") })
     ).wait();
-    expect(await paymaster.gasBalance(organizer.address)).to.equal(ethers.parseEther("1.5"));
+    expect(await paymaster.gasBalance(stranger.address)).to.equal(ethers.parseEther("0.5"));
+    expect(await paymaster.gasBalance(organizer.address)).to.equal(ethers.parseEther("1.0"));
   });
 
   it("only the owner can configure the factory and relay params", async () => {
@@ -368,7 +370,7 @@ describe("ElectionPaymaster, gas reserved for one election", () => {
     const bare = await stack.factory.elections(count - 1n);
 
     await (
-      await stack.paymaster.connect(organizer).depositFor(organizer.address, {
+      await stack.paymaster.connect(organizer).deposit({
         value: ethers.parseEther("1"),
       })
     ).wait();
@@ -450,19 +452,16 @@ describe("ElectionPaymaster, gas reserved for one election", () => {
     ).to.be.revertedWithCustomError(stack.paymaster, "NotElectionOrganizer");
   });
 
-  it("still lets a stranger help, where the money is plainly a gift", async () => {
-    // `depositFor` stays open: the money lands in the organizer's balance, where
-    // nobody could mistake it for a reserve they might get back.
+  it("gives a stranger no way to put money in this organizer's tank either", async () => {
+    // Nor should it. Giving an organizer gas is a transfer between two wallets,
+    // and leaving it there lets them decide whether it enters a contract at all.
     const before = await stack.paymaster.gasBalance(organizer.address);
     await (
-      await stack.paymaster
-        .connect(stranger)
-        .depositFor(organizer.address, { value: ethers.parseEther("0.5") })
+      await stack.paymaster.connect(stranger).deposit({ value: ethers.parseEther("0.5") })
     ).wait();
 
-    expect((await stack.paymaster.gasBalance(organizer.address)) - before).to.equal(
-      ethers.parseEther("0.5"),
-    );
+    expect(await stack.paymaster.gasBalance(organizer.address)).to.equal(before);
+    expect(await stack.paymaster.gasBalance(stranger.address)).to.be.greaterThan(0n);
   });
 
   it("refuses money aimed at something that is not an election", async () => {
@@ -497,7 +496,7 @@ describe("ElectionPaymaster, moving a balance into an election", () => {
 
   it("moves gas the organizer already holds, without touching their wallet", async () => {
     await (
-      await stack.paymaster.connect(organizer).depositFor(organizer.address, { value: ethers.parseEther("3") })
+      await stack.paymaster.connect(organizer).deposit({ value: ethers.parseEther("3") })
     ).wait();
 
     const walletBefore = await ethers.provider.getBalance(organizer.address);
@@ -516,7 +515,7 @@ describe("ElectionPaymaster, moving a balance into an election", () => {
 
   it("refuses to spend a balance on somebody else's election", async () => {
     await (
-      await stack.paymaster.connect(stranger).depositFor(stranger.address, { value: ethers.parseEther("1") })
+      await stack.paymaster.connect(stranger).deposit({ value: ethers.parseEther("1") })
     ).wait();
 
     // Committing your OWN money to an election is open to anyone, because a
@@ -529,7 +528,7 @@ describe("ElectionPaymaster, moving a balance into an election", () => {
 
   it("refuses to move more than is there", async () => {
     await (
-      await stack.paymaster.connect(organizer).depositFor(organizer.address, { value: ethers.parseEther("1") })
+      await stack.paymaster.connect(organizer).deposit({ value: ethers.parseEther("1") })
     ).wait();
 
     await expect(
@@ -539,7 +538,7 @@ describe("ElectionPaymaster, moving a balance into an election", () => {
 
   it("comes back to the balance it came from, and can go round again", async () => {
     await (
-      await stack.paymaster.connect(organizer).depositFor(organizer.address, { value: ethers.parseEther("2") })
+      await stack.paymaster.connect(organizer).deposit({ value: ethers.parseEther("2") })
     ).wait();
     await (
       await stack.paymaster.connect(organizer).reserveFromBalance(election, ethers.parseEther("2"))
@@ -559,7 +558,7 @@ describe("ElectionPaymaster, moving a balance into an election", () => {
 describe("ElectionFactory, funding a new election from both sources", () => {
   it("takes what it can from the balance and the rest from the transaction", async () => {
     await (
-      await stack.paymaster.connect(organizer).depositFor(organizer.address, { value: ethers.parseEther("1.5") })
+      await stack.paymaster.connect(organizer).deposit({ value: ethers.parseEther("1.5") })
     ).wait();
     const freeBefore = await stack.paymaster.gasBalance(organizer.address);
 

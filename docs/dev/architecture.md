@@ -219,8 +219,13 @@ wrong: the leftovers are released to the ORGANIZER, so a stranger funding an
 election was making them a gift of everything the voters did not spend, with no
 way to ask for it back. Paying for an election is not a donation to the election;
 it is taking on the organizer's obligation, and the refund proves it. Someone who
-does want to help still can, through `depositFor`, where the money lands in the
-organizer's balance and is plainly a gift.
+does want to help sends a plain transfer to the organizer's wallet, which leaves
+them to decide whether it enters a contract at all.
+
+`deposit` fills the caller's own tank and nobody else's, for the same reason it
+took an address before and no longer does: nothing ever called it with somebody
+else's, the interface never offered it, and what it did offer was money appearing
+in a balance its owner never chose to hold.
 
 **What a ballot costs is measured, not assumed.** Every figure quoted in ballots
 used to rest on a constant of 0.03, written once in a source file and a second

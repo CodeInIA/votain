@@ -366,9 +366,10 @@ export async function publishResults(
 // Gas tank
 // ────────────────────────────────────────────────
 
-export async function depositGas(signer: Signer, organizer: string, matic: string): Promise<string> {
+/** Into the signer's own tank: nobody may fill another organizer's. */
+export async function depositGas(signer: Signer, matic: string): Promise<string> {
   const { ethers } = await import("ethers");
-  const tx = await getPaymaster(signer).depositFor(organizer, { value: ethers.parseEther(matic) });
+  const tx = await getPaymaster(signer).deposit({ value: ethers.parseEther(matic) });
   return waitForLifecycleTx(tx);
 }
 

@@ -278,7 +278,7 @@ export default function GasManagement() {
       // reply is lost, which is what leaving the page to sign does to it.
       const before = await getGasBalance(wallet.address!);
       await wallet.withWalletApp(
-        () => depositGas(signer, wallet.address!, amount),
+        () => depositGas(signer, amount),
         () => toast({ title: t('errors.confirm_in_wallet_app'), variant: 'info' }),
         async () => ((await getGasBalance(wallet.address!)) > before ? 'confirmed' : undefined),
       );

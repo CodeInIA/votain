@@ -92,7 +92,9 @@ contract ElectionPaymaster {
 
     event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-    event Deposited(address indexed organizer, address indexed from, uint256 amount);
+    /// @dev No `from`: a tank is only ever filled by its owner, so the two were
+    /// always the same address and one of them was decoration.
+    event Deposited(address indexed organizer, uint256 amount);
     event ElectionFunded(address indexed election, address indexed from, uint256 amount);
     event ReserveReleased(address indexed election, address indexed organizer, uint256 amount);
     event Withdrawn(address indexed organizer, uint256 amount);
@@ -183,13 +185,26 @@ contract ElectionPaymaster {
 
     receive() external payable {
         gasBalance[msg.sender] += msg.value;
-        emit Deposited(msg.sender, msg.sender, msg.value);
+        emit Deposited(msg.sender, msg.value);
     }
 
-    /// @notice Deposit POL into an organizer's gas tank on their behalf.
-    function depositFor(address organizer) external payable {
-        gasBalance[organizer] += msg.value;
-        emit Deposited(organizer, msg.sender, msg.value);
+    /**
+     * @notice Put POL into your own gas tank.
+     *
+     * YOUR OWN, where this used to take an address and credit anyone. Nothing
+     * ever called it with somebody else's: the interface never offered it, and
+     * the one entry point that might have wanted it, the factory, funds an
+     * election rather than a balance. What it did offer was money appearing in
+     * a tank its owner never chose to hold, and a `Deposited` row they could not
+     * account for.
+     *
+     * Wanting to give an organizer gas is not a reason for it either. A plain
+     * transfer from one wallet to another does that, and leaves them to decide
+     * whether it goes into a contract at all.
+     */
+    function deposit() external payable {
+        gasBalance[msg.sender] += msg.value;
+        emit Deposited(msg.sender, msg.value);
     }
 
     /**
