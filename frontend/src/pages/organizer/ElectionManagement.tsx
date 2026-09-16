@@ -335,11 +335,13 @@ export default function ElectionManagement() {
           the measure the ballot is laid out for, and because everything this
           page adds is a stacked full-width control. */}
       <div className="max-w-2xl mx-auto pt-4 pb-24">
-        {/* Explicit target rather than history back: this page is reached from
-            the dashboard, from the members list and from a direct link, and
-            after a reload there is no history to step into at all. */}
+        {/* HISTORY BACK, with the dashboard as the answer when there is none.
+            It used to navigate to the dashboard always, which is right for a
+            direct link or a reload and wrong for everybody else: this page is
+            reached from a filtered list, and a bare path drops the filters
+            that live in the query string. */}
         <div className="flex items-center justify-between gap-3 mb-5">
-          <BackButton onClick={() => navigate('/organizer/dashboard')} />
+          <BackButton fallback="/organizer/dashboard" />
           {/* What a voter sees is the thing an organizer most needs to check
               before an election opens, and there was no way to get to it. */}
           <ViewAsSwitch to="voter" href={voterViewHref(election.id)} />
