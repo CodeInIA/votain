@@ -188,85 +188,69 @@ export function ElectionCard({ election, view = 'public', className }: ElectionC
         {election.description}
       </p>
 
-      {/* Stats, on a fixed 2x2 grid rather than a wrapping row.
-          Four facts of very different widths ("Two-thirds majority" beside
-          "0 enrolled") made a flex row break in a different place on every
-          card, and the date, pushed right by `ml-auto`, landed on the first
-          line or the second depending on what was beside it. Nothing was
-          misaligned within a card and the wall of cards still read as ragged.
+      {/* Stats, on ONE grid of two EQUAL columns, which is the whole point.
+          It used to be `1.35fr 1fr`, uneven so the voting rule had room: that
+          rule carries the longest label on the card in every language. When
+          the two dates arrived they did not fit the narrow half, so they were
+          given a nested even sub-grid, and the result was a card whose second
+          row started its right-hand column 21px left of the first row's. Two
+          grids means two sets of column edges, and the eye reads that as
+          things being out of line, because they are.
 
-          Each fact is now pinned to its own cell, so the columns line up across
-          every card in the list and a card without a turnout figure leaves that
-          cell empty instead of reflowing the other three. The first column is
-          the wider one because it carries the rule, whose label is the longest
-          text here in every language. */}
-      <div className="grid grid-cols-[1.35fr_1fr] gap-x-3 gap-y-1.5 text-xs text-on-surface-meta">
-        {/* How it is decided, which the card never said: a plurality and a
-            two-thirds bar look identical here otherwise, and they are not the
-            same question being asked of the voter. */}
-        <span className="col-start-1 row-start-1 flex items-center gap-1.5 min-w-0">
+          Measured before choosing: at the width a card actually gets, an even
+          half is 139px, and every label fits it except the rule, which needs
+          149. So the rule takes a row of its own and everything else pairs
+          off against one set of edges.
+
+          Placement is automatic now rather than a grid of `col-start` and
+          `row-start` pairs. The full-width items push what follows onto the
+          next row on their own, so a card missing its turnout figure or its
+          promises reflows correctly instead of leaving a hole where an
+          explicit coordinate used to point. */}
+      <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs text-on-surface-meta">
+        {/* Its own row: the longest label here, and the one a reader needs
+            whole. A plurality and a two-thirds bar look identical on a card
+            otherwise, and they are not the same question being asked. */}
+        <span className="col-span-2 flex items-center gap-1.5 min-w-0">
           <VotingTypeIcon className="w-3.5 h-3.5 shrink-0" />
           <span className="truncate">{t(votingTypeLabelKey(election.votingType))}</span>
         </span>
-        <span className="col-start-2 row-start-1 flex items-center gap-1.5 min-w-0">
+
+        {/* The two dates, as a pair, which is the useful way to read them:
+            an election created yesterday that closes tomorrow is a very
+            different thing from the same pair a year apart. */}
+        <CreatedOn date={election.createdAt} />
+        <span className="flex items-center gap-1.5 min-w-0">
+          {/* Paired with the plus on the creation date. See `CreatedOn`. */}
+          <CalendarMinus className="w-3.5 h-3.5 shrink-0" />
+          <span className="truncate">
+            {t('election.ends_on', { date: election.voteEnd.toLocaleDateString() })}
+          </span>
+        </span>
+
+        {/* The two people figures. Turnout is the conditional one, so it sits
+            last in the pair and the empty cell falls at the end of the block
+            rather than in the middle of it. */}
+        <span className="flex items-center gap-1.5 min-w-0">
           <Users className="w-3.5 h-3.5 shrink-0" />
           <span className="truncate">
             {election.totalEnrolled.toLocaleString()} {t('election.enrolled')}
           </span>
         </span>
-        {/* THE TWO DATES SHARE A ROW, AND BOTH SAY WHICH THEY ARE.
-            The closing date used to be a bare "9/25/2026" behind a calendar
-            icon, which was readable while it was the only date on the card.
-            Adding the creation date put two bare numbers a cell apart with
-            nothing to tell them apart, so the one that had never needed a
-            label now needs one. Side by side rather than at opposite ends of
-            the grid, because the useful thing about having both is comparing
-            them: an election created yesterday that closes tomorrow reads
-            very differently from the same pair a year apart.
-
-            CREATED IS ALWAYS DRAWN when the chain knows it. It used to give
-            up its cell whenever there was turnout to show, so it vanished
-            from exactly the elections people look at most: every active one,
-            and on the organizer's dashboard every counted and closed one
-            too. A fact that appears on some cards and not others is worse
-            than one that appears on none, because its absence reads as
-            meaning something. */}
-        {/* THEIR OWN SUB-GRID, SPLIT EVENLY, not two cells of the grid above.
-            That grid is 1.35fr to 1fr because the first column carries the
-            voting rule, the longest label on the card. The dates inherited
-            those widths and did not want them: in Spanish "Termina el
-            25/9/2026" is wider than the narrow column, so it truncated to
-            "Termina el 25/..." and the date, the only part worth reading,
-            was the part cut off. Two equal halves fit both labels in every
-            language the app ships. */}
-        <div className="col-span-2 row-start-2 grid grid-cols-2 gap-x-3 min-w-0">
-          <CreatedOn date={election.createdAt} />
-          <span className="flex items-center gap-1.5 min-w-0">
-            {/* The other end of the pair. See `CreatedOn` for why these two
-                are a plus and a minus rather than two arrows. */}
-            <CalendarMinus className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">
-              {t('election.ends_on', { date: election.voteEnd.toLocaleDateString() })}
-            </span>
-          </span>
-        </div>
-        {/* Its own row now, where it shared one with a date. Short enough
-            that the empty cell beside it costs nothing, and it is the one
-            number here that moves while somebody is reading the card. */}
         {showsTurnout && (
-          <span className="col-start-1 row-start-3 truncate">
+          <span className="truncate">
             {pct}% {t('election.voted')}
           </span>
         )}
-        {/* Full-width rows under the grid rather than cells of their own: these
-            are the longest labels here in every language, and squeezed into one
-            column they truncated to nothing. Auto-placement puts them on rows 3
-            and 4, so a card that makes both promises is one line taller.
+
+        {/* Full width, because these are the only labels longer than half a
+            card: "No se puede cancelar" needs more than the 139px a column
+            gets. Nothing is drawn for an election deployed before the flags,
+            which made no promise and declined none.
 
             The same component the detail pages use, where this card used to
             draw its own copy of the fixed/movable line and had never been
-            taught the second promise at all: an election that cannot be called
-            off looked identical to one that can. */}
+            taught the second promise at all. */}
         <SchedulePromise
           fixedSchedule={election.fixedSchedule}
           cancellable={election.cancellable}
