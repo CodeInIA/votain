@@ -2,6 +2,7 @@ import { useState, useEffect, type ReactNode } from 'react';
 import { clearSessionSecrets } from '../lib/passkeyPrf';
 import { clearOrganizerKeyCache } from '../lib/organizerKey';
 import { clearIdentity } from '../lib/semaphore';
+import { clearOnDevice, sealOnDevice } from '../lib/deviceSeal';
 import { storeVoterPersonhood, clearVoterPersonhood } from '../lib/voterSession';
 import {
   clearRolePreference,
@@ -104,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (res.status === 401) {
           // Definitive "not authenticated": clear any (possibly spoofed) flag.
           localStorage.removeItem(VOTER_KEY);
-          localStorage.removeItem('voter_nullifier');
+          void clearOnDevice('nullifier');
           clearVoterPersonhood();
           setVoterLoggedInState(false);
           return null;
@@ -115,7 +116,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       .then(data => {
         if (data?.authenticated) {
-          if (data.nullifier) localStorage.setItem('voter_nullifier', data.nullifier);
+          // Sealed rather than stored: see `deviceSeal`. Not awaited,
+          // because nothing in this reconcile depends on it landing, and the
+          // only reader loads it asynchronously anyway.
+          if (data.nullifier) void sealOnDevice('nullifier', data.nullifier);
           // Written on every reconcile, cleared when absent: a voter who signs
           // in again with a stronger credential must not keep the old answer,
           // and one whose credential predates the claim must not keep a level
@@ -150,7 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // which the fallback never performs.
   const voterSignOut = () => {
     localStorage.removeItem(VOTER_KEY);
-    localStorage.removeItem('voter_nullifier');
+    void clearOnDevice('nullifier');
     clearVoterPersonhood();
     clearIdentity();
     // The PRF secrets a passkey handed over this session live in memory only,

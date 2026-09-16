@@ -36,16 +36,38 @@
 const DB_NAME = "votain-device-seal";
 const DB_VERSION = 1;
 const STORE = "seal";
-const KEY_ID = "phrase-key";
-const BLOB_ID = "phrase-blob";
-
-/** The plaintext slot, which is now only a fallback and a thing to migrate. */
-const LEGACY_PLAINTEXT_KEY = "votain_recovery_phrase";
 /**
- * Set when a sealed phrase exists, so "is there one" can be answered without
- * opening a database. Several callers ask that question during render.
+ * One key for everything this device seals.
+ *
+ * Per-value keys would be theatre: they would all be non-extractable, all
+ * sitting in the same database, all usable by the same page. The key exists
+ * to be unreadable, not to separate one secret from another on a machine that
+ * can reach both.
  */
-const SEALED_MARKER_KEY = "votain_phrase_sealed_here";
+const KEY_ID = "device-key";
+
+/**
+ * What this device can seal, and where each one used to live in the clear.
+ *
+ * `legacyKey` is what makes migration free: a value found in the old slot is
+ * sealed and the clear copy removed the first time anything reads it, so
+ * existing voters are upgraded by opening the app.
+ */
+const SLOT = {
+  /** The twelve words, when no passkey can hold them. The whole identity. */
+  phrase: { blobId: "phrase-blob", legacyKey: "votain_recovery_phrase", marker: "votain_phrase_sealed_here" },
+  /**
+   * The World ID nullifier.
+   *
+   * It cannot cast a vote or impersonate anybody, so it is a weaker secret
+   * than the phrase. It is still a stable identifier for one human inside
+   * Votain, and this platform rests on not being correlatable: leaked
+   * alongside data from somewhere else, it is the join column.
+   */
+  nullifier: { blobId: "nullifier-blob", legacyKey: "voter_nullifier", marker: "votain_nullifier_sealed_here" },
+} as const;
+
+export type SealedName = keyof typeof SLOT;
 
 const IV_BYTES = 12;
 
@@ -109,15 +131,25 @@ async function deviceKey(db: IDBDatabase): Promise<CryptoKey> {
 
 export type PhraseProtection = "sealed-on-device" | "plaintext" | "none";
 
-/** How the phrase on this device is held, for a screen that has to say so. */
-export function phraseProtection(): PhraseProtection {
-  if (localStorage.getItem(SEALED_MARKER_KEY) === "1") return "sealed-on-device";
-  return localStorage.getItem(LEGACY_PLAINTEXT_KEY) !== null ? "plaintext" : "none";
+/** How a value on this device is held, for a screen that has to say so. */
+export function protectionOf(name: SealedName): PhraseProtection {
+  const slot = SLOT[name];
+  if (localStorage.getItem(slot.marker) === "1") return "sealed-on-device";
+  return localStorage.getItem(slot.legacyKey) !== null ? "plaintext" : "none";
 }
 
-/** Whether this device holds the phrase at all, sealed or not. Synchronous. */
+/** Whether this device holds it at all, sealed or not. Synchronous. */
+export function hasOnDevice(name: SealedName): boolean {
+  return protectionOf(name) !== "none";
+}
+
+/** How the phrase is held. The one value several screens ask about by name. */
+export function phraseProtection(): PhraseProtection {
+  return protectionOf("phrase");
+}
+
 export function hasPhraseOnDevice(): boolean {
-  return phraseProtection() !== "none";
+  return hasOnDevice("phrase");
 }
 
 /**
@@ -127,7 +159,8 @@ export function hasPhraseOnDevice(): boolean {
  * migration as well as a write: a voter who already had words sitting there
  * gets them sealed the first time anything stores or reads.
  */
-export async function sealPhraseOnDevice(phrase: string): Promise<PhraseProtection> {
+export async function sealOnDevice(name: SealedName, value: string): Promise<PhraseProtection> {
+  const slot = SLOT[name];
   try {
     const db = await openDb();
     const key = await deviceKey(db);
@@ -136,28 +169,33 @@ export async function sealPhraseOnDevice(phrase: string): Promise<PhraseProtecti
       await crypto.subtle.encrypt(
         { name: "AES-GCM", iv },
         key,
-        new TextEncoder().encode(phrase) as BufferSource,
+        new TextEncoder().encode(value) as BufferSource,
       ),
     );
 
     const blob = new Uint8Array(iv.length + ciphertext.length);
     blob.set(iv, 0);
     blob.set(ciphertext, iv.length);
-    await idbPut(db, BLOB_ID, blob);
+    await idbPut(db, slot.blobId, blob);
 
-    localStorage.setItem(SEALED_MARKER_KEY, "1");
-    // Only now, so a failure anywhere above leaves the voter with the words
-    // they already had rather than with nothing.
-    localStorage.removeItem(LEGACY_PLAINTEXT_KEY);
+    localStorage.setItem(slot.marker, "1");
+    // Only now, so a failure anywhere above leaves the voter with what they
+    // already had rather than with nothing.
+    localStorage.removeItem(slot.legacyKey);
     return "sealed-on-device";
   } catch (error: unknown) {
     // A browser that will not give us a database is a bad place to keep a
     // secret, and not a reason to take somebody's identity away.
-    console.warn("Could not seal the phrase on this device, keeping it as it was:", error);
-    localStorage.setItem(LEGACY_PLAINTEXT_KEY, phrase);
-    localStorage.removeItem(SEALED_MARKER_KEY);
+    console.warn(`Could not seal ${name} on this device, keeping it as it was:`, error);
+    localStorage.setItem(slot.legacyKey, value);
+    localStorage.removeItem(slot.marker);
     return "plaintext";
   }
+}
+
+/** The phrase, by the name the identity module calls it. */
+export function sealPhraseOnDevice(phrase: string): Promise<PhraseProtection> {
+  return sealOnDevice("phrase", phrase);
 }
 
 /**
@@ -167,19 +205,43 @@ export async function sealPhraseOnDevice(phrase: string): Promise<PhraseProtecti
  * removed, so an existing voter is upgraded by opening the app rather than by
  * doing anything.
  */
-export async function readPhraseOnDevice(): Promise<string | null> {
-  const legacy = localStorage.getItem(LEGACY_PLAINTEXT_KEY);
+/**
+ * Drop the marker for something that cannot be opened.
+ *
+ * WHY THIS MATTERS MORE THAN IT LOOKS. The marker is what every synchronous
+ * caller consults, so a blob that will not decrypt leaves the app insisting a
+ * phrase is on this device while every attempt to read it comes back empty:
+ * screens offer to protect something that is not there, and the one honest
+ * answer, "type your phrase again", is never reached. An unreadable secret is
+ * the same as no secret, and saying so is what lets the voter recover.
+ */
+async function forgetUnreadable(name: SealedName): Promise<void> {
+  localStorage.removeItem(SLOT[name].marker);
+  try {
+    const db = await openDb();
+    await idbDelete(db, SLOT[name].blobId);
+  } catch {
+    // The marker is gone, which is the part anything reads.
+  }
+}
+
+export async function readOnDevice(name: SealedName): Promise<string | null> {
+  const slot = SLOT[name];
+  const legacy = localStorage.getItem(slot.legacyKey);
   if (legacy !== null) {
-    await sealPhraseOnDevice(legacy);
+    await sealOnDevice(name, legacy);
     return legacy;
   }
-  if (localStorage.getItem(SEALED_MARKER_KEY) !== "1") return null;
+  if (localStorage.getItem(slot.marker) !== "1") return null;
 
   try {
     const db = await openDb();
-    const blob = await idbGet<Uint8Array>(db, BLOB_ID);
+    const blob = await idbGet<Uint8Array>(db, slot.blobId);
     const key = await idbGet<CryptoKey>(db, KEY_ID);
-    if (!blob || !key) return null;
+    if (!blob || !key) {
+      await forgetUnreadable(name);
+      return null;
+    }
 
     const plain = await crypto.subtle.decrypt(
       { name: "AES-GCM", iv: blob.slice(0, IV_BYTES) },
@@ -188,23 +250,34 @@ export async function readPhraseOnDevice(): Promise<string | null> {
     );
     return new TextDecoder().decode(plain);
   } catch (error: unknown) {
-    // Cleared site data, a corrupted store, a key that went without its blob.
-    // Nothing here can be recovered and the caller has other ways in.
-    console.warn("Could not open the phrase sealed on this device:", error);
+    // Cleared site data, a corrupted store, a blob left behind by a key that
+    // is gone. Nothing here can be recovered and the caller has other ways in.
+    console.warn(`Could not open ${name} sealed on this device:`, error);
+    await forgetUnreadable(name);
     return null;
   }
 }
 
+export function readPhraseOnDevice(): Promise<string | null> {
+  return readOnDevice("phrase");
+}
+
 /** Forget the phrase entirely, both forms of it. */
-export async function clearPhraseOnDevice(): Promise<void> {
-  localStorage.removeItem(LEGACY_PLAINTEXT_KEY);
-  localStorage.removeItem(SEALED_MARKER_KEY);
+export async function clearOnDevice(name: SealedName): Promise<void> {
+  const slot = SLOT[name];
+  localStorage.removeItem(slot.legacyKey);
+  localStorage.removeItem(slot.marker);
   try {
     const db = await openDb();
-    await idbDelete(db, BLOB_ID);
-    await idbDelete(db, KEY_ID);
+    await idbDelete(db, slot.blobId);
+    // The key stays. It is shared, so dropping it here would silently take
+    // the other sealed value down with this one.
   } catch (error: unknown) {
     // The markers are gone, so nothing will be read back either way.
-    console.warn("Could not clear the sealed phrase:", error);
+    console.warn(`Could not clear the sealed ${name}:`, error);
   }
+}
+
+export function clearPhraseOnDevice(): Promise<void> {
+  return clearOnDevice("phrase");
 }

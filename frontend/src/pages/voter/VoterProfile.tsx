@@ -1,4 +1,6 @@
 import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { readOnDevice } from '../../lib/deviceSeal';
 import { useTranslation } from 'react-i18next';
 import { ShieldCheck, SearchCheck, RefreshCw } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
@@ -15,7 +17,20 @@ export default function VoterProfile() {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
-  const nullifier = localStorage.getItem('voter_nullifier');
+  /**
+   * Loaded rather than read during render, because it is sealed now and
+   * opening it means asking the browser to decrypt. Null until it arrives,
+   * which the card below already handles: it was null for anybody who had
+   * never verified.
+   */
+  const [nullifier, setNullifier] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void readOnDevice('nullifier').then(value => {
+      if (!cancelled) setNullifier(value);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <PageLayout role="voter" showNav>

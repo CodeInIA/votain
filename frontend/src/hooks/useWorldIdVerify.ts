@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { type IDKitResult } from '@worldcoin/idkit-core';
 import { useAuth } from '../contexts/AuthContext';
+import { sealOnDevice } from '../lib/deviceSeal';
 
 import { requestWorldIdProof } from '../lib/worldId';
 import { backendUrl } from '../lib/backend';
@@ -37,7 +38,7 @@ export function useWorldIdVerify() {
       }
 
       const data = await res.json() as { nullifier?: string };
-      if (data.nullifier) localStorage.setItem('voter_nullifier', data.nullifier);
+      if (data.nullifier) await sealOnDevice('nullifier', data.nullifier);
 
       // Verification ends here. What happens to the voting identity is a
       // separate question, asked on its own screen, so no authenticator dialog
