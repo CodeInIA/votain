@@ -766,6 +766,8 @@
     "restoring": "Recupero in corso...",
     "restored": "Identità recuperata",
     "failed": "Quelle parole non hanno funzionato",
+    "not_registered": "Queste parole non ricostruiscono nessuna identita nota",
+    "not_registered_desc": "La frase e ben formata, quindi le parole sono dell'elenco, ma l'identita che ricostruisce non e mai stata registrata. Controlla se una parola e fuori posto.",
     "help": "Le parole sono in minuscolo e l'ordine conta. Spazi e maiuscole no.",
     "lost_phrase": "Hai perso anche le parole?",
     "restored_session": "Identità ripristinata, non salvata qui",

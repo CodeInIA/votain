@@ -26,7 +26,17 @@ import { Textarea } from '../../components/ui/Input';
 import { SignOutActions } from '../../components/ui/SignOutActions';
 import { useToast } from '../../components/ui/useToast';
 import { isValidPhrase, normalizePhrase, unknownWords } from '../../lib/recoveryPhrase';
-import { adoptRecoveryPhrase, inspectIdentity } from '../../lib/semaphore';
+import { Modal } from '../../components/ui/Modal';
+import { PasskeyStep } from '../../components/voter/PasskeyStep';
+import { PasskeyCancelledError } from '../../lib/passkeyPrf';
+import {
+  adoptRecoveryPhrase,
+  inspectIdentity,
+  keepRecoveredPhraseOnDevice,
+  PhraseNotRegisteredError,
+  sealRecoveredPhrase,
+} from '../../lib/semaphore';
+import type { Identity } from '@semaphore-protocol/identity';
 
 export default function RecoverPhrase() {
   const { t } = useTranslation();
@@ -35,6 +45,10 @@ export default function RecoverPhrase() {
 
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
+  /** Set once the phrase has been accepted, which is what moves to step two. */
+  const [recovered, setRecovered] = useState<Identity | null>(null);
+  const [noPrf, setNoPrf] = useState(false);
+  const [askingSkip, setAskingSkip] = useState(false);
   /**
    * Whether this human has ever sealed their phrase under a passkey.
    *
@@ -63,37 +77,87 @@ export default function RecoverPhrase() {
   const unknown = useMemo(() => unknownWords(input), [input]);
   const ready = isValidPhrase(input);
 
+  /**
+   * The guard above this route guarantees the session, so the elections are
+   * reachable. It was not always so: public, this screen could adopt a phrase
+   * for somebody with no session and then bounce them off the guard to the
+   * landing page, identity taken on and person nowhere.
+   */
+  const done = () => navigate('/voter/elections', { replace: true });
+
+  /**
+   * Step one: take on the identity, and nothing else.
+   *
+   * Where the words end up is step two now. It used to happen inside this
+   * call, which meant typing the last word of a recovery phrase summoned an
+   * authenticator dialog with no warning and no explanation of what it was
+   * holding.
+   */
   const submit = async () => {
     setBusy(true);
     try {
-      const { kept } = await adoptRecoveryPhrase(input);
-      // Declining the passkey is an answer, and the screen has to say what it
-      // cost: nothing was written here, so the next visit starts from the words
-      // again. Announcing that as a plain success is how somebody ends up
-      // surprised on the device they were being careful about.
-      if (kept === "session") {
-        toast({
-          title: t('recover.restored_session'),
-          description: t('recover.restored_session_desc'),
-          variant: 'warning',
-        });
-      } else {
-        toast({ title: t('recover.restored'), variant: 'success' });
-      }
-      // The guard above this route guarantees the session, so the elections
-      // are reachable. It was not always so: public, this screen could adopt a
-      // phrase for somebody with no session and then bounce them off the guard
-      // to the landing page, identity taken on and person nowhere.
-      navigate('/voter/elections', { replace: true });
+      const { identity } = await adoptRecoveryPhrase(input);
+      setRecovered(identity);
     } catch (e) {
+      // A phrase that rebuilds nobody is not a failure to recover, it is a
+      // typo, and the two need different words: one sends the reader back to
+      // what they typed, the other tells them to try again later.
+      const wrongPhrase = e instanceof PhraseNotRegisteredError;
       toast({
-        title: t('recover.failed'),
-        description: e instanceof Error ? e.message : String(e),
+        title: t(wrongPhrase ? 'recover.not_registered' : 'recover.failed'),
+        description: wrongPhrase
+          ? t('recover.not_registered_desc')
+          : e instanceof Error ? e.message : String(e),
         variant: 'error',
       });
     } finally {
       setBusy(false);
     }
+  };
+
+  /** Step two, the same one a new voter finishes on. */
+  const linkPasskey = async () => {
+    if (!recovered) return;
+    setBusy(true);
+    setNoPrf(false);
+    try {
+      const kept = await sealRecoveredPhrase(input, recovered);
+      if (kept === 'sealed') {
+        toast({ title: t('recover.restored'), variant: 'success' });
+        done();
+        return;
+      }
+      // Nothing to seal under. The words are on the device instead, and the
+      // screen says so rather than calling it a success.
+      setNoPrf(true);
+    } catch (error: unknown) {
+      // Dismissing the prompt is a decision, not a limit. Nothing was kept and
+      // they stay here, because the retry is the whole point of saying so.
+      if (error instanceof PasskeyCancelledError) {
+        toast({ title: t('errors.passkey_cancelled'), variant: 'info' });
+        return;
+      }
+      console.error('Could not link a passkey:', error);
+      toast({
+        title: t('errors.generic_title'),
+        description: error instanceof Error ? error.message : String(error),
+        variant: 'error',
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** Step two, declined: the words stay on this device, in the clear. */
+  const keepOnDevice = () => {
+    keepRecoveredPhraseOnDevice(input);
+    setAskingSkip(false);
+    toast({
+      title: t('recover.restored_session'),
+      description: t('recover.restored_session_desc'),
+      variant: 'warning',
+    });
+    done();
   };
 
   return (
@@ -130,6 +194,25 @@ export default function RecoverPhrase() {
             </p>
           )}
 
+          {recovered ? (
+            /* STEP TWO, and the reason this screen has steps at all. The
+               passkey used to be enrolled inside `adoptRecoveryPhrase`, so
+               the last word of a phrase summoned an authenticator dialog with
+               no warning. It is the same step a new voter finishes on, and
+               the same component, so the two paths cannot describe it
+               differently. */
+            <Card className="p-5">
+              <p className="text-xs text-on-surface-meta mb-3">
+                {t('new_identity.step_of', { current: 2, total: 2 })}
+              </p>
+              <PasskeyStep
+                busy={busy}
+                noPrf={noPrf}
+                onLink={() => void linkPasskey()}
+                onSkip={() => setAskingSkip(true)}
+              />
+            </Card>
+          ) : (
           <Card className="p-5">
             <Textarea
               value={input}
@@ -163,6 +246,7 @@ export default function RecoverPhrase() {
               {busy ? t('recover.restoring') : t('recover.restore')}
             </Button>
           </Card>
+          )}
 
           <p className="text-xs text-on-surface-meta mt-4 leading-relaxed text-center">
             {t('recover.help')}
@@ -185,6 +269,38 @@ export default function RecoverPhrase() {
             </Link>
           </p>
         </div>
+
+        {/* Asked before the words are left readable on this device, which is
+            the outcome nobody would pick on purpose and the one a tired
+            person picks by pressing the quiet link. */}
+        <Modal
+          open={askingSkip}
+          showClose={false}
+          onClose={() => setAskingSkip(false)}
+          title={t('new_identity.skip_confirm_title')}
+          description={t('new_identity.skip_confirm_desc')}
+        >
+          {/* The same two buttons the onboarding confirmation offers, in the
+              same order and with the same words: linking is the answer being
+              pushed, and it is second because that is where the thumb lands. */}
+          <div className="flex flex-col gap-2 mt-2">
+            <Button
+              variant="default"
+              className="w-full rounded-full h-11"
+              disabled={busy}
+              onClick={keepOnDevice}
+            >
+              {t('new_identity.skip')}
+            </Button>
+            <Button
+              variant="gradient"
+              className="w-full rounded-full h-11"
+              onClick={() => setAskingSkip(false)}
+            >
+              {t('new_identity.passkey_action')}
+            </Button>
+          </div>
+        </Modal>
 
         {/* The only way out of this screen, for somebody on the wrong device or
             without their words. Until it was here, leaving meant closing the tab

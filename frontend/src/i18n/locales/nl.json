@@ -760,6 +760,8 @@
     "restoring": "Bezig met herstellen...",
     "restored": "Identiteit hersteld",
     "failed": "Die woorden werkten niet",
+    "not_registered": "Deze woorden vormen geen bekende identiteit",
+    "not_registered_desc": "De zin is goed opgebouwd, dus de woorden staan in de lijst, maar de identiteit die eruit volgt is nooit geregistreerd. Controleer of een woord op de verkeerde plek staat.",
     "help": "De woorden zijn kleine letters en de volgorde telt. Spaties en hoofdletters niet.",
     "lost_phrase": "Ook de woorden kwijt?",
     "restored_session": "Identiteit hersteld, hier niet bewaard",

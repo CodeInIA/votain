@@ -760,6 +760,8 @@
     "restoring": "Wird wiederhergestellt...",
     "restored": "Identität wiederhergestellt",
     "failed": "Diese Wörter haben nicht funktioniert",
+    "not_registered": "Diese Worter ergeben keine bekannte Identitat",
+    "not_registered_desc": "Die Phrase ist wohlgeformt, die Worter stammen also aus der Liste, aber die daraus entstehende Identitat wurde nie registriert. Prufen Sie, ob ein Wort an der falschen Stelle steht.",
     "help": "Die Wörter sind kleingeschrieben und die Reihenfolge zählt. Leerzeichen und Großschreibung nicht.",
     "lost_phrase": "Auch die Wörter verloren?",
     "restored_session": "Identität wiederhergestellt, hier nicht gespeichert",

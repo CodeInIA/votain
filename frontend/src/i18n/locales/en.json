@@ -760,6 +760,8 @@
     "restoring": "Restoring...",
     "restored": "Identity restored",
     "failed": "Those words did not work",
+    "not_registered": "Those words rebuild no known identity",
+    "not_registered_desc": "The phrase is well formed, so the words are on the list, but the identity it rebuilds has never been registered. Check for a word in the wrong place.",
     "help": "The words are all lowercase and the order matters. Spaces and capitals do not.",
     "lost_phrase": "Lost the words as well?",
     "restored_session": "Identity restored, not kept here",

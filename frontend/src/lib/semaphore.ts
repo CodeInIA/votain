@@ -18,6 +18,8 @@
  * Proofs are generated against the election's on-chain LeanIMT group.
  */
 import { Identity } from "@semaphore-protocol/identity";
+import { getRegistry } from "./contracts";
+import { isChainConfigured } from "./deployments";
 import { Group } from "@semaphore-protocol/group";
 import { generateProof, type SemaphoreProof } from "@semaphore-protocol/proof";
 import { poseidon2 } from "poseidon-lite/poseidon2";
@@ -34,7 +36,6 @@ import {
   prfReadbackFailed,
   prfReadbackProven,
   PasskeyAlreadyRegisteredError,
-  PasskeyCancelledError,
   type PrfAssertion,
 } from "./passkeyPrf";
 import { generateRecoveryPhrase, identityFromPhrase, normalizePhrase } from "./recoveryPhrase";
@@ -488,41 +489,134 @@ export type PhraseAdoption = "sealed" | "stored" | "session";
  * A platform that CANNOT seal is a different case and keeps the old behaviour,
  * because there the fallback is the only way back in.
  */
+/**
+ * Raised when the words are well formed and belong to no registered voter.
+ *
+ * Its own type because the screen has to tell it apart from a network
+ * failure: one means "check what you typed" and the other means "try again
+ * in a moment", and showing the wrong one sends somebody looking for a
+ * mistake they did not make.
+ */
+export class PhraseNotRegisteredError extends Error {
+  constructor() {
+    super("That phrase does not belong to a registered identity");
+    this.name = "PhraseNotRegisteredError";
+  }
+}
+
+/**
+ * Whether the chain knows the identity these words rebuild.
+ *
+ * WHAT WAS MISSING. `isValidPhrase` checks the SHAPE of a phrase: twelve
+ * words, all from the list. Nothing checked whether the phrase was the right
+ * one. Twelve words picked at random off that list derive a perfectly valid
+ * Semaphore identity, so a single mistyped word was adopted in silence and
+ * the voter was handed a brand new identity enrolled in nothing. Every
+ * election then said they were not a member, with no explanation and no way
+ * back: the real identity was still recoverable, but the app had already
+ * stopped asking for it.
+ *
+ * WHAT THIS CAN AND CANNOT SETTLE. The registry answers "is this commitment a
+ * verified member", and deliberately does not map a person to a commitment,
+ * because that mapping is what the anonymity rests on. So this catches the
+ * mistake, which is the case that actually happens, and cannot catch somebody
+ * typing another person's phrase, which is not a check that belongs on a
+ * client: whoever holds the words holds the identity, and that is what the
+ * words are.
+ *
+ * `unknown` when there is no chain to ask or the read fails. Recovery must
+ * not depend on a registry lookup succeeding: a voter with the right words
+ * and a bad connection would be locked out of their own identity by a check
+ * meant to protect them.
+ */
+async function registrationOfPhrase(
+  identity: Identity,
+): Promise<"registered" | "unregistered" | "unknown"> {
+  if (!isChainConfigured()) return "unknown";
+  try {
+    const registry = getRegistry();
+    const known = (await registry.verifiedMembers(identity.commitment)) as boolean;
+    return known ? "registered" : "unregistered";
+  } catch (error: unknown) {
+    console.warn("Could not ask the registry about this phrase:", error);
+    return "unknown";
+  }
+}
+
+/**
+ * Take on the identity a phrase rebuilds, and decide nothing else.
+ *
+ * IT USED TO SUMMON A PASSKEY DIALOG on its own, inside this call. Typing the
+ * last word of a recovery phrase produced an authenticator prompt with no
+ * warning, no explanation of what it was for, and no way to see it coming,
+ * which is the exact pattern the sign-in step was rebuilt to avoid and which
+ * the identity step already says out loud: nothing here asks for a
+ * fingerprint without saying why first. Where the phrase LIVES is now a
+ * second, announced step, the same two steps a new voter walks through.
+ *
+ * NOTHING IS WRITTEN TO DISK HERE, and that is deliberate rather than
+ * incidental. Persisting the words before the passkey question is answered is
+ * the older bug this flow already had once: dismissing the prompt left them
+ * in the clear on a device the voter was being careful about, under a screen
+ * that said "restored". The commitment is remembered so the session works;
+ * the words stay in the caller's hands until someone chooses where they go.
+ */
 export async function adoptRecoveryPhrase(
   phrase: string,
-): Promise<{ identity: Identity; kept: PhraseAdoption }> {
+): Promise<{ identity: Identity }> {
   const identity = await identityFromPhrase(phrase);
-  const normalized = normalizePhrase(phrase);
 
-  const keepInTheClear = (): PhraseAdoption => {
-    keepPhraseOnDevice(normalized);
-    return "stored";
-  };
-
-  // Already known to be unable to read one back: no point asking again.
-  if (prfReadbackFailed()) return { identity: remember(identity), kept: keepInTheClear() };
-
-  let kept: PhraseAdoption;
-  try {
-    const assertion = await enrollPrfPasskey("voter");
-    if (assertion) {
-      await sealPhraseForPasskey(normalized, identity, assertion);
-      noteSealed(normalized);
-      kept = "sealed";
-    } else {
-      // No assertion and no error: the authenticator cannot do PRF.
-      kept = keepInTheClear();
-    }
-  } catch (error: unknown) {
-    if (error instanceof PasskeyCancelledError) {
-      kept = "session";
-    } else {
-      console.info("Recovered without sealing under a passkey:", error);
-      kept = keepInTheClear();
-    }
+  // Before anything is remembered. Adopting first and checking after would
+  // leave the wrong identity on this device.
+  if ((await registrationOfPhrase(identity)) === "unregistered") {
+    throw new PhraseNotRegisteredError();
   }
 
-  return { identity: remember(identity), kept };
+  return { identity: remember(identity) };
+}
+
+/**
+ * Seal a recovered phrase under a passkey on this device.
+ *
+ * `completeWithPasskey` without the registration: a voter recovering is
+ * already in the registry, which is how their phrase got past
+ * `adoptRecoveryPhrase` in the first place, and asking the registrar to add
+ * them again would be a write that exists only to be rejected.
+ */
+export async function sealRecoveredPhrase(phrase: string, identity: Identity): Promise<PhraseAdoption> {
+  const normalized = normalizePhrase(phrase);
+  // Already known to be unable to read one back: asking again spends a
+  // fingerprint to be told what we know.
+  if (prfReadbackFailed()) {
+    keepPhraseOnDevice(normalized);
+    return "stored";
+  }
+
+  const assertion = await enrollPrfPasskey("voter");
+  if (!assertion) {
+    // A credential that cannot do PRF, or one that could not be read back.
+    // Nothing can be sealed under it, so the words stay on the device.
+    keepPhraseOnDevice(normalized);
+    return "stored";
+  }
+
+  try {
+    await sealPhraseForPasskey(normalized, identity, assertion);
+    noteSealed(normalized);
+    return "sealed";
+  } catch (error: unknown) {
+    // The passkey working and the vault write succeeding are two events, and
+    // only the first was about the passkey.
+    console.error("The passkey worked and the vault write did not:", error);
+    keepPhraseOnDevice(normalized);
+    return "stored";
+  }
+}
+
+/** Keep a recovered phrase on this device, in the clear, having been asked. */
+export function keepRecoveredPhraseOnDevice(phrase: string): PhraseAdoption {
+  keepPhraseOnDevice(normalizePhrase(phrase));
+  return "stored";
 }
 
 

@@ -766,6 +766,8 @@
     "restoring": "Restauration...",
     "restored": "Identité restaurée",
     "failed": "Ces mots n'ont pas fonctionné",
+    "not_registered": "Ces mots ne reconstruisent aucune identite connue",
+    "not_registered_desc": "La phrase est bien formee, donc les mots viennent de la liste, mais l'identite qu'elle reconstruit n'a jamais ete enregistree. Verifiez si un mot est mal place.",
     "help": "Les mots sont en minuscules et l'ordre compte. Les espaces et les majuscules non.",
     "lost_phrase": "Vous avez perdu les mots aussi ?",
     "restored_session": "Identité restaurée, non conservée ici",
