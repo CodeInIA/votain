@@ -6,11 +6,15 @@
  */
 
 /**
- * Where "view as a voter would" leads, mirroring how `ElectionCard` picks its
- * own destination so the two cannot disagree.
+ * Where "view as a voter would" leads.
+ *
+ * One path whoever is asking. The election page reads the session itself and
+ * shows the ballot or the invitation to verify, so there is no longer a voter
+ * copy of it to choose between. The signature keeps its second argument off:
+ * nothing about the destination depends on it any more.
  */
-export function voterViewHref(electionId: string, voterLoggedIn: boolean): string {
-  return voterLoggedIn ? `/voter/election/${electionId}` : `/election/${electionId}`;
+export function voterViewHref(electionId: string): string {
+  return `/election/${electionId}`;
 }
 
 export function organizerViewHref(electionId: string): string {

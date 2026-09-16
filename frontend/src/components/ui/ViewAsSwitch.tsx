@@ -7,10 +7,10 @@
  * they own gives them no way back to the controls without going through the
  * dashboard.
  *
- * WHICH VOTER VIEW. Not always the same one. Discover sends a signed-in voter to
- * `/voter/election/:id` and everyone else to the public `/election/:id`, so
- * "view as a voter would" has to make the same choice, or the organizer would be
- * shown a page they could not have arrived at.
+ * WHICH VOTER VIEW. There is only one, and there used to be two. `/election/:id`
+ * now serves the reader it has, showing the ballot to a session and the
+ * invitation to verify to everyone else, so "view as a voter would" has one
+ * destination and cannot pick the wrong one.
  *
  * The organizer direction is deliberately narrow: it appears only when the
  * connected wallet owns the election AND an organizer session is active. Without

@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { IdentityStepCard } from '../../components/voter/IdentityStep';
 import { NewVoterSetup } from '../../components/voter/NewVoterSetup';
 import { PageLayout } from '../../components/layout/PageLayout';
+import { takeReturnTo } from '../../lib/returnTo';
 import { SignOutActions } from '../../components/ui/SignOutActions';
 import { Spinner } from '../../components/ui/Spinner';
 import { useToast } from '../../components/ui/useToast';
@@ -30,6 +31,19 @@ import {
   isIdentityLoaded,
   type IdentityState,
 } from '../../lib/semaphore';
+
+/**
+ * Where sign up ends.
+ *
+ * `/voter/elections` unless something remembered a better answer. Someone who
+ * followed a link to one election and pressed "verify to vote" came here to
+ * reach that election, and dropping them on a list of all of them makes them
+ * find it again. Taken rather than read, so it fires once and never surprises
+ * a later sign in. See `lib/returnTo`.
+ */
+function whereNext(): string {
+  return takeReturnTo() ?? '/voter/elections';
+}
 
 export default function IdentityStepPage() {
   const navigate = useNavigate();
@@ -50,7 +64,7 @@ export default function IdentityStepPage() {
   useEffect(() => {
     // Already resolved this session: nothing to ask, nothing to explain.
     if (isIdentityLoaded()) {
-      navigate('/voter/elections', { replace: true });
+      navigate(whereNext(), { replace: true });
       return;
     }
     let cancelled = false;
@@ -71,7 +85,7 @@ export default function IdentityStepPage() {
     }
     try {
       await getOrCreateIdentity();
-      navigate('/voter/elections', { replace: true });
+      navigate(whereNext(), { replace: true });
     } catch (error: unknown) {
       // Verified, and this device cannot open the identity World ID just proved
       // belongs to this human. Not a failure: the session is real, so they go to
@@ -107,7 +121,7 @@ export default function IdentityStepPage() {
     <PageLayout role="voter" showNav={false} showFooter={false}>
       <div className="min-h-dvh flex flex-col items-center justify-center gap-6 p-4">
         {setUp
-          ? <NewVoterSetup onDone={() => navigate('/voter/elections', { replace: true })} />
+          ? <NewVoterSetup onDone={() => navigate(whereNext(), { replace: true })} />
           : state ? <IdentityStepCard state={state} onContinue={go} /> : <Spinner />}
 
         {/* VISIBLE FROM THE START, and it used to appear only after an attempt

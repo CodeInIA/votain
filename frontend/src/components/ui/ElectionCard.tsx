@@ -95,11 +95,11 @@ export function ElectionCard({ election, view = 'public', className }: ElectionC
 
   const VotingTypeIcon = VOTING_TYPE_ICONS[election.votingType];
 
+  // Two destinations, not three: the election reads the session itself now,
+  // so a voter and a visitor follow the same link to the same page.
   const href = organizerView
     ? `/organizer/election/${election.id}`
-    : voterView
-      ? `/voter/election/${election.id}`
-      : `/election/${election.id}`;
+    : `/election/${election.id}`;
 
   // See ORGANIZER_TURNOUT_PHASES. Everyone else sees it only while it moves.
   const showsTurnout = organizerView
@@ -322,7 +322,7 @@ export function ElectionCard({ election, view = 'public', className }: ElectionC
             variant="gradient"
             size="sm"
             className="rounded-full px-4"
-            onClick={e => { e.stopPropagation(); navigate(`/voter/election/${election.id}`); }}
+            onClick={e => { e.stopPropagation(); navigate(`/election/${election.id}`); }}
           >
             {t('election.vote_now')}
           </Button>

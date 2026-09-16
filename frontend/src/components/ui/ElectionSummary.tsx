@@ -19,23 +19,17 @@ import type { Election } from '../../data/seed';
 /**
  * The parts of an election page that are the same whoever is reading it.
  *
- * WHY THESE EXIST. There are two routes to an election: `/election/:id` is
- * public and crawlable, and `/voter/election/:id` is behind a session and
- * carries the ballot. The pages behind them had converged to the point of
- * holding byte-identical markup, and had started to drift inside it: the
- * titles were set at different sizes, only one of them linked to the
- * contract, only one showed what gas was reserved, and a comment in one
- * described behaviour the other had stopped having.
+ * WHY THESE EXIST. There were two pages for one election, a public preview
+ * and a voter's ballot, and they had converged until they held byte-identical
+ * markup while drifting inside it. Pulling the shared half out was the first
+ * half of the answer; the second was merging the pages themselves, so these
+ * are now used by `ElectionPage` alone.
  *
- * WHY NOT ONE PAGE BEHIND BOTH ROUTES, which is the obvious next step. What
- * they share is the description of the election; what they do not share is
- * everything that acts on it. The voter's page is twice the size and pulls in
- * enrolment, the attestation, the ZK proof handoff, the ballot, the receipt
- * and the transaction modal. Serving that from `/election/:id` would load the
- * whole voting stack for a reader with no session and for the crawler that
- * indexes the page, and would put a session check down the middle of one
- * component. Sharing the description and not the machinery keeps the public
- * page small and the two impossible to drift apart.
+ * THEY STAY SEPARATE ANYWAY. The election page is long, and these three are
+ * the part of it that says what the election IS rather than what can be done
+ * about it. That boundary is worth a file even with one caller: it is the
+ * line between the description any reader gets and the machinery only a
+ * session can use.
  */
 
 interface HeaderProps {

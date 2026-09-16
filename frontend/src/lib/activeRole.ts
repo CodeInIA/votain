@@ -126,7 +126,7 @@ export function homeRouteFor(role: Role): string {
  * Pages that exist for both roles, paired by route.
  *
  * Only the pairs where the SAME page is being looked at from the other side.
- * An election is deliberately absent: `/voter/election/:id` and
+ * An election is deliberately absent: `/election/:id` and
  * `/organizer/election/:id` are two views of one election, but the organizer
  * one only loads for the wallet that owns it, so sending someone there because
  * they flipped a switch in the header would land them on a page that refuses.

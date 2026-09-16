@@ -6,6 +6,7 @@ import { AuthProvider } from './contexts/AuthProvider';
 import { RequireVoter, RequireOrganizer } from './components/auth/RequireAuth';
 import Landing from './pages/Landing';
 
+
 // Public
 
 // Voter
@@ -31,14 +32,13 @@ import NotFound from './pages/shared/NotFound';
 const Onboarding = lazy(() => import('./pages/voter/Onboarding'));
 const SignIn = lazy(() => import('./pages/voter/SignIn'));
 const Discover = lazy(() => import('./pages/public/Discover'));
-const ElectionPreview = lazy(() => import('./pages/public/ElectionPreview'));
+const ElectionPage = lazy(() => import('./pages/ElectionPage'));
 const ElectionResults = lazy(() => import('./pages/public/ElectionResults'));
 const HowItWorks = lazy(() => import('./pages/public/HowItWorks'));
 const Terms = lazy(() => import('./pages/public/Terms'));
 const Privacy = lazy(() => import('./pages/public/Privacy'));
 const VerifyReceipt = lazy(() => import('./pages/public/VerifyReceipt'));
 const VoterElections = lazy(() => import('./pages/voter/VoterElections'));
-const ElectionDetail = lazy(() => import('./pages/voter/ElectionDetail'));
 const ZkProofGeneration = lazy(() => import('./pages/voter/ZkProofGeneration'));
 const VoteConfirmation = lazy(() => import('./pages/voter/VoteConfirmation'));
 const ChangeVote = lazy(() => import('./pages/voter/ChangeVote'));
@@ -98,7 +98,7 @@ export default function App() {
 
           {/* Public */}
           <Route path="/discover"              element={<Discover />} />
-          <Route path="/election/:id"          element={<ElectionPreview />} />
+          <Route path="/election/:id"          element={<ElectionPage />} />
           <Route path="/election/:id/results"  element={<ElectionResults />} />
           <Route path="/how-it-works"          element={<HowItWorks />} />
           <Route path="/terms"                 element={<Terms />} />
@@ -132,7 +132,9 @@ export default function App() {
 
           {/* Voter app — requires a voter session (httpOnly VC cookie) */}
           <Route path="/voter/elections"               element={<RequireVoter><VoterElections /></RequireVoter>} />
-          <Route path="/voter/election/:id"            element={<RequireVoter><ElectionDetail /></RequireVoter>} />
+          {/* No `/voter/election/:id`: the election is one public page at
+              `/election/:id`. The steps below stay here, because none of them
+              can begin without a session. */}
           <Route path="/voter/election/:id/zk-proof"   element={<RequireVoter><ZkProofGeneration /></RequireVoter>} />
           <Route path="/voter/election/:id/confirmation" element={<RequireVoter><VoteConfirmation /></RequireVoter>} />
           <Route path="/voter/election/:id/change-vote"  element={<RequireVoter><ChangeVote /></RequireVoter>} />

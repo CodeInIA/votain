@@ -2,47 +2,75 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, ExternalLink, Copy, Check, Lock } from 'lucide-react';
-import { PageLayout } from '../../components/layout/PageLayout';
-import { Badge } from '../../components/ui/Badge';
-import { Button } from '../../components/ui/Button';
-import { BackButton } from '../../components/ui/BackButton';
-import { useAuth } from '../../contexts/AuthContext';
-import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
-import { ViewAsSwitch } from '../../components/ui/ViewAsSwitch';
-import { organizerViewHref, canManageElection } from '../../lib/electionViews';
-import { Card } from '../../components/ui/Card';
-import { Spinner } from '../../components/ui/Spinner';
-import { RadioGroup } from '../../components/ui/RadioCard';
-import { EligibilityRow } from '../../components/ui/EligibilityRow';
+import { PageLayout } from '../components/layout/PageLayout';
+import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
+import { BackButton } from '../components/ui/BackButton';
+import { useAuth } from '../contexts/AuthContext';
+import { usePageMeta } from '../seo/usePageMeta';
+import { useOrganizerWallet } from '../hooks/useOrganizerWallet';
+import { ViewAsSwitch } from '../components/ui/ViewAsSwitch';
+import { organizerViewHref, canManageElection } from '../lib/electionViews';
+import { Card } from '../components/ui/Card';
+import { Spinner } from '../components/ui/Spinner';
+import { RadioGroup } from '../components/ui/RadioCard';
+import { EligibilityRow } from '../components/ui/EligibilityRow';
 import {
   ElectionAbout,
   ElectionHeader,
   ElectionSchedule,
-} from '../../components/ui/ElectionSummary';
-import { StatusNotice } from '../../components/ui/StatusNotice';
-import { TransactionPendingModal, type TxState } from '../../components/ui/TransactionPendingModal';
-import { useElection } from '../../hooks/useElections';
-import { shortenReference } from '../../lib/utils';
-import { usePolicyRequirements } from '../../hooks/usePolicyRequirements';
-import { ResultBarChart } from '../../components/ui/BarChart';
-import { hasPublishedResults, tallyTotal } from '../../data/seed';
-import { enrollInElection } from '../../lib/voting';
-import { FundingNotice } from '../../components/ui/FundingNotice';
-import { useElectionFunding } from '../../hooks/useElectionFunding';
-import { canFundOneVote } from '../../lib/gasNeeds';
-import { useVoteCost } from '../../hooks/useVoteCost';
-import { EligibilityCheck } from '../../components/voter/EligibilityCheck';
-import { relayErrorMessage, type EnrollAttestationInput } from '../../lib/relay';
-import { isEmptyPolicy } from '../../lib/eligibility';
-import { getStoredCommitment } from '../../lib/semaphore';
-import { useVoterIdentity } from '../../hooks/useVoterIdentity';
+} from '../components/ui/ElectionSummary';
+import { StatusNotice } from '../components/ui/StatusNotice';
+import { TransactionPendingModal, type TxState } from '../components/ui/TransactionPendingModal';
+import { useElection } from '../hooks/useElections';
+import { shortenReference } from '../lib/utils';
+import { usePolicyRequirements } from '../hooks/usePolicyRequirements';
+import { ResultBarChart } from '../components/ui/BarChart';
+import { hasPublishedResults, tallyTotal } from '../data/seed';
+import { enrollInElection } from '../lib/voting';
+import { FundingNotice } from '../components/ui/FundingNotice';
+import { useElectionFunding } from '../hooks/useElectionFunding';
+import { canFundOneVote } from '../lib/gasNeeds';
+import { useVoteCost } from '../hooks/useVoteCost';
+import { EligibilityCheck } from '../components/voter/EligibilityCheck';
+import { relayErrorMessage, type EnrollAttestationInput } from '../lib/relay';
+import { isEmptyPolicy } from '../lib/eligibility';
+import { getStoredCommitment } from '../lib/semaphore';
+import { useVoterIdentity } from '../hooks/useVoterIdentity';
+import { rememberReturnTo } from '../lib/returnTo';
 
-export default function ElectionDetail() {
+/**
+ * One election, for whoever is looking at it.
+ *
+ * THERE USED TO BE TWO OF THESE. `/election/:id` served a public preview and
+ * `/voter/election/:id` served the ballot, and the two had converged until
+ * they held byte-identical markup and had begun to drift inside it. Their
+ * shared description came out into `ElectionSummary` first; this is the rest
+ * of the answer, and it removes the question of which link to hand someone.
+ *
+ * ONE ROUTE, `/election/:id`, public and crawlable. The old voter path
+ * redirects to it so links already sent out keep working.
+ *
+ * WHAT A SESSION CHANGES is the footer and the ballot, and nothing above
+ * them. A reader with no session gets the same schedule, the same rules and
+ * the same candidates, and is asked to verify only at the point where acting
+ * begins. Everything that needs a session to be ANSWERED, rather than to be
+ * acted on, is guarded here rather than assumed: `isEnrolled` and `hasVoted`
+ * are undefined without one, which is not the same as false.
+ *
+ * The voting steps that follow, the proof, the confirmation and the change of
+ * vote, stay behind `RequireVoter` at their own paths. They cannot begin
+ * without a session and there is nothing to show a reader who lacks one.
+ */
+export default function ElectionPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { election, loading, live, refresh } = useElection(id);
-  const { organizerLoggedIn } = useAuth();
+  const { voterLoggedIn, organizerLoggedIn } = useAuth();
+  // Public and crawlable, so the tab and the crawler snapshot need the real
+  // title rather than the site name. Falls back until the chain answers.
+  usePageMeta({ title: election?.title, description: election?.description });
   const wallet = useOrganizerWallet();
   // Computed with optional chaining so it sits above the loading and not-found
   // early returns, where the election may not exist yet.
@@ -105,9 +133,13 @@ export default function ElectionDetail() {
   // they can also withdraw it whenever they like, so it is not theirs to promise.
 
 
+  // The chrome follows the reader: a visitor with no session must not be
+  // given the voter's navigation.
+  const layoutRole = voterLoggedIn ? 'voter' : 'public';
+
   if (loading) {
     return (
-      <PageLayout role="voter" showNav>
+      <PageLayout role={layoutRole} showNav>
         <div className="flex items-center justify-center min-h-[60vh]"><Spinner /></div>
       </PageLayout>
     );
@@ -115,7 +147,7 @@ export default function ElectionDetail() {
 
   if (!election) {
     return (
-      <PageLayout role="voter" showNav>
+      <PageLayout role={layoutRole} showNav>
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
           <span className="text-5xl mb-4">🗳️</span>
           <h2 className="text-xl font-bold text-on-surface mb-2">{t('errors.not_found')}</h2>
@@ -145,8 +177,16 @@ export default function ElectionDetail() {
    * an authenticator dialog on its own, unannounced, exactly the pattern the
    * sign-in step was rebuilt to avoid. Now it is asked for, with a reason.
    */
+  // `voterLoggedIn` first, and it is not redundant. Without a session
+  // `isEnrolled` is undefined and no commitment is stored, which is exactly
+  // the shape of "we cannot tell" and would have offered a visitor a button
+  // to unlock an identity they have not got.
   const enrolmentUnknown =
-    live && election.isEnrolled === undefined && getStoredCommitment() === null && !identityReady;
+    voterLoggedIn &&
+    live &&
+    election.isEnrolled === undefined &&
+    getStoredCommitment() === null &&
+    !identityReady;
 
   const infoPanel = (message: string) => (
     <StatusNotice message={message} />
@@ -170,6 +210,38 @@ export default function ElectionDetail() {
         // above with its own link to the full view, and repeating it as the
         // main call to action would send the reader away from what they came for.
         return hasResults ? null : infoPanel(t('results.not_available'));
+    }
+
+    /**
+     * The live phases need an identity, so this is where a reader without one
+     * is asked for it, and not a moment earlier. Everything above is worth
+     * reading signed out.
+     *
+     * `/voter/onboarding` rather than the plain sign in: someone arriving on
+     * a link to a specific election has most likely never seen Votain, and
+     * both doors end at the same World ID verification anyway. What matters
+     * more than the door is coming back here afterwards, which is what
+     * `rememberReturnTo` is for.
+     */
+    if (!voterLoggedIn) {
+      return (
+        <div className="bg-surface-low/30 backdrop-blur-xl rounded-3xl border border-white/5 p-5 flex flex-col sm:flex-row items-center gap-4">
+          <div className="flex items-center gap-3">
+            <Lock className="w-5 h-5 text-on-surface-meta shrink-0" />
+            <p className="text-sm text-on-surface-variant">{t('election.auth_cta')}</p>
+          </div>
+          <Button
+            variant="gradient"
+            className="w-full sm:w-auto rounded-full px-6"
+            onClick={() => {
+              rememberReturnTo(`/election/${election.id}`);
+              navigate('/voter/onboarding');
+            }}
+          >
+            {t('election.verify_to_vote')}
+          </Button>
+        </div>
+      );
     }
 
     // Before any of the live-phase actions: none of them can be right while
@@ -328,7 +400,7 @@ export default function ElectionDetail() {
   };
 
   return (
-    <PageLayout role="voter" showNav>
+    <PageLayout role={layoutRole} showNav>
       <div className="max-w-2xl mx-auto pt-4 pb-28">
         <div className="flex items-center justify-between gap-3 mb-5">
           <BackButton />

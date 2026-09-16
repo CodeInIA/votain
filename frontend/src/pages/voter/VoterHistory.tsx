@@ -94,7 +94,7 @@ export default function VoterHistory() {
     const election = elections.find(e => e.contractAddress === row.electionId);
     return election && hasPublishedResults(election)
       ? `/election/${row.electionId}/results`
-      : `/voter/election/${row.electionId}`;
+      : `/election/${row.electionId}`;
   };
 
   const handleExport = () => {

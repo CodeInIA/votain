@@ -28,7 +28,6 @@ import { usePolicyRequirements } from '../../hooks/usePolicyRequirements';
 import { EligibilityRow } from '../../components/ui/EligibilityRow';
 import { hasPublishedResults, tallyTotal } from '../../data/seed';
 import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
-import { useAuth } from '../../contexts/AuthContext';
 import {
   cancelElection,
   closeVotingEarly,
@@ -50,8 +49,6 @@ export default function ElectionManagement() {
   const { t } = useTranslation();
   const { toast } = useToast();
   const wallet = useOrganizerWallet();
-  // Only to pick which voter view Discover would have led to.
-  const { voterLoggedIn } = useAuth();
   const { election, loading, live, refresh } = useElection(id);
 
   // Above the early returns: hooks must run in the same order on every render.
@@ -312,7 +309,7 @@ export default function ElectionManagement() {
           <BackButton onClick={() => navigate('/organizer/dashboard')} />
           {/* What a voter sees is the thing an organizer most needs to check
               before an election opens, and there was no way to get to it. */}
-          <ViewAsSwitch to="voter" href={voterViewHref(election.id, voterLoggedIn)} />
+          <ViewAsSwitch to="voter" href={voterViewHref(election.id)} />
         </div>
 
         {/* Header */}
