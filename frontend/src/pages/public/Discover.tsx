@@ -11,11 +11,11 @@ import { useVerifiedDomains } from '../../hooks/useVerifiedDomains';
 import { useAuth } from '../../contexts/AuthContext';
 import { ElectionFilters, ClearFilters } from '../../components/ui/ElectionFilters';
 import { usePageMeta } from '../../seo/usePageMeta';
+import { useElectionFilterParams } from '../../hooks/useElectionFilterParams';
 import {
   matchesElectionFilter,
   isAnyFilterActive,
   EMPTY_FILTERS,
-  type ElectionFilterState,
 } from '../../lib/electionFilter';
 import { sortElections, sortNeedsEverything } from '../../lib/electionSort';
 
@@ -26,7 +26,9 @@ export default function Discover() {
   const { t } = useTranslation();
   usePageMeta({ title: t('discover.title'), description: t('discover.subtitle') });
   const { voterLoggedIn } = useAuth();
-  const [filters, setFilters] = useState<ElectionFilterState>(EMPTY_FILTERS);
+  // In the address bar, so opening an election and pressing back comes home
+  // to the list the reader had narrowed rather than to all of them.
+  const [filters, setFilters] = useElectionFilterParams();
   const [showFilters, setShowFilters] = useState(false);
 
   /**

@@ -14,6 +14,7 @@ import { ListError } from '../../components/ui/ListError';
 import { ElectionCard } from '../../components/ui/ElectionCard';
 import { useElectionPages } from '../../hooks/useElectionPages';
 import { usePageLimit } from '../../hooks/usePageLimit';
+import { useElectionFilterParams } from '../../hooks/useElectionFilterParams';
 import { ELECTIONS } from '../../data/seed';
 import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
 import { useVoteCost } from '../../hooks/useVoteCost';
@@ -25,11 +26,7 @@ import {
   setOrganizerName,
 } from '../../lib/organizer';
 import { ElectionFilters, ClearFilters } from '../../components/ui/ElectionFilters';
-import {
-  matchesElectionFilter,
-  EMPTY_FILTERS,
-  type ElectionFilterState,
-} from '../../lib/electionFilter';
+import { matchesElectionFilter } from '../../lib/electionFilter';
 import { sortElections } from '../../lib/electionSort';
 import { useVerifiedDomains } from '../../hooks/useVerifiedDomains';
 
@@ -42,7 +39,9 @@ export default function OrganizerDashboard() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const wallet = useOrganizerWallet();
-  const [filters, setFilters] = useState<ElectionFilterState>(EMPTY_FILTERS);
+  // In the address bar, so opening an election and pressing back comes home
+  // to the list the organizer had narrowed rather than to all of them.
+  const [filters, setFilters] = useElectionFilterParams();
   // Which end of the creation order the pager reads from. Declared up here
   // because the hook below takes it, and the rest of the filter state is only
   // needed further down.
