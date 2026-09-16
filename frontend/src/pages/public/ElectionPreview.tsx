@@ -205,7 +205,10 @@ export default function ElectionPreview() {
             {/* Public too: whether the dates can move is part of deciding
                 whether to take this election seriously, and that decision is
                 made here, before anyone signs in. */}
-            <SchedulePromise fixedSchedule={election.fixedSchedule} />
+            <SchedulePromise
+              fixedSchedule={election.fixedSchedule}
+              cancellable={election.cancellable}
+            />
           </div>
         </Card>
 

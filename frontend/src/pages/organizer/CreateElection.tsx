@@ -73,6 +73,16 @@ interface FormState {
    * they can already promise in words, which is nothing a voter can check.
    */
   fixedSchedule: boolean;
+  /**
+   * Keep the power to call the election off.
+   *
+   * Its own switch, not part of the schedule: "the dates will not move" and
+   * "this will not be called off" are two different things to promise, and an
+   * organizer can reasonably make either without the other. Coupling them would
+   * mean anyone wanting fixed dates had to surrender their only way out, and
+   * most would then fix nothing at all.
+   */
+  cancellable: boolean;
   depositAmount: string;
   /** Attribute restrictions. Off by default: an open election is the norm. */
   eligibilityEnabled: boolean;
@@ -96,6 +106,10 @@ const INITIAL: FormState = {
   // Off by default, because it cannot be undone and an organizer should choose
   // it rather than discover it. The wizard says what it buys.
   fixedSchedule: false,
+  // ON by default, which is the opposite default for the opposite reason: the
+  // way out of an election that should not go ahead is not something to lose by
+  // not noticing the question.
+  cancellable: true,
   eligibilityEnabled: false, minAge: '', countryMode: 'none', countries: [],
 };
 
@@ -625,6 +639,7 @@ export default function CreateElection() {
         candidates,
         privacyQuorum: Number(form.privacyQuorum),
         fixedSchedule: form.fixedSchedule,
+        cancellable: form.cancellable,
         // Drawn on before the wallet is asked for anything, so an organizer who
         // already holds gas is not made to send more and withdraw the
         // difference afterwards.
@@ -723,6 +738,20 @@ export default function CreateElection() {
               checked={form.fixedSchedule}
               onChange={v => set('fixedSchedule', v)}
             />
+            {/* Phrased as giving something up, like the one above, so both
+                switches read the same way round: on means a promise made. */}
+            <Switch
+              label={t('create.no_cancel')}
+              description={t('create.no_cancel_desc')}
+              checked={!form.cancellable}
+              onChange={v => set('cancellable', !v)}
+            />
+            {/* Said once, where both have been answered: an election that can
+                neither be adjusted nor stopped will run exactly as published,
+                and a mistake in these dates is permanent. */}
+            {form.fixedSchedule && !form.cancellable && (
+              <p className="text-xs text-warning">{t('create.no_way_back')}</p>
+            )}
             {/* One column on phones: a date + time label does not fit in a half-width field. */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {form.separateEnrollment && (

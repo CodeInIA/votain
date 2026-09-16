@@ -34,6 +34,7 @@ import {
   closeVotingEarly,
   closeEnrollmentEarly,
   openEnrollmentEarly,
+  openVotingEarly,
   markVoided,
   publishResults,
 } from '../../lib/organizer';
@@ -58,6 +59,7 @@ export default function ElectionManagement() {
   const [cancelModal, setCancelModal] = useState(false);
   const [closeModal, setCloseModal]   = useState(false);
   const [openModal, setOpenModal]     = useState(false);
+  const [openVoteModal, setOpenVoteModal] = useState(false);
   const [tallyModal, setTallyModal]   = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -146,7 +148,8 @@ export default function ElectionManagement() {
 
   // Cancel is allowed any time before the election is decided (contract: before
   // voteEnd), including before enrollment opens and in the pending-vote gap.
-  const canCancel  = ['upcoming', 'enrolling', 'pending_vote', 'active'].includes(election.phase);
+  const canCancel  = election.cancellable !== false
+    && ['upcoming', 'enrolling', 'pending_vote', 'active'].includes(election.phase);
   const closingEnrollment = election.phase === 'enrolling';
   // Only an *open* phase can be closed early: enrollment while enrolling, voting
   // while active. Nothing to close in upcoming or the pending-vote gap.
@@ -166,6 +169,13 @@ export default function ElectionManagement() {
    * opening only adds one, and the closing date does not move either way.
    */
   const canOpen    = scheduleMovable && election.phase === 'upcoming';
+  /**
+   * The gap between the windows, which nothing could reach before.
+   *
+   * `closeEnrollmentEarly` pulls the vote forward with it, but only while
+   * enrolment is open; from here the election used to be stuck waiting.
+   */
+  const canOpenVote = scheduleMovable && election.phase === 'pending_vote';
   const canTally   = election.phase === 'tallying';
   const boundary   = nextBoundary(election);
   // Known before the organizer clicks anything: without the key there is nothing
@@ -460,6 +470,12 @@ export default function ElectionManagement() {
         <Card className="p-5 flex flex-col gap-3">
           <h2 className="text-sm font-semibold text-on-surface mb-1">{t('election_mgmt.actions')}</h2>
 
+          {election.cancellable === false && (
+            <p className="text-xs text-on-surface-meta px-1 flex items-start gap-1.5">
+              <CalendarCheck className="w-3.5 h-3.5 shrink-0 mt-0.5 text-success" />
+              {t('schedule.no_cancel_desc')}
+            </p>
+          )}
           {!scheduleMovable && (
             <p className="text-xs text-on-surface-meta px-1 flex items-start gap-1.5">
               <CalendarCheck className="w-3.5 h-3.5 shrink-0 mt-0.5 text-success" />
@@ -471,6 +487,13 @@ export default function ElectionManagement() {
               onClick={() => setOpenModal(true)}>
               <Clock className="w-4 h-4" />
               {t('election_mgmt.open_enrollment_early')}
+            </Button>
+          )}
+          {canOpenVote && (
+            <Button variant="gradient" className="w-full rounded-2xl gap-2"
+              onClick={() => setOpenVoteModal(true)}>
+              <Clock className="w-4 h-4" />
+              {t('election_mgmt.open_voting_early')}
             </Button>
           )}
           {canClose && (
@@ -561,6 +584,21 @@ export default function ElectionManagement() {
                 t('election_mgmt.enrollment_opened_done'),
                 openEnrollmentEarly,
                 () => setOpenModal(false),
+              )}>
+              {t('common.confirm')}
+            </Button>
+          </div>
+        </Modal>
+        <Modal open={openVoteModal} onClose={() => setOpenVoteModal(false)}
+          title={t('election_mgmt.open_voting_title')}
+          description={t('election_mgmt.open_voting_desc')}>
+          <div className="flex gap-3 mt-2">
+            <Button variant="ghost" className="flex-1" disabled={busy} onClick={() => setOpenVoteModal(false)}>{t('common.cancel')}</Button>
+            <Button variant="gradient" className="flex-1" disabled={busy}
+              onClick={() => runAction(
+                t('election_mgmt.voting_opened_done'),
+                openVotingEarly,
+                () => setOpenVoteModal(false),
               )}>
               {t('common.confirm')}
             </Button>

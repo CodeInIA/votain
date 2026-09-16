@@ -124,3 +124,22 @@ describe('the new properties a reader can narrow by', () => {
     expect(isAnyFilterActive(EMPTY_FILTERS)).toBe(false);
   });
 });
+
+describe('the two promises are not one promise', () => {
+  const later = new Date(Date.now() + 5 * 86_400_000);
+
+  it('filters on the dates without touching whether it can be called off', () => {
+    // An election can keep its schedule and still be stopped, or run to the end
+    // whatever happens. Someone asking for fixed dates is not asking about the
+    // second, and folding them together would answer a question nobody asked.
+    const fixedAndFinal = election({
+      phase: 'active', voteEnd: later, fixedSchedule: true, cancellable: false,
+    });
+    const fixedButStoppable = election({
+      phase: 'active', voteEnd: later, fixedSchedule: true, cancellable: true,
+    });
+
+    expect(matches(fixedAndFinal, { schedule: 'fixed' })).toBe(true);
+    expect(matches(fixedButStoppable, { schedule: 'fixed' })).toBe(true);
+  });
+});

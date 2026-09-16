@@ -401,7 +401,10 @@
     "personhood_orb": "Um documento de identidade e um Orb World ID",
     "personhood_orb_desc": "A fasquia mais alta e mais estreita: a verificação por Orb não está disponível nos países de onde foram retirados, e esses eleitores não se poderão inscrever.",
     "fixed_schedule": "Datas fixas, para sempre",
-    "fixed_schedule_desc": "Abdica de poder fechar as inscrições ou a votação mais cedo. Os eleitores veem isto na eleição e não pode ser desfeito. Cancelar a eleição continua possível."
+    "fixed_schedule_desc": "Abdica de poder fechar as inscrições ou a votação mais cedo. Os eleitores veem isto na eleição e não pode ser desfeito. Cancelar a eleição continua possível.",
+    "no_cancel": "Não poderá ser cancelada, para sempre",
+    "no_cancel_desc": "Abdica de poder cancelar esta eleição. Vai até ao fim seja qual for a participação, e os eleitores veem-no.",
+    "no_way_back": "Com as duas renúncias, esta eleição decorre exactamente como publicada: um erro nestas datas não poderá ser corrigido nem cancelado."
   },
   "election_mgmt": {
     "actions": "Ações",
@@ -447,7 +450,11 @@
     "open_enrollment_early": "Abrir inscrições agora",
     "open_enrollment_title": "Abrir as inscrições mais cedo?",
     "open_enrollment_desc": "Os eleitores poderão inscrever-se a partir de agora. A data de fecho não muda.",
-    "enrollment_opened_done": "Inscrições abertas"
+    "enrollment_opened_done": "Inscrições abertas",
+    "open_voting_early": "Abrir a votação agora",
+    "open_voting_title": "Começar a votação mais cedo?",
+    "open_voting_desc": "As inscrições já fecharam e a votação ainda não é devida. Todos os inscritos poderão votar a partir de agora. A data de fecho não muda.",
+    "voting_opened_done": "Votação aberta"
   },
   "gas": {
     "title": "Gestão de Gas",
@@ -798,8 +805,12 @@
     "fixed": "Datas fixas",
     "fixed_desc": "O organizador abdicou de poder mexer em qualquer prazo ao criar esta eleição. As datas publicadas são as que vão ser cumpridas.",
     "movable": "Datas que o organizador pode encurtar",
-    "movable_desc": "O organizador pode fechar as inscrições ou a votação mais cedo, e enquanto decide vê quantas pessoas se inscreveram e votaram.",
-    "movable_short": "Datas encurtáveis"
+    "movable_desc": "O organizador pode antecipar qualquer data desta eleição ou encurtar um período, e enquanto decide vê quantas pessoas se inscreveram e votaram.",
+    "movable_short": "Datas encurtáveis",
+    "no_cancel": "Não pode ser cancelada",
+    "no_cancel_desc": "O organizador abdicou de poder cancelar esta eleição quando a criou. Vai até ao fim seja qual for a participação.",
+    "can_cancel": "O organizador pode cancelá-la",
+    "can_cancel_desc": "O organizador pode cancelar esta eleição enquanto decorre. Nesse caso não é publicado nenhum resultado."
   },
   "funding": {
     "unfunded_title": "Esta eleição não pode pagar votos neste momento",

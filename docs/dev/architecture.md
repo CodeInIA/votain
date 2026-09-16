@@ -270,10 +270,26 @@ dates it runs to. Immutable because a flag the organizer could turn off when it
 became inconvenient would promise exactly what they can already promise in words,
 which is nothing anyone can check.
 
-**Cancelling stays available** and that is deliberate. Cancelling produces no
-result, so it cannot shape one; it is terminal and public, and it is the only
-honest way out of an election that should not go ahead. An organizer able neither
-to adjust nor to stop would be forced to carry a broken vote to its end.
+**Cancelling is a second switch, not part of the first.** It is a weaker lever
+than closing early, since it publishes no result and so cannot shape one, but it
+is still a veto: an organizer watching the turnout rise against them can deny the
+outcome by ending the election rather than losing it. So `cancellable` is its own
+immutable flag, on by default.
+
+Kept apart from `fixedSchedule` rather than folded into it, because coupling them
+would price the cheaper promise out of reach. An organizer who wanted fixed dates
+would have to surrender their only way out of an election that should not go
+ahead, and most would then fix nothing at all: the more valuable promise lost in
+order to protect the lesser one. With both given up, an election with a mistake in
+its dates runs to the end regardless, which is the point, and the wizard says so
+before it is signed.
+
+**All four boundaries move, which was not true at first.** `openEnrollmentEarly`
+reaches UPCOMING, `closeEnrollmentEarly` reaches ENROLLING and pulls `voteStart`
+with it, `closeVotingEarly` reaches ACTIVE, and PENDING_VOTE, the gap between
+enrolment closing and voting opening, could not be reached at all: an election
+advertising dates the organizer can shorten could not shorten that one.
+`openVotingEarly` closes it.
 
 **Both answers are shown to the voter**, on the card, on the public preview and
 on the election itself. Showing only the reassuring one would make its absence

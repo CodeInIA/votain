@@ -398,7 +398,10 @@
     "personhood_orb": "An identity document and a World ID Orb",
     "personhood_orb_desc": "The strongest bar, and the narrowest: Orb verification is unavailable in countries where the Orbs were withdrawn, and those voters will not be able to enrol.",
     "fixed_schedule": "Fixed dates, permanently",
-    "fixed_schedule_desc": "Give up the power to close enrolment or voting early. Voters see this on the election, and it cannot be undone. Cancelling the election is still possible."
+    "fixed_schedule_desc": "Give up the power to close enrolment or voting early. Voters see this on the election, and it cannot be undone. Cancelling the election is still possible.",
+    "no_cancel": "Cannot be called off, permanently",
+    "no_cancel_desc": "Give up the power to cancel this election. It will run to its end whatever the turnout looks like, and voters see this on the election.",
+    "no_way_back": "With both given up, this election runs exactly as published: a mistake in these dates cannot be corrected or called off."
   },
   "election_mgmt": {
     "actions": "Actions",
@@ -443,7 +446,11 @@
     "open_enrollment_early": "Open enrollment now",
     "open_enrollment_title": "Open enrollment ahead of schedule?",
     "open_enrollment_desc": "Voters will be able to enrol from this moment. The closing date does not change.",
-    "enrollment_opened_done": "Enrollment is open"
+    "enrollment_opened_done": "Enrollment is open",
+    "open_voting_early": "Open voting now",
+    "open_voting_title": "Start voting ahead of schedule?",
+    "open_voting_desc": "Enrolment is already closed and voting is not due yet. Everyone enrolled will be able to vote from this moment. The closing date does not change.",
+    "voting_opened_done": "Voting is open"
   },
   "gas": {
     "title": "Gas Management",
@@ -792,8 +799,12 @@
     "fixed": "Fixed dates",
     "fixed_desc": "The organizer gave up the power to move any deadline when this election was created. The published dates are the dates it will run to.",
     "movable": "Dates the organizer can shorten",
-    "movable_desc": "The organizer can close enrolment or voting early. They can also see how many people have enrolled and voted while deciding.",
-    "movable_short": "Shortenable dates"
+    "movable_desc": "The organizer can bring any of this election’s dates forward or cut a period short. They can also see how many people have enrolled and voted while deciding.",
+    "movable_short": "Shortenable dates",
+    "no_cancel": "Cannot be called off",
+    "no_cancel_desc": "The organizer gave up the power to cancel this election when it was created. It will run to its end whatever the turnout looks like.",
+    "can_cancel": "The organizer can call it off",
+    "can_cancel_desc": "The organizer may cancel this election while it runs. No result is published if they do."
   },
   "funding": {
     "unfunded_title": "This election cannot pay for ballots right now",

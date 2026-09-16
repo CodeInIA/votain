@@ -95,6 +95,7 @@ export async function fetchElection(address: string): Promise<Election> {
     metadataJson,
     policyHashOnChain,
     fixedSchedule,
+    cancellable,
   ] = await Promise.all([
     c.name(),
     c.organizer(),
@@ -113,6 +114,7 @@ export async function fetchElection(address: string): Promise<Election> {
     c.metadataJson(),
     c.eligibilityPolicyHash() as Promise<string>,
     c.fixedSchedule() as Promise<boolean>,
+    c.cancellable() as Promise<boolean>,
   ]);
 
   const meta = parseMetadata(metadataJson);
@@ -282,6 +284,7 @@ export async function fetchElection(address: string): Promise<Election> {
     thresholdValue: Number(thresholdValue),
     privacyQuorum: meta.privacyQuorum ?? (Number(thresholdValue) || 0),
     fixedSchedule: Boolean(fixedSchedule),
+    cancellable: Boolean(cancellable),
     keyNonce: meta.keyNonce,
     isEnrolled,
     hasVoted,

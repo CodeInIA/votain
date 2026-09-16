@@ -13,7 +13,7 @@ import { addresses, chainInfo } from "./deployments";
 // ────────────────────────────────────────────────
 
 export const ELECTION_FACTORY_ABI = [
-  "function createElection((string name, uint8 votingType, uint256 thresholdValue, uint256 numOptions, uint256 enrollStart, uint256 enrollEnd, uint256 voteStart, uint256 voteEnd, uint256 scope, string paillierPublicKey, string metadataJson, address eligibilityAttester, bytes32 eligibilityPolicyHash, uint8 personhood, uint256 privacyQuorum, bool fixedSchedule) cfg, uint256 fromBalance) payable returns (address)",
+  "function createElection((string name, uint8 votingType, uint256 thresholdValue, uint256 numOptions, uint256 enrollStart, uint256 enrollEnd, uint256 voteStart, uint256 voteEnd, uint256 scope, string paillierPublicKey, string metadataJson, address eligibilityAttester, bytes32 eligibilityPolicyHash, uint8 personhood, uint256 privacyQuorum, bool fixedSchedule, bool cancellable) cfg, uint256 fromBalance) payable returns (address)",
   "function electionsCount() view returns (uint256)",
   "function getElections(uint256 offset, uint256 limit) view returns (address[])",
   "event ElectionCreated(address indexed electionAddress, address indexed organizer, string name, uint8 votingType, uint256 scope)",
@@ -44,6 +44,7 @@ export const ELECTION_ABI = [
   "function distinctVoters() view returns (uint256)",
   "function privacyQuorum() view returns (uint256)",
   "function fixedSchedule() view returns (bool)",
+  "function cancellable() view returns (bool)",
   "function resultsPublished() view returns (bool)",
   "function resultsCid() view returns (string)",
   "function tally() view returns (uint256[])",
@@ -58,6 +59,7 @@ export const ELECTION_ABI = [
   "function castVote(bytes voteCiphertext, uint256 nullifier, uint256 merkleRoot, uint256 merkleDepth, uint256[2] _pA, uint256[2][2] _pB, uint256[2] _pC)",
   "function cancelElection()",
   "function openEnrollmentEarly()",
+  "function openVotingEarly()",
   "function closeEnrollmentEarly()",
   "function closeVotingEarly()",
   "function markVoided()",

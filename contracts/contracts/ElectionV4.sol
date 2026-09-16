@@ -73,6 +73,7 @@ contract ElectionV4 is ERC2771Context {
         PersonhoodLevel personhood;    // how distinct a human each voter must prove to be
         uint256 privacyQuorum;         // fewest distinct voters a publishable result may rest on
         bool fixedSchedule;            // organizer gives up the power to move any deadline
+        bool cancellable;              // whether the organizer may call it off at all
     }
 
     // ────────────────────────────────────────────────
@@ -205,6 +206,30 @@ contract ElectionV4 is ERC2771Context {
      * which serves nobody.
      */
     bool public immutable fixedSchedule;
+    /**
+     * @notice Whether the organizer may call this election off. Immutable.
+     *
+     * A SEPARATE PROMISE FROM THE SCHEDULE, and separate on purpose. "The dates
+     * will not move" and "this will not be called off" are two different things
+     * to tell a voter, and an election can reasonably make either without the
+     * other.
+     *
+     * Cancelling is a weaker lever than closing early, since it publishes no
+     * result and so cannot shape one, but it is still a veto: an organizer
+     * watching the turnout rise against them can deny the outcome by ending the
+     * election instead of losing it.
+     *
+     * Kept apart from `fixedSchedule` rather than folded into it, because
+     * coupling them would price the cheaper promise out of reach. An organizer
+     * who wants fixed dates would have to surrender their only way out of an
+     * election that should not go ahead, and most would then fix nothing at all:
+     * the more valuable promise lost in order to protect the lesser one.
+     *
+     * With both given up, an election with a mistake in its dates runs to the
+     * end regardless. That is the point, and the wizard says so before it is
+     * signed.
+     */
+    bool public immutable cancellable;
     bool public resultsPublished;
 
     LeanIMTData internal membersTree;
@@ -261,6 +286,7 @@ contract ElectionV4 is ERC2771Context {
     event MemberEnrolled(uint256 indexed identityCommitment, uint256 index, uint256 merkleTreeRoot);
     event VoteCast(uint256 indexed nullifier, bytes voteCiphertext, uint256 nonce, uint256 timestamp);
     event EnrollmentOpenedEarly(uint256 newEnrollStart);
+    event VotingOpenedEarly(uint256 newVoteStart);
     event EnrollmentClosedEarly(uint256 newEnrollEnd, uint256 newVoteStart);
     event VotingClosedEarly(uint256 newVoteEnd);
     event ElectionCancelled(address indexed by);
@@ -298,6 +324,8 @@ contract ElectionV4 is ERC2771Context {
     error WrongPhase();
     /// @dev The organizer gave up the power to move deadlines when this was deployed.
     error ScheduleIsFixed();
+    /// @dev The organizer gave up the power to call this election off.
+    error NotCancellable();
     error AttestationRequired();
     error UnexpectedAttestation();
     error AttestationExpired();
@@ -392,6 +420,7 @@ contract ElectionV4 is ERC2771Context {
         numOptions = cfg.numOptions;
         privacyQuorum = cfg.privacyQuorum;
         fixedSchedule = cfg.fixedSchedule;
+        cancellable = cfg.cancellable;
         enrollStart = cfg.enrollStart;
         enrollEnd = cfg.enrollEnd;
         voteStart = cfg.voteStart;
@@ -617,6 +646,7 @@ contract ElectionV4 is ERC2771Context {
 
     /// @notice Cancel the election before it ends. Terminal.
     function cancelElection() external onlyOrganizer notDecided {
+        if (!cancellable) revert NotCancellable();
         if (block.timestamp > voteEnd) revert WrongPhase();
         cancelled = true;
         emit ElectionCancelled(_msgSender());
@@ -658,6 +688,28 @@ contract ElectionV4 is ERC2771Context {
         enrollEnd = block.timestamp;
         if (voteStart > block.timestamp) voteStart = block.timestamp;
         emit EnrollmentClosedEarly(enrollEnd, voteStart);
+    }
+
+    /**
+     * @notice Open voting now, from the gap between the two windows.
+     *
+     * THE ONE BOUNDARY NOTHING COULD MOVE. `closeEnrollmentEarly` pulls
+     * `voteStart` forward with it, but only while enrolment is still open: once
+     * an election is sitting in PENDING_VOTE, with enrolment closed and voting
+     * not yet due, every early function refused it and the organizer could only
+     * wait. An election offering "dates the organizer can shorten" could not
+     * shorten that one, which made the label a promise the contract did not
+     * keep.
+     *
+     * The safe direction, like opening enrolment: voting starts sooner, the
+     * close does not move, and nobody loses a chance to take part.
+     */
+    function openVotingEarly() external onlyOrganizer notDecided {
+        if (fixedSchedule) revert ScheduleIsFixed();
+        if (block.timestamp < enrollEnd) revert WrongPhase();
+        if (block.timestamp >= voteStart) revert WrongPhase();
+        voteStart = block.timestamp;
+        emit VotingOpenedEarly(voteStart);
     }
 
     /// @notice End the voting period now, moving the election into tallying.

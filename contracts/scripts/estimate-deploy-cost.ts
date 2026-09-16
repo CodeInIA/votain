@@ -183,6 +183,7 @@ async function main(): Promise<void> {
     // been in the config for a while, `fixedSchedule` since today.
     privacyQuorum: 0n,
     fixedSchedule: false,
+    cancellable: true,
   };
   steps.push({
     label: "factory.createElection (per election)",

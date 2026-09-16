@@ -9,7 +9,7 @@ issuer, voter + organizer flows and tally all wired and green.
 custom dark `DatePicker`, phase-aware voter/organizer/public screens, and shared phase helpers.
 **This pass**: WalletConnect works from a phone for every organizer action, and the voter's
 identity flow was rebuilt around the recovery phrase (see the milestone log).
-Tests: contracts 146/146, backend 107/107, frontend 322/322; prod build OK.
+Tests: contracts 155/155, backend 107/107, frontend 323/323; prod build OK.
 **Next milestone**: Live Amoy deployment (pending funding the deployer key),
 then Phase C (H10 IPFS/Fleek, H11 Phala TEE).
 
@@ -34,7 +34,7 @@ then Phase C (H10 IPFS/Fleek, H11 Phala TEE).
 | Solidity | 0.8.37 | Latest stable |
 | TypeScript target | ESNext | |
 
-**Tests**: 146/146 passing, including an E2E suite that checks real Groth16 proofs against the official Semaphore verifier.
+**Tests**: 155/155 passing, including an E2E suite that checks real Groth16 proofs against the official Semaphore verifier.
 
 **Technical debt pending (H5)**:
 
@@ -100,7 +100,7 @@ then Phase C (H10 IPFS/Fleek, H11 Phala TEE).
 | `@types/node` | 26.5.1 | Same: the `latest` tag lags at 22.x |
 
 **Build**: ✅ clean, no sourcemaps.
-**Tests**: 322/322 unit tests in 45 files passing (Vitest, jsdom), covering the voter identity lifecycle (minting, sealing, the PRF read-back proof, rotation, adding further passkeys), WalletConnect return handling, the Paillier ballot encoding, the i18n plural tables and how the lists are paged. Playwright E2E scaffold in `e2e/` (excluded from Vitest).
+**Tests**: 323/323 unit tests in 45 files passing (Vitest, jsdom), covering the voter identity lifecycle (minting, sealing, the PRF read-back proof, rotation, adding further passkeys), WalletConnect return handling, the Paillier ballot encoding, the i18n plural tables and how the lists are paged. Playwright E2E scaffold in `e2e/` (excluded from Vitest).
 
 **Gas, votes and deadlines** (2026-09-16): gas is reserved per election and cannot be
 withdrawn while voters may still need it; the wallet is crossed only at `deposit` and

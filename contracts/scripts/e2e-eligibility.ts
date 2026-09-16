@@ -124,6 +124,7 @@ async function main() {
     // today. A script nobody runs rots quietly.
     privacyQuorum: 1n,
     fixedSchedule: false,
+    cancellable: true,
   };
 
   console.log("1. Creating a restricted election");

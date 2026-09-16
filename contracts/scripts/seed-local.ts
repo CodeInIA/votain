@@ -105,6 +105,7 @@ async function main() {
       // script could not have run since `privacyQuorum` joined the config.
       privacyQuorum: 3n,
       fixedSchedule: false,
+      cancellable: true,
     };
 
     const tx = await factory.createElection(cfg, 0n, { value: ethers.parseEther("1") });

@@ -395,7 +395,10 @@
     "personhood_orb": "身份证件加 World ID Orb",
     "personhood_orb_desc": "门槛最高，覆盖最窄：在 Orb 已撤出的国家无法完成验证，那里的选民将无法登记。",
     "fixed_schedule": "永久固定日期",
-    "fixed_schedule_desc": "放弃提前关闭登记或投票的权力。选民会在选举上看到这一点，且无法撤销。取消选举仍然可以。"
+    "fixed_schedule_desc": "放弃提前关闭登记或投票的权力。选民会在选举上看到这一点，且无法撤销。取消选举仍然可以。",
+    "no_cancel": "永久不可取消",
+    "no_cancel_desc": "放弃取消本次选举的权力。无论投票率如何都会进行到底，选民也会看到这一点。",
+    "no_way_back": "两项都放弃后，本次选举将完全按公布的方式进行：这些日期中的错误既无法更正也无法取消。"
   },
   "election_mgmt": {
     "actions": "操作",
@@ -439,7 +442,11 @@
     "open_enrollment_early": "立即开放登记",
     "open_enrollment_title": "提前开放登记？",
     "open_enrollment_desc": "选民从现在起可以登记。截止日期不变。",
-    "enrollment_opened_done": "登记已开放"
+    "enrollment_opened_done": "登记已开放",
+    "open_voting_early": "立即开放投票",
+    "open_voting_title": "提前开始投票？",
+    "open_voting_desc": "登记已结束，投票尚未开始。所有已登记的人从现在起即可投票。截止日期不变。",
+    "voting_opened_done": "投票已开放"
   },
   "gas": {
     "title": "Gas 管理",
@@ -786,8 +793,12 @@
     "fixed": "日期固定",
     "fixed_desc": "组织者在创建本次选举时已放弃修改任何期限的权力。公布的日期就是执行的日期。",
     "movable": "组织者可提前结束的日期",
-    "movable_desc": "组织者可以提前关闭登记或投票，而且在做决定时能看到多少人已登记、多少人已投票。",
-    "movable_short": "可提前结束"
+    "movable_desc": "组织者可以把本次选举的任何日期提前，或缩短某个阶段，而且在做决定时能看到多少人已登记、多少人已投票。",
+    "movable_short": "可提前结束",
+    "no_cancel": "无法取消",
+    "no_cancel_desc": "组织者在创建时放弃了取消本次选举的权力。无论投票率如何，它都会进行到底。",
+    "can_cancel": "组织者可以取消",
+    "can_cancel_desc": "组织者可以在选举进行中取消它。那样将不会公布任何结果。"
   },
   "funding": {
     "unfunded_title": "本次选举目前无法支付投票费用",

@@ -420,7 +420,10 @@ export default function ElectionDetail() {
                 A line, not a coloured box: a box that appears when all is well
                 on every election is how people learn to stop reading the one
                 that appears when it is not. */}
-            <SchedulePromise fixedSchedule={election.fixedSchedule} />
+            <SchedulePromise
+              fixedSchedule={election.fixedSchedule}
+              cancellable={election.cancellable}
+            />
             {reservedBallots > 0 && (
               <span className="flex items-center gap-1.5">
                 <Lock className="w-3.5 h-3.5" />

@@ -792,3 +792,112 @@ describe("ElectionV4, a fixed schedule", () => {
       .to.have.lengthOf(1); // the getter, and nothing that writes it
   });
 });
+
+/**
+ * The gap between the two windows, and the way out.
+ *
+ * An election that says its dates can be shortened has to be able to shorten all
+ * of them, and one boundary could not be reached at all. Cancelling is a
+ * separate promise from the dates, kept on its own switch.
+ */
+describe("ElectionV4, the gap between enrolment and voting", () => {
+  async function inTheGap(overrides = {}) {
+    const now = await networkHelpers.time.latest();
+    return freshElection({
+      enrollStart: now - 200,
+      enrollEnd: now - 10,
+      voteStart: now + 86_400,
+      voteEnd: now + 3 * 86_400,
+      ...overrides,
+    });
+  }
+
+  it("sits in PENDING_VOTE, taking neither an enrolment nor a ballot", async () => {
+    const election = await inTheGap();
+    expect(await election.phase()).to.equal(Phase.PENDING_VOTE);
+  });
+
+  it("lets the organizer start voting now, without moving the close", async () => {
+    // The boundary nothing could move: every other early function refuses this
+    // phase, so an election promising shortenable dates could not shorten this
+    // one and the organizer could only wait it out.
+    const election = await inTheGap();
+    const closesAt = await election.voteEnd();
+
+    await expect(election.connect(organizer).openVotingEarly()).to.emit(
+      election,
+      "VotingOpenedEarly",
+    );
+
+    expect(await election.phase()).to.equal(Phase.ACTIVE);
+    expect(await election.voteEnd()).to.equal(closesAt);
+  });
+
+  it("refuses it while enrolment is still open", async () => {
+    // There it would skip the rest of the enrolment window without saying so.
+    // `closeEnrollmentEarly` is the function that ends both at once.
+    const election = await freshElection();
+    await expect(
+      election.connect(organizer).openVotingEarly(),
+    ).to.be.revertedWithCustomError(election, "WrongPhase");
+  });
+
+  it("refuses it once voting has already started", async () => {
+    const election = await inTheGap();
+    await (await election.connect(organizer).openVotingEarly()).wait();
+    await expect(
+      election.connect(organizer).openVotingEarly(),
+    ).to.be.revertedWithCustomError(election, "WrongPhase");
+  });
+
+  it("is refused outright on a fixed schedule", async () => {
+    const election = await inTheGap({ fixedSchedule: true });
+    await expect(
+      election.connect(organizer).openVotingEarly(),
+    ).to.be.revertedWithCustomError(election, "ScheduleIsFixed");
+  });
+
+  it("is the organizer's to open, nobody else's", async () => {
+    const election = await inTheGap();
+    await expect(
+      election.connect(voter).openVotingEarly(),
+    ).to.be.revertedWithCustomError(election, "NotOrganizer");
+  });
+});
+
+describe("ElectionV4, an election that cannot be called off", () => {
+  it("is cancellable by default", async () => {
+    const election = await freshElection();
+    expect(await election.cancellable()).to.equal(true);
+    await (await election.connect(organizer).cancelElection()).wait();
+    expect(await election.phase()).to.equal(Phase.CANCELLED);
+  });
+
+  it("refuses to be cancelled once that was given up", async () => {
+    // A weaker lever than closing early, since it publishes no result and so
+    // cannot shape one, but still a veto: an organizer watching the turnout rise
+    // against them can deny the outcome by ending the election instead.
+    const election = await freshElection({ cancellable: false });
+    await expect(
+      election.connect(organizer).cancelElection(),
+    ).to.be.revertedWithCustomError(election, "NotCancellable");
+    expect(await election.phase()).to.equal(Phase.ENROLLING);
+  });
+
+  it("is a promise apart from the dates, in either combination", async () => {
+    // Coupling the two would price the cheaper one out of reach: an organizer
+    // wanting fixed dates would have to surrender their only way out, and most
+    // would then fix nothing at all.
+    const fixedButCancellable = await freshElection({ fixedSchedule: true, cancellable: true });
+    await (await fixedButCancellable.connect(organizer).cancelElection()).wait();
+    expect(await fixedButCancellable.phase()).to.equal(Phase.CANCELLED);
+
+    const movableButFinal = await freshElection({ fixedSchedule: false, cancellable: false });
+    await expect(
+      movableButFinal.connect(organizer).cancelElection(),
+    ).to.be.revertedWithCustomError(movableButFinal, "NotCancellable");
+    // The dates still move, which is the other half of the pair.
+    await (await movableButFinal.connect(organizer).closeEnrollmentEarly()).wait();
+    expect(await movableButFinal.phase()).to.equal(Phase.ACTIVE);
+  });
+});

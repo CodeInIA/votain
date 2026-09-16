@@ -1,10 +1,19 @@
 import { useTranslation } from 'react-i18next';
-import { CalendarCheck, CalendarClock } from 'lucide-react';
+import { CalendarCheck, CalendarClock, ShieldCheck } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 interface SchedulePromiseProps {
   /** Undefined for seed elections and anything deployed before the flag existed. */
   fixedSchedule: boolean | undefined;
+  /**
+   * Whether the organizer kept the power to call the election off.
+   *
+   * A SEPARATE LINE, not folded into the one above, because they are separate
+   * promises: "the dates will not move" says nothing about whether the election
+   * will happen at all, and a voter reading one badge should not be left to
+   * assume the other.
+   */
+  cancellable?: boolean | undefined;
   className?: string;
 }
 
@@ -29,18 +38,35 @@ interface SchedulePromiseProps {
  * before this existed cannot make the promise, and cannot be said to have
  * declined it either.
  */
-export function SchedulePromise({ fixedSchedule, className }: SchedulePromiseProps) {
+export function SchedulePromise({ fixedSchedule, cancellable, className }: SchedulePromiseProps) {
   const { t } = useTranslation();
-  if (fixedSchedule === undefined) return null;
+  if (fixedSchedule === undefined && cancellable === undefined) return null;
 
   const Icon = fixedSchedule ? CalendarCheck : CalendarClock;
   return (
-    <span
-      className={cn('flex items-center gap-1.5', className)}
-      title={t(fixedSchedule ? 'schedule.fixed_desc' : 'schedule.movable_desc')}
-    >
-      <Icon className={cn('w-3.5 h-3.5 shrink-0', fixedSchedule && 'text-success')} />
-      {t(fixedSchedule ? 'schedule.fixed' : 'schedule.movable')}
-    </span>
+    <>
+      {fixedSchedule !== undefined && (
+        <span
+          className={cn('flex items-center gap-1.5', className)}
+          title={t(fixedSchedule ? 'schedule.fixed_desc' : 'schedule.movable_desc')}
+        >
+          <Icon className={cn('w-3.5 h-3.5 shrink-0', fixedSchedule && 'text-success')} />
+          {t(fixedSchedule ? 'schedule.fixed' : 'schedule.movable')}
+        </span>
+      )}
+      {/* Only the promise is shown, not its absence. Keeping the power to cancel
+          is the ordinary state of every election ever created here, and a line
+          on all of them saying so would be noise, where the badge above is a
+          choice made in both directions and worth reading either way. */}
+      {cancellable === false && (
+        <span
+          className={cn('flex items-center gap-1.5', className)}
+          title={t('schedule.no_cancel_desc')}
+        >
+          <ShieldCheck className="w-3.5 h-3.5 shrink-0 text-success" />
+          {t('schedule.no_cancel')}
+        </span>
+      )}
+    </>
   );
 }

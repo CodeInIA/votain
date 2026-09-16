@@ -145,6 +145,14 @@ export interface Election {
    * existed, which is not the same as false and is shown as neither.
    */
   fixedSchedule?: boolean;
+  /**
+   * The organizer may call this election off.
+   *
+   * A promise apart from the dates: an election can keep its schedule and still
+   * be stopped, or run to the end whatever happens. Undefined for seed elections
+   * and anything deployed before the flag, which is not the same as false.
+   */
+  cancellable?: boolean;
   /** Public per-election salt for deriving the tally key from the organizer's
    *  wallet signature. Present only on elections whose key is re-derivable
    *  (not stored). */

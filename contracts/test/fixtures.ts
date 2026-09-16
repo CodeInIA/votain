@@ -121,6 +121,8 @@ export interface ElectionConfig {
   privacyQuorum: bigint;
   /** The organizer gives up the power to move any deadline. */
   fixedSchedule: boolean;
+  /** Whether the organizer may call the election off at all. */
+  cancellable: boolean;
 }
 
 export const VotingType = {
@@ -171,6 +173,8 @@ export function baseConfig(now: number, overrides: Partial<ElectionConfig> = {})
     // Off by default, so the existing tests keep exercising the early-close
     // paths. The tests for the promise turn it on explicitly.
     fixedSchedule: false,
+    // On by default, so the existing tests keep exercising the way out.
+    cancellable: true,
     ...overrides,
   };
 }

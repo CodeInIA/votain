@@ -103,6 +103,8 @@ export interface CreateElectionInput {
    * real time, since the member and voter counts are public.
    */
   fixedSchedule: boolean;
+  /** Whether the organizer keeps the power to call it off. */
+  cancellable: boolean;
   /**
    * What the organizer already holds in the paymaster, in wei.
    *
@@ -256,6 +258,7 @@ export async function createElection(
     privacyQuorum: BigInt(input.privacyQuorum),
     // Immutable in the contract, so this is the only moment it can be decided.
     fixedSchedule: input.fixedSchedule,
+    cancellable: input.cancellable,
   };
 
   const factory = getFactory(signer);
@@ -328,6 +331,18 @@ export async function cancelElection(signer: Signer, address: string): Promise<s
 /** Bring enrollment forward to now, from an election that has not opened yet. */
 export async function openEnrollmentEarly(signer: Signer, address: string): Promise<string> {
   const tx = await getElection(address, signer).openEnrollmentEarly();
+  return waitForLifecycleTx(tx);
+}
+
+/**
+ * Start voting now, from the gap between the two windows.
+ *
+ * The one boundary nothing could move: every other early call refuses
+ * PENDING_VOTE, so an election offering shortenable dates could not shorten that
+ * one and the organizer could only wait.
+ */
+export async function openVotingEarly(signer: Signer, address: string): Promise<string> {
+  const tx = await getElection(address, signer).openVotingEarly();
   return waitForLifecycleTx(tx);
 }
 

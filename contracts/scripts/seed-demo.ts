@@ -164,6 +164,11 @@ interface Spec {
    * never seen.
    */
   fixedSchedule?: boolean;
+  /**
+   * Whether the organizer may call it off, a promise separate from the dates.
+   * Set on one seeded election so both answers are visible in the interface.
+   */
+  cancellable?: boolean;
   /// Which option each seeded voter picks. Length = number of voters who VOTE.
   ballots?: number[];
   /**
@@ -440,6 +445,7 @@ async function main(): Promise<void> {
       privacyQuorum: BigInt(spec.privacyQuorum ?? SEED_PRIVACY_QUORUM),
       // Immutable in the contract: this is the only moment it can be decided.
       fixedSchedule: spec.fixedSchedule ?? false,
+      cancellable: spec.cancellable ?? true,
     };
 
     const receipt = await (

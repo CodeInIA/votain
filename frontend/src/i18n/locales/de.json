@@ -398,7 +398,10 @@
     "personhood_orb": "Ein Ausweisdokument und ein World ID Orb",
     "personhood_orb_desc": "Die höchste und zugleich engste Hürde: die Orb-Verifizierung ist in Ländern, aus denen die Orbs abgezogen wurden, nicht verfügbar, und diese Wählenden können sich nicht anmelden.",
     "fixed_schedule": "Feste Termine, dauerhaft",
-    "fixed_schedule_desc": "Verzichten Sie darauf, Anmeldung oder Abstimmung vorzeitig zu schließen. Wählende sehen das an der Wahl, und es ist unumkehrbar. Absagen bleibt möglich."
+    "fixed_schedule_desc": "Verzichten Sie darauf, Anmeldung oder Abstimmung vorzeitig zu schließen. Wählende sehen das an der Wahl, und es ist unumkehrbar. Absagen bleibt möglich.",
+    "no_cancel": "Kann dauerhaft nicht abgesagt werden",
+    "no_cancel_desc": "Verzichten Sie darauf, diese Wahl abzusagen. Sie läuft bis zum Ende, wie die Beteiligung auch ausfällt, und die Wählenden sehen das.",
+    "no_way_back": "Mit beiden Verzichten läuft diese Wahl genau wie veröffentlicht: ein Fehler in diesen Terminen lässt sich weder korrigieren noch absagen."
   },
   "election_mgmt": {
     "actions": "Aktionen",
@@ -443,7 +446,11 @@
     "open_enrollment_early": "Anmeldung jetzt öffnen",
     "open_enrollment_title": "Anmeldung vorzeitig öffnen?",
     "open_enrollment_desc": "Wählende können sich ab sofort anmelden. Das Enddatum bleibt unverändert.",
-    "enrollment_opened_done": "Anmeldung ist offen"
+    "enrollment_opened_done": "Anmeldung ist offen",
+    "open_voting_early": "Abstimmung jetzt öffnen",
+    "open_voting_title": "Abstimmung vorzeitig beginnen?",
+    "open_voting_desc": "Die Anmeldung ist geschlossen und die Abstimmung noch nicht fällig. Alle Angemeldeten können ab sofort abstimmen. Das Enddatum bleibt unverändert.",
+    "voting_opened_done": "Die Abstimmung ist offen"
   },
   "gas": {
     "title": "Gas-Verwaltung",
@@ -792,8 +799,12 @@
     "fixed": "Feste Termine",
     "fixed_desc": "Der Veranstalter hat bei der Erstellung darauf verzichtet, Fristen zu verschieben. Die veröffentlichten Termine gelten.",
     "movable": "Termine, die der Veranstalter kürzen kann",
-    "movable_desc": "Der Veranstalter kann Anmeldung oder Abstimmung vorzeitig schließen und sieht dabei, wie viele sich angemeldet und abgestimmt haben.",
-    "movable_short": "Kürzbare Termine"
+    "movable_desc": "Der Veranstalter kann jeden Termin dieser Wahl vorziehen oder einen Abschnitt verkürzen und sieht dabei, wie viele sich angemeldet und abgestimmt haben.",
+    "movable_short": "Kürzbare Termine",
+    "no_cancel": "Kann nicht abgesagt werden",
+    "no_cancel_desc": "Der Veranstalter hat bei der Erstellung darauf verzichtet, diese Wahl abzusagen. Sie läuft bis zum Ende, wie die Beteiligung auch aussieht.",
+    "can_cancel": "Der Veranstalter kann sie absagen",
+    "can_cancel_desc": "Der Veranstalter kann diese Wahl während sie läuft absagen. Dann wird kein Ergebnis veröffentlicht."
   },
   "funding": {
     "unfunded_title": "Diese Wahl kann derzeit keine Stimmen bezahlen",

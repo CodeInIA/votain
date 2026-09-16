@@ -398,7 +398,10 @@
     "personhood_orb": "Een identiteitsdocument en een World ID Orb",
     "personhood_orb_desc": "De hoogste en tegelijk smalste lat: Orb-verificatie is niet beschikbaar in landen waar de Orbs zijn weggehaald, en die kiezers kunnen zich niet inschrijven.",
     "fixed_schedule": "Vaste data, permanent",
-    "fixed_schedule_desc": "Zie af van de mogelijkheid om inschrijving of stemming vroeger te sluiten. Kiezers zien dit bij de verkiezing en het is onomkeerbaar. Annuleren blijft mogelijk."
+    "fixed_schedule_desc": "Zie af van de mogelijkheid om inschrijving of stemming vroeger te sluiten. Kiezers zien dit bij de verkiezing en het is onomkeerbaar. Annuleren blijft mogelijk.",
+    "no_cancel": "Kan permanent niet worden afgeblazen",
+    "no_cancel_desc": "Zie af van de mogelijkheid deze verkiezing te annuleren. Ze loopt tot het einde, hoe de opkomst ook is, en kiezers zien dat.",
+    "no_way_back": "Met beide keuzes loopt deze verkiezing precies zoals gepubliceerd: een fout in deze data kan niet worden hersteld of afgeblazen."
   },
   "election_mgmt": {
     "actions": "Acties",
@@ -443,7 +446,11 @@
     "open_enrollment_early": "Inschrijving nu openen",
     "open_enrollment_title": "Inschrijving eerder openen?",
     "open_enrollment_desc": "Kiezers kunnen zich vanaf nu inschrijven. De sluitingsdatum verandert niet.",
-    "enrollment_opened_done": "Inschrijving is open"
+    "enrollment_opened_done": "Inschrijving is open",
+    "open_voting_early": "Stemming nu openen",
+    "open_voting_title": "Stemming eerder beginnen?",
+    "open_voting_desc": "De inschrijving is gesloten en de stemming is nog niet aan de beurt. Alle ingeschrevenen kunnen vanaf nu stemmen. De sluitingsdatum verandert niet.",
+    "voting_opened_done": "De stemming is open"
   },
   "gas": {
     "title": "Gasbeheer",
@@ -792,8 +799,12 @@
     "fixed": "Vaste data",
     "fixed_desc": "De organisator heeft bij het aanmaken afgezien van de mogelijkheid om termijnen te verschuiven. De gepubliceerde data gelden.",
     "movable": "Data die de organisator kan inkorten",
-    "movable_desc": "De organisator kan inschrijving of stemming vroeger sluiten, en ziet daarbij hoeveel mensen zich hebben ingeschreven en gestemd.",
-    "movable_short": "Inkortbare data"
+    "movable_desc": "De organisator kan elke datum van deze verkiezing vervroegen of een periode inkorten, en ziet daarbij hoeveel mensen zich hebben ingeschreven en gestemd.",
+    "movable_short": "Inkortbare data",
+    "no_cancel": "Kan niet worden afgeblazen",
+    "no_cancel_desc": "De organisator heeft bij het aanmaken afgezien van de mogelijkheid deze verkiezing te annuleren. Ze loopt tot het einde, hoe de opkomst er ook uitziet.",
+    "can_cancel": "De organisator kan haar afblazen",
+    "can_cancel_desc": "De organisator kan deze verkiezing tussentijds annuleren. Er wordt dan geen uitslag gepubliceerd."
   },
   "funding": {
     "unfunded_title": "Deze verkiezing kan nu geen stemmen betalen",
