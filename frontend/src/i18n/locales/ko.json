@@ -157,6 +157,7 @@
     "eligibility": "자격",
     "enrolled": "등록자",
     "created_on": "{{date}} 생성",
+    "ends_on": "{{date}} 종료",
     "votes_cast": "투표 수",
     "participation": "참여율",
     "enrollment_closes": "등록 마감",

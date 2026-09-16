@@ -162,6 +162,7 @@
     "eligibility": "الأهلية",
     "enrolled": "المسجلون",
     "created_on": "أُنشئت في {{date}}",
+    "ends_on": "تنتهي في {{date}}",
     "votes_cast": "الأصوات المدلى بها",
     "participation": "المشاركة",
     "enrollment_closes": "يغلق التسجيل",

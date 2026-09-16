@@ -159,6 +159,7 @@
     "eligibility": "Elegibilidad",
     "enrolled": "Inscritos",
     "created_on": "Creada el {{date}}",
+    "ends_on": "Termina el {{date}}",
     "votes_cast": "Votos emitidos",
     "participation": "Participación",
     "enrollment_closes": "Inscripción cierra",

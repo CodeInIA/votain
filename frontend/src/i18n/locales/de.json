@@ -158,6 +158,7 @@
     "eligibility": "Wahlberechtigung",
     "enrolled": "Angemeldet",
     "created_on": "Erstellt am {{date}}",
+    "ends_on": "Endet am {{date}}",
     "votes_cast": "Abgegebene Stimmen",
     "participation": "Beteiligung",
     "enrollment_closes": "Anmeldung endet",

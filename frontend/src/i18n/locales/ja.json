@@ -157,6 +157,7 @@
     "eligibility": "資格",
     "enrolled": "登録者数",
     "created_on": "{{date}} 作成",
+    "ends_on": "{{date}} 終了",
     "votes_cast": "投票数",
     "participation": "参加率",
     "enrollment_closes": "登録締切",

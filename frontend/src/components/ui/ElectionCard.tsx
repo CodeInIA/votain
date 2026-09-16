@@ -214,26 +214,37 @@ export function ElectionCard({ election, view = 'public', className }: ElectionC
             {election.totalEnrolled.toLocaleString()} {t('election.enrolled')}
           </span>
         </span>
-        {showsTurnout && (
-          <span className="col-start-1 row-start-2 truncate">
-            {pct}% {t('election.voted')}
-          </span>
-        )}
+        {/* THE TWO DATES SHARE A ROW, AND BOTH SAY WHICH THEY ARE.
+            The closing date used to be a bare "9/25/2026" behind a calendar
+            icon, which was readable while it was the only date on the card.
+            Adding the creation date put two bare numbers a cell apart with
+            nothing to tell them apart, so the one that had never needed a
+            label now needs one. Side by side rather than at opposite ends of
+            the grid, because the useful thing about having both is comparing
+            them: an election created yesterday that closes tomorrow reads
+            very differently from the same pair a year apart.
+
+            CREATED IS ALWAYS DRAWN when the chain knows it. It used to give
+            up its cell whenever there was turnout to show, so it vanished
+            from exactly the elections people look at most: every active one,
+            and on the organizer's dashboard every counted and closed one
+            too. A fact that appears on some cards and not others is worse
+            than one that appears on none, because its absence reads as
+            meaning something. */}
+        <CreatedOn date={election.createdAt} className="col-start-1 row-start-2" />
         <span className="col-start-2 row-start-2 flex items-center gap-1.5 min-w-0">
           <Calendar className="w-3.5 h-3.5 shrink-0" />
-          <span className="truncate">{election.voteEnd.toLocaleDateString()}</span>
+          <span className="truncate">
+            {t('election.ends_on', { date: election.voteEnd.toLocaleDateString() })}
+          </span>
         </span>
-        {/* How long it has existed, which no date beside it answers. An
-            election deployed this morning and one that has been running for a
-            year look the same here otherwise, and "this was created an hour
-            ago" is the single most useful thing to know about a convincing
-            copy of somebody else's election.
-
-            In the turnout cell's place when there is no turnout to show, so
-            the grid keeps its shape: a phase where nobody has voted yet has
-            that cell empty anyway. */}
-        {!showsTurnout && (
-          <CreatedOn date={election.createdAt} className="col-start-1 row-start-2" />
+        {/* Its own row now, where it shared one with a date. Short enough
+            that the empty cell beside it costs nothing, and it is the one
+            number here that moves while somebody is reading the card. */}
+        {showsTurnout && (
+          <span className="col-start-1 row-start-3 truncate">
+            {pct}% {t('election.voted')}
+          </span>
         )}
         {/* Full-width rows under the grid rather than cells of their own: these
             are the longest labels here in every language, and squeezed into one

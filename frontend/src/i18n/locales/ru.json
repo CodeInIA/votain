@@ -160,6 +160,7 @@
     "eligibility": "Право голоса",
     "enrolled": "Зарегистрировано",
     "created_on": "Создано {{date}}",
+    "ends_on": "До {{date}}",
     "votes_cast": "Подано голосов",
     "participation": "Явка",
     "enrollment_closes": "Регистрация закрывается",

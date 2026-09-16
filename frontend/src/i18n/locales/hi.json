@@ -158,6 +158,7 @@
     "eligibility": "पात्रता",
     "enrolled": "नामांकित",
     "created_on": "{{date}} को बनाया गया",
+    "ends_on": "{{date}} को समाप्त",
     "votes_cast": "डाले गए वोट",
     "participation": "भागीदारी",
     "enrollment_closes": "नामांकन बंद होता है",

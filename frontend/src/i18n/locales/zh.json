@@ -157,6 +157,7 @@
     "eligibility": "参选资格",
     "enrolled": "已报名",
     "created_on": "创建于 {{date}}",
+    "ends_on": "{{date}} 结束",
     "votes_cast": "已投票",
     "participation": "参与率",
     "enrollment_closes": "报名截止",

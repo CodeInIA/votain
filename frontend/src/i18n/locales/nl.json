@@ -158,6 +158,7 @@
     "eligibility": "Verkiesbaarheid",
     "enrolled": "Ingeschreven",
     "created_on": "Aangemaakt op {{date}}",
+    "ends_on": "Eindigt op {{date}}",
     "votes_cast": "Uitgebrachte stemmen",
     "participation": "Deelname",
     "enrollment_closes": "Inschrijving sluit",

@@ -158,6 +158,7 @@
     "eligibility": "Eligibility",
     "enrolled": "Enrolled",
     "created_on": "Created {{date}}",
+    "ends_on": "Ends {{date}}",
     "votes_cast": "Votes cast",
     "participation": "Participation",
     "enrollment_closes": "Enrollment closes",
