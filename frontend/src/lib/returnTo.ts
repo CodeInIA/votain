@@ -29,9 +29,34 @@
 
 const KEY = 'votain_return_to';
 
+/**
+ * Places that are not somewhere to come back TO.
+ *
+ * The sign-up screens themselves, which would loop, and the landing page,
+ * which is where someone starts rather than where they were going. Refused
+ * here rather than at each call site: the header offers to sign in from every
+ * page in the app, so the one thing that must not depend on the caller
+ * getting it right is which pages count.
+ */
+const NOT_A_DESTINATION = [
+  '/',
+  '/voter/signin',
+  '/voter/onboarding',
+  '/voter/identity',
+  '/voter/recover',
+  '/organizer/auth',
+];
+
 /** A path within this app: one leading slash, and no second one after it. */
 function isInternalPath(path: string): boolean {
   return path.startsWith('/') && !path.startsWith('//') && !path.includes('\\');
+}
+
+/** Worth returning to: inside the app, and not part of getting into it. */
+function isWorthReturningTo(path: string): boolean {
+  if (!isInternalPath(path)) return false;
+  const bare = path.split('?')[0].split('#')[0].replace(/\/+$/, '') || '/';
+  return !NOT_A_DESTINATION.includes(bare);
 }
 
 /**
@@ -42,7 +67,7 @@ function isInternalPath(path: string): boolean {
  */
 export function rememberReturnTo(path: string): void {
   try {
-    if (!isInternalPath(path)) return;
+    if (!isWorthReturningTo(path)) return;
     sessionStorage.setItem(KEY, path);
   } catch {
     // Private mode, or storage refused. Coming back to the list instead of
@@ -61,7 +86,7 @@ export function takeReturnTo(): string | null {
   try {
     const path = sessionStorage.getItem(KEY);
     sessionStorage.removeItem(KEY);
-    return path && isInternalPath(path) ? path : null;
+    return path && isWorthReturningTo(path) ? path : null;
   } catch {
     return null;
   }

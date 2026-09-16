@@ -85,3 +85,45 @@ describe('when the browser will not store anything', () => {
     expect(takeReturnTo()).toBeNull();
   });
 });
+
+describe('places that are not somewhere to come back to', () => {
+  beforeEach(() => sessionStorage.clear());
+
+  it('refuses the screens that getting in is made of', () => {
+    // Remembering one of these would land the person back at the door they
+    // just came through, which at best is confusing and at worst loops.
+    for (const door of [
+      '/voter/signin',
+      '/voter/onboarding',
+      '/voter/identity',
+      '/voter/recover',
+      '/organizer/auth',
+    ]) {
+      rememberReturnTo(door);
+      expect(takeReturnTo()).toBeNull();
+    }
+  });
+
+  it('refuses the landing page', () => {
+    // Where someone starts, not where they were going. Signing in from there
+    // should put them in the app, not back on the front door.
+    rememberReturnTo('/');
+    expect(takeReturnTo()).toBeNull();
+  });
+
+  it('is not fooled by a trailing slash or a query', () => {
+    // The header hands over `pathname + search`, so the check has to look at
+    // the path the way a router would.
+    rememberReturnTo('/voter/signin/');
+    expect(takeReturnTo()).toBeNull();
+    rememberReturnTo('/voter/onboarding?step=2');
+    expect(takeReturnTo()).toBeNull();
+  });
+
+  it('still keeps the pages worth returning to', () => {
+    rememberReturnTo('/election/0xabc');
+    expect(takeReturnTo()).toBe('/election/0xabc');
+    rememberReturnTo('/discover?q=budget');
+    expect(takeReturnTo()).toBe('/discover?q=budget');
+  });
+});

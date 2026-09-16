@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Compass, Vote, Clock, User, LayoutDashboard, Users, Zap, ShieldCheck } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -6,6 +6,7 @@ import { Button } from '../ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
 import { homeRouteFor } from '../../lib/activeRole';
 import { RoleSwitch } from './RoleSwitch';
+import { rememberReturnTo } from '../../lib/returnTo';
 
 interface NavItem {
   to: string;
@@ -40,6 +41,7 @@ const PUBLIC_ITEMS: NavItem[] = [
 export function TopNav() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { activeRole } = useAuth();
 
   const items = activeRole === 'organizer' ? ORGANIZER_ITEMS :
@@ -110,7 +112,14 @@ export function TopNav() {
           <Button
             variant="default"
             size="sm"
-            onClick={() => navigate('/voter/signin')}
+          // Remembers the page first, so signing in from here comes back
+          // to it. The election's own "verify to vote" did this already and
+          // this button did not, which meant the same sign in ended in two
+          // different places depending on which control started it.
+            onClick={() => {
+              rememberReturnTo(location.pathname + location.search);
+              navigate('/voter/signin');
+            }}
             className="rounded-full border-white/10 hover:bg-white/10 px-5"
           >
             {t('landing.login')}
