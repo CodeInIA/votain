@@ -35,6 +35,9 @@ import { useVerifiedDomains } from '../../hooks/useVerifiedDomains';
 
 
 
+/** What the dashboard shows with no chain configured. */
+const SEED_ELECTIONS = ELECTIONS.slice(0, 4);
+
 export default function OrganizerDashboard() {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -68,6 +71,18 @@ export default function OrganizerDashboard() {
     order: sortOrder,
   });
   const { loading, live, refresh, error } = pages;
+  /**
+   * Whether this organizer has any elections at all, as opposed to whether
+   * any are in hand this instant.
+   *
+   * `total` is the size of the scope, settled by one cheap read before a
+   * single election is hydrated, so it survives the moments when the list
+   * itself is empty: a refresh, or a reorder that has to read from the other
+   * end. The controls below used to key off the hydrated list, so those
+   * moments took the filter bar away with the rows and left the organizer
+   * looking at "no elections yet" on an account with thirty.
+   */
+  const hasAnyElections = live ? (pages.total ?? 0) > 0 : SEED_ELECTIONS.length > 0;
   const [gasBalance, setGasBalance] = useState(live ? 0 : 2.5);
   // Set once the organizer has answered or dismissed the name prompt, so it
   // does not reopen on the next render.
@@ -100,7 +115,7 @@ export default function OrganizerDashboard() {
   }, [live, wallet.address, reloadToken]);
 
   // Live: only elections created by the connected organizer. Seed: first few.
-  const myElections = live ? pages.all : ELECTIONS.slice(0, 4);
+  const myElections = live ? pages.all : SEED_ELECTIONS;
 
   // The display name lives in localStorage, so a new browser or a sign out
   // leaves it unset and the next election created would be labelled with the
@@ -204,7 +219,7 @@ export default function OrganizerDashboard() {
                     had drifted: this list had the eligibility inputs but no
                     phase chips, so an organizer could not narrow by state at
                     all and had to learn a second set of rules. */}
-                {myElections.length > 0 && (
+                {hasAnyElections && (
                   <ElectionFilters
                     value={filters}
                     onChange={setFilters}
@@ -219,7 +234,7 @@ export default function OrganizerDashboard() {
                   <div className="flex justify-center py-10"><Spinner /></div>
                 ) : error ? (
                   <ListError onRetry={() => void refresh()} />
-                ) : myElections.length === 0 ? (
+                ) : !hasAnyElections ? (
                   <p className="px-5 py-8 text-center text-sm text-on-surface-meta">{t('dashboard.no_elections')}</p>
                 ) : visibleElections.length === 0 ? (
                   <p className="px-5 py-8 text-center text-sm text-on-surface-meta">{t('dashboard.no_matches')}</p>

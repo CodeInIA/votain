@@ -30,7 +30,7 @@
  * deliberately two pages and not more: the point was to stop hydrating
  * everything, and a generous buffer walks straight back into that.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ELECTIONS, type Election } from '../data/seed';
 import { isChainConfigured } from '../lib/deployments';
 import {
@@ -127,6 +127,11 @@ export interface ElectionPagesState {
 /** Addresses hydrated per round of the fill loop. Independent of the page size. */
 const CHUNK = 12;
 
+// Shared empty values, so an untouched hook keeps the same identities across
+// renders and the memos below do not recompute for nothing.
+const EMPTY_MAP: ReadonlyMap<string, Election> = new Map();
+const EMPTY_SET: ReadonlySet<string> = new Set();
+
 async function resolveScope(scope: ElectionScope, organizer?: string | null): Promise<string[]> {
   if (scope === 'mine') {
     // The caller holds this back until the wallet answers; see `organizer`.
@@ -167,22 +172,85 @@ export function useElectionPages(options: ElectionPagesOptions = {}): ElectionPa
     keepRef.current = keep;
   });
 
+  /**
+   * The scope's addresses in the order the chain layer gave them, which is
+   * always newest first. Never reversed in place: `order` is applied below,
+   * so flipping it is not a reason to ask the chain anything again.
+   */
   const [addresses, setAddresses] = useState<string[] | null>(null);
-  const [hydrated, setHydrated] = useState<Election[]>([]);
-  const [consumed, setConsumed] = useState(0);
+  /**
+   * What has been read, BY ADDRESS rather than as a list in arrival order.
+   *
+   * This is what makes reordering free. Progress used to be an index into the
+   * address list plus an array in fetch order, and both are meaningless the
+   * moment the list is walked from the other end: the only way to reorder was
+   * to throw away every election already read and fetch them again, which is
+   * exactly what the screens were doing, and why the list blinked out and
+   * came back on every change of order.
+   */
+  const [byAddress, setByAddress] = useState<ReadonlyMap<string, Election>>(EMPTY_MAP);
+  /**
+   * Addresses already asked for, successful or not.
+   *
+   * Separate from the map on purpose: a read that fails leaves no election,
+   * and counting only successes would make `complete` unreachable and offer
+   * "load more" for ever.
+   */
+  const [attempted, setAttempted] = useState<ReadonlySet<string>>(EMPTY_SET);
   const [want, setWant] = useState(pageSize);
-  const [loading, setLoading] = useState(live);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
 
-  const source = live ? hydrated : ELECTIONS;
+  /** The scope in the order it is to be shown and read in. */
+  const ordered = useMemo(() => {
+    if (addresses === null) return null;
+    return order === 'oldest' ? [...addresses].reverse() : addresses;
+  }, [addresses, order]);
+
+  /**
+   * The longest fully read PREFIX of the ordered scope.
+   *
+   * A prefix and not "everything read so far", which is the subtle half. Flip
+   * to oldest-first with only the newest pages read and those elections are
+   * still in hand, but they belong at the BOTTOM now: listing them would put
+   * the newest elections under a heading that says oldest. Stopping at the
+   * first address nobody has read yet means what is shown is always the true
+   * head of the list, just sometimes shorter than it will be.
+   *
+   * An address that was attempted and yielded nothing is stepped over rather
+   * than stopped at: that read failed, and waiting for it would stall the
+   * whole list behind one bad election.
+   */
+  const source = useMemo(() => {
+    if (!live) return ELECTIONS;
+    if (ordered === null) return [];
+    const out: Election[] = [];
+    for (const address of ordered) {
+      const election = byAddress.get(address);
+      if (election) out.push(election);
+      else if (!attempted.has(address)) break;
+    }
+    return out;
+  }, [live, ordered, byAddress, attempted]);
+
   const matching = keep ? source.filter(keep) : source;
   const elections = matching.slice(0, want);
 
   const total = live ? (addresses?.length ?? null) : matching.length;
-  const complete = live ? addresses !== null && consumed >= addresses.length : true;
+  const complete = live ? addresses !== null && attempted.size >= addresses.length : true;
   const hasMore = matching.length > want || !complete;
+
+  /**
+   * Nothing to show yet and more still coming.
+   *
+   * Derived rather than a flag that something has to remember to lower. The
+   * flag version was the other half of the blink: re-resolving the scope
+   * emptied the list without raising it, so for a moment the screens had an
+   * empty list and no reason given, and every one of them draws "no elections
+   * found" for that.
+   */
+  const loading = live && !error && elections.length === 0 && !complete;
 
   // Resolving the scope: one cheap query, before anything is hydrated.
   useEffect(() => {
@@ -193,72 +261,88 @@ export function useElectionPages(options: ElectionPagesOptions = {}): ElectionPa
       try {
         const list = await resolveScope(scope, organizer);
         if (cancelled) return;
-        // Every `fetchElection*Addresses` hands these back newest first, so
-        // the other order is one reversal and the pager needs to know nothing
-        // about it.
-        setAddresses(order === 'oldest' ? [...list].reverse() : list);
-        setHydrated([]);
-        setConsumed(0);
+        // Stored as the chain gave them, newest first. `ordered` applies the
+        // reader's choice, so this effect has no reason to run again when
+        // that choice changes and no reason to discard what it has read.
+        setAddresses(list);
+        setByAddress(EMPTY_MAP);
+        setAttempted(EMPTY_SET);
         setError(null);
-        // Nothing in scope resolves the screen here; the fill loop below would
-        // never run and the spinner would never come down.
-        if (list.length === 0) setLoading(false);
       } catch (e) {
-        if (!cancelled) {
-          setError(e instanceof Error ? e.message : String(e));
-          setLoading(false);
-        }
+        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [live, scope, organizer, waitingForScope, order, reloadToken]);
+  }, [live, scope, organizer, waitingForScope, reloadToken]);
 
   // Filling the page: hydrate in chunks until there are enough MATCHES.
   useEffect(() => {
-    if (!live || addresses === null || addresses.length === 0) return;
+    if (!live || ordered === null || ordered.length === 0) return;
     let cancelled = false;
 
     void (async () => {
       try {
         const target = hydrateAll ? Number.POSITIVE_INFINITY : want + pageSize;
-        let seen = consumed;
+        // Walked in the order being shown, skipping whatever a previous run
+        // already asked for. After a change of order that is usually most of
+        // the list, and on a screen that reads everything it is all of it, so
+        // the loop does not run at all.
+        const pending = ordered.filter(address => !attempted.has(address));
         let found = matching.length;
-        const fresh: Election[] = [];
+        let i = 0;
+        // Keyed by the address that was ASKED FOR, not by a field of the
+        // answer. `hydrateElections` returns one election per address in the
+        // order it was given them, so the pairing is positional and the
+        // pager never has to trust the reply to say which question it
+        // answers.
+        const fresh: [string, Election][] = [];
+        const tried: string[] = [];
 
-        while (found < target && seen < addresses.length) {
-          const chunk = addresses.slice(seen, seen + CHUNK);
+        while (found < target && i < pending.length) {
+          const chunk = pending.slice(i, i + CHUNK);
           const page = await hydrateElections(chunk);
           if (cancelled) return;
-          seen += chunk.length;
-          fresh.push(...page);
+          i += chunk.length;
+          tried.push(...chunk);
+          page.forEach((election, j) => fresh.push([chunk[j], election]));
           const k = keepRef.current;
           found += k ? page.filter(k).length : page.length;
         }
 
-        if (fresh.length > 0) setHydrated(prev => [...prev, ...fresh]);
-        if (seen !== consumed) setConsumed(seen);
+        if (fresh.length > 0) {
+          setByAddress(prev => {
+            const next = new Map(prev);
+            for (const [address, election] of fresh) next.set(address, election);
+            return next;
+          });
+        }
+        if (tried.length > 0) {
+          setAttempted(prev => {
+            const next = new Set(prev);
+            for (const address of tried) next.add(address);
+            return next;
+          });
+        }
         setError(null);
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e));
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-          setLoadingMore(false);
-        }
+        if (!cancelled) setLoadingMore(false);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-    // `matching` and `consumed` are read inside but must not re-trigger: the
-    // effect writes them, and depending on them would loop. `want` asks for
-    // more, `filterKey` says the target moved, `reloadToken` restarts.
+    // `matching` and `attempted` are read inside but must not re-trigger: the
+    // effect writes them, and depending on them would loop. `ordered` covers
+    // both the scope and the reader's order, `want` asks for more,
+    // `filterKey` says the target moved, `reloadToken` restarts.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [live, addresses, want, pageSize, hydrateAll, filterKey, reloadToken]);
+  }, [live, ordered, want, pageSize, hydrateAll, filterKey, reloadToken]);
 
   const loadMore = useCallback(() => {
     setWant(w => w + pageSize);
@@ -267,11 +351,14 @@ export function useElectionPages(options: ElectionPagesOptions = {}): ElectionPa
 
   const refresh = useCallback(async () => {
     if (!live) return;
+    // Everything goes, which is the point: this is asked for when the screen
+    // has reason to think what it holds is stale. `loading` follows on its
+    // own now, because with nothing read and nothing complete it is true by
+    // definition.
     setAddresses(null);
-    setHydrated([]);
-    setConsumed(0);
+    setByAddress(EMPTY_MAP);
+    setAttempted(EMPTY_SET);
     setWant(pageSize);
-    setLoading(true);
     setReloadToken(t => t + 1);
   }, [live, pageSize]);
 

@@ -238,3 +238,85 @@ describe('when there is nothing more to load', () => {
     expect(result.current.hasMore).toBe(false);
   });
 });
+
+describe('changing the order', () => {
+  beforeEach(() => {
+    estado.todas = [];
+    estado.mias = [];
+    estado.inscritas = [];
+    estado.commitment = 1n;
+    estado.hidratadas = [];
+    estado.lecturasAmplias = 0;
+    vi.resetModules();
+  });
+
+  it('reuses what it has read instead of emptying the list', async () => {
+    // The bug these are for: `order` used to re-resolve the scope, which
+    // threw away every election already read. The list blinked out, and
+    // because nothing said it was loading, the screens drew "no elections
+    // found" into the gap.
+    estado.todas = direcciones(4);
+    const { useElectionPages } = await import('./useElectionPages');
+    const { result, rerender } = renderHook(
+      ({ order }: { order: 'newest' | 'oldest' }) => useElectionPages({ pageSize: 12, order }),
+      { initialProps: { order: 'newest' as 'newest' | 'oldest' } },
+    );
+
+    await waitFor(() => expect(result.current.elections).toHaveLength(4));
+    const lecturas = estado.hidratadas.length;
+
+    rerender({ order: 'oldest' });
+
+    // Same four elections, the other way round, and not one address read
+    // again: everything needed was already in hand.
+    expect(result.current.elections.map(e => e.id)).toEqual(['e3', 'e2', 'e1', 'e0']);
+    expect(result.current.loading).toBe(false);
+    expect(estado.hidratadas).toHaveLength(lecturas);
+    expect(estado.lecturasAmplias).toBe(1);
+  });
+
+  it('never shows the newest at the top of a list that says oldest', async () => {
+    // With only the first page read, flipping to oldest-first has nothing
+    // true to show at the head of the list. Those elections are still in
+    // hand, and listing them would put the newest under a heading that says
+    // the opposite, so the hook reports itself as loading and waits.
+    estado.todas = direcciones(40);
+    const { useElectionPages } = await import('./useElectionPages');
+    const { result, rerender } = renderHook(
+      ({ order }: { order: 'newest' | 'oldest' }) => useElectionPages({ pageSize: 5, order }),
+      { initialProps: { order: 'newest' as 'newest' | 'oldest' } },
+    );
+
+    await waitFor(() => expect(result.current.elections).toHaveLength(5));
+    expect(result.current.elections[0].id).toBe('e0');
+
+    rerender({ order: 'oldest' });
+    await waitFor(() => expect(result.current.elections).toHaveLength(5));
+
+    // The genuinely oldest, read from the other end of the address list.
+    expect(result.current.elections.map(e => e.id)).toEqual(['e39', 'e38', 'e37', 'e36', 'e35']);
+    // And still only ever one read of the factory: reordering is not a
+    // reason to ask which elections exist again.
+    expect(estado.lecturasAmplias).toBe(1);
+  });
+
+  it('is instant on a screen that reads its whole scope', async () => {
+    // The organizer dashboard hydrates everything, so there is nothing left
+    // to fetch and a change of order cannot blink at all.
+    estado.mias = direcciones(9, 'mia');
+    const { useElectionPages } = await import('./useElectionPages');
+    const { result, rerender } = renderHook(
+      ({ order }: { order: 'newest' | 'oldest' }) =>
+        useElectionPages({ scope: 'mine', organizer: '0xmia', hydrateAll: true, order }),
+      { initialProps: { order: 'newest' as 'newest' | 'oldest' } },
+    );
+
+    await waitFor(() => expect(result.current.all).toHaveLength(9));
+
+    rerender({ order: 'oldest' });
+
+    expect(result.current.all).toHaveLength(9);
+    expect(result.current.loading).toBe(false);
+    expect(result.current.all[0].id).toBe('mia8');
+  });
+});
