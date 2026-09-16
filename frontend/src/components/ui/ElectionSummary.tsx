@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { EyeOff, Fuel, Users, Vote } from 'lucide-react';
+import { EyeOff, Fuel, Info, Users, Vote } from 'lucide-react';
+import { useState } from 'react';
 import { cn } from '../../lib/utils';
 import { Badge } from './Badge';
 import { BlockchainBadge } from './BlockchainBadge';
@@ -92,12 +93,15 @@ export function ElectionHeader({ election, extraBadges }: HeaderProps) {
  * The icon carries the colour, not the number. Four coloured numbers would
  * compete with each other and with the phase pill at the top of the page,
  * and the number is what should be read first; the tint is there to tell the
- * four rows apart at a glance.
+ * rows apart at a glance.
  *
- * The explanation, where there is one, goes in `title` rather than under the
- * label. Inline it was three lines of small text that made its own cell twice
- * the width of the others, which is what stopped three figures fitting on one
- * row of a phone.
+ * A FIGURE WITH AN EXPLANATION IS A BUTTON, and that is the whole reason this
+ * is not just a `title`. A tooltip is a hover, and a phone has no hover, so
+ * the explanation existed only for people on a mouse: the two figures that
+ * need one, what the reserve pays for and what the quorum withholds, are
+ * exactly the two a reader is least likely to already know. Pressing one
+ * opens its sentence; `title` stays as well, so a mouse still gets it without
+ * pressing anything.
  */
 function Figure({
   icon: Icon,
@@ -105,21 +109,44 @@ function Figure({
   label,
   value,
   hint,
+  open,
+  onToggle,
 }: {
   icon: typeof Users;
   tint: string;
   label: string;
   value: string;
   hint?: string;
+  open?: boolean;
+  onToggle?: () => void;
 }) {
-  return (
-    <div className="min-w-0" title={hint}>
+  const body = (
+    <>
       <p className="text-lg font-bold text-on-surface tabular-nums leading-tight">{value}</p>
       <p className="flex items-center gap-1.5 text-xs text-on-surface-meta min-w-0">
         <Icon className={cn('w-3.5 h-3.5 shrink-0', tint)} strokeWidth={2.5} />
         <span className="min-w-0">{label}</span>
+        {hint && <Info className="w-3 h-3 shrink-0 opacity-50" />}
       </p>
-    </div>
+    </>
+  );
+
+  if (!hint) return <div className="min-w-0">{body}</div>;
+
+  return (
+    <button
+      type="button"
+      title={hint}
+      aria-expanded={open}
+      onClick={onToggle}
+      className={cn(
+        'min-w-0 text-left rounded-lg -m-1 p-1 cursor-pointer transition-colors',
+        'hover:bg-white/5',
+        open && 'bg-white/5',
+      )}
+    >
+      {body}
+    </button>
   );
 }
 
@@ -145,6 +172,15 @@ function Figure({
  */
 export function ElectionSchedule({ election }: { election: Election }) {
   const { t } = useTranslation();
+  /**
+   * Which explanation is open, by label.
+   *
+   * Shown UNDER the grid rather than inside the cell that was pressed, and
+   * that is deliberate: a sentence inside a third of a phone would either
+   * stretch that column or wrap into a tower, and either one moves the two
+   * figures beside it. Below, it is full width and nothing else shifts.
+   */
+  const [openHint, setOpenHint] = useState<string | null>(null);
   const funding = useElectionFunding(election.contractAddress);
   const voteCost = useVoteCost();
   const reservedBallots = Math.floor(funding.reserved / voteCost.matic);
@@ -188,6 +224,9 @@ export function ElectionSchedule({ election }: { election: Election }) {
             tint="text-success"
             label={t('election.reserved_ballots')}
             value={reservedBallots.toLocaleString()}
+            hint={t('election.reserved_ballots_hint')}
+            open={openHint === 'reserved'}
+            onToggle={() => setOpenHint(openHint === 'reserved' ? null : 'reserved')}
           />
         )}
         {election.privacyQuorum > 0 && (
@@ -197,7 +236,16 @@ export function ElectionSchedule({ election }: { election: Election }) {
             label={t('election.quorum_short')}
             value={election.privacyQuorum.toLocaleString()}
             hint={t('create.quorum_hint')}
+            open={openHint === 'quorum'}
+            onToggle={() => setOpenHint(openHint === 'quorum' ? null : 'quorum')}
           />
+        )}
+        {/* Spans the grid, so opening one changes the height of the panel and
+            nothing else about it. */}
+        {openHint && (
+          <p className="col-span-3 text-[11px] text-on-surface-meta leading-snug sm:max-w-[13rem]">
+            {t(openHint === 'reserved' ? 'election.reserved_ballots_hint' : 'create.quorum_hint')}
+          </p>
         )}
       </div>
     </Card>

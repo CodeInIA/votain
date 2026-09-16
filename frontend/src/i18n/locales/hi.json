@@ -161,6 +161,7 @@
     "ends_on": "समाप्त {{date}}",
     "votes_cast": "डाले गए वोट",
     "reserved_ballots": "आरक्षित मत",
+    "reserved_ballots_hint": "आयोजक ने इस चुनाव के लिए जो गैस रोकी है। यह लगभग इतने मतों का खर्च उठाती है और चुनाव चलने तक वापस नहीं ली जा सकती।",
     "quorum_short": "कोरम",
     "participation": "भागीदारी",
     "enrollment_closes": "नामांकन बंद होता है",

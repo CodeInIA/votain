@@ -161,6 +161,7 @@
     "ends_on": "Ends {{date}}",
     "votes_cast": "Votes cast",
     "reserved_ballots": "Ballots reserved",
+    "reserved_ballots_hint": "Gas the organizer has locked for this election. It pays for about this many ballots and cannot be taken back while the election is running.",
     "quorum_short": "Quorum",
     "participation": "Participation",
     "enrollment_closes": "Enrollment closes",

@@ -162,6 +162,7 @@
     "ends_on": "Fin {{date}}",
     "votes_cast": "Votes exprimés",
     "reserved_ballots": "Bulletins reserves",
+    "reserved_ballots_hint": "Du gas que l'organisateur a bloque pour cette election. Il paie environ ce nombre de bulletins et ne peut pas etre recupere tant que l'election est en cours.",
     "quorum_short": "Quorum",
     "participation": "Participation",
     "enrollment_closes": "Clôture des inscriptions",

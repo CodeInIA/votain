@@ -161,6 +161,7 @@
     "ends_on": "Eindigt {{date}}",
     "votes_cast": "Uitgebrachte stemmen",
     "reserved_ballots": "Gereserveerde stemmen",
+    "reserved_ballots_hint": "Gas dat de organisator voor deze verkiezing heeft vastgezet. Het betaalt ongeveer dit aantal stemmen en kan niet worden teruggehaald zolang de verkiezing loopt.",
     "quorum_short": "Quorum",
     "participation": "Deelname",
     "enrollment_closes": "Inschrijving sluit",

@@ -162,6 +162,7 @@
     "ends_on": "Termina {{date}}",
     "votes_cast": "Votos emitidos",
     "reserved_ballots": "Votos reservados",
+    "reserved_ballots_hint": "Gas que o organizador bloqueou para esta eleicao. Paga cerca deste numero de votos e nao pode ser recuperado enquanto a eleicao decorre.",
     "quorum_short": "Quórum",
     "participation": "Participação",
     "enrollment_closes": "Inscrições encerram",

@@ -161,6 +161,7 @@
     "ends_on": "Endet {{date}}",
     "votes_cast": "Abgegebene Stimmen",
     "reserved_ballots": "Reservierte Stimmen",
+    "reserved_ballots_hint": "Gas, das der Veranstalter fur diese Wahl gesperrt hat. Es bezahlt etwa so viele Stimmen und kann wahrend der laufenden Wahl nicht zuruckgeholt werden.",
     "quorum_short": "Quorum",
     "participation": "Beteiligung",
     "enrollment_closes": "Anmeldung endet",

@@ -160,6 +160,7 @@
     "ends_on": "{{date}} 종료",
     "votes_cast": "투표 수",
     "reserved_ballots": "예약된 표",
+    "reserved_ballots_hint": "주최자가 이 선거를 위해 잠근 가스입니다. 대략 이만큼의 표를 부담하며, 선거가 진행되는 동안에는 회수할 수 없습니다.",
     "quorum_short": "정족수",
     "participation": "참여율",
     "enrollment_closes": "등록 마감",

@@ -160,6 +160,7 @@
     "ends_on": "{{date}} 结束",
     "votes_cast": "已投票",
     "reserved_ballots": "已预留票数",
+    "reserved_ballots_hint": "组织者为本次选举锁定的 gas。大约可支付这么多张选票，选举进行期间无法取回。",
     "quorum_short": "法定票数",
     "participation": "参与率",
     "enrollment_closes": "报名截止",

@@ -160,6 +160,7 @@
     "ends_on": "{{date}} 終了",
     "votes_cast": "投票数",
     "reserved_ballots": "予約済みの票",
+    "reserved_ballots_hint": "主催者がこの選挙のために確保したガスです。おおよそこの数の投票を負担でき、選挙の実施中は引き出せません。",
     "quorum_short": "定足数",
     "participation": "参加率",
     "enrollment_closes": "登録締切",
