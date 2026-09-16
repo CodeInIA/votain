@@ -160,6 +160,7 @@
     "ends_on": "{{date}} 结束",
     "votes_cast": "已投票",
     "reserved_ballots": "已预留票数",
+    "quorum_short": "法定票数",
     "participation": "参与率",
     "enrollment_closes": "报名截止",
     "voting_closes": "投票截止",

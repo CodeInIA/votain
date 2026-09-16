@@ -161,6 +161,7 @@
     "ends_on": "Ends {{date}}",
     "votes_cast": "Votes cast",
     "reserved_ballots": "Ballots reserved",
+    "quorum_short": "Quorum",
     "participation": "Participation",
     "enrollment_closes": "Enrollment closes",
     "voting_closes": "Voting closes",

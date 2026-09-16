@@ -165,6 +165,7 @@
     "ends_on": "تنتهي {{date}}",
     "votes_cast": "الأصوات المدلى بها",
     "reserved_ballots": "أصوات محجوزة",
+    "quorum_short": "النصاب",
     "participation": "المشاركة",
     "enrollment_closes": "يغلق التسجيل",
     "voting_closes": "يغلق التصويت",

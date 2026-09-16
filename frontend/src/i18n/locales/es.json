@@ -162,6 +162,7 @@
     "ends_on": "Termina {{date}}",
     "votes_cast": "Votos emitidos",
     "reserved_ballots": "Votos reservados",
+    "quorum_short": "Quórum",
     "participation": "Participación",
     "enrollment_closes": "Inscripción cierra",
     "voting_closes": "Votación cierra",

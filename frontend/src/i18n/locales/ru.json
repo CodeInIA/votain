@@ -163,6 +163,7 @@
     "ends_on": "До {{date}}",
     "votes_cast": "Подано голосов",
     "reserved_ballots": "Зарезервировано голосов",
+    "quorum_short": "Кворум",
     "participation": "Явка",
     "enrollment_closes": "Регистрация закрывается",
     "voting_closes": "Голосование закрывается",

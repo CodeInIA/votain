@@ -162,6 +162,7 @@
     "ends_on": "Fin {{date}}",
     "votes_cast": "Votes exprimés",
     "reserved_ballots": "Bulletins reserves",
+    "quorum_short": "Quorum",
     "participation": "Participation",
     "enrollment_closes": "Clôture des inscriptions",
     "voting_closes": "Clôture du vote",

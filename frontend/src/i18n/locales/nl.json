@@ -161,6 +161,7 @@
     "ends_on": "Eindigt {{date}}",
     "votes_cast": "Uitgebrachte stemmen",
     "reserved_ballots": "Gereserveerde stemmen",
+    "quorum_short": "Quorum",
     "participation": "Deelname",
     "enrollment_closes": "Inschrijving sluit",
     "voting_closes": "Stemming sluit",

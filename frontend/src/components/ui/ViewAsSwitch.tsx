@@ -21,6 +21,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Eye, SlidersHorizontal } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface Props {
   /** The view being offered, not the one currently shown. */
@@ -32,12 +33,38 @@ interface Props {
 export function ViewAsSwitch({ to, href, className }: Props) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { voterLoggedIn, organizerLoggedIn, setActiveRole } = useAuth();
   const Icon = to === 'voter' ? Eye : SlidersHorizontal;
+
+  /**
+   * Whether the person actually holds the role being offered.
+   *
+   * Only then is switching to it a true statement. This button appears for an
+   * organizer who may have no voter session at all, and telling the app they
+   * are now acting as a voter would put the voter's navigation around
+   * somebody with no voter identity.
+   */
+  const holdsTheRole = to === 'voter' ? voterLoggedIn : organizerLoggedIn;
+
+  /**
+   * SWITCHES THE ROLE, not only the page.
+   *
+   * It used to navigate and nothing else, which was defensible while the
+   * header toggle refused to cross between the two views of an election. Now
+   * that it does, pressing one control left the header saying "Voter" over
+   * the organizer's panel while pressing the other, two inches away, changed
+   * both. Two controls that go to the same place should leave the app in the
+   * same state.
+   */
+  const go = () => {
+    if (holdsTheRole) setActiveRole(to);
+    navigate(href);
+  };
 
   return (
     <button
       type="button"
-      onClick={() => navigate(href)}
+      onClick={go}
       className={cn(
         'inline-flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer shrink-0',
         'text-xs font-semibold whitespace-nowrap ring-1 transition-colors',

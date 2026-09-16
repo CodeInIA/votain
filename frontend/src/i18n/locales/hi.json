@@ -161,6 +161,7 @@
     "ends_on": "समाप्त {{date}}",
     "votes_cast": "डाले गए वोट",
     "reserved_ballots": "आरक्षित मत",
+    "quorum_short": "कोरम",
     "participation": "भागीदारी",
     "enrollment_closes": "नामांकन बंद होता है",
     "voting_closes": "मतदान बंद होता है",

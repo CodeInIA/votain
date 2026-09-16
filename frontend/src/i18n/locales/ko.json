@@ -160,6 +160,7 @@
     "ends_on": "{{date}} 종료",
     "votes_cast": "투표 수",
     "reserved_ballots": "예약된 표",
+    "quorum_short": "정족수",
     "participation": "참여율",
     "enrollment_closes": "등록 마감",
     "voting_closes": "투표 마감",

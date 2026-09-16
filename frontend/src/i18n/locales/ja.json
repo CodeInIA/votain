@@ -160,6 +160,7 @@
     "ends_on": "{{date}} 終了",
     "votes_cast": "投票数",
     "reserved_ballots": "予約済みの票",
+    "quorum_short": "定足数",
     "participation": "参加率",
     "enrollment_closes": "登録締切",
     "voting_closes": "投票締切",

@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { EyeOff, Fuel, Users, Vote } from 'lucide-react';
+import { cn } from '../../lib/utils';
 import { Badge } from './Badge';
 import { BlockchainBadge } from './BlockchainBadge';
 import { Card } from './Card';
@@ -84,13 +86,39 @@ export function ElectionHeader({ election, extraBadges }: HeaderProps) {
   );
 }
 
-/** One figure and what it is, in the panel beside the schedule. */
-function Figure({ label, value, hint }: { label: string; value: string; hint?: string }) {
+/**
+ * One figure and what it is, in the panel beside the schedule.
+ *
+ * The icon carries the colour, not the number. Four coloured numbers would
+ * compete with each other and with the phase pill at the top of the page,
+ * and the number is what should be read first; the tint is there to tell the
+ * four rows apart at a glance.
+ *
+ * The explanation, where there is one, goes in `title` rather than under the
+ * label. Inline it was three lines of small text that made its own cell twice
+ * the width of the others, which is what stopped three figures fitting on one
+ * row of a phone.
+ */
+function Figure({
+  icon: Icon,
+  tint,
+  label,
+  value,
+  hint,
+}: {
+  icon: typeof Users;
+  tint: string;
+  label: string;
+  value: string;
+  hint?: string;
+}) {
   return (
-    <div className="min-w-0">
+    <div className="min-w-0" title={hint}>
       <p className="text-lg font-bold text-on-surface tabular-nums leading-tight">{value}</p>
-      <p className="text-xs text-on-surface-meta">{label}</p>
-      {hint && <p className="text-[11px] text-on-surface-meta/80 leading-snug mt-0.5">{hint}</p>}
+      <p className="flex items-center gap-1.5 text-xs text-on-surface-meta min-w-0">
+        <Icon className={cn('w-3.5 h-3.5 shrink-0', tint)} strokeWidth={2.5} />
+        <span className="min-w-0">{label}</span>
+      </p>
     </div>
   );
 }
@@ -129,29 +157,44 @@ export function ElectionSchedule({ election }: { election: Election }) {
   return (
     <Card className="p-4 mb-4 flex flex-col sm:flex-row items-start gap-4">
       <PhaseTimeline election={election} className="flex-1 min-w-0 sm:min-w-[15rem]" />
+      {/* A GRID ON A PHONE, a column on a wide screen. Wrapping a flex row
+          put two figures on one line and the third on the next, ragged and
+          for no reason; three columns give every figure the same width and
+          fit them all on one row. A fourth, which only exists once somebody
+          has voted, starts a second row underneath and stays aligned with
+          the first. */}
       <div
-        className="w-full sm:w-auto sm:min-w-[9.5rem] flex flex-row flex-wrap sm:flex-col gap-x-6 gap-y-3
-                   pt-3 sm:pt-0 border-t sm:border-t-0 sm:border-l border-white/5 sm:pl-4"
+        className="w-full sm:w-auto sm:min-w-[9.5rem] grid grid-cols-3 sm:flex sm:flex-col
+                   gap-x-3 gap-y-3 pt-3 sm:pt-0 border-t sm:border-t-0 sm:border-l
+                   border-white/5 sm:pl-4"
       >
         <Figure
+          icon={Users}
+          tint="text-tertiary"
           label={t('election.enrolled')}
           value={election.totalEnrolled.toLocaleString()}
         />
         {showVotes && (
           <Figure
+            icon={Vote}
+            tint="text-primary"
             label={t('election.votes_cast')}
             value={election.castVotes.toLocaleString()}
           />
         )}
         {reservedBallots > 0 && (
           <Figure
+            icon={Fuel}
+            tint="text-success"
             label={t('election.reserved_ballots')}
             value={reservedBallots.toLocaleString()}
           />
         )}
         {election.privacyQuorum > 0 && (
           <Figure
-            label={t('create.privacy_quorum')}
+            icon={EyeOff}
+            tint="text-secondary"
+            label={t('election.quorum_short')}
             value={election.privacyQuorum.toLocaleString()}
             hint={t('create.quorum_hint')}
           />
