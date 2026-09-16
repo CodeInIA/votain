@@ -31,6 +31,7 @@ import { Button } from './Button';
 import { Input } from './Input';
 import { EligibilityFilterControls } from './EligibilityFilterControls';
 import { SelectMenu } from './SelectMenu';
+import { DatePicker } from './DatePicker';
 import { cn } from '../../lib/utils';
 import { VOTING_TYPE_ICONS, VOTING_TYPES, votingTypeLabelKey } from '../../lib/votingTypes';
 import {
@@ -39,7 +40,7 @@ import {
   isAnyFilterActive,
   type ElectionFilterState,
 } from '../../lib/electionFilter';
-import { SORT_OPTIONS, type ElectionSort } from '../../lib/electionSort';
+import { DEFAULT_SORT, SORT_OPTIONS, type ElectionSort } from '../../lib/electionSort';
 
 /** One icon per ordering, so the trigger says which is on without being read. */
 const SORT_ICONS: Record<ElectionSort, typeof Globe> = {
@@ -136,6 +137,19 @@ export function ElectionFilters({ value, onChange, open, onToggleOpen, searchPla
   const { t } = useTranslation();
   const set = (patch: Partial<ElectionFilterState>) => onChange({ ...value, ...patch });
 
+  /**
+   * Whether "clear" has anything to undo.
+   *
+   * WIDER THAN `isAnyFilterActive`, and the difference is the whole point of
+   * having two. That one answers "is the list being narrowed", which drives
+   * the dot warning that elections are hidden, and an order hides nothing so
+   * it must stay out of it. This answers "is anything not as it was", which is
+   * what the button resets: the search box and the order are both part of that
+   * and neither is a filter.
+   */
+  const anythingToClear =
+    isAnyFilterActive(value) || value.query !== '' || value.sort !== DEFAULT_SORT;
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex gap-3">
@@ -200,6 +214,27 @@ export function ElectionFilters({ value, onChange, open, onToggleOpen, searchPla
           contentClassName="w-max"
         />
       </div>
+
+      {/* IN THE TOOLBAR AND NOT ONLY IN THE PANEL, which is where it used to
+          live. Collapsing the panel does not undo anything, so a list could
+          sit narrowed by an age bound and a phase with the only way to undo
+          them hidden behind the button that had to be pressed to see them in
+          the first place.
+
+          It appears for a non-default ORDER too. The order is not a filter and
+          never lights the dot, and it is still a thing the reader changed and
+          may want back: "clear" is the one control that puts the whole panel
+          back to how it started. */}
+      {!open && anythingToClear && (
+        <button
+          type="button"
+          onClick={() => onChange(EMPTY_FILTERS)}
+          className="self-start inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline cursor-pointer"
+        >
+          <X className="w-3.5 h-3.5 shrink-0" />
+          {t('common.clear_filters')}
+        </button>
+      )}
 
       {open && (
         <div className="flex flex-col gap-3">
@@ -322,6 +357,44 @@ export function ElectionFilters({ value, onChange, open, onToggleOpen, searchPla
             ))}
           </FilterGroup>
 
+          {/* WHEN IT APPEARED, which no other control here can ask.
+              Every date in the schedule was chosen by the organizer and can
+              be set to anything; this is the one the chain wrote. So "what
+              turned up this week" is a different question from "what is
+              happening this week", and only this band answers it.
+
+              Two days rather than one, because either end alone is a useful
+              question: "nothing older than the first" is how someone finds
+              what is new, and "nothing newer than the last" is how they read
+              the platform as it stood. The upper bound runs to the end of its
+              day, so the same day at both ends means that day. */}
+          <FilterGroup label={t('discover.group_created')}>
+            {/* Boxed to a width each. `DatePicker` is `w-full` for the create
+                wizard, where it owns its column; here two of them at full
+                width became two stacked rows taller than every other band in
+                the panel. */}
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="w-[9.5rem]">
+                <DatePicker
+                  value={value.createdFrom}
+                  onChange={createdFrom => set({ createdFrom })}
+                  label={t('discover.created_from')}
+                  max={value.createdTo || undefined}
+                  id="created-from"
+                />
+              </div>
+              <div className="w-[9.5rem]">
+                <DatePicker
+                  value={value.createdTo}
+                  onChange={createdTo => set({ createdTo })}
+                  label={t('discover.created_to')}
+                  min={value.createdFrom || undefined}
+                  id="created-to"
+                />
+              </div>
+            </div>
+          </FilterGroup>
+
           {/* The only band that asks about the VOTER rather than the election:
               "would I qualify", answered with values instead of chips. */}
           <FilterGroup label={t('discover.group_eligibility')}>
@@ -339,7 +412,7 @@ export function ElectionFilters({ value, onChange, open, onToggleOpen, searchPla
               Resets the search box too: it sits above these bands and narrows
               the same list, so leaving it behind would clear the filters and
               still show a filtered list. */}
-          {(isAnyFilterActive(value) || value.query !== '') && (
+          {anythingToClear && (
             <button
               type="button"
               onClick={() => onChange(EMPTY_FILTERS)}
