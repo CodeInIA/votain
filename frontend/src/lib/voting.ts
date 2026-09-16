@@ -18,6 +18,7 @@ import {
   relayVote,
   type EnrollAttestationInput,
 } from "./relay";
+import type { Identity } from "@semaphore-protocol/identity";
 import { identityForElection } from "./electionIdentity";
 import { claimAttestation } from "./eligibility";
 import { counterBaseFor, encryptBallot } from "./paillier";
@@ -86,11 +87,14 @@ async function enrolsPrivately(electionAddress: string): Promise<boolean> {
  * before that keep using the platform identity, because that is the leaf that
  * is already in their tree.
  */
-export async function votingIdentity(electionAddress: string) {
-  const master = await getOrCreateIdentity();
+export async function votingIdentity(electionAddress: string, master?: Identity) {
+  // The caller passes one where prompting would be wrong: the history reads
+  // whatever is already unlocked and shows nothing rather than summoning an
+  // authenticator dialog to draw a list.
+  const base = master ?? (await getOrCreateIdentity());
   return (await enrolsPrivately(electionAddress))
-    ? identityForElection(master, electionAddress)
-    : master;
+    ? identityForElection(base, electionAddress)
+    : base;
 }
 
 /**
@@ -392,13 +396,17 @@ export async function fetchLocalVoteHistory(
 export async function fetchVoteHistory(
   elections: { contractAddress: string; title: string; phase: string; scope?: bigint }[],
 ): Promise<VoteHistoryEntry[]> {
-  const identity = getStoredIdentity();
-  if (!identity) return [];
+  const master = getStoredIdentity();
+  if (!master) return [];
 
   const entries: VoteHistoryEntry[] = [];
   for (const el of elections) {
     const election = getElection(el.contractAddress);
     const scope: bigint = el.scope ?? BigInt(await election.scope());
+    // Per election, because that is what the ballot was cast with wherever the
+    // election enrols privately. Computing this from the platform identity
+    // found nothing at all there, which reads as "you never voted".
+    const identity = await votingIdentity(el.contractAddress, master);
     const nullifier = computeNullifier(identity, scope);
     const receipts = await fetchVoteReceipts(el.contractAddress, nullifier);
     if (receipts.length === 0) continue;

@@ -27,7 +27,7 @@ import { shortenReference } from '../lib/utils';
 import { usePolicyRequirements } from '../hooks/usePolicyRequirements';
 import { ResultBarChart } from '../components/ui/BarChart';
 import { hasPublishedResults, tallyTotal } from '../data/seed';
-import { enrollInElection } from '../lib/voting';
+import { enrollInElection, votingIdentity } from '../lib/voting';
 import { FundingNotice } from '../components/ui/FundingNotice';
 import { useElectionFunding } from '../hooks/useElectionFunding';
 import { canFundOneVote } from '../lib/gasNeeds';
@@ -254,7 +254,14 @@ export default function ElectionPage() {
             variant="ghost"
             className="rounded-full px-6 gap-2"
             disabled={unlocking}
-            onClick={() => { void unlock().then(() => refresh()); }}
+            onClick={() => {
+              // Derive this election's identity before re-reading: the enrolled
+              // check compares against the commitment THIS election holds, and
+              // a device that has never enrolled here has never derived it.
+              void unlock()
+                .then(ok => (ok ? votingIdentity(election.contractAddress) : null))
+                .then(() => refresh());
+            }}
           >
             <Lock className="w-4 h-4" />
             {unlocking ? t('common.loading') : t('election.check_enrolment')}
