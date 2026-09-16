@@ -157,8 +157,8 @@ export default function RecoverPhrase() {
    * the phrase here, and a toast describing the old behaviour is worse than
    * none, because it tells somebody their words are not on a device they are.
    */
-  const keepOnDevice = () => {
-    keepRecoveredPhraseOnDevice(input);
+  const keepOnDevice = async () => {
+    await keepRecoveredPhraseOnDevice(input);
     setAskingSkip(false);
     toast({
       title: t('recover.kept_on_device'),
@@ -296,7 +296,7 @@ export default function RecoverPhrase() {
               variant="default"
               className="w-full rounded-full h-11"
               disabled={busy}
-              onClick={keepOnDevice}
+              onClick={() => void keepOnDevice()}
             >
               {t('new_identity.skip')}
             </Button>

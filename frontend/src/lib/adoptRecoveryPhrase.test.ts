@@ -237,7 +237,7 @@ describe('where a recovered phrase ends up', () => {
     const { adoptRecoveryPhrase, keepRecoveredPhraseOnDevice } = await import('./semaphore');
     await adoptRecoveryPhrase(frase);
 
-    expect(keepRecoveredPhraseOnDevice(frase)).toBe('stored');
+    expect(await keepRecoveredPhraseOnDevice(frase)).toBe('stored');
     expect(localStorage.getItem('votain_recovery_phrase')).toBe(frase);
     expect(localStorage.getItem('votain_identity_mode')).toBe('local');
   });

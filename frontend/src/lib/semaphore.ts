@@ -18,6 +18,12 @@
  * Proofs are generated against the election's on-chain LeanIMT group.
  */
 import { Identity } from "@semaphore-protocol/identity";
+import {
+  clearPhraseOnDevice,
+  hasPhraseOnDevice,
+  readPhraseOnDevice,
+  sealPhraseOnDevice,
+} from "./deviceSeal";
 import { getRegistry } from "./contracts";
 import { isChainConfigured } from "./deployments";
 import { Group } from "@semaphore-protocol/group";
@@ -49,7 +55,6 @@ import {
   type VaultState,
 } from "./identityVault";
 
-const IDENTITY_STORAGE_KEY = "votain_recovery_phrase"; // the phrase, when no passkey can hold it
 const IDENTITY_MODE_KEY = "votain_identity_mode"; // "prf" | "local"
 
 /**
@@ -70,17 +75,21 @@ const IDENTITY_MODE_KEY = "votain_identity_mode"; // "prf" | "local"
  * a voter with no way in. `phraseIsUnprotected` is exactly this state seen from
  * outside.
  */
-function keepPhraseOnDevice(phrase: string): void {
-  localStorage.setItem(IDENTITY_STORAGE_KEY, phrase);
+async function keepPhraseOnDevice(phrase: string): Promise<void> {
+  // Encrypted under a key this browser cannot read back. See `deviceSeal`,
+  // including what that is and is not worth.
+  await sealPhraseOnDevice(phrase);
   localStorage.setItem(IDENTITY_MODE_KEY, "local");
 }
 
-function noteSealed(phrase: string): void {
+async function noteSealed(phrase: string): Promise<void> {
   localStorage.setItem(IDENTITY_MODE_KEY, "prf");
   if (prfReadbackProven()) {
-    localStorage.removeItem(IDENTITY_STORAGE_KEY);
+    await clearPhraseOnDevice();
   } else {
-    localStorage.setItem(IDENTITY_STORAGE_KEY, phrase);
+    // The passkey holds a copy that nothing here has managed to read yet, so
+    // the device keeps one too. Sealed, like every other copy on this device.
+    await sealPhraseOnDevice(phrase);
   }
 }
 
@@ -91,7 +100,9 @@ function noteSealed(phrase: string): void {
  */
 function noteReadBack(): void {
   localStorage.setItem(IDENTITY_MODE_KEY, "prf");
-  localStorage.removeItem(IDENTITY_STORAGE_KEY);
+  // Fire and forget: the vault is proven readable, so nothing depends on this
+  // finishing, and the marker it clears is what any later read consults.
+  void clearPhraseOnDevice();
 }
 
 /**
@@ -177,7 +188,7 @@ export async function getOrCreateIdentity(): Promise<Identity> {
   // that is guaranteed to end in an error, on every page load, forever. The
   // phrase derives the same identity with no prompt at all.
   if (localStorage.getItem(IDENTITY_MODE_KEY) === "local" || prfReadbackFailed()) {
-    const stored = localStorage.getItem(IDENTITY_STORAGE_KEY);
+    const stored = await readPhraseOnDevice();
     if (stored) return remember(await identityFromPhrase(stored));
   }
 
@@ -197,7 +208,7 @@ export async function getOrCreateIdentity(): Promise<Identity> {
     // Unless the phrase is still here, which is the case this whole read-back
     // dance exists for. It derives the SAME identity, so this is a fallback and
     // never a fork. Recorded, so the next load goes straight to it.
-    const stored = localStorage.getItem(IDENTITY_STORAGE_KEY);
+    const stored = await readPhraseOnDevice();
     if (stored) {
       notePrfReadbackFailed();
       console.info(
@@ -212,7 +223,7 @@ export async function getOrCreateIdentity(): Promise<Identity> {
   // A phrase already on this device is this voter, so it is used. The slot is
   // read back by the branch at the top of this function, which reconstructs the
   // voter by deriving from whatever it finds.
-  const stored = localStorage.getItem(IDENTITY_STORAGE_KEY);
+  const stored = await readPhraseOnDevice();
   if (stored) return remember(await identityFromPhrase(stored));
 
   // AND OTHERWISE, NOTHING IS MINTED HERE. This used to generate a phrase,
@@ -355,9 +366,9 @@ async function resolveIdentityFromVault(): Promise<VaultOutcome> {
  * behind but a phrase on one device.
  */
 export async function beginNewIdentity(): Promise<{ phrase: string; identity: Identity }> {
-  const existing = localStorage.getItem(IDENTITY_STORAGE_KEY);
+  const existing = await readPhraseOnDevice();
   const phrase = existing ?? generateRecoveryPhrase();
-  if (!existing) keepPhraseOnDevice(phrase);
+  if (!existing) await keepPhraseOnDevice(phrase);
   return { phrase, identity: await identityFromPhrase(phrase) };
 }
 
@@ -614,8 +625,8 @@ export async function sealRecoveredPhrase(phrase: string, identity: Identity): P
 }
 
 /** Keep a recovered phrase on this device, in the clear, having been asked. */
-export function keepRecoveredPhraseOnDevice(phrase: string): PhraseAdoption {
-  keepPhraseOnDevice(normalizePhrase(phrase));
+export async function keepRecoveredPhraseOnDevice(phrase: string): Promise<PhraseAdoption> {
+  await keepPhraseOnDevice(normalizePhrase(phrase));
   return "stored";
 }
 
@@ -631,7 +642,7 @@ export function keepRecoveredPhraseOnDevice(phrase: string): PhraseAdoption {
  * not vote either, so the caller is already in the locked path.
  */
 export async function revealRecoveryPhrase(): Promise<string | null> {
-  const local = localStorage.getItem(IDENTITY_STORAGE_KEY);
+  const local = await readPhraseOnDevice();
   if (local) return local;
 
   const vault = await fetchVault().catch(() => null);
@@ -757,10 +768,12 @@ export async function ensureRegistered(identity: Identity): Promise<boolean> {
  * when it did not happen they were never told the copy was unprotected.
  */
 export function phraseIsUnprotected(): boolean {
-  return (
-    localStorage.getItem(IDENTITY_MODE_KEY) === "local" &&
-    localStorage.getItem(IDENTITY_STORAGE_KEY) !== null
-  );
+  // Still "unprotected" when it is sealed under this device's key, and that
+  // is not a slip. The seal answers somebody carrying the storage away; it
+  // cannot answer somebody holding the device, because the key is on it. Only
+  // a passkey moves the secret off this machine, so only a passkey clears
+  // this flag and stops the screen offering to link one.
+  return localStorage.getItem(IDENTITY_MODE_KEY) === "local" && hasPhraseOnDevice();
 }
 
 /**
@@ -779,8 +792,8 @@ export function phraseIsUnprotected(): boolean {
 export async function protectPhraseWithPasskey(): Promise<void> {
   const result = await enrollThisDevice();
   if (result.alreadyRegistered) return;
-  const phrase = localStorage.getItem(IDENTITY_STORAGE_KEY);
-  if (phrase) noteSealed(phrase);
+  const phrase = await readPhraseOnDevice();
+  if (phrase) await noteSealed(phrase);
 }
 
 export async function enrollThisDevice(): Promise<{
@@ -896,7 +909,7 @@ export function isIdentityLoaded(): boolean {
 
 export function clearIdentity(): void {
   cachedIdentity = null;
-  localStorage.removeItem(IDENTITY_STORAGE_KEY);
+  void clearPhraseOnDevice();
   localStorage.removeItem(IDENTITY_MODE_KEY);
   clearPrfReadback();
   localStorage.removeItem(IDENTITY_COMMITMENT_KEY);
