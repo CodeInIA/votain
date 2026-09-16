@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Users, CalendarMinus, Lock, ExternalLink } from 'lucide-react';
+import { Users, Lock, ExternalLink } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Badge } from '../../components/ui/Badge';
 import { EligibilityChips } from '../../components/ui/EligibilityChips';
@@ -10,7 +10,7 @@ import { BackButton } from '../../components/ui/BackButton';
 import { ViewAsSwitch } from '../../components/ui/ViewAsSwitch';
 import { organizerViewHref, canManageElection } from '../../lib/electionViews';
 import { Card } from '../../components/ui/Card';
-import { Countdown } from '../../components/ui/Countdown';
+import { PhaseTimeline } from '../../components/ui/PhaseTimeline';
 import { BlockchainBadge } from '../../components/ui/BlockchainBadge';
 import { EligibilityRow } from '../../components/ui/EligibilityRow';
 import { Spinner } from '../../components/ui/Spinner';
@@ -24,7 +24,6 @@ import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
 import { PULSE_PHASES } from '../../lib/phase';
 import { explorerAddressUrl } from '../../lib/deployments';
 import { SchedulePromise } from '../../components/ui/SchedulePromise';
-import { CreatedOn } from '../../components/ui/CreatedOn';
 import { ExpandableText } from '../../components/ui/ExpandableText';
 import { VotingRule } from '../../components/ui/VotingRule';
 import { usePageMeta } from '../../seo/usePageMeta';
@@ -173,25 +172,27 @@ export default function ElectionPreview() {
           </div>
         </div>
 
-        {/* Countdown */}
-        {isActive && (
-          <Card className="p-4 mb-4 flex items-center gap-4 flex-wrap">
-            <div>
-              <p className="text-xs text-on-surface-meta mb-1">{t('election.voting_closes')}</p>
-              <Countdown deadline={election.voteEnd} size="lg" />
-            </div>
-            <div className="flex-1 h-2 rounded-full bg-surface-high overflow-hidden min-w-24">
-              <div
-                className="h-full rounded-full bg-primary/60"
-                style={{ width: `${Math.round((election.castVotes / election.totalEnrolled) * 100)}%` }}
-              />
-            </div>
-            <div className="text-right">
+        {/* THE SAME SCHEDULE THE OTHER TWO VIEWS SHOW, where this page had a
+            countdown and only while voting was open. Two things were wrong
+            with that. It drifted: the voter's page and the organizer's both
+            moved to the schedule and this one did not, so the same election
+            told a different story depending on which link you followed. And
+            it left a hole: `isActive` meant an upcoming or closed election
+            showed no dates at all here, on the one page a shared link opens.
+
+            The turnout figure stays for a live election, as on the voter's
+            page. The bar that used to sit beside it does not: the voter's
+            page has none, and it divided by `totalEnrolled` without checking
+            it, so an election nobody had joined computed a NaN width. */}
+        <Card className="p-4 mb-4 flex items-start gap-4 flex-wrap">
+          <PhaseTimeline election={election} className="flex-1 min-w-[15rem]" />
+          {isActive && (
+            <div className="text-right ml-auto">
               <p className="text-lg font-bold text-on-surface">{election.castVotes.toLocaleString()}</p>
               <p className="text-xs text-on-surface-meta">{t('election.votes_cast')}</p>
             </div>
-          </Card>
-        )}
+          )}
+        </Card>
 
         {/* Description */}
         <Card className="p-5 mb-4">
@@ -202,22 +203,9 @@ export default function ElectionPreview() {
           </div>
           <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-white/5 text-xs text-on-surface-meta">
             <span className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5" />{election.totalEnrolled.toLocaleString()} {t('election.enrolled')}</span>
-            {/* Labelled, like the creation date a line away from it. A bare
-                date read fine while it was the only one on the screen, and
-                stopped the moment a second date joined it. */}
-            <span className="flex items-center gap-1.5">
-              {/* Paired with the plus on the creation date. */}
-              <CalendarMinus className="w-3.5 h-3.5" />
-              {t('election.ends_on', { date: election.voteEnd.toLocaleDateString() })}
-            </span>
-            {/* Next to the closing date, because the two dates are one thought
-                and the two promises after them are another. Same grouping as
-                the card and the voter's view.
-
-                Public too, and most useful here: this is the page a link in a
-                message opens, which is exactly where a copy of somebody
-                else's election gets read. */}
-            <CreatedOn date={election.createdAt} precise />
+            {/* No dates here either. The schedule above carries them, and
+                decides for itself whether the creation date needs a line of
+                its own. See `PhaseTimeline`. */}
             {/* Public too: whether the dates can move, and whether it can be
                 called off at all, are part of deciding whether to take this
                 election seriously, and that decision is made here, before
