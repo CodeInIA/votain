@@ -246,11 +246,16 @@
     "your_receipts": "Ihre Quittungen",
     "unlock_hint": "Dieser Browser kennt noch keine Stimme. Falls Sie von einem anderen Gerät gewählt haben, findet eine Passkey-Bestätigung sie und merkt sie sich hier."
   },
+  "saved": {
+    "add": "Wahl speichern",
+    "remove": "Aus Gespeicherten entfernen",
+    "filter": "Gespeichert"
+  },
   "voter_elections": {
     "title": "Meine Wahlen",
-    "subtitle": "Wahlen, für die Sie angemeldet sind",
+    "subtitle": "Wahlen auf deiner Liste",
     "search_placeholder": "In Ihren Wahlen suchen…",
-    "empty": "Sie sind noch bei keiner Wahl angemeldet.",
+    "empty": "Du hast noch keine Wahl beigetreten oder gespeichert.",
     "ends_soon": "Endet bald",
     "urgent_other": "{{count}} enden bald",
     "urgent_one": "{{count}} endet bald"

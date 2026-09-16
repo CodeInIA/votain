@@ -127,6 +127,17 @@ export interface ElectionFilterState {
    * for its own window to open and says nothing about the reader.
    */
   canVoteNow: boolean;
+  /**
+   * Only the elections this voter saved.
+   *
+   * NOT ANSWERED BY `matchesElectionFilter`, unlike every other field here, and
+   * that is deliberate rather than an omission. The saved set is the voter's
+   * own, sealed on chain and kept in this browser; an election carries no field
+   * saying whether somebody bookmarked it, and reading the store from inside a
+   * pure predicate would make one list's rule depend on a device. The page that
+   * offers the chip applies it, next to the set it already holds.
+   */
+  savedOnly: boolean;
 }
 
 export const EMPTY_FILTERS: ElectionFilterState = {
@@ -145,6 +156,7 @@ export const EMPTY_FILTERS: ElectionFilterState = {
   enrolledOnly: false,
   votedOnly: false,
   canVoteNow: false,
+  savedOnly: false,
 };
 
 /**
@@ -166,6 +178,7 @@ export function isAnyFilterActive(filter: ElectionFilterState): boolean {
     filter.enrolledOnly ||
     filter.votedOnly ||
     filter.canVoteNow ||
+    filter.savedOnly ||
     isEligibilityFilterActive(filter.eligibility)
   );
 }
@@ -280,6 +293,9 @@ export function matchesElectionFilter(
   if (filter.enrolledOnly && !election.isEnrolled) return false;
   if (filter.votedOnly && !election.hasVoted) return false;
   if (filter.canVoteNow && !canVoteNow(election)) return false;
+  // `savedOnly` is missing on purpose. See the field: the answer is not on the
+  // election, so the page that draws the chip applies it.
+
   if (!matchesQuery(election, filter.query.trim().toLowerCase())) return false;
   if (filter.domainOnly && !isDomainVerified(election)) return false;
   if (filter.restrictedOnly && !isRestricted(election)) return false;

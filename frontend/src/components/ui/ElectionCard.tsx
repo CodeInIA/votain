@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Users, CalendarMinus, ChevronRight, Clock } from 'lucide-react';
+import { Users, CalendarMinus, ChevronRight, Clock, Bookmark } from 'lucide-react';
 import { Badge } from './Badge';
 import { DomainBadge } from './DomainBadge';
 import { turnoutPct, votersOf } from '../../lib/turnout';
@@ -11,6 +11,7 @@ import { CreatedOn } from './CreatedOn';
 import { Button } from './Button';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSavedElections } from '../../hooks/useSavedElections';
 import { electionHrefFor } from '../../lib/electionViews';
 import { getRememberedOrganizerAddress } from '../../hooks/useOrganizerWallet';
 import { endsSoon, nextBoundary } from '../../lib/phase';
@@ -61,7 +62,8 @@ interface ElectionCardProps {
 }
 
 export function ElectionCard({ election, view = 'public', className }: ElectionCardProps) {
-  const { activeRole, organizerLoggedIn } = useAuth();
+  const { activeRole, organizerLoggedIn, voterLoggedIn } = useAuth();
+  const { isSaved, toggle } = useSavedElections();
   const navigate = useNavigate();
   const { t } = useTranslation();
   const voterView = view === 'voter';
@@ -84,6 +86,48 @@ export function ElectionCard({ election, view = 'public', className }: ElectionC
   });
 
   const VotingTypeIcon = VOTING_TYPE_ICONS[election.votingType];
+
+  /**
+   * Saving is offered to a signed-in voter, on their own lists and on Discover.
+   *
+   * ON DISCOVER ABOVE ALL, which is where somebody meets an election they are
+   * not ready to join: enrolment may not be open yet, or they want to read the
+   * question again this evening. Without this the only way to keep it was the
+   * browser's own bookmarks, and an election has no page worth bookmarking
+   * before it opens.
+   *
+   * NOT WITHOUT A SESSION, and not on the organizer's dashboard. A visitor has
+   * no identity to seal a list under, so a star would promise a sync that
+   * cannot happen; an organizer looking at their own elections is not choosing
+   * which to follow.
+   */
+  const savable = voterLoggedIn && !organizerView;
+  const saved = savable && isSaved(election.id);
+
+  /**
+   * What the left of the footer is for, decided once instead of three times.
+   *
+   * ONE SLOT, and the vote button, the two badges and the candidate count are
+   * candidates for it. Signing in used to change what a card SAID rather than
+   * only what it offered: the count was drawn for `!voterView`, so the same
+   * election on Discover showed "2 candidates" to a visitor and an empty
+   * footer to a voter, who has more reason to know how many there are, not
+   * less. Nothing was taking the slot for an election they had not joined yet.
+   *
+   * So the count is the fallback, not the public case: it appears whenever
+   * nothing with more to say is there.
+   */
+  const offersVote =
+    voterView && Boolean(election.isEnrolled) && election.phase === 'active' && !election.hasVoted;
+  const saysVoted = voterView && Boolean(election.hasVoted);
+  const saysEnrolled =
+    voterView &&
+    Boolean(election.isEnrolled) &&
+    !election.hasVoted &&
+    ENROLLED_PHASES.includes(election.phase);
+  // Not after a ballot is cast: at that point the roll is history and the
+  // receipt is what matters.
+  const showsCandidates = !offersVote && !saysVoted && !saysEnrolled && !election.hasVoted;
 
   /**
    * Two destinations, not three: the election reads the session itself now, so
@@ -322,7 +366,7 @@ export function ElectionCard({ election, view = 'public', className }: ElectionC
 
       {/* CTA */}
       <div className="flex items-center justify-between mt-auto pt-1">
-        {voterView && election.isEnrolled && election.phase === 'active' && !election.hasVoted && (
+        {offersVote && (
           <Button
             variant="gradient"
             size="sm"
@@ -332,22 +376,40 @@ export function ElectionCard({ election, view = 'public', className }: ElectionC
             {t('election.vote_now')}
           </Button>
         )}
-        {voterView && election.hasVoted && (
-          <Badge variant="voted" dot>{t('phase.voted')}</Badge>
-        )}
+        {saysVoted && <Badge variant="voted" dot>{t('phase.voted')}</Badge>}
         {/* Enrolled, and nothing else on this card says so. While voting is open
             the button above already implies it, and after enrollment matters the
             fact is history, so this covers the two phases in between: the voter
             is in, and has nothing to do yet. Without it a card they had already
             joined looked exactly like one they had not, and the only way to find
             out was to open it. */}
-        {voterView && election.isEnrolled && !election.hasVoted && ENROLLED_PHASES.includes(election.phase) && (
-          <Badge variant="enrolled" dot>{t('election.already_enrolled')}</Badge>
+        {saysEnrolled && <Badge variant="enrolled" dot>{t('election.already_enrolled')}</Badge>}
+        {showsCandidates && (
+          <span className="text-xs text-on-surface-meta">
+            {election.candidates.length - 1} {t('election.candidates')}
+          </span>
         )}
-        {!voterView && !election.hasVoted && (
-          <span className="text-xs text-on-surface-meta">{election.candidates.length - 1} {t('election.candidates')}</span>
-        )}
-        <ChevronRight className="w-4 h-4 text-on-surface-meta group-hover:text-on-surface transition-colors ml-auto" />
+        <div className="flex items-center gap-1 ml-auto">
+          {/* STOPS THE CLICK, because the card is a link and this is not. A
+              star that also opened the election would be unusable on a phone,
+              where the two targets are a thumb apart. */}
+          {savable && (
+            <button
+              type="button"
+              aria-pressed={saved}
+              aria-label={t(saved ? 'saved.remove' : 'saved.add')}
+              title={t(saved ? 'saved.remove' : 'saved.add')}
+              onClick={e => { e.stopPropagation(); toggle(election.id); }}
+              className={cn(
+                'p-1.5 -m-1.5 rounded-full cursor-pointer transition-colors',
+                saved ? 'text-primary' : 'text-on-surface-meta hover:text-on-surface',
+              )}
+            >
+              <Bookmark className={cn('w-4 h-4', saved && 'fill-current')} />
+            </button>
+          )}
+          <ChevronRight className="w-4 h-4 text-on-surface-meta group-hover:text-on-surface transition-colors" />
+        </div>
       </div>
     </div>
   );

@@ -172,3 +172,22 @@ describe('the participation bar', () => {
     expect(track).toHaveAttribute('title', 'election.turnout_detail');
   });
 });
+
+describe('ElectionCard, what it tells everybody', () => {
+  it('counts the candidates for a voter as well as a visitor', () => {
+    // Signing in used to change what a card SAID rather than only what it
+    // offered: the count was drawn for the public view alone, so a voter
+    // reading Discover got an empty footer on an election nobody had joined
+    // yet, and a visitor beside them was told there were two candidates.
+    setup(makeElection({ phase: 'upcoming' }), true);
+    expect(screen.getByText(/election.candidates/)).toBeInTheDocument();
+  });
+
+  it('gives the slot up to whatever has more to say', () => {
+    // One slot, and the standing of the reader outranks a count they can see
+    // for themselves by opening it.
+    setup(makeElection({ isEnrolled: true }), true);
+    expect(screen.queryByText(/election.candidates/)).not.toBeInTheDocument();
+    expect(screen.getByText('election.already_enrolled')).toBeInTheDocument();
+  });
+});

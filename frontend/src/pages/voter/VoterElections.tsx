@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Bell, KeyRound } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
@@ -13,6 +13,8 @@ import { useVoterIdentity } from '../../hooks/useVoterIdentity';
 import { useElectionFilterParams } from '../../hooks/useElectionFilterParams';
 import { ElectionFilters, ClearFilters } from '../../components/ui/ElectionFilters';
 import { matchesQuery, canVoteNow } from '../../lib/electionFilter';
+import { syncSavedElections } from '../../lib/savedElections';
+import { useSavedElections } from '../../hooks/useSavedElections';
 import { sortElections } from '../../lib/electionSort';
 import { Button } from '../../components/ui/Button';
 import { isChainConfigured } from '../../lib/deployments';
@@ -33,15 +35,34 @@ export default function VoterElections() {
    * who is warned about none of their deadlines because the election was on the
    * second page has been failed by the feature.
    */
+  const { isSaved } = useSavedElections();
   const { all: myElections, loading, error, refresh } = useElectionPages({
     scope: 'enrolled',
     hydrateAll: true,
-    keep: e => Boolean(e.isEnrolled || e.hasVoted),
+    // Saved as well as joined: an election kept for later has no leaf with
+    // this voter in it, which is exactly why it was worth saving.
+    keep: e => Boolean(e.isEnrolled || e.hasVoted || isSaved(e.id)),
   });
 
   // Snapshot the clock once at mount so render stays pure (the count doesn't
   // need second-by-second accuracy; Countdown handles the ticking).
   const [now] = useState(() => Date.now());
+
+  /**
+   * Bring the saved list here from wherever else it was changed.
+   *
+   * ON THIS SCREEN and not on app start, because this is the screen that shows
+   * the answer: a voter who saved something on their phone comes here to find
+   * it. It needs the identity to be unlocked already and says nothing when it
+   * is not, so opening a list never summons an authenticator. Pushing is the
+   * library's own business and happens wherever a star is pressed.
+   */
+  useEffect(() => {
+    void syncSavedElections().then(() => refresh());
+    // Once per visit. `refresh` is stable and re-running on every render would
+    // turn a list into a poll.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /**
    * SEARCH AND ORDER, and not the panel behind the filter button.
@@ -81,6 +102,7 @@ export default function VoterElections() {
    */
   const byTab = myElections.filter(e => {
     if (filters.phase && e.phase !== filters.phase) return false;
+    if (filters.savedOnly && !isSaved(e.id)) return false;
     if (filters.enrolledOnly && !e.isEnrolled) return false;
     if (filters.votedOnly && !e.hasVoted) return false;
     if (filters.canVoteNow && !canVoteNow(e)) return false;
@@ -96,7 +118,7 @@ export default function VoterElections() {
   const { visible, hasMore, loadMore } = usePageLimit(
     filtered,
     undefined,
-    `${filters.phase ?? ''}${filters.enrolledOnly}${filters.votedOnly}${filters.canVoteNow}${filters.query}${filters.sort}`,
+    `${filters.phase ?? ''}${filters.savedOnly}${filters.enrolledOnly}${filters.votedOnly}${filters.canVoteNow}${filters.query}${filters.sort}`,
   );
 
   const urgentCount = myElections.filter(e => endsSoon(e, now)).length;

@@ -244,11 +244,16 @@
     "your_receipts": "내 영수증",
     "unlock_hint": "이 브라우저는 아직 어떤 투표도 알지 못합니다. 다른 기기에서 투표했다면 패스키를 한 번 누르면 찾아서 여기에 기억합니다."
   },
+  "saved": {
+    "add": "선거 저장",
+    "remove": "저장에서 제거",
+    "filter": "저장됨"
+  },
   "voter_elections": {
     "title": "내 선거",
-    "subtitle": "등록한 선거",
+    "subtitle": "내 목록의 선거",
     "search_placeholder": "내 선거 검색…",
-    "empty": "아직 선거에 등록하지 않았습니다.",
+    "empty": "아직 참여하거나 저장한 선거가 없습니다.",
     "ends_soon": "곧 종료",
     "urgent_other": "{{count}}개 곧 종료"
   },

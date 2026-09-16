@@ -28,6 +28,10 @@ const REGISTRY_ABI = [
   'function resetVault(uint256 nullifier, bytes credentialId, bytes blob)',
   'function getVault(uint256 nullifier) view returns ((bytes credentialId, bytes blob, uint64 addedAt)[])',
   'function vaultEntryCount(uint256 nullifier) view returns (uint256)',
+  // The voter's own settings, sealed under a key derived from their Semaphore
+  // secret. This server moves the blob and cannot read it.
+  'function setPreferences(uint256 nullifier, bytes blob)',
+  'function preferencesOf(uint256 nullifier) view returns (bytes)',
   // Credential status. The slot is assigned by `registerMember`, so signing in
   // costs no transaction; only a revocation writes.
   'function statusIndexOf(uint256 nullifier) view returns (uint256)',

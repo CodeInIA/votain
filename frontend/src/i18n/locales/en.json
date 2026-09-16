@@ -246,11 +246,16 @@
     "your_receipts": "Your receipts",
     "unlock_hint": "This browser knows of no ballot yet. If you voted from another device, one passkey tap will find those and remember them here."
   },
+  "saved": {
+    "add": "Save election",
+    "remove": "Remove from saved",
+    "filter": "Saved"
+  },
   "voter_elections": {
     "title": "My Elections",
-    "subtitle": "Elections you are enrolled in",
+    "subtitle": "Elections on your list",
     "search_placeholder": "Search your elections…",
-    "empty": "You haven't enrolled in any elections yet.",
+    "empty": "You have not joined or saved any election yet.",
     "ends_soon": "Ends soon",
     "urgent_other": "{{count}} ending soon",
     "urgent_one": "{{count}} ending soon"

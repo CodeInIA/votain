@@ -40,6 +40,7 @@ import {
   hydrateElections,
 } from '../lib/chainElections';
 import { getStoredCommitment, getStoredIdentity } from '../lib/semaphore';
+import { savedElectionIds } from '../lib/savedElections';
 // One page means the same thing whichever half of the pagination draws it.
 import { DEFAULT_PAGE_SIZE } from './usePageLimit';
 
@@ -143,7 +144,17 @@ async function resolveScope(scope: ElectionScope, organizer?: string | null): Pr
     // privately; the platform commitment answers for everything older. Neither
     // prompts: an identity that is not already unlocked stays locked, and the
     // list then falls back to whatever this device has derived before.
-    return fetchEnrolledElectionAddresses(getStoredIdentity(), getStoredCommitment());
+    const enrolled = await fetchEnrolledElectionAddresses(
+      getStoredIdentity(),
+      getStoredCommitment(),
+    );
+    // AND THE ONES THEY SAVED, which the chain's index cannot know: a saved
+    // election has no leaf with this voter in it, that being the point of
+    // saving one you have not joined. Deduplicated because an election can
+    // easily be both, and the first mention keeps its place in creation order.
+    const seen = new Set(enrolled.map(address => address.toLowerCase()));
+    const saved = savedElectionIds().filter(address => !seen.has(address.toLowerCase()));
+    return [...enrolled, ...saved];
   }
   return fetchElectionAddresses();
 }

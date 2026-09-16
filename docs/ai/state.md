@@ -2312,3 +2312,60 @@ per-election nullifier) fails on recovery: a re-issued identity after a lost
 phrase produces new nullifiers everywhere, so nothing on chain could stop that
 human enrolling twice where they had already voted. See `architecture.md`,
 "Who joined what, and why the chain no longer says it".
+
+## Saved elections, and why a bookmark went on a chain
+
+**The observation.** "Próximamente" was a filter in My Elections that could
+never match anything. Confirmed in the contract, not by looking: `ElectionV4`
+only ever moves dates FORWARD (`openEnrollmentEarly` sets `enrollStart =
+block.timestamp`, and nothing sets it later), so an election a voter is enrolled
+in has passed its enrolment start for good and can never read as UPCOMING
+again. The chip was unreachable by construction.
+
+**The choice.** Delete the chip, or give it something to match. The second one
+was a feature worth having on its own: somebody meeting an election on Discover
+before enrolment opens has no way to keep it, and the browser's own bookmarks
+are no use for a page that does not exist yet.
+
+**Why the chain.** A saved list has to follow a voter to their other device, and
+a voter has no account and no password: they have one Semaphore secret,
+recoverable from a passkey or twelve words. The issuer has no database either,
+and this project already answered the same question once, for the identity
+vault. So the list goes in `PlatformRegistry.setPreferences`, one `bytes` slot
+per World ID nullifier, written by the relayer.
+
+**Encrypted, and that is not optional.** In plaintext this mapping would be a
+public, permanent record of which elections interest a named human, readable by
+anyone with an RPC endpoint. That is the linkage `enrollPrivate` and the
+per-election identities exist to remove, and worse than the one they removed:
+saving costs nothing, so people save what they are curious about and not only
+what they join. The blob is AES-GCM under HKDF over the identity's private key,
+info `votain/preferences-key/v1`, which the platform cannot compute.
+
+**Measured on the local node** (`contracts/scripts/e2e-preferences.ts`): a
+two-election list seals to 149 bytes, the addresses appear nowhere in what the
+chain stores, another voter's secret opens nothing, and one change costs 59,368
+gas.
+
+**The key is kept on the device after the first unlock.** In passkey mode the
+secret is not at rest, so every reload leaves it locked, and a sync that needed
+the secret would need an authenticator prompt to reconcile a bookmark. Nobody
+accepts that prompt, so the list would have been multi-device on paper and local
+in fact. The cached key opens the saved list and nothing else, and that list is
+already in this device's storage in plaintext, so it gives away nothing a reader
+of the device did not already have.
+
+**Merging, not overwriting.** Each entry carries when it was set, and unsaving
+writes a negative time rather than deleting. A union would have resurrected
+every election the voter removed as soon as an older device wrote back.
+
+**What it costs.** The chain records that a human saved SOMETHING, the rough
+size of it and when it changed. Not what. Clearing stops it being served and
+does not erase the history, as with everything else written to a chain.
+
+**Where the code went.** Contract: `setPreferences` / `preferencesOf` /
+`MAX_PREFERENCES_BYTES` in `PlatformRegistry`. Backend:
+`identity/preferences.ts` and `GET`/`PUT /api/preferences`. Frontend:
+`lib/savedElections.ts`, `hooks/useSavedElections.ts`, the bookmark on
+`ElectionCard`, the `saved` chip in the participation band, and `useElectionPages`
+adding saved addresses to the `enrolled` scope.

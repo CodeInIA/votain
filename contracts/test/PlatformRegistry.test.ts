@@ -332,4 +332,101 @@ describe("PlatformRegistry", function () {
       ).to.be.revertedWithCustomError(registry, "NotOwner");
     });
   });
+
+  describe("encrypted preferences", function () {
+    const BLOB = "0xdeadbeefcafe";
+    const OTHER_BLOB = "0x0badc0de";
+
+    async function registered() {
+      const registry = await deployRegistry();
+      await (await registry.registerMember(NULLIFIER, COMMITMENT)).wait();
+      return registry;
+    }
+
+    it("keeps one sealed blob per human and hands it back", async function () {
+      const registry = await registered();
+
+      await expect(registry.setPreferences(NULLIFIER, BLOB))
+        .to.emit(registry, "PreferencesSet")
+        .withArgs(NULLIFIER, 6n);
+
+      expect(await registry.preferencesOf(NULLIFIER)).to.equal(BLOB);
+    });
+
+    it("replaces rather than appends, because it cannot read what it holds", async function () {
+      const registry = await registered();
+      await (await registry.setPreferences(NULLIFIER, BLOB)).wait();
+
+      await (await registry.setPreferences(NULLIFIER, OTHER_BLOB)).wait();
+
+      expect(await registry.preferencesOf(NULLIFIER)).to.equal(OTHER_BLOB);
+    });
+
+    it("lets a voter clear them", async function () {
+      // An empty blob is the only "delete" a store of ciphertext can offer,
+      // and the browser needs one: a voter who unsaves everything must not be
+      // left with their last list still being served to their other devices.
+      const registry = await registered();
+      await (await registry.setPreferences(NULLIFIER, BLOB)).wait();
+
+      await (await registry.setPreferences(NULLIFIER, "0x")).wait();
+
+      expect(await registry.preferencesOf(NULLIFIER)).to.equal("0x");
+    });
+
+    it("answers empty for a human who never saved anything", async function () {
+      const registry = await registered();
+      expect(await registry.preferencesOf(NULLIFIER)).to.equal("0x");
+    });
+
+    it("refuses settings for a human the registry does not know", async function () {
+      const registry = await deployRegistry();
+      await expect(
+        registry.setPreferences(NULLIFIER, BLOB),
+      ).to.be.revertedWithCustomError(registry, "NullifierNotRegistered");
+    });
+
+    it("refuses the zero nullifier", async function () {
+      const registry = await registered();
+      await expect(
+        registry.setPreferences(0n, BLOB),
+      ).to.be.revertedWithCustomError(registry, "ZeroValue");
+    });
+
+    it("bounds what one write can cost the relayer", async function () {
+      const registry = await registered();
+      const cap = await registry.MAX_PREFERENCES_BYTES();
+
+      const atCap = "0x" + "ab".repeat(Number(cap));
+      await (await registry.setPreferences(NULLIFIER, atCap)).wait();
+      expect(await registry.preferencesOf(NULLIFIER)).to.equal(atCap);
+
+      await expect(
+        registry.setPreferences(NULLIFIER, "0x" + "ab".repeat(Number(cap) + 1)),
+      ).to.be.revertedWithCustomError(registry, "PreferencesTooLarge");
+    });
+
+    it("is the owner's to write, like every other entry here", async function () {
+      // A voter has no wallet, so an open setter would only ever be somebody
+      // else writing over their settings.
+      const registry = await registered();
+      const [, stranger] = await ethers.getSigners();
+
+      await expect(
+        registry.connect(stranger).setPreferences(NULLIFIER, BLOB),
+      ).to.be.revertedWithCustomError(registry, "NotOwner");
+    });
+
+    it("keeps each human's settings to themselves", async function () {
+      const registry = await registered();
+      const OTHER_NULLIFIER = 777n;
+      await (await registry.registerMember(OTHER_NULLIFIER, OTHER_COMMITMENT)).wait();
+
+      await (await registry.setPreferences(NULLIFIER, BLOB)).wait();
+      await (await registry.setPreferences(OTHER_NULLIFIER, OTHER_BLOB)).wait();
+
+      expect(await registry.preferencesOf(NULLIFIER)).to.equal(BLOB);
+      expect(await registry.preferencesOf(OTHER_NULLIFIER)).to.equal(OTHER_BLOB);
+    });
+  });
 });

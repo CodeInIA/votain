@@ -248,11 +248,16 @@
     "your_receipts": "Os teus recibos",
     "unlock_hint": "Este navegador ainda não conhece nenhum voto. Se votaste noutro dispositivo, um toque na passkey encontra-os e guarda-os aqui."
   },
+  "saved": {
+    "add": "Guardar eleição",
+    "remove": "Remover dos guardados",
+    "filter": "Guardadas"
+  },
   "voter_elections": {
     "title": "Minhas Eleições",
-    "subtitle": "Eleições nas quais você está inscrito",
+    "subtitle": "Eleições na tua lista",
     "search_placeholder": "Pesquisar nas suas eleições…",
-    "empty": "Você ainda não se inscreveu em nenhuma eleição.",
+    "empty": "Ainda não te inscreveste nem guardaste nenhuma eleição.",
     "ends_soon": "Encerra em breve",
     "urgent_one": "{{count}} termina em breve",
     "urgent_other": "{{count}} terminam em breve",

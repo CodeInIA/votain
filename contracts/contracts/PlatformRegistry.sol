@@ -66,6 +66,48 @@ contract PlatformRegistry {
     mapping(uint256 => VaultEntry[]) private vaults;
 
     /**
+     * @dev World ID nullifier => this voter's encrypted preferences.
+     *
+     * WHAT IT IS FOR. A voter's own settings, today the elections they saved to
+     * come back to. It has to survive a reinstall and follow them to a second
+     * device, and a voter has no wallet and no account with a password: what
+     * they have is one Semaphore secret, recoverable from a passkey or twelve
+     * words. Anything derived from that secret is therefore reachable wherever
+     * they are, and nowhere else.
+     *
+     * WHY IT IS A BLOB AND NOT A LIST OF ELECTIONS. In plaintext this mapping
+     * would be a public, permanent record of which elections interest a named
+     * human, readable by anyone with an RPC endpoint. That is the linkage
+     * `enrollPrivate` and the per-election identities exist to remove, and it
+     * would be worse than the one they removed, since saving costs nothing and
+     * people save what they are curious about, not only what they join. So the
+     * chain gets ciphertext: AES-GCM under a key derived from the voter's own
+     * secret, which this contract, its owner and every observer cannot compute.
+     *
+     * WHY THE CHAIN. The same reason as the vault above, and no other: what is
+     * needed is AVAILABILITY, and the issuer has no database. Substituting a
+     * blob only breaks decryption, which the browser notices and reports; the
+     * owner is a writer here and never a reader.
+     *
+     * WHAT IT COSTS, said plainly because it is permanent. That this human
+     * saved SOMETHING is public, as is the rough size of it and when each
+     * change was made. What was saved is not. Clearing the blob stops it being
+     * served, it does not erase it from the chain's history.
+     */
+    mapping(uint256 => bytes) private preferences;
+
+    /**
+     * @dev Ceiling on one voter's blob, and it is GAS that sets it.
+     *
+     * A write replaces the whole value, so its cost grows with the length the
+     * caller sends, and the caller here is the platform's own relayer paying
+     * for somebody else. At 4 KiB a blob holds far more saved elections than a
+     * person will ever have, and a bug or an abusive client cannot turn one
+     * voter's settings into a transaction that empties the relayer.
+     */
+    uint256 public constant MAX_PREFERENCES_BYTES = 4096;
+
+    /**
      * @dev World ID nullifier => this human's slot in the credential status
      * list, 1 based so that zero still means "not registered".
      *
@@ -103,6 +145,9 @@ contract PlatformRegistry {
     event VaultEntryAdded(uint256 indexed nullifier, bytes credentialId);
     event VaultEntryRemoved(uint256 indexed nullifier, bytes credentialId);
     event VaultReset(uint256 indexed nullifier, bytes credentialId);
+    /// @dev The SIZE and not the blob: an event carrying the ciphertext would
+    /// double what every change costs to store something already in storage.
+    event PreferencesSet(uint256 indexed nullifier, uint256 size);
     event StatusRevoked(uint256 indexed statusIndex);
     event StatusRestored(uint256 indexed statusIndex);
 
@@ -116,6 +161,7 @@ contract PlatformRegistry {
     error CredentialAlreadyPresent();
     error CredentialNotFound();
     error UnknownStatusIndex();
+    error PreferencesTooLarge();
     error ZeroAddress();
 
     constructor() {
@@ -275,6 +321,37 @@ contract PlatformRegistry {
     /// @notice How many passkeys can open this human's identity.
     function vaultEntryCount(uint256 nullifier) external view returns (uint256) {
         return vaults[nullifier].length;
+    }
+
+    // ────────────────────────────────────────────────
+    // Encrypted preferences
+    // ────────────────────────────────────────────────
+
+    /**
+     * @notice Stores this human's sealed settings, replacing what was there.
+     * @dev Owner-only for the reason the vault is: a voter has no wallet, by
+     * design, because a per-voter sending address would publicly link their
+     * enrollment to their ballot. Somebody has to submit on their behalf, and
+     * the ciphertext means that somebody learns nothing by doing it.
+     *
+     * REPLACES RATHER THAN MERGES, because it cannot merge: it cannot read
+     * what it holds. Two devices reconciling their settings is the browser's
+     * problem, solved where the plaintext is, and an empty blob is how a voter
+     * clears them.
+     */
+    function setPreferences(uint256 nullifier, bytes calldata blob) external onlyOwner {
+        if (nullifier == 0) revert ZeroValue();
+        if (!registeredNullifiers[nullifier]) revert NullifierNotRegistered();
+        if (blob.length > MAX_PREFERENCES_BYTES) revert PreferencesTooLarge();
+
+        preferences[nullifier] = blob;
+        emit PreferencesSet(nullifier, blob.length);
+    }
+
+    /// @notice This human's sealed settings, empty when they have none.
+    /// @dev Public, and nothing is lost by that: see the note on `preferences`.
+    function preferencesOf(uint256 nullifier) external view returns (bytes memory) {
+        return preferences[nullifier];
     }
 
     /// @notice Hand control to another address.

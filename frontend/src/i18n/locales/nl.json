@@ -246,11 +246,16 @@
     "your_receipts": "Jouw bewijzen",
     "unlock_hint": "Deze browser kent nog geen stem. Als je vanaf een ander apparaat hebt gestemd, vindt één passkey-tik ze en onthoudt ze hier."
   },
+  "saved": {
+    "add": "Stemming opslaan",
+    "remove": "Uit opgeslagen verwijderen",
+    "filter": "Opgeslagen"
+  },
   "voter_elections": {
     "title": "Mijn Verkiezingen",
-    "subtitle": "Verkiezingen waarvoor je bent ingeschreven",
+    "subtitle": "Stemmingen op je lijst",
     "search_placeholder": "Zoek in je verkiezingen…",
-    "empty": "Je hebt je nog niet ingeschreven voor verkiezingen.",
+    "empty": "Je hebt nog geen stemming bijgewoond of opgeslagen.",
     "ends_soon": "Eindigt binnenkort",
     "urgent_other": "{{count}} eindigen binnenkort",
     "urgent_one": "{{count}} eindigt binnenkort"

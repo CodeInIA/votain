@@ -10,6 +10,7 @@ import relayRouter from './routes/relay.js';
 import organizerDomainsRouter from './routes/organizerDomains.js';
 import eligibilityRouter from './routes/eligibility.js';
 import enrolmentRouter from './routes/enrolment.js';
+import preferencesRouter from './routes/preferences.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -69,6 +70,7 @@ app.use('/api', relayRouter);
 app.use('/api', organizerDomainsRouter);
 app.use('/api', eligibilityRouter);
 app.use('/api', enrolmentRouter);
+app.use('/api', preferencesRouter);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'Votain VC Issuer Backend is running' });

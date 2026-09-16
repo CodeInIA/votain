@@ -29,6 +29,7 @@ import {
   UserCheck,
   CheckCheck,
   Vote,
+  Bookmark,
 } from 'lucide-react';
 import { Badge } from './Badge';
 import { Button } from './Button';
@@ -393,6 +394,16 @@ export function ElectionFilters({
                 The words are the badges' own, `phase.enrolled` and
                 `phase.voted`, so a chip cannot come to say something
                 different from the label on the card it filters for. */}
+            {/* FIRST, because it is the only one here the voter decided.
+                Enrolled, voted and still to vote are things that happened to
+                them; saved is a list they made. */}
+            <FilterToggle
+              active={value.savedOnly}
+              onClick={() => set({ savedOnly: !value.savedOnly })}
+              icon={Bookmark}
+            >
+              {t('saved.filter')}
+            </FilterToggle>
             <FilterToggle
               active={value.enrolledOnly}
               onClick={() => set({ enrolledOnly: !value.enrolledOnly })}

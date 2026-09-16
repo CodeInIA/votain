@@ -248,11 +248,16 @@
     "your_receipts": "Vos reçus",
     "unlock_hint": "Ce navigateur ne connaît encore aucun bulletin. Si vous avez voté depuis un autre appareil, une pression sur votre passkey les trouvera et les retiendra ici."
   },
+  "saved": {
+    "add": "Enregistrer l'élection",
+    "remove": "Retirer des enregistrées",
+    "filter": "Enregistrées"
+  },
   "voter_elections": {
     "title": "Mes Élections",
-    "subtitle": "Élections auxquelles vous êtes inscrit",
+    "subtitle": "Élections de votre liste",
     "search_placeholder": "Rechercher dans vos élections…",
-    "empty": "Vous n'êtes encore inscrit à aucune élection.",
+    "empty": "Vous n'avez encore rejoint ni enregistré aucune élection.",
     "ends_soon": "Se termine bientôt",
     "urgent_one": "{{count}} se termine bientôt",
     "urgent_other": "{{count}} se terminent bientôt",

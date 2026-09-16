@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, ExternalLink, Copy, Check, Lock } from 'lucide-react';
+import { AlertTriangle, ExternalLink, Copy, Check, Lock, Bookmark } from 'lucide-react';
 import { PageLayout } from '../components/layout/PageLayout';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { BackButton } from '../components/ui/BackButton';
 import { useAuth } from '../contexts/AuthContext';
+import { useSavedElections } from '../hooks/useSavedElections';
 import { usePageMeta } from '../seo/usePageMeta';
 import { useOrganizerWallet } from '../hooks/useOrganizerWallet';
 import { ViewAsSwitch } from '../components/ui/ViewAsSwitch';
@@ -23,7 +24,7 @@ import {
 import { StatusNotice } from '../components/ui/StatusNotice';
 import { TransactionPendingModal, type TxState } from '../components/ui/TransactionPendingModal';
 import { useElection } from '../hooks/useElections';
-import { shortenReference } from '../lib/utils';
+import { shortenReference, cn } from '../lib/utils';
 import { usePolicyRequirements } from '../hooks/usePolicyRequirements';
 import { ResultBarChart } from '../components/ui/BarChart';
 import { hasPublishedResults, tallyTotal } from '../data/seed';
@@ -68,6 +69,7 @@ export default function ElectionPage() {
   const { t } = useTranslation();
   const { election, loading, live, refresh } = useElection(id);
   const { voterLoggedIn, organizerLoggedIn } = useAuth();
+  const { isSaved, toggle } = useSavedElections();
   // Public and crawlable, so the tab and the crawler snapshot need the real
   // title rather than the site name. Falls back until the chain answers.
   usePageMeta({ title: election?.title, description: election?.description });
@@ -411,9 +413,33 @@ export default function ElectionPage() {
       <div className="max-w-2xl mx-auto pt-4 pb-28">
         <div className="flex items-center justify-between gap-3 mb-5">
           <BackButton />
-          {canManage && (
-            <ViewAsSwitch to="organizer" href={organizerViewHref(election.id)} />
-          )}
+          <div className="flex items-center gap-2">
+            {/* HERE AS WELL AS ON THE CARD, because this is where somebody
+                decides. A voter reads the question, the dates and the rules on
+                this page and then wants to keep it for when enrolment opens;
+                sending them back to the list to find the bookmark they just
+                scrolled past is the kind of detour that makes a feature go
+                unused. Labelled rather than a bare icon: there is room, and the
+                page is read slowly.
+
+                Not for the organizer of this election, who has a panel for it
+                and no reason to follow their own vote. */}
+            {voterLoggedIn && !canManage && (
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-pressed={isSaved(election.id)}
+                className="rounded-full gap-2"
+                onClick={() => toggle(election.id)}
+              >
+                <Bookmark className={cn('w-4 h-4', isSaved(election.id) && 'fill-current text-primary')} />
+                {t(isSaved(election.id) ? 'saved.remove' : 'saved.add')}
+              </Button>
+            )}
+            {canManage && (
+              <ViewAsSwitch to="organizer" href={organizerViewHref(election.id)} />
+            )}
+          </div>
         </div>
 
         <ElectionHeader

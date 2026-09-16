@@ -111,7 +111,7 @@
 | `ElectionV4.sol` | Single election: ERC-2771, Semaphore V4, Paillier, coercion resistance |
 | `ElectionFactory.sol` | ElectionV4 deployment, paymaster fund management |
 | `ElectionPaymaster.sol` | Relay hub and gas tank: sponsors every enrolment and ballot, with gas reserved per election so it cannot be withdrawn from under the voters |
-| `PlatformRegistry.sol` | Identity commitment registry with owner access control |
+| `PlatformRegistry.sol` | Identity commitment registry with owner access control, plus two sealed stores it cannot read: the identity vault and each voter's preferences |
 
 ### backend/
 
@@ -1067,7 +1067,7 @@ through the dApp?** Function by function:
 
 | Entry point | Open to | What stops abuse |
 |---|---|---|
-| `PlatformRegistry.registerMember` / `rotateMember` / vault writes | the platform backend only | `onlyOwner`. A person becomes a member of the platform only through the World ID flow, so an outside caller cannot mint an identity |
+| `PlatformRegistry.registerMember` / `rotateMember` / vault writes / `setPreferences` | the platform backend only | `onlyOwner`. A person becomes a member of the platform only through the World ID flow, so an outside caller cannot mint an identity. The two blob stores are written by the same owner and readable by nobody: both hold ciphertext under keys derived from the voter's own secret |
 | `ElectionV4.enroll` | anyone | The commitment must already be a registered member, the human behind it must not be enrolled yet, and an election with an attribute policy refuses this path outright (`AttestationRequired`) |
 | `ElectionV4.enrollAttested` | anyone holding an attestation | An EIP-712 signature from the election's attester over (commitment, personhood nullifier, deadline), bound to that election and chain. Submitting it is deliberately open, so a voter can pay their own gas or hand it to the relayer |
 | `ElectionV4.castVote` | anyone holding a valid proof | A Semaphore membership proof against a current or recently valid root. Deliberately open: requiring our relayer would mean a voter we refuse to relay for cannot vote, which is exactly the power this design exists to remove |

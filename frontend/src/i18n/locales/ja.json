@@ -244,11 +244,16 @@
     "your_receipts": "あなたの受領証",
     "unlock_hint": "このブラウザはまだどの票も把握していません。別の端末から投票した場合は、パスキーの操作一度でそれらを見つけ、ここに記憶します。"
   },
+  "saved": {
+    "add": "選挙を保存",
+    "remove": "保存から削除",
+    "filter": "保存済み"
+  },
   "voter_elections": {
     "title": "マイ選挙",
-    "subtitle": "登録している選挙",
+    "subtitle": "あなたのリストの選挙",
     "search_placeholder": "自分の選挙を検索…",
-    "empty": "まだ選挙に登録していません。",
+    "empty": "まだ参加も保存もしていません。",
     "ends_soon": "間もなく終了",
     "urgent_other": "{{count}}件が間もなく終了"
   },
