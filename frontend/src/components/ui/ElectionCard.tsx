@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Users, CalendarMinus, ChevronRight, Clock } from 'lucide-react';
 import { Badge } from './Badge';
 import { DomainBadge } from './DomainBadge';
+import { turnoutPct, votersOf } from '../../lib/turnout';
 import { EligibilityChips } from './EligibilityChips';
 import { Countdown } from './Countdown';
 import { SchedulePromise } from './SchedulePromise';
@@ -68,26 +69,11 @@ export function ElectionCard({ election, view = 'public', className }: ElectionC
   // predicate already encodes; `voterView` keeps it off the public listing,
   // where it would be somebody else's clock.
   const urgent = voterView && endsSoon(election);
-  /**
-   * Turnout: PEOPLE who voted, over people enrolled.
-   *
-   * `castVotes` counts BALLOTS, and a voter who is coerced can vote again, so
-   * the raw ratio passes 100%: a card with one enrolled voter who had voted
-   * twice read "200% voted". This used to be capped at 100 to hide that, with a
-   * comment claiming the chain kept no count of distinct voters and that
-   * recovering the figure would mean reading every VoteCast event.
-   *
-   * That was simply wrong. `ElectionV4.distinctVoters()` exists, is read on
-   * every election, and has been sitting on this object the whole time. The
-   * capped estimate is gone: the number is exact.
-   *
-   * `castVotes` remains the fallback for seed elections, which carry no such
-   * count, and the cap with it.
-   */
-  const voted = election.distinctVoters ?? Math.min(election.castVotes, election.totalEnrolled);
-  const pct = election.totalEnrolled > 0
-    ? Math.min(100, Math.round((voted / election.totalEnrolled) * 100))
-    : 0;
+  // Turnout: PEOPLE who voted, over people enrolled. The rule lives in
+  // `lib/turnout` because the election page needs the same one and had its own,
+  // which divided ballots by the roll: see the file for what that cost.
+  const voted = votersOf(election);
+  const pct = turnoutPct(election);
   const turnoutLabel = t('election.turnout_detail', {
     voted,
     total: election.totalEnrolled,
