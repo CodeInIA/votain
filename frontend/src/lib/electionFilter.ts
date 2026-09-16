@@ -80,7 +80,7 @@ export interface ElectionFilterState {
    */
   cancel: 'no_cancel' | 'can_cancel' | null;
   /**
-   * Created no earlier than this day, as 'yyyy-mm-dd' local, or empty.
+   * Created no earlier than this moment, as 'yyyy-mm-ddThh:mm' local, or empty.
    *
    * SEPARATE FROM EVERY OTHER DATE HERE, which is why it is worth a control.
    * An election announced today for next March and one deployed last March
@@ -90,7 +90,7 @@ export interface ElectionFilterState {
    * recently" rather than "what is happening soon".
    */
   createdFrom: string;
-  /** Created no later than the END of this day. See `matchesElectionFilter`. */
+  /** Created no later than the END of this minute. See `matchesCreated`. */
   createdTo: string;
   /** Its next deadline falls within a day, whatever that deadline is. */
   closingSoon: boolean;
@@ -143,29 +143,49 @@ export function isAnyFilterActive(filter: ElectionFilterState): boolean {
   );
 }
 
+/**
+ * Whether "clear" has anything to undo.
+ *
+ * WIDER THAN `isAnyFilterActive`, and the difference is why both exist. That
+ * one answers "is the list being narrowed", which drives the dot warning that
+ * elections are hidden, and an order hides nothing so it must stay out of it.
+ * This answers "is anything not as it started", which is what the button
+ * resets: the search box and the order both belong in that and neither is a
+ * filter.
+ */
+export function isAnythingToClear(filter: ElectionFilterState): boolean {
+  return isAnyFilterActive(filter) || filter.query !== '' || filter.sort !== DEFAULT_SORT;
+}
+
 /** Whether either end of the creation range is set. */
 export function isCreatedFilterActive(filter: ElectionFilterState): boolean {
   return Boolean(filter.createdFrom || filter.createdTo);
 }
 
-/** A whole day, for running an upper bound to the end of the one that was picked. */
-const DAY_MS = 86_400_000;
+/** One minute, for running an upper bound to the end of the one that was picked. */
+const MINUTE_MS = 60_000;
 
-/** 'yyyy-mm-dd' is local time by specification, which is what the picker gives. */
-function parseLocalDay(value: string): number | null {
+/**
+ * 'yyyy-mm-ddThh:mm' is local time by specification, which is what the picker
+ * gives. A bare 'yyyy-mm-dd' is still read, as midnight, so a range saved
+ * before the controls offered a time keeps working.
+ */
+function parseLocal(value: string): number | null {
   if (!value) return null;
-  const [y, m, d] = value.split('-').map(Number);
+  const [datePart, timePart] = value.split('T');
+  const [y, m, d] = datePart.split('-').map(Number);
   if (!y || !m || !d) return null;
-  const at = new Date(y, m - 1, d).getTime();
+  const [hh, mm] = timePart ? timePart.split(':').map(Number) : [0, 0];
+  const at = new Date(y, m - 1, d, hh || 0, mm || 0).getTime();
   return Number.isNaN(at) ? null : at;
 }
 
 /**
  * Whether the election was created inside the range asked for.
  *
- * THE UPPER BOUND RUNS TO THE END OF ITS DAY, the same rule the gas history
- * settled on for minutes. Someone who puts the same day at both ends is asking
- * for that day, and compared against midnight at its start that is an empty
+ * THE UPPER BOUND RUNS TO THE END OF ITS MINUTE, the same rule and the same
+ * reason as the gas history. Someone who puts the same moment at both ends is
+ * asking for that moment, and compared against its start that is an empty
  * window: the honest-looking answer to a reasonable question would be "no
  * elections".
  *
@@ -176,14 +196,14 @@ function parseLocalDay(value: string): number | null {
  * make reliably.
  */
 function matchesCreated(election: Election, filter: ElectionFilterState): boolean {
-  const from = parseLocalDay(filter.createdFrom);
-  const to = parseLocalDay(filter.createdTo);
+  const from = parseLocal(filter.createdFrom);
+  const to = parseLocal(filter.createdTo);
   if (from === null && to === null) return true;
   if (!election.createdAt) return false;
 
   const at = election.createdAt.getTime();
   if (from !== null && at < from) return false;
-  if (to !== null && at >= to + DAY_MS) return false;
+  if (to !== null && at >= to + MINUTE_MS) return false;
   return true;
 }
 

@@ -39,9 +39,10 @@ import {
   EMPTY_FILTERS,
   PHASE_FILTERS,
   isAnyFilterActive,
+  isAnythingToClear,
   type ElectionFilterState,
 } from '../../lib/electionFilter';
-import { DEFAULT_SORT, SORT_OPTIONS, type ElectionSort } from '../../lib/electionSort';
+import { SORT_OPTIONS, type ElectionSort } from '../../lib/electionSort';
 
 /** One icon per ordering, so the trigger says which is on without being read. */
 const SORT_ICONS: Record<ElectionSort, typeof Globe> = {
@@ -163,6 +164,46 @@ function FilterGroup({
   );
 }
 
+/**
+ * "Clear", for a page to place on a line it already draws.
+ *
+ * IT USED TO SIT UNDER THE COLLAPSED PANEL, and that is what made choosing an
+ * order feel like the list reloading. A non-default order is something to
+ * clear, so picking one made this button appear, which pushed everything
+ * below it down 28px at the very instant the cards themselves changed. Two
+ * things moving at once read as a jolt even when neither is wrong.
+ *
+ * There is nowhere inside the filter bar to put it that does not add a row:
+ * on a phone the toolbar's second line is already the filter button and the
+ * order control. So the page places it instead, on a row that is always
+ * there anyway, and nothing reflows.
+ */
+export function ClearFilters({
+  value,
+  onChange,
+  className,
+}: {
+  value: ElectionFilterState;
+  onChange: (next: ElectionFilterState) => void;
+  className?: string;
+}) {
+  const { t } = useTranslation();
+  if (!isAnythingToClear(value)) return null;
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(EMPTY_FILTERS)}
+      className={cn(
+        'inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline cursor-pointer',
+        className,
+      )}
+    >
+      <X className="w-3.5 h-3.5 shrink-0" />
+      {t('common.clear_filters')}
+    </button>
+  );
+}
+
 interface Props {
   value: ElectionFilterState;
   onChange: (next: ElectionFilterState) => void;
@@ -176,18 +217,6 @@ export function ElectionFilters({ value, onChange, open, onToggleOpen, searchPla
   const { t } = useTranslation();
   const set = (patch: Partial<ElectionFilterState>) => onChange({ ...value, ...patch });
 
-  /**
-   * Whether "clear" has anything to undo.
-   *
-   * WIDER THAN `isAnyFilterActive`, and the difference is the whole point of
-   * having two. That one answers "is the list being narrowed", which drives
-   * the dot warning that elections are hidden, and an order hides nothing so
-   * it must stay out of it. This answers "is anything not as it was", which is
-   * what the button resets: the search box and the order are both part of that
-   * and neither is a filter.
-   */
-  const anythingToClear =
-    isAnyFilterActive(value) || value.query !== '' || value.sort !== DEFAULT_SORT;
 
   return (
     <div className="flex flex-col gap-3">
@@ -221,7 +250,12 @@ export function ElectionFilters({ value, onChange, open, onToggleOpen, searchPla
           className="gap-2 h-11 px-4 rounded-2xl text-sm text-on-surface-variant hover:text-on-surface"
         >
           <SlidersHorizontal className="w-4 h-4" />
-          <span className="hidden sm:inline">{t('common.filter')}</span>
+          {/* Labelled at every width. It was icon-only below `sm`, from when
+              all three controls shared one line and the room was not there.
+              The row wraps now, so the second line is this and the order
+              control, and an icon-only button beside a fully labelled
+              dropdown reads as one of them being unfinished. */}
+          <span>{t('common.filter')}</span>
           {/* Any active filter, not just the phase: with only the domain chip
               on, the collapsed bar gave no sign the list was being filtered. */}
           {isAnyFilterActive(value) && <span className="w-2 h-2 rounded-full bg-primary" />}
@@ -261,27 +295,6 @@ export function ElectionFilters({ value, onChange, open, onToggleOpen, searchPla
           contentClassName="w-max"
         />
       </div>
-
-      {/* IN THE TOOLBAR AND NOT ONLY IN THE PANEL, which is where it used to
-          live. Collapsing the panel does not undo anything, so a list could
-          sit narrowed by an age bound and a phase with the only way to undo
-          them hidden behind the button that had to be pressed to see them in
-          the first place.
-
-          It appears for a non-default ORDER too. The order is not a filter and
-          never lights the dot, and it is still a thing the reader changed and
-          may want back: "clear" is the one control that puts the whole panel
-          back to how it started. */}
-      {!open && anythingToClear && (
-        <button
-          type="button"
-          onClick={() => onChange(EMPTY_FILTERS)}
-          className="self-start inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline cursor-pointer"
-        >
-          <X className="w-3.5 h-3.5 shrink-0" />
-          {t('common.clear_filters')}
-        </button>
-      )}
 
       {open && (
         <div className="flex flex-col gap-3">
@@ -441,23 +454,25 @@ export function ElectionFilters({ value, onChange, open, onToggleOpen, searchPla
                 Same outline, same corner, same text size; only the height
                 keeps a little more, because a date is a target you click. */}
             <div className="flex flex-wrap items-end gap-2">
-              <div className="w-[9.5rem]">
+              <div className="w-[11.5rem]">
                 <DatePicker
                   value={value.createdFrom}
                   onChange={createdFrom => set({ createdFrom })}
                   label={t('discover.created_from')}
                   max={value.createdTo || undefined}
+                  withTime
                   className={FIELD_AS_CHIP}
                   labelClassName={FIELD_LABEL_AS_HINT}
                   id="created-from"
                 />
               </div>
-              <div className="w-[9.5rem]">
+              <div className="w-[11.5rem]">
                 <DatePicker
                   value={value.createdTo}
                   onChange={createdTo => set({ createdTo })}
                   label={t('discover.created_to')}
                   min={value.createdFrom || undefined}
+                  withTime
                   className={FIELD_AS_CHIP}
                   labelClassName={FIELD_LABEL_AS_HINT}
                   id="created-to"
@@ -483,7 +498,7 @@ export function ElectionFilters({ value, onChange, open, onToggleOpen, searchPla
               Resets the search box too: it sits above these bands and narrows
               the same list, so leaving it behind would clear the filters and
               still show a filtered list. */}
-          {anythingToClear && (
+          {isAnythingToClear(value) && (
             <button
               type="button"
               onClick={() => onChange(EMPTY_FILTERS)}

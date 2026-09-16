@@ -3,14 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { ElectionCard } from '../../components/ui/ElectionCard';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { Spinner } from '../../components/ui/Spinner';
 import { LoadMore } from '../../components/ui/LoadMore';
 import { ListError } from '../../components/ui/ListError';
 import { useElectionPages } from '../../hooks/useElectionPages';
 import { useVerifiedDomains } from '../../hooks/useVerifiedDomains';
 import { useAuth } from '../../contexts/AuthContext';
-import { ElectionFilters } from '../../components/ui/ElectionFilters';
+import { ElectionFilters, ClearFilters } from '../../components/ui/ElectionFilters';
 import { usePageMeta } from '../../seo/usePageMeta';
-import { cn } from '../../lib/utils';
 import {
   matchesElectionFilter,
   isAnyFilterActive,
@@ -170,25 +170,50 @@ export default function Discover() {
                 the honest statement is "this many so far", not a total: a
                 figure that looks final and is not is the kind of number people
                 quote back at you. */}
-            <p className="text-xs text-on-surface-meta mb-4">
-              {exactCount
-                ? t('discover.results_count', { count: all.length })
-                : t('discover.results_partial', { shown: shown.length })}
-              {partialOrder && (
-                <>
-                  {' · '}
-                  {t('sort.partial_notice')}
-                </>
-              )}
+            <p className="text-xs text-on-surface-meta mb-4 flex items-center gap-2">
+              <span>
+                {exactCount
+                  ? t('discover.results_count', { count: all.length })
+                  : t('discover.results_partial', { shown: shown.length })}
+                {partialOrder && (
+                  <>
+                    {' · '}
+                    {t('sort.partial_notice')}
+                  </>
+                )}
+              </span>
+              {/* Off the grid on purpose: the grid is what is being replaced,
+                  and anything animating inside it competes with the
+                  replacement.
+
+                  The slot is always here, empty or not. Letting a 16px
+                  spinner appear and vanish inside a 12px line made the line
+                  grow and shrink, which pushed the whole grid down 28px and
+                  back: the jolt moved out of the grid and straight into the
+                  thing above it. A reserved box the size of the text means
+                  nothing reflows. */}
+              <span className="inline-flex w-3 h-3 shrink-0 items-center justify-center">
+                {settling && <Spinner size="sm" className="w-3 h-3" />}
+              </span>
+              {/* On the count line, which is always here: it is a statement
+                  about what the filters did, and undoing them belongs beside
+                  it. Under the panel it added a row and shoved the results
+                  down the moment an order was chosen. */}
+              <ClearFilters value={filters} onChange={setFilters} className="ml-auto" />
             </p>
-            <div
-              className={cn(
-                'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 transition-opacity duration-200',
-                // Dimmer, never brighter: the whole complaint was a grid that
-                // flared pale for an instant.
-                settling && 'opacity-60',
-              )}
-            >
+            {/* NOT DIMMED WHILE IT SETTLES, which the first attempt did.
+                Fading to 60% and back takes 200ms each way and the new
+                elections arrive in about the same time, so the fade out, the
+                content swap and the fade in all landed on top of each other:
+                one pulse of the whole grid at the same moment every card in
+                it changed. Two things moving at once read as a jolt even
+                when neither is wrong.
+
+                So the grid holds completely still and the fact that
+                something is happening is said beside the count instead. It
+                is the one part of the page that is not the thing being
+                replaced. */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {shown.map(e => (
                 <ElectionCard key={e.id} election={e} view={voterLoggedIn ? 'voter' : 'public'} />
               ))}

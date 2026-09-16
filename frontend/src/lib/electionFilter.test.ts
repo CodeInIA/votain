@@ -198,12 +198,30 @@ describe('narrowing by the date nobody chose', () => {
     expect(matches(made('2026-08-31'), { createdFrom: '2026-09-01' })).toBe(false);
   });
 
-  it('runs the upper bound to the END of its day', () => {
-    // The same day at both ends means that day. Compared against midnight at
-    // its start it would be an empty window, and "no elections" would be the
+  it('runs the upper bound to the END of its minute', () => {
+    // The same moment at both ends means that moment. Compared against its
+    // start it would be an empty window, and "no elections" would be the
     // honest-looking answer to a perfectly reasonable question.
-    expect(matches(made('2026-09-10'), { createdFrom: '2026-09-10', createdTo: '2026-09-10' })).toBe(true);
-    expect(matches(made('2026-09-11'), { createdTo: '2026-09-10' })).toBe(false);
+    const noon = { createdFrom: '2026-09-10T12:00', createdTo: '2026-09-10T12:00' };
+    expect(matches(made('2026-09-10'), noon)).toBe(true);
+    expect(matches(made('2026-09-11'), { createdTo: '2026-09-10T12:00' })).toBe(false);
+  });
+
+  it('narrows to the minute, not just to the day', () => {
+    // The whole point of the controls offering a time: two elections created
+    // on the same day, an hour apart, are now separable.
+    const morning = election({ phase: 'active', createdAt: new Date('2026-09-10T09:30:00') });
+    const evening = election({ phase: 'active', createdAt: new Date('2026-09-10T19:30:00') });
+    const range = { createdFrom: '2026-09-10T18:00', createdTo: '2026-09-10T23:00' };
+
+    expect(matches(evening, range)).toBe(true);
+    expect(matches(morning, range)).toBe(false);
+  });
+
+  it('still reads a bare day, as midnight', () => {
+    // A range from before the controls offered a time.
+    expect(matches(made('2026-09-10'), { createdFrom: '2026-09-01' })).toBe(true);
+    expect(matches(made('2026-09-10'), { createdFrom: '2026-09-20' })).toBe(false);
   });
 
   it('drops an election whose age the chain never recorded', () => {
