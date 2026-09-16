@@ -1,10 +1,11 @@
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Users, Calendar, ChevronRight, Clock, CalendarCheck, CalendarClock } from 'lucide-react';
+import { Users, Calendar, ChevronRight, Clock } from 'lucide-react';
 import { Badge } from './Badge';
 import { DomainBadge } from './DomainBadge';
 import { EligibilityChips } from './EligibilityChips';
 import { Countdown } from './Countdown';
+import { SchedulePromise } from './SchedulePromise';
 import { Button } from './Button';
 import { cn } from '../../lib/utils';
 import { endsSoon, nextBoundary } from '../../lib/phase';
@@ -22,15 +23,43 @@ function phaseVariant(phase: ElectionPhase) {
  */
 const ENROLLED_PHASES: ElectionPhase[] = ['enrolling', 'pending_vote'];
 
+/**
+ * Who is looking, which decides where the card leads and what it may claim.
+ *
+ * `public` is Discover with nobody signed in: no clock is the visitor's, and no
+ * statement about enrolment can be made about them.
+ * `voter` adds their own standing and the deadlines that are theirs.
+ * `organizer` is the dashboard, where every card is their own election.
+ */
+export type ElectionCardView = 'public' | 'voter' | 'organizer';
+
+/**
+ * Phases where a vote count is still worth a line on the organizer's own list.
+ *
+ * Wider than the voter's, which stops at `active`: to someone browsing, a
+ * finished election's turnout is trivia, and to the organizer running it, it is
+ * the number they came to the dashboard for. It was on the plain row this card
+ * replaced, in every phase, and dropping it would be the one regression in the
+ * change.
+ */
+const ORGANIZER_TURNOUT_PHASES: ElectionPhase[] = ['active', 'tallying', 'closed'];
+
 interface ElectionCardProps {
   election: Election;
-  voterView?: boolean;
+  /**
+   * One prop rather than a boolean per audience. It was `voterView`, and a
+   * third audience would have made it two booleans that cannot both be true,
+   * which is a state the type would not have ruled out.
+   */
+  view?: ElectionCardView;
   className?: string;
 }
 
-export function ElectionCard({ election, voterView = false, className }: ElectionCardProps) {
+export function ElectionCard({ election, view = 'public', className }: ElectionCardProps) {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const voterView = view === 'voter';
+  const organizerView = view === 'organizer';
   // Each waiting/live phase counts down to its own next boundary.
   const deadline = nextBoundary(election)?.deadline;
   const isLive = election.phase === 'active' || election.phase === 'enrolling';
@@ -65,9 +94,16 @@ export function ElectionCard({ election, voterView = false, className }: Electio
 
   const VotingTypeIcon = VOTING_TYPE_ICONS[election.votingType];
 
-  const href = voterView
-    ? `/voter/election/${election.id}`
-    : `/election/${election.id}`;
+  const href = organizerView
+    ? `/organizer/election/${election.id}`
+    : voterView
+      ? `/voter/election/${election.id}`
+      : `/election/${election.id}`;
+
+  // See ORGANIZER_TURNOUT_PHASES. Everyone else sees it only while it moves.
+  const showsTurnout = organizerView
+    ? ORGANIZER_TURNOUT_PHASES.includes(election.phase)
+    : election.phase === 'active';
 
   return (
     <div
@@ -94,7 +130,14 @@ export function ElectionCard({ election, voterView = false, className }: Electio
               domain is never shortened, the name keeps its own line, and a card
               with a verified domain is one line taller than one without. */}
           <div className="mb-1.5 min-w-0">
-            <p className="text-xs text-on-surface-meta truncate">{election.organizer}</p>
+            {/* The name goes, and only the name: on the organizer's dashboard
+                every card carries their own, so repeating it down the list
+                says nothing and costs the title a line. The domain badge
+                stays, because it is per election and it is where they find
+                out whether the one they published actually verified. */}
+            {!organizerView && (
+              <p className="text-xs text-on-surface-meta truncate">{election.organizer}</p>
+            )}
             <DomainBadge domain={election.organizerDomain} organizerAddress={election.organizerAddress} />
           </div>
           {/* `line-clamp` hides whatever overflows the box, and at
@@ -170,7 +213,7 @@ export function ElectionCard({ election, voterView = false, className }: Electio
             {election.totalEnrolled.toLocaleString()} {t('election.enrolled')}
           </span>
         </span>
-        {election.phase === 'active' && (
+        {showsTurnout && (
           <span className="col-start-1 row-start-2 truncate">
             {pct}% {t('election.voted')}
           </span>
@@ -179,21 +222,21 @@ export function ElectionCard({ election, voterView = false, className }: Electio
           <Calendar className="w-3.5 h-3.5 shrink-0" />
           <span className="truncate">{election.voteEnd.toLocaleDateString()}</span>
         </span>
-        {/* Across the bottom of the grid rather than in a cell of its own: it is
-            the longest label here in every language, and squeezed into one
-            column it truncated to nothing. Nothing is drawn for an election
-            deployed before the flag existed, which neither made the promise nor
-            declined it. */}
-        {election.fixedSchedule !== undefined && (
-          <span className="col-span-2 row-start-3 flex items-center gap-1.5 min-w-0">
-            {election.fixedSchedule
-              ? <CalendarCheck className="w-3.5 h-3.5 shrink-0 text-success" />
-              : <CalendarClock className="w-3.5 h-3.5 shrink-0" />}
-            <span className="truncate">
-              {t(election.fixedSchedule ? 'schedule.fixed' : 'schedule.movable_short')}
-            </span>
-          </span>
-        )}
+        {/* Full-width rows under the grid rather than cells of their own: these
+            are the longest labels here in every language, and squeezed into one
+            column they truncated to nothing. Auto-placement puts them on rows 3
+            and 4, so a card that makes both promises is one line taller.
+
+            The same component the detail pages use, where this card used to
+            draw its own copy of the fixed/movable line and had never been
+            taught the second promise at all: an election that cannot be called
+            off looked identical to one that can. */}
+        <SchedulePromise
+          fixedSchedule={election.fixedSchedule}
+          cancellable={election.cancellable}
+          compact
+          className="col-span-2 min-w-0 [&>span]:truncate"
+        />
       </div>
 
       {/* Countdown to this phase's next boundary */}
@@ -212,7 +255,7 @@ export function ElectionCard({ election, voterView = false, className }: Electio
           nobody enrolled yet drew an empty grey track: it depicted nothing the
           "0% voted" line beside it did not already say, and an unfilled bar
           reads as a component that failed to load rather than as a zero. */}
-      {election.phase === 'active' && election.totalEnrolled > 0 && (
+      {showsTurnout && election.totalEnrolled > 0 && (
         <div
           role="progressbar"
           aria-valuenow={pct}

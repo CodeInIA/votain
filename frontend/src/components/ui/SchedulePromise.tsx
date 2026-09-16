@@ -14,6 +14,14 @@ interface SchedulePromiseProps {
    * assume the other.
    */
   cancellable?: boolean | undefined;
+  /**
+   * Use the short labels, for a card rather than a detail page.
+   *
+   * Only the movable case has two wordings: "Dates the organizer can shorten"
+   * says what it means and is the right length under a heading, and the same
+   * sentence in a card's stats grid pushes everything else off the row.
+   */
+  compact?: boolean;
   className?: string;
 }
 
@@ -38,7 +46,12 @@ interface SchedulePromiseProps {
  * before this existed cannot make the promise, and cannot be said to have
  * declined it either.
  */
-export function SchedulePromise({ fixedSchedule, cancellable, className }: SchedulePromiseProps) {
+export function SchedulePromise({
+  fixedSchedule,
+  cancellable,
+  compact = false,
+  className,
+}: SchedulePromiseProps) {
   const { t } = useTranslation();
   if (fixedSchedule === undefined && cancellable === undefined) return null;
 
@@ -51,7 +64,13 @@ export function SchedulePromise({ fixedSchedule, cancellable, className }: Sched
           title={t(fixedSchedule ? 'schedule.fixed_desc' : 'schedule.movable_desc')}
         >
           <Icon className={cn('w-3.5 h-3.5 shrink-0', fixedSchedule && 'text-success')} />
-          {t(fixedSchedule ? 'schedule.fixed' : 'schedule.movable')}
+          {t(
+            fixedSchedule
+              ? 'schedule.fixed'
+              : compact
+                ? 'schedule.movable_short'
+                : 'schedule.movable',
+          )}
         </span>
       )}
       {/* Only the promise is shown, not its absence. Keeping the power to cancel

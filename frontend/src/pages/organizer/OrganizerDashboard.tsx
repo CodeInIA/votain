@@ -5,14 +5,13 @@ import { Plus, Vote, Users, TrendingUp, Settings } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Button } from '../../components/ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
-import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
 import { GasWidget } from '../../components/ui/GasWidget';
 import { Spinner } from '../../components/ui/Spinner';
-import { DomainBadge } from '../../components/ui/DomainBadge';
 import { Modal } from '../../components/ui/Modal';
 import { LoadMore } from '../../components/ui/LoadMore';
 import { ListError } from '../../components/ui/ListError';
+import { ElectionCard } from '../../components/ui/ElectionCard';
 import { useElectionPages } from '../../hooks/useElectionPages';
 import { usePageLimit } from '../../hooks/usePageLimit';
 import { ELECTIONS } from '../../data/seed';
@@ -25,7 +24,6 @@ import {
   recoverOrganizerName,
   setOrganizerName,
 } from '../../lib/organizer';
-import { PULSE_PHASES } from '../../lib/phase';
 import { ElectionFilters } from '../../components/ui/ElectionFilters';
 import {
   matchesElectionFilter,
@@ -33,7 +31,6 @@ import {
   type ElectionFilterState,
 } from '../../lib/electionFilter';
 import { useVerifiedDomains } from '../../hooks/useVerifiedDomains';
-import { EligibilityChips } from '../../components/ui/EligibilityChips';
 
 
 
@@ -217,52 +214,30 @@ export default function OrganizerDashboard() {
                 ) : visibleElections.length === 0 ? (
                   <p className="px-5 py-8 text-center text-sm text-on-surface-meta">{t('dashboard.no_matches')}</p>
                 ) : (
-                  <div className="divide-y divide-white/5">
+                  <div className="flex flex-col gap-3 px-5 pb-5">
+                    {/* THE SAME CARD DISCOVER DRAWS, not a second rendering of
+                        the same election.
+
+                        This was a one-line row: title, "3 enrolled, 1 vote", a
+                        phase pill and the requirement chips. Everything else
+                        the organizer had decided about the election was
+                        invisible until they opened it: the two promises they
+                        cannot take back, the rule it is decided by, its next
+                        deadline. Their own list told them less about their own
+                        elections than the public listing told a stranger.
+
+                        Reused rather than enriched in place, because enriching
+                        in place is how the filter bar drifted: two copies of
+                        the same idea, each learning half of what the other
+                        knew. The card takes a `view` instead, so it can lead
+                        to the organizer's panel and drop the organizer's own
+                        name from every row. */}
                     {visible.map(e => (
-                      <button
-                        key={e.id}
-                        type="button"
-                        onClick={() => navigate(`/organizer/election/${e.id}`)}
-                        className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-white/3 transition-colors text-left cursor-pointer"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-on-surface truncate">{e.title}</p>
-                          {/* Was hardcoded English ("0 enrolled - 0 votes"), which
-                              showed untranslated in every other locale. */}
-                          <p className="text-xs text-on-surface-meta">
-                            {e.totalEnrolled.toLocaleString()} {t('election.enrolled').toLowerCase()}
-                            {' · '}
-                            {e.castVotes.toLocaleString()} {t('election.votes_cast').toLowerCase()}
-                          </p>
-                          {e.organizerDomain && (
-                            <div className="mt-1">
-                              <DomainBadge
-                                domain={e.organizerDomain}
-                                organizerAddress={e.organizerAddress}
-                              />
-                            </div>
-                          )}
-                        </div>
-                        {/* Stacked, so a restricted election is identifiable
-                            from the list without opening it, and with the same
-                            chips voters see on Discover: an organizer should
-                            recognise their own election by the same marks. */}
-                        <div className="flex flex-col items-end gap-2 shrink-0">
-                          <Badge variant={e.phase as Parameters<typeof Badge>[0]['variant']} dot={PULSE_PHASES.has(e.phase)}>
-                            {t(`phase.${e.phase}`)}
-                          </Badge>
-                          <EligibilityChips policy={e.eligibilityPolicy} className="justify-end" />
-                        </div>
-                      </button>
+                      <ElectionCard key={e.id} election={e} view="organizer" />
                     ))}
                     {/* Everything is already read; this only widens what is
                         drawn, so it never waits on the chain. */}
-                    <LoadMore
-                      hasMore={hasMore}
-                      loading={false}
-                      onClick={loadMore}
-                      className="pb-5"
-                    />
+                    <LoadMore hasMore={hasMore} loading={false} onClick={loadMore} />
                   </div>
                 )}
               </CardContent>

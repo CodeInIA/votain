@@ -102,7 +102,7 @@ export default function VoterElections() {
           <>
             <div className="flex flex-col gap-3">
               {visible.map(e => (
-                <ElectionCard key={e.id} election={e} voterView />
+                <ElectionCard key={e.id} election={e} view="voter" />
               ))}
             </div>
             {/* Nothing is being fetched: the whole set is already here and this

@@ -43,7 +43,7 @@ function makeElection(overrides: Partial<Election> = {}): Election {
 const setup = (election: Election, voterView = true) =>
   render(
     <MemoryRouter>
-      <ElectionCard election={election} voterView={voterView} />
+      <ElectionCard election={election} view={voterView ? 'voter' : 'public'} />
     </MemoryRouter>,
   );
 
