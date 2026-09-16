@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { ElectionCard } from '../../components/ui/ElectionCard';
@@ -10,6 +10,7 @@ import { useVerifiedDomains } from '../../hooks/useVerifiedDomains';
 import { useAuth } from '../../contexts/AuthContext';
 import { ElectionFilters } from '../../components/ui/ElectionFilters';
 import { usePageMeta } from '../../seo/usePageMeta';
+import { cn } from '../../lib/utils';
 import {
   matchesElectionFilter,
   isAnyFilterActive,
@@ -74,6 +75,30 @@ export default function Discover() {
   const partialOrder = !complete && sortNeedsEverything(filters.sort);
 
   /**
+   * The grid that is already on screen, kept for the moment a reorder needs.
+   *
+   * WHY IT IS WORTH A REF. Asking for oldest-first with only the newest pages
+   * read means the pager has nothing true to put at the head of the list yet,
+   * so it reports itself as loading and this page drew skeletons. Skeletons
+   * are `bg-surface-high/60` and a card is `bg-surface-low/30`: the brighter
+   * thing replaced the darker one for about a fifth of a second, and a grid
+   * that flashes pale and back reads as a flare, not as progress.
+   *
+   * So the cards stay put and dim slightly instead. They are the previous
+   * order for that moment, which is a smaller lie than a blank grid and a
+   * much smaller one than a flash: nothing here claims to be sorted yet, and
+   * the list it is about to become is already being read.
+   *
+   * Written during render on purpose. An effect would set it one render late,
+   * which is exactly the render the flash happens in.
+   */
+  const lastDrawn = useRef<typeof filtered>([]);
+  if (filtered.length > 0) lastDrawn.current = filtered;
+  /** A reorder settling over a grid that already has something in it. */
+  const settling = loading && lastDrawn.current.length > 0;
+  const shown = filtered.length > 0 ? filtered : lastDrawn.current;
+
+  /**
    * Whether the number below is a total or a running tally.
    *
    * Two separate ways of not knowing. The chain may still have unread elections,
@@ -108,7 +133,9 @@ export default function Discover() {
             count is a statement ABOUT the filters, and with no gap it read as
             one more line of the panel, right under the clear button. */}
         <div className="mt-6">
-        {loading ? (
+        {loading && !settling ? (
+          /* Only when there is genuinely nothing yet. A reorder over a full
+             grid takes the branch below instead; see `settling`. */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-52" />)}
           </div>
@@ -117,7 +144,7 @@ export default function Discover() {
              as one: "no elections found", with a load-more button underneath
              that would fail the same way. */
           <ListError onRetry={() => void refresh()} />
-        ) : filtered.length === 0 ? (
+        ) : shown.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <span className="text-5xl mb-4">🗳️</span>
             <h2 className="text-xl font-bold text-on-surface mb-2">{t('discover.empty_title')}</h2>
@@ -146,7 +173,7 @@ export default function Discover() {
             <p className="text-xs text-on-surface-meta mb-4">
               {exactCount
                 ? t('discover.results_count', { count: all.length })
-                : t('discover.results_partial', { shown: filtered.length })}
+                : t('discover.results_partial', { shown: shown.length })}
               {partialOrder && (
                 <>
                   {' · '}
@@ -154,8 +181,15 @@ export default function Discover() {
                 </>
               )}
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filtered.map(e => (
+            <div
+              className={cn(
+                'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 transition-opacity duration-200',
+                // Dimmer, never brighter: the whole complaint was a grid that
+                // flared pale for an instant.
+                settling && 'opacity-60',
+              )}
+            >
+              {shown.map(e => (
                 <ElectionCard key={e.id} election={e} view={voterLoggedIn ? 'voter' : 'public'} />
               ))}
             </div>
