@@ -11,37 +11,11 @@ import { useElectionPages } from '../../hooks/useElectionPages';
 import { usePageLimit } from '../../hooks/usePageLimit';
 import { useVoterIdentity } from '../../hooks/useVoterIdentity';
 import { useElectionFilterParams } from '../../hooks/useElectionFilterParams';
-import { ElectionFilters } from '../../components/ui/ElectionFilters';
-import { matchesQuery, PHASE_FILTERS } from '../../lib/electionFilter';
-import { Badge } from '../../components/ui/Badge';
-import { cn } from '../../lib/utils';
+import { ElectionFilters, ClearFilters } from '../../components/ui/ElectionFilters';
+import { matchesQuery } from '../../lib/electionFilter';
 import { sortElections } from '../../lib/electionSort';
 import { Button } from '../../components/ui/Button';
 import { isChainConfigured } from '../../lib/deployments';
-import type { ElectionPhase } from '../../data/seed';
-
-/**
- * WHICH SLICE, as the same chips every other list uses.
- *
- * It was five generic pills in the app's one accent colour, covering four of
- * the eight phases: an election of theirs that was announced, waiting between
- * windows, being counted, voided or called off fell into none of them and could
- * only be found under "all". And the row said nothing about state, where the
- * cards under it say it in colour, so the same election was yellow in the list
- * and blue in the filter that selected it.
- *
- * `PHASE_FILTERS` is the whole set, in the order the contract moves through
- * them, and each chip wears its own phase's colour. Two extras sit with them:
- * everything, and the one slice that is about the reader rather than the
- * election.
- */
-type Slice = { key: 'all' | 'voted' | ElectionPhase; labelKey: string };
-
-const SLICES: Slice[] = [
-  { key: 'all', labelKey: 'common.all' },
-  ...PHASE_FILTERS.map(phase => ({ key: phase, labelKey: `phase.${phase}` })),
-  { key: 'voted', labelKey: 'phase.voted' },
-];
 
 export default function VoterElections() {
   const { t } = useTranslation();
@@ -84,20 +58,6 @@ export default function VoterElections() {
   const [filters, setFilters] = useElectionFilterParams();
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  /**
-   * The chosen slice, IN THE URL with the rest of them.
-   *
-   * It used to be component state, so stepping into an election and back
-   * landed on "all" however the list had been narrowed: the search survived
-   * the trip and the phase beside it did not.
-   */
-  const slice: Slice['key'] = filters.votedOnly ? 'voted' : filters.phase ?? 'all';
-  const selectSlice = (key: Slice['key']) =>
-    setFilters({
-      ...filters,
-      phase: key === 'all' || key === 'voted' ? null : key,
-      votedOnly: key === 'voted',
-    });
 
   /**
    * SHOWN WHENEVER THERE IS A LIST, and not above some number of rows.
@@ -111,10 +71,18 @@ export default function VoterElections() {
    */
   const worthSearching = myElections.length > 0;
 
+  /**
+   * The filters this screen offers, and only those.
+   *
+   * The panel is asked for the status band alone, so running the whole
+   * matcher would let a hand-written URL narrow the list by rules with no
+   * control on screen. Clearing still resets everything, so a stray parameter
+   * is inert rather than stuck.
+   */
   const byTab = myElections.filter(e => {
-    if (slice === 'all') return true;
-    if (slice === 'voted') return Boolean(e.hasVoted);
-    return e.phase === slice;
+    if (filters.phase && e.phase !== filters.phase) return false;
+    if (filters.votedOnly && !e.hasVoted) return false;
+    return true;
   });
   // The query alone, because the panel that sets everything else is not
   // offered here: running the whole matcher would let a hand-written URL
@@ -123,7 +91,11 @@ export default function VoterElections() {
   const filtered = sortElections(byTab.filter(e => matchesQuery(e, needle)), filters.sort);
   // Switching tab or searching starts a different list, so it starts at the
   // first page.
-  const { visible, hasMore, loadMore } = usePageLimit(filtered, undefined, slice + filters.query + filters.sort);
+  const { visible, hasMore, loadMore } = usePageLimit(
+    filtered,
+    undefined,
+    `${filters.phase ?? ''}${filters.votedOnly}${filters.query}${filters.sort}`,
+  );
 
   const urgentCount = myElections.filter(e => endsSoon(e, now)).length;
 
@@ -134,7 +106,12 @@ export default function VoterElections() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-black tracking-tight text-white">{t('voter_elections.title')}</h1>
-            <p className="text-xs text-on-surface-meta mt-0.5">{myElections.length} {t('voter_elections.subtitle')}</p>
+            <p className="text-xs text-on-surface-meta mt-0.5 flex items-center gap-3">
+              <span>{myElections.length} {t('voter_elections.subtitle')}</span>
+              {/* Beside the count, as on Discover: the count is what says
+                  something is being hidden, and undoing it belongs there. */}
+              <ClearFilters value={filters} onChange={setFilters} />
+            </p>
           </div>
           {urgentCount > 0 && (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-error/10 border border-error/20 text-error text-xs font-semibold">
@@ -148,43 +125,12 @@ export default function VoterElections() {
             filter panels use, so a phase looks the same wherever it is read.
             `all` is the one without a phase to wear, so it borrows the neutral
             surface the unselected chips sit on. */}
-        {/* ONE SCROLLING ROW ON A PHONE, wrapped on a wide screen. Ten chips
-            wrap into five lines at 390px, which is more header than list
-            before anything is read; the same ten take two lines at desktop
-            width, where wrapping shows the whole set at once. */}
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-1 scrollbar-none sm:flex-wrap sm:overflow-visible sm:pb-0">
-          {SLICES.map(option => (
-            <button
-              key={option.key}
-              type="button"
-              onClick={() => selectSlice(option.key)}
-              className="shrink-0 transition-all cursor-pointer"
-            >
-              {option.key === 'all' ? (
-                <span
-                  className={cn(
-                    'inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold',
-                    'bg-surface-high/50 text-on-surface-variant ring-1 ring-outline-variant/20',
-                    slice === 'all' ? 'ring-2 ring-primary/40' : 'opacity-60 hover:opacity-100',
-                  )}
-                >
-                  {t(option.labelKey)}
-                </span>
-              ) : (
-                <Badge
-                  variant={option.key as Parameters<typeof Badge>[0]['variant']}
-                  dot={option.key === 'active' || option.key === 'enrolling'}
-                  className={slice === option.key ? 'ring-2 ring-primary/40' : 'opacity-60 hover:opacity-100'}
-                >
-                  {t(option.labelKey)}
-                </Badge>
-              )}
-            </button>
-          ))}
-        </div>
-
-        {/* Search and order, above the list and below the tabs: the tabs pick
-            which slice, this searches inside it. */}
+        {/* Search, the state filters and the order, in the bar every other
+            list uses. The nine phase chips used to sit open above the list,
+            which at a phone's width was five rows of header before a single
+            election; behind the button they are one row of a panel nobody has
+            to look at. Only the status band is asked for: the rest of that
+            panel is for choosing an election to join. */}
         {worthSearching && (
           <div className="mb-4">
             <ElectionFilters
@@ -193,7 +139,8 @@ export default function VoterElections() {
               open={filtersOpen}
               onToggleOpen={() => setFiltersOpen(open => !open)}
               searchPlaceholder={t('voter_elections.search_placeholder')}
-              showFilterButton={false}
+              groups={['status']}
+              showVotedFilter
             />
           </div>
         )}

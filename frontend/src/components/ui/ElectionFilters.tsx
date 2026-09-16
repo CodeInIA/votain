@@ -212,16 +212,45 @@ interface Props {
   onToggleOpen: () => void;
   searchPlaceholder: string;
   /**
-   * Whether to offer the panel of discovery filters.
+   * Which groups the panel offers, in the order named. Defaults to all of them.
    *
-   * Off for a list the reader is already part of. Age, nationality, voting
-   * rule and the two promises are there to help somebody CHOOSE an election;
-   * on "my elections" they narrow a handful of rows the voter already joined,
-   * by properties they accepted when they joined. Search and order are the two
-   * that still earn their place, so those stay.
+   * A list the reader is already part of wants a different subset: age,
+   * nationality, voting rule and the two promises are there to help somebody
+   * CHOOSE an election, and on "my elections" they narrow a handful of rows by
+   * properties the voter accepted when they joined. Which state each one is in
+   * is the question that survives, so that page asks for `status` alone.
+   *
+   * An empty list leaves the panel, and the button that opens it, out entirely.
    */
-  showFilterButton?: boolean;
+  groups?: FilterGroupName[];
+  /**
+   * Whether the state band offers "I have already voted".
+   *
+   * OFF unless a page asks, because it is a statement about the reader and
+   * most readers of a public list have not got one: for a visitor with no
+   * session `hasVoted` is unknown everywhere, so the chip would empty the list
+   * and say nothing about why. On the voter's own elections it is exactly the
+   * slice they came for.
+   */
+  showVotedFilter?: boolean;
 }
+
+export type FilterGroupName =
+  | 'status'
+  | 'properties'
+  | 'commitments'
+  | 'voting_type'
+  | 'created'
+  | 'eligibility';
+
+const ALL_GROUPS: FilterGroupName[] = [
+  'status',
+  'properties',
+  'commitments',
+  'voting_type',
+  'created',
+  'eligibility',
+];
 
 export function ElectionFilters({
   value,
@@ -229,10 +258,15 @@ export function ElectionFilters({
   open,
   onToggleOpen,
   searchPlaceholder,
-  showFilterButton = true,
+  groups = ALL_GROUPS,
+  showVotedFilter = false,
 }: Props) {
   const { t } = useTranslation();
   const set = (patch: Partial<ElectionFilterState>) => onChange({ ...value, ...patch });
+  const shows = (group: FilterGroupName) => groups.includes(group);
+  const showFilterButton = groups.length > 0;
+  // The first group drawn carries no rule above it, whichever one it is.
+  const firstShown = groups[0];
 
 
   return (
@@ -317,7 +351,8 @@ export function ElectionFilters({
 
       {open && showFilterButton && (
         <div className="flex flex-col gap-3">
-          <FilterGroup label={t('discover.group_status')} first>
+          {shows('status') && (
+          <FilterGroup label={t('discover.group_status')} first={firstShown === 'status'}>
             {PHASE_FILTERS.map(p => (
               <button
                 key={p}
@@ -334,9 +369,30 @@ export function ElectionFilters({
                 </Badge>
               </button>
             ))}
+            {/* ABOUT THE READER, NOT THE ELECTION, and it sits here anyway:
+                somebody narrowing by state is asking "where do things stand",
+                and "I have already voted" is one of the answers they mean. An
+                election is `active` whether or not they voted in it, so this
+                is a toggle beside the phases rather than one of them. */}
+            {showVotedFilter && (
+            <button
+              type="button"
+              onClick={() => set({ votedOnly: !value.votedOnly })}
+              className="transition-all cursor-pointer"
+            >
+              <Badge
+                variant="voted"
+                className={value.votedOnly ? 'ring-2 ring-primary/40' : 'opacity-60 hover:opacity-100'}
+              >
+                {t('phase.voted')}
+              </Badge>
+            </button>
+            )}
           </FilterGroup>
+          )}
 
-          <FilterGroup label={t('discover.group_properties')}>
+          {shows('properties') && (
+          <FilterGroup label={t('discover.group_properties')} first={firstShown === 'properties'}>
             {/* Only verified is offered, not its negative: "no verified domain"
                 is the normal state for most organizers, so a chip for it would
                 read as a category of suspicion rather than a filter. */}
@@ -373,7 +429,10 @@ export function ElectionFilters({
             </FilterToggle>
 
           </FilterGroup>
+          )}
 
+          {shows('commitments') && (
+          <>
           {/* The two promises an organizer makes at deployment and cannot take
               back. Named for the promises rather than for the dates, because
               the second one is not about dates at all: an election can keep
@@ -388,7 +447,7 @@ export function ElectionFilters({
               to find the elections that cannot be cut short, the other to audit
               the ones that can. Single choice, so picking one clears the
               other. */}
-          <FilterGroup label={t('discover.group_commitments')}>
+          <FilterGroup label={t('discover.group_commitments')} first={firstShown === 'commitments'}>
             <FilterToggle
               active={value.schedule === 'fixed'}
               onClick={() => set({ schedule: value.schedule === 'fixed' ? null : 'fixed' })}
@@ -436,7 +495,11 @@ export function ElectionFilters({
               Single choice: the four rules are alternatives, so picking one
               clears the last, and picking the active one clears it. Same
               behaviour as the phase pills above. */}
-          <FilterGroup label={t('discover.group_voting_type')}>
+          </>
+          )}
+
+          {shows('voting_type') && (
+          <FilterGroup label={t('discover.group_voting_type')} first={firstShown === 'voting_type'}>
             {VOTING_TYPES.map(type => (
               <FilterToggle
                 key={type}
@@ -448,6 +511,7 @@ export function ElectionFilters({
               </FilterToggle>
             ))}
           </FilterGroup>
+          )}
 
           {/* WHEN IT APPEARED, which no other control here can ask.
               Every date in the schedule was chosen by the organizer and can
@@ -460,7 +524,8 @@ export function ElectionFilters({
               what is new, and "nothing newer than the last" is how they read
               the platform as it stood. The upper bound runs to the end of its
               day, so the same day at both ends means that day. */}
-          <FilterGroup label={t('discover.group_created')}>
+          {shows('created') && (
+          <FilterGroup label={t('discover.group_created')} first={firstShown === 'created'}>
             {/* Boxed to a width each. `DatePicker` is `w-full` for the create
                 wizard, where it owns its column; here two of them at full
                 width became two stacked rows taller than every other band in
@@ -499,15 +564,18 @@ export function ElectionFilters({
               </div>
             </div>
           </FilterGroup>
+          )}
 
           {/* The only band that asks about the VOTER rather than the election:
               "would I qualify", answered with values instead of chips. */}
-          <FilterGroup label={t('discover.group_eligibility')}>
+          {shows('eligibility') && (
+          <FilterGroup label={t('discover.group_eligibility')} first={firstShown === 'eligibility'}>
             <EligibilityFilterControls
               value={value.eligibility}
               onChange={eligibility => set({ eligibility })}
             />
           </FilterGroup>
+          )}
           {/* Clearing lives in the panel, not only in the empty state.
               `Discover` offered it when a filter had hidden everything, which
               is the one moment the person can already see something is wrong.
