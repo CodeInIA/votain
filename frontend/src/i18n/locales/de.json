@@ -143,7 +143,10 @@
     "group_properties": "Wahl",
     "group_voting_type": "Entschieden durch",
     "group_eligibility": "Erfülle ich die Kriterien",
-    "results_partial": "Bisher {{shown}} gefunden"
+    "results_partial": "Bisher {{shown}} gefunden",
+    "closing_soon": "Schließt binnen eines Tages",
+    "with_results": "Ergebnisse veröffentlicht",
+    "group_schedule": "Termine"
   },
   "election": {
     "by": "von",
@@ -353,7 +356,7 @@
     "blank_vote_note": "Eine Leerstimmoption wird immer automatisch hinzugefügt.",
     "privacy_quorum": "Datenschutz-Quorum",
     "quorum_hint": "Mindestanzahl Stimmen, bevor Ergebnisse angezeigt werden.",
-    "deposit_hint": "Optional. Füllt Ihren gemeinsamen Gas-Vorrat auf, der die Gebühren der Wählenden ALLER Ihrer Wahlen bezahlt.",
+    "deposit_hint": "Optional. Für DIESE Wahl reserviert und bis zu ihrem Ende nicht abhebbar, was den Wählenden zeigt, dass ihre Stimme bezahlt ist. Sie können später mehr hinzufügen.",
     "immutability_warning": "Nach der Bereitstellung können die Parameter nicht mehr geändert werden. Sorgfältig prüfen.",
     "deploy": "Wahl bereitstellen",
     "deploy_confirm_title": "Auf der Blockchain bereitstellen?",
@@ -393,7 +396,9 @@
     "personhood_document": "Ein Ausweisdokument (empfohlen)",
     "personhood_document_desc": "Die wählende Person weist Reisepass oder Personalausweis auf dem eigenen Telefon nach. Vom Dokument wird nichts offengelegt, und eine zweite Anmeldung mit demselben wird abgelehnt.",
     "personhood_orb": "Ein Ausweisdokument und ein World ID Orb",
-    "personhood_orb_desc": "Die höchste und zugleich engste Hürde: die Orb-Verifizierung ist in Ländern, aus denen die Orbs abgezogen wurden, nicht verfügbar, und diese Wählenden können sich nicht anmelden."
+    "personhood_orb_desc": "Die höchste und zugleich engste Hürde: die Orb-Verifizierung ist in Ländern, aus denen die Orbs abgezogen wurden, nicht verfügbar, und diese Wählenden können sich nicht anmelden.",
+    "fixed_schedule": "Feste Termine, dauerhaft",
+    "fixed_schedule_desc": "Verzichten Sie darauf, Anmeldung oder Abstimmung vorzeitig zu schließen. Wählende sehen das an der Wahl, und es ist unumkehrbar. Absagen bleibt möglich."
   },
   "election_mgmt": {
     "actions": "Aktionen",
@@ -434,12 +439,16 @@
     "key_no_longer_needed": "Der Entschlüsselungsschlüssel wird nicht mehr gebraucht: die Zählung ist veröffentlicht und unveränderlich. Löschen Sie exportierte Kopien, denn damit ließen sich die einzelnen auf der Blockchain gespeicherten Stimmzettel weiterhin entschlüsseln.",
     "entry_requirements": "Teilnahmebedingungen",
     "tally_voters_other": "{{count}} Wähler nach Entfernen ersetzter Stimmen",
-    "tally_voters_one": "{{count}} Wähler nach Entfernen ersetzter Stimmen"
+    "tally_voters_one": "{{count}} Wähler nach Entfernen ersetzter Stimmen",
+    "open_enrollment_early": "Anmeldung jetzt öffnen",
+    "open_enrollment_title": "Anmeldung vorzeitig öffnen?",
+    "open_enrollment_desc": "Wählende können sich ab sofort anmelden. Das Enddatum bleibt unverändert.",
+    "enrollment_opened_done": "Anmeldung ist offen"
   },
   "gas": {
     "title": "Gas-Verwaltung",
     "deposit_title": "Gas einzahlen",
-    "amount_hint": "Mindestens 0,1 {{currency}}. Jede Stimme kostet ca. 0,03 {{currency}}.",
+    "amount_hint": "Mindestens 0,1 {{currency}}. Jede Stimme kostet ca. {{cost}} {{currency}}.",
     "deposit_btn": "{{amount}} {{currency}} einzahlen",
     "deposit_pending": "Einzahlung ausstehend…",
     "history": "Transaktionsverlauf",
@@ -457,7 +466,22 @@
     "undated_hidden": "{{n}} ohne lesbares Datum sind bei aktivem Datumsfilter ausgeblendet.",
     "view_on_explorer": "Im Block-Explorer ansehen",
     "copy_hash": "Transaktions-Hash kopieren",
-    "showing": "{{shown}} von {{total}} werden angezeigt"
+    "showing": "{{shown}} von {{total}} werden angezeigt",
+    "reserved_here": "Für diese Wahl reserviert",
+    "free_balance": "Freies Guthaben",
+    "fund_election": "Gas für diese Wahl reservieren",
+    "release": "Nicht verbrauchtes Gas zurückholen",
+    "release_available": "Diese Wahl ist beendet. {{amount}} {{currency}} wurden nie ausgegeben.",
+    "withdraw_title": "Abheben",
+    "withdraw_btn": "{{amount}} {{currency}} abheben",
+    "withdraw_confirm_body": "Danach bleiben {{left}} {{currency}} frei. Ihre laufenden Wahlen brauchen noch etwa {{needed}} {{currency}} für die {{voters}} angemeldeten Personen, die nicht gewählt haben.",
+    "withdraw_danger": "Das ist weniger, als Ihre laufenden Wahlen brauchen. Wählende könnten ihre Stimme nicht abgeben können.",
+    "withdraw_nothing_owed": "Danach bleiben {{left}} {{currency}} frei. Keine laufende Wahl wartet darauf.",
+    "movement_reserved": "Für eine Wahl reserviert",
+    "movement_released": "Aus einer Wahl zurück",
+    "reserve_note": "Reserviertes Gas kann bis zum Ende der Wahl nicht abgehoben werden. Genau das macht es zu einem Versprechen an die Wählenden.",
+    "reserve_source_balance": "Aus Ihrem Guthaben von {{amount}} {{currency}}. Von der Wallet wird nichts verlangt.",
+    "reserve_source_split": "{{fromBalance}} {{currency}} aus Ihrem Guthaben und {{fromWallet}} {{currency}} aus Ihrer Wallet."
   },
   "members": {
     "title": "Registrierte Mitglieder",
@@ -527,7 +551,8 @@
     "wallet_rejected": "Die Wallet-Verbindung wurde abgelehnt.",
     "wallet_answer_lost": "Die Antwort deiner Wallet konnte nicht bestätigt werden. Prüfe den Status, bevor du es erneut versuchst.",
     "wallet_request_rejected": "Du hast die Anfrage in deiner Wallet abgebrochen. Es wurde nichts ausgeführt.",
-    "passkey_cancelled": "Du hast den Passkey-Dialog abgebrochen. Es wurde nichts erstellt: du kannst es erneut versuchen."
+    "passkey_cancelled": "Du hast den Passkey-Dialog abgebrochen. Es wurde nichts erstellt: du kannst es erneut versuchen.",
+    "list_unreadable": "Diese Liste konnte nicht von der Chain gelesen werden, was nicht dasselbe ist wie leer zu sein. Prüfen Sie die Verbindung und versuchen Sie es erneut."
   },
   "demo": {
     "banner": "Demo-Daten: keine Verträge bereitgestellt. Nichts hiervon ist on-chain."
@@ -762,5 +787,18 @@
     "sealed": "Passkey verknüpft",
     "skip_confirm_title": "Ohne Passkey fortfahren?",
     "skip_confirm_desc": "Deine zwölf Wörter bleiben unverschlüsselt auf diesem Gerät gespeichert und sind dein einziger Weg zurück. Einen Passkey kannst du später jederzeit in deinem Profil verknüpfen."
+  },
+  "schedule": {
+    "fixed": "Feste Termine",
+    "fixed_desc": "Der Veranstalter hat bei der Erstellung darauf verzichtet, Fristen zu verschieben. Die veröffentlichten Termine gelten.",
+    "movable": "Termine, die der Veranstalter kürzen kann",
+    "movable_desc": "Der Veranstalter kann Anmeldung oder Abstimmung vorzeitig schließen und sieht dabei, wie viele sich angemeldet und abgestimmt haben.",
+    "movable_short": "Kürzbare Termine"
+  },
+  "funding": {
+    "unfunded_title": "Diese Wahl kann derzeit keine Stimmen bezahlen",
+    "unfunded_body": "Jede Stimme wird hier vom Veranstalter bezahlt, damit zum Wählen keine Wallet nötig ist. Sein Guthaben für diese Wahl ist leer. Mit Ihrer Identität ist alles in Ordnung: bitten Sie ihn aufzuladen und kommen Sie wieder.",
+    "short": "Etwa {{votes}} weitere Stimmen sind finanziert, und {{voters}} angemeldete Personen haben noch nicht gewählt.",
+    "reserved_votes": "Etwa {{votes}} Stimmen sind für diese Wahl reserviert."
   }
 }

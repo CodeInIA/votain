@@ -1,7 +1,7 @@
 import { useState, useRef, type ChangeEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { XCircle, Clock, BarChart3, Users, KeyRound } from 'lucide-react';
+import { XCircle, Clock, BarChart3, Users, KeyRound, CalendarCheck } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Badge } from '../../components/ui/Badge';
 import { EligibilityChips } from '../../components/ui/EligibilityChips';
@@ -26,13 +26,21 @@ import { useToast } from '../../components/ui/useToast';
 import { useElection } from '../../hooks/useElections';
 import { usePolicyRequirements } from '../../hooks/usePolicyRequirements';
 import { EligibilityRow } from '../../components/ui/EligibilityRow';
-import { hasPublishedResults } from '../../data/seed';
+import { hasPublishedResults, tallyTotal } from '../../data/seed';
 import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
 import { useAuth } from '../../contexts/AuthContext';
-import { cancelElection, closeVotingEarly, closeEnrollmentEarly, markVoided, publishResults } from '../../lib/organizer';
+import {
+  cancelElection,
+  closeVotingEarly,
+  closeEnrollmentEarly,
+  openEnrollmentEarly,
+  markVoided,
+  publishResults,
+} from '../../lib/organizer';
 import { computeTally, hasTallyKey, resolveTallyKey, importTallyKey, MissingTallyKeyError, type TallyResult } from '../../lib/tally';
 import { nextBoundary, PULSE_PHASES } from '../../lib/phase';
 import { explorerAddressUrl } from '../../lib/deployments';
+import { ElectionGasCard } from '../../components/organizer/ElectionGasCard';
 import { isUserRejection } from '../../lib/walletErrors';
 
 export default function ElectionManagement() {
@@ -49,6 +57,7 @@ export default function ElectionManagement() {
   const policyRequirements = usePolicyRequirements(election?.eligibilityPolicy);
   const [cancelModal, setCancelModal] = useState(false);
   const [closeModal, setCloseModal]   = useState(false);
+  const [openModal, setOpenModal]     = useState(false);
   const [tallyModal, setTallyModal]   = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -141,7 +150,22 @@ export default function ElectionManagement() {
   const closingEnrollment = election.phase === 'enrolling';
   // Only an *open* phase can be closed early: enrollment while enrolling, voting
   // while active. Nothing to close in upcoming or the pending-vote gap.
-  const canClose   = ['enrolling', 'active'].includes(election.phase);
+  /**
+   * Whether the deadlines can still be moved at all.
+   *
+   * An organizer who gave this up at deployment cannot get it back, so the
+   * buttons are not offered: a control that exists and always fails is worse
+   * than no control, and the promise is stated below in its place.
+   */
+  const scheduleMovable = election.fixedSchedule !== true;
+  const canClose   = scheduleMovable && ['enrolling', 'active'].includes(election.phase);
+  /**
+   * Only from UPCOMING, which is the only phase where it means anything.
+   *
+   * The safer twin of closing early: closing takes away a chance to take part,
+   * opening only adds one, and the closing date does not move either way.
+   */
+  const canOpen    = scheduleMovable && election.phase === 'upcoming';
   const canTally   = election.phase === 'tallying';
   const boundary   = nextBoundary(election);
   // Known before the organizer clicks anything: without the key there is nothing
@@ -267,7 +291,7 @@ export default function ElectionManagement() {
     }
   };
   const hasResults = hasPublishedResults(election);
-  const totalVotes = election.candidates.reduce((s, c) => s + (c.votes ?? 0), 0);
+  const totalVotes = tallyTotal(election);
 
   return (
     <PageLayout role="organizer" showNav>
@@ -351,6 +375,9 @@ export default function ElectionManagement() {
           })}
         </div>
 
+        {/* This election's own gas, which is what a voter is promised. */}
+        <ElectionGasCard election={election} />
+
         {/* Countdown to the phase's next boundary (null in terminal phases). */}
         {boundary && (
           <Card className="p-4 mb-4 flex items-center gap-4 flex-wrap">
@@ -433,6 +460,19 @@ export default function ElectionManagement() {
         <Card className="p-5 flex flex-col gap-3">
           <h2 className="text-sm font-semibold text-on-surface mb-1">{t('election_mgmt.actions')}</h2>
 
+          {!scheduleMovable && (
+            <p className="text-xs text-on-surface-meta px-1 flex items-start gap-1.5">
+              <CalendarCheck className="w-3.5 h-3.5 shrink-0 mt-0.5 text-success" />
+              {t('schedule.fixed_desc')}
+            </p>
+          )}
+          {canOpen && (
+            <Button variant="gradient" className="w-full rounded-2xl gap-2"
+              onClick={() => setOpenModal(true)}>
+              <Clock className="w-4 h-4" />
+              {t('election_mgmt.open_enrollment_early')}
+            </Button>
+          )}
           {canClose && (
             <Button variant="default" className="w-full rounded-2xl gap-2 border-warning/30 text-warning hover:bg-warning/10"
               onClick={() => setCloseModal(true)}>
@@ -508,6 +548,21 @@ export default function ElectionManagement() {
             <Button variant="default" className="flex-1 border-error/30 text-error hover:bg-error/10" disabled={busy}
               onClick={() => runAction(t('election_mgmt.cancelled_done'), cancelElection, () => setCancelModal(false))}>
               {t('election_mgmt.cancel_confirm')}
+            </Button>
+          </div>
+        </Modal>
+        <Modal open={openModal} onClose={() => setOpenModal(false)}
+          title={t('election_mgmt.open_enrollment_title')}
+          description={t('election_mgmt.open_enrollment_desc')}>
+          <div className="flex gap-3 mt-2">
+            <Button variant="ghost" className="flex-1" disabled={busy} onClick={() => setOpenModal(false)}>{t('common.cancel')}</Button>
+            <Button variant="gradient" className="flex-1" disabled={busy}
+              onClick={() => runAction(
+                t('election_mgmt.enrollment_opened_done'),
+                openEnrollmentEarly,
+                () => setOpenModal(false),
+              )}>
+              {t('common.confirm')}
             </Button>
           </div>
         </Modal>

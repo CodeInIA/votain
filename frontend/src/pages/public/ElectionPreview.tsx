@@ -18,11 +18,12 @@ import { StatusNotice } from '../../components/ui/StatusNotice';
 import { useElection } from '../../hooks/useElections';
 import { usePolicyRequirements } from '../../hooks/usePolicyRequirements';
 import { ResultBarChart } from '../../components/ui/BarChart';
-import { hasPublishedResults } from '../../data/seed';
+import { hasPublishedResults, tallyTotal } from '../../data/seed';
 import { useAuth } from '../../contexts/AuthContext';
 import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
 import { PULSE_PHASES } from '../../lib/phase';
 import { explorerAddressUrl } from '../../lib/deployments';
+import { SchedulePromise } from '../../components/ui/SchedulePromise';
 import { ExpandableText } from '../../components/ui/ExpandableText';
 import { VotingRule } from '../../components/ui/VotingRule';
 import { usePageMeta } from '../../seo/usePageMeta';
@@ -201,6 +202,10 @@ export default function ElectionPreview() {
           <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-white/5 text-xs text-on-surface-meta">
             <span className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5" />{election.totalEnrolled.toLocaleString()} {t('election.enrolled')}</span>
             <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" />{election.voteEnd.toLocaleDateString()}</span>
+            {/* Public too: whether the dates can move is part of deciding
+                whether to take this election seriously, and that decision is
+                made here, before anyone signs in. */}
+            <SchedulePromise fixedSchedule={election.fixedSchedule} />
           </div>
         </Card>
 
@@ -215,7 +220,7 @@ export default function ElectionPreview() {
             <>
               <ResultBarChart
                 candidates={election.candidates as Parameters<typeof ResultBarChart>[0]['candidates']}
-                totalVotes={election.castVotes}
+                totalVotes={tallyTotal(election)}
               />
               <Button
                 variant="ghost"

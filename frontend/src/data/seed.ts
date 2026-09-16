@@ -56,6 +56,25 @@ export interface VoteRecord {
  *
  * One function so the three views cannot drift apart again.
  */
+/**
+ * The number a published result is a share OF.
+ *
+ * THE SUM OF THE COUNTERS, never `castVotes`. Those two are different figures
+ * and the difference is the feature this system is proudest of: a voter who is
+ * coerced can vote again, the later ballot replaces the earlier one, and
+ * `castVotes` counts BOTH while the tally counts one. Divide by the wrong one
+ * and every candidate's share shrinks by however many people changed their
+ * mind, which is exactly when a result is most worth reading correctly.
+ *
+ * It was wrong in two of the four places that draw the same bar chart: an
+ * election with one voter who voted twice read 100% on the organizer's screen
+ * and 50% on the voter's, for the same single vote. One function now, so the
+ * four cannot disagree again.
+ */
+export function tallyTotal(election: { candidates: Candidate[] }): number {
+  return election.candidates.reduce((sum, c) => sum + (c.votes ?? 0), 0);
+}
+
 export function hasPublishedResults(election: {
   phase: ElectionPhase;
   candidates?: Candidate[];
@@ -119,6 +138,13 @@ export interface Election {
    */
   thresholdValue?: number;
   privacyQuorum: number;
+  /**
+   * The organizer gave up the power to move any deadline.
+   *
+   * Undefined for seed elections and for anything deployed before the flag
+   * existed, which is not the same as false and is shown as neither.
+   */
+  fixedSchedule?: boolean;
   /** Public per-election salt for deriving the tally key from the organizer's
    *  wallet signature. Present only on elections whose key is re-derivable
    *  (not stored). */

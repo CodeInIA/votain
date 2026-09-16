@@ -15,6 +15,10 @@ const { estado } = vi.hoisted(() => ({
     deposits: [] as unknown[],
     withdrawals: [] as unknown[],
     sponsored: [] as unknown[],
+    funded: [] as unknown[],
+    released: [] as unknown[],
+    /** Elections the factory says belong to this organizer. */
+    mine: [] as string[],
     /** Every block number asked for, including repeats. */
     bloquesPedidos: [] as number[],
     bloqueFalla: false,
@@ -31,6 +35,8 @@ vi.mock('./contracts', () => ({
       Deposited: () => 'deposits',
       Withdrawn: () => 'withdrawals',
       VoteSponsored: () => 'sponsored',
+      ElectionFunded: () => 'funded',
+      ReserveReleased: () => 'released',
     },
   }),
   getReadProvider: () => ({
@@ -44,7 +50,13 @@ vi.mock('./contracts', () => ({
 
 vi.mock('./logs', () => ({
   queryLogsFrom: async (_contract: unknown, filter: unknown) =>
-    estado[filter as 'deposits' | 'withdrawals' | 'sponsored'] ?? [],
+    estado[filter as 'deposits' | 'withdrawals' | 'sponsored' | 'funded' | 'released'] ?? [],
+}));
+
+// `ElectionFunded` is indexed by election, not by organizer, so the reader has
+// to know which elections are theirs before it can keep the right rows.
+vi.mock('./chainElections', () => ({
+  fetchOrganizerElectionAddresses: async () => estado.mine,
 }));
 
 /** One log as ethers hands it over, with only the fields the reader uses. */
@@ -54,15 +66,21 @@ const log = (blockNumber: number, field: 'amount' | 'cost', wei: bigint, hash: s
   blockNumber,
 });
 
-describe('fetchGasHistory', () => {
-  beforeEach(() => {
-    estado.deposits = [];
-    estado.withdrawals = [];
-    estado.sponsored = [];
-    estado.bloquesPedidos = [];
-    estado.bloqueFalla = false;
-  });
+// At the top level, not inside one describe: the second block below shares this
+// state, and leaving the reset in the first one let its rows leak into tests
+// that were asserting on an exact list.
+beforeEach(() => {
+  estado.deposits = [];
+  estado.withdrawals = [];
+  estado.sponsored = [];
+  estado.funded = [];
+  estado.released = [];
+  estado.mine = [];
+  estado.bloquesPedidos = [];
+  estado.bloqueFalla = false;
+});
 
+describe('fetchGasHistory', () => {
   it('reads each block once, however many votes it sponsored', async () => {
     // Two hundred sponsored votes, mined across three blocks.
     estado.sponsored = Array.from({ length: 200 }, (_, i) =>
@@ -119,5 +137,50 @@ describe('fetchGasHistory', () => {
     expect(byHash['0xin']).toBeCloseTo(1);
     expect(byHash['0xout']).toBeCloseTo(-0.5);
     expect(byHash['0xvote']).toBeCloseTo(-0.01);
+  });
+});
+
+describe('gas committed to one election', () => {
+  /** A funding log, which names the election rather than the organizer. */
+  const funding = (blockNumber: number, election: string, wei: bigint, hash: string) => ({
+    args: { amount: wei, election },
+    transactionHash: hash,
+    blockNumber,
+  });
+
+  it('shows money that went straight into an election', async () => {
+    // Creating an election now sends the attached POL to that election's
+    // reserve, so it no longer emits `Deposited`. Without this the history
+    // would say nothing at all about the funds that left the wallet.
+    estado.mine = ['0xMyElection'];
+    estado.funded = [funding(5, '0xMyElection', 2_000_000_000_000_000_000n, '0xfund')];
+
+    const [movement] = await fetchGasHistory('0xorg');
+
+    expect(movement.type).toBe('reserved');
+    expect(movement.amount).toBeCloseTo(2);
+  });
+
+  it('keeps out other organizers money', async () => {
+    // The event is indexed by election, not by organizer, so every election's
+    // funding comes back from the node and the wrong ones have to be dropped
+    // here. Someone else topping up their own election is not a line in this
+    // organizer's history.
+    estado.mine = ['0xMyElection'];
+    estado.funded = [
+      funding(5, '0xMyElection', 1_000_000_000_000_000_000n, '0xmine'),
+      funding(6, '0xSomeoneElses', 9_000_000_000_000_000_000n, '0xtheirs'),
+    ];
+
+    const movements = await fetchGasHistory('0xorg');
+
+    expect(movements.map(m => m.txHash)).toEqual(['0xmine']);
+  });
+
+  it('matches an election however the address is cased', async () => {
+    estado.mine = ['0xmyelection'];
+    estado.funded = [funding(5, '0xMyElection', 1n, '0xmine')];
+
+    expect(await fetchGasHistory('0xorg')).toHaveLength(1);
   });
 });

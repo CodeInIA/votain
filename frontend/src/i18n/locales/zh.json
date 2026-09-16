@@ -142,7 +142,10 @@
     "group_properties": "选举",
     "group_voting_type": "决出方式",
     "group_eligibility": "我是否符合",
-    "results_partial": "目前找到 {{shown}} 个"
+    "results_partial": "目前找到 {{shown}} 个",
+    "closing_soon": "一天内截止",
+    "with_results": "已公布结果",
+    "group_schedule": "日期"
   },
   "election": {
     "by": "由",
@@ -350,7 +353,7 @@
     "blank_vote_note": "始终自动包含空白票选项。",
     "privacy_quorum": "隐私法定人数",
     "quorum_hint": "公布结果前所需的最低票数。",
-    "deposit_hint": "可选。为你的共享 gas 储备充值，它支付你所有选举中选民的交易费用。",
+    "deposit_hint": "可选。资金专门为本次选举预留，在选举结束前无法提取，这正是选民能看到自己的票已付费的原因。以后还可以再加。",
     "immutability_warning": "部署后，选举参数无法更改。请仔细检查所有内容。",
     "deploy": "部署选举",
     "deploy_confirm_title": "部署到区块链？",
@@ -390,7 +393,9 @@
     "personhood_document": "一份身份证件（推荐）",
     "personhood_document_desc": "选民在自己的手机上证明护照或身份证。证件内容不会被披露，用同一份证件的第二次登记会被拒绝。",
     "personhood_orb": "身份证件加 World ID Orb",
-    "personhood_orb_desc": "门槛最高，覆盖最窄：在 Orb 已撤出的国家无法完成验证，那里的选民将无法登记。"
+    "personhood_orb_desc": "门槛最高，覆盖最窄：在 Orb 已撤出的国家无法完成验证，那里的选民将无法登记。",
+    "fixed_schedule": "永久固定日期",
+    "fixed_schedule_desc": "放弃提前关闭登记或投票的权力。选民会在选举上看到这一点，且无法撤销。取消选举仍然可以。"
   },
   "election_mgmt": {
     "actions": "操作",
@@ -430,12 +435,16 @@
     "key_imported": "解密密钥已导入",
     "key_no_longer_needed": "解密密钥已不再需要：计票结果已公布且无法更改。请删除你导出的任何副本，因为它仍能解密链上保存的每一张选票。",
     "entry_requirements": "参加条件",
-    "tally_voters_other": "剔除被替代的选票后共 {{count}} 名选民"
+    "tally_voters_other": "剔除被替代的选票后共 {{count}} 名选民",
+    "open_enrollment_early": "立即开放登记",
+    "open_enrollment_title": "提前开放登记？",
+    "open_enrollment_desc": "选民从现在起可以登记。截止日期不变。",
+    "enrollment_opened_done": "登记已开放"
   },
   "gas": {
     "title": "Gas 管理",
     "deposit_title": "充值 Gas",
-    "amount_hint": "最低 0.1 {{currency}}。每次投票约需 0.03 {{currency}}。",
+    "amount_hint": "最低 0.1 {{currency}}。每次投票约需 {{cost}} {{currency}}。",
     "deposit_btn": "充值 {{amount}} {{currency}}",
     "deposit_pending": "充值待处理…",
     "history": "交易历史",
@@ -452,7 +461,22 @@
     "undated_hidden": "按日期筛选时，{{n}} 条日期无法读取的记录被隐藏。",
     "view_on_explorer": "在区块浏览器中查看",
     "copy_hash": "复制交易哈希",
-    "showing": "显示 {{total}} 条中的 {{shown}} 条"
+    "showing": "显示 {{total}} 条中的 {{shown}} 条",
+    "reserved_here": "为本次选举预留",
+    "free_balance": "自由余额",
+    "fund_election": "为本次选举预留 gas",
+    "release": "取回未使用的 gas",
+    "release_available": "本次选举已结束，有 {{amount}} {{currency}} 未被使用。",
+    "withdraw_title": "提取",
+    "withdraw_btn": "提取 {{amount}} {{currency}}",
+    "withdraw_confirm_body": "提取后自由余额为 {{left}} {{currency}}。你进行中的选举还需要约 {{needed}} {{currency}}，用于 {{voters}} 名已登记但未投票的人。",
+    "withdraw_danger": "这少于你进行中的选举所需。可能有选民无法投票。",
+    "withdraw_nothing_owed": "提取后自由余额为 {{left}} {{currency}}。没有进行中的选举依赖它。",
+    "movement_reserved": "为一次选举预留",
+    "movement_released": "从一次选举退回",
+    "reserve_note": "预留的 gas 在选举结束前无法提取，这正是它成为对选民承诺的原因。",
+    "reserve_source_balance": "从你 {{amount}} {{currency}} 的余额中扣除，不向钱包索取任何资金。",
+    "reserve_source_split": "余额支付 {{fromBalance}} {{currency}}，钱包支付 {{fromWallet}} {{currency}}。"
   },
   "members": {
     "title": "已注册成员",
@@ -522,7 +546,8 @@
     "wallet_rejected": "钱包连接已被拒绝。",
     "wallet_answer_lost": "无法确认钱包的响应。请先查看状态，再重试。",
     "wallet_request_rejected": "你在钱包中取消了请求，未执行任何操作。",
-    "passkey_cancelled": "你关闭了通行密钥请求。没有创建任何内容，可以再试一次。"
+    "passkey_cancelled": "你关闭了通行密钥请求。没有创建任何内容，可以再试一次。",
+    "list_unreadable": "无法从链上读取此列表，这并不等于列表为空。请检查连接后重试。"
   },
   "demo": {
     "banner": "演示数据：未部署合约。此处内容均不在链上。"
@@ -756,5 +781,18 @@
     "sealed": "通行密钥已绑定",
     "skip_confirm_title": "不绑定通行密钥，继续？",
     "skip_confirm_desc": "你的十二个词会以未加密的形式保存在本设备上，并且是你唯一的回归方式。你可以之后随时在个人资料里绑定通行密钥。"
+  },
+  "schedule": {
+    "fixed": "日期固定",
+    "fixed_desc": "组织者在创建本次选举时已放弃修改任何期限的权力。公布的日期就是执行的日期。",
+    "movable": "组织者可提前结束的日期",
+    "movable_desc": "组织者可以提前关闭登记或投票，而且在做决定时能看到多少人已登记、多少人已投票。",
+    "movable_short": "可提前结束"
+  },
+  "funding": {
+    "unfunded_title": "本次选举目前无法支付投票费用",
+    "unfunded_body": "这里每一票的费用都由组织者承担，因此投票无需钱包。他为本次选举准备的余额已用尽。你的身份没有问题：请他充值后再回来。",
+    "short": "还有约 {{votes}} 票的费用，另有 {{voters}} 名已登记的人尚未投票。",
+    "reserved_votes": "本次选举已预留约 {{votes}} 票的费用。"
   }
 }

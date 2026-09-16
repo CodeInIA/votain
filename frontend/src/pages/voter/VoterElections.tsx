@@ -6,6 +6,7 @@ import { ElectionCard } from '../../components/ui/ElectionCard';
 import { endsSoon } from '../../lib/phase';
 import { Spinner } from '../../components/ui/Spinner';
 import { LoadMore } from '../../components/ui/LoadMore';
+import { ListError } from '../../components/ui/ListError';
 import { useElectionPages } from '../../hooks/useElectionPages';
 import { usePageLimit } from '../../hooks/usePageLimit';
 import type { ElectionPhase } from '../../data/seed';
@@ -32,7 +33,7 @@ export default function VoterElections() {
    * who is warned about none of their deadlines because the election was on the
    * second page has been failed by the feature.
    */
-  const { all: myElections, loading } = useElectionPages({
+  const { all: myElections, loading, error, refresh } = useElectionPages({
     scope: 'enrolled',
     hydrateAll: true,
     keep: e => Boolean(e.isEnrolled || e.hasVoted),
@@ -90,6 +91,8 @@ export default function VoterElections() {
         {/* List */}
         {loading ? (
           <div className="flex justify-center py-20"><Spinner /></div>
+        ) : error ? (
+          <ListError onRetry={() => void refresh()} />
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <span className="text-4xl mb-3">📋</span>

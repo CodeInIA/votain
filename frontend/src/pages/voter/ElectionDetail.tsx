@@ -25,8 +25,13 @@ import { useElection } from '../../hooks/useElections';
 import { shortenReference } from '../../lib/utils';
 import { usePolicyRequirements } from '../../hooks/usePolicyRequirements';
 import { ResultBarChart } from '../../components/ui/BarChart';
-import { hasPublishedResults } from '../../data/seed';
+import { hasPublishedResults, tallyTotal } from '../../data/seed';
 import { enrollInElection } from '../../lib/voting';
+import { FundingNotice } from '../../components/ui/FundingNotice';
+import { SchedulePromise } from '../../components/ui/SchedulePromise';
+import { useElectionFunding } from '../../hooks/useElectionFunding';
+import { canFundOneVote } from '../../lib/gasNeeds';
+import { useVoteCost } from '../../hooks/useVoteCost';
 import { EligibilityCheck } from '../../components/voter/EligibilityCheck';
 import { relayErrorMessage, type EnrollAttestationInput } from '../../lib/relay';
 import { isEmptyPolicy } from '../../lib/eligibility';
@@ -76,6 +81,31 @@ export default function ElectionDetail() {
   // having loaded, so there was never a reason for it to be down there. The
   // comment on `canManage` says the same thing about the same two returns.
   const { ready: identityReady, unlocking, unlock } = useVoterIdentity(live);
+  /**
+   * Whether this election can pay for a ballot at all.
+   *
+   * Read before the voter commits to anything, because the alternative is a
+   * revert after the proof has been generated, which on a phone is two minutes
+   * of work thrown away.
+   *
+   * UP HERE for the same reason as the line above it, and the test that guards
+   * this file caught it sitting below: an optional argument is not what makes a
+   * hook conditional, its POSITION is, and this one had been written next to
+   * the code that uses it. The hook tolerates `undefined` and does nothing with
+   * it, which is what makes calling it before the election has loaded correct.
+   */
+  const funding = useElectionFunding(election?.contractAddress);
+  // Above the early returns with every other hook, for the reason written there.
+  const voteCost = useVoteCost();
+  // A slow read must never look like an empty tank, so nothing is blocked while
+  // it is loading, or if the chain refused to answer.
+  const canPayForAVote =
+    funding.loading ||
+    funding.error ||
+    canFundOneVote(funding.reserved, funding.free, voteCost.matic);
+  // Only the reserve is counted. The organizer's free balance would pay too, and
+  // they can also withdraw it whenever they like, so it is not theirs to promise.
+  const reservedBallots = Math.floor(funding.reserved / voteCost.matic);
 
 
   if (loading) {
@@ -191,7 +221,23 @@ export default function ElectionDetail() {
         )
         : (
           <div className="flex flex-col gap-2">
-            <Button variant="gradient" size="lg" className="w-full rounded-full h-14" onClick={handleEnroll}>
+            {/* THE HARD STOP GOES HERE, not at the ballot. Being turned away
+                before enrolling is recoverable: come back when the organizer
+                has topped up. Being enrolled and then unable to vote, possibly
+                on the last day, is a vote lost. */}
+            <FundingNotice
+              election={election}
+              reserved={funding.reserved}
+              organizerFree={funding.free}
+              className="mb-1"
+            />
+            <Button
+              variant="gradient"
+              size="lg"
+              className="w-full rounded-full h-14"
+              disabled={!canPayForAVote}
+              onClick={handleEnroll}
+            >
               {t('election.enroll')}
             </Button>
             {/* Said before the tap, not after: a voter without a passport to
@@ -209,15 +255,27 @@ export default function ElectionDetail() {
     if (election.hasVoted) return null;
     if (!election.isEnrolled) return infoPanel(t('election.cta_not_enrolled'));
     return (
-      <Button
-        variant="gradient"
-        size="lg"
-        className="w-full rounded-full h-14"
-        disabled={!selectedCandidate}
-        onClick={handleVote}
-      >
-        {t('election.cast_vote')}
-      </Button>
+      <div className="flex flex-col gap-2">
+        {/* Warned, not blocked. The balance was read when the page loaded and
+            may have changed since, so refusing a ballot that would have gone
+            through would be a failure of its own. If it really is empty the
+            relay says so, and that message is already written for the voter. */}
+        <FundingNotice
+          election={election}
+          reserved={funding.reserved}
+          organizerFree={funding.free}
+          className="mb-1"
+        />
+        <Button
+          variant="gradient"
+          size="lg"
+          className="w-full rounded-full h-14"
+          disabled={!selectedCandidate}
+          onClick={handleVote}
+        >
+          {t('election.cast_vote')}
+        </Button>
+      </div>
     );
   };
 
@@ -351,6 +409,24 @@ export default function ElectionDetail() {
           <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-white/5 text-xs text-on-surface-meta">
             <span className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5" />{election.totalEnrolled.toLocaleString()} {t('election.enrolled')}</span>
             <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" />{election.voteEnd.toLocaleDateString()}</span>
+            {/* WHAT IS RESERVED, stated as a fact among the other facts rather
+                than as a banner.
+                The warning below the enrol button only speaks when something is
+                wrong, which is right for a warning and wrong as the only way to
+                learn this. The reserve is a promise made to the voter on chain,
+                one the organizer cannot revoke, and a promise nobody can see is
+                worth a great deal less. The organizer's own screen shows this
+                number; the voter has more right to it than they do.
+                A line, not a coloured box: a box that appears when all is well
+                on every election is how people learn to stop reading the one
+                that appears when it is not. */}
+            <SchedulePromise fixedSchedule={election.fixedSchedule} />
+            {reservedBallots > 0 && (
+              <span className="flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5" />
+                {t('funding.reserved_votes', { votes: reservedBallots })}
+              </span>
+            )}
           </div>
         </Card>
 
@@ -400,7 +476,7 @@ export default function ElectionDetail() {
             <>
               <ResultBarChart
                 candidates={election.candidates as Parameters<typeof ResultBarChart>[0]['candidates']}
-                totalVotes={election.castVotes}
+                totalVotes={tallyTotal(election)}
               />
               <Button
                 variant="ghost"

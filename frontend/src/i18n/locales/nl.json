@@ -143,7 +143,10 @@
     "group_properties": "Verkiezing",
     "group_voting_type": "Beslist door",
     "group_eligibility": "Voldoe ik",
-    "results_partial": "{{shown}} tot nu toe gevonden"
+    "results_partial": "{{shown}} tot nu toe gevonden",
+    "closing_soon": "Sluit binnen een dag",
+    "with_results": "Uitslag gepubliceerd",
+    "group_schedule": "Data"
   },
   "election": {
     "by": "door",
@@ -353,7 +356,7 @@
     "blank_vote_note": "Een blanco stemoptie wordt altijd automatisch toegevoegd.",
     "privacy_quorum": "Privacyquorum",
     "quorum_hint": "Minimum stemmen vereist voordat resultaten worden onthuld.",
-    "deposit_hint": "Optioneel. Vult je gedeelde gasvoorraad aan, die de transactiekosten van de kiezers van AL je verkiezingen betaalt.",
+    "deposit_hint": "Optioneel. Gereserveerd voor DEZE verkiezing en niet opneembaar tot ze afloopt, waardoor kiezers zien dat hun stem betaald is. Je kunt later meer toevoegen.",
     "immutability_warning": "Eenmaal geïmplementeerd kunnen de parameters niet worden gewijzigd. Controleer alles zorgvuldig.",
     "deploy": "Verkiezing implementeren",
     "deploy_confirm_title": "Implementeren op de blockchain?",
@@ -393,7 +396,9 @@
     "personhood_document": "Een identiteitsdocument (aanbevolen)",
     "personhood_document_desc": "De kiezer bewijst een paspoort of identiteitskaart op de eigen telefoon. Er wordt niets over het document prijsgegeven, en een tweede inschrijving met hetzelfde document wordt geweigerd.",
     "personhood_orb": "Een identiteitsdocument en een World ID Orb",
-    "personhood_orb_desc": "De hoogste en tegelijk smalste lat: Orb-verificatie is niet beschikbaar in landen waar de Orbs zijn weggehaald, en die kiezers kunnen zich niet inschrijven."
+    "personhood_orb_desc": "De hoogste en tegelijk smalste lat: Orb-verificatie is niet beschikbaar in landen waar de Orbs zijn weggehaald, en die kiezers kunnen zich niet inschrijven.",
+    "fixed_schedule": "Vaste data, permanent",
+    "fixed_schedule_desc": "Zie af van de mogelijkheid om inschrijving of stemming vroeger te sluiten. Kiezers zien dit bij de verkiezing en het is onomkeerbaar. Annuleren blijft mogelijk."
   },
   "election_mgmt": {
     "actions": "Acties",
@@ -434,12 +439,16 @@
     "key_no_longer_needed": "De ontsleutelsleutel is niet meer nodig: de telling is gepubliceerd en kan niet meer wijzigen. Verwijder geëxporteerde kopieën, want daarmee zijn de afzonderlijke stembiljetten op de keten nog te ontsleutelen.",
     "entry_requirements": "Deelnamevoorwaarden",
     "tally_voters_other": "{{count}} kiezers na verwijdering van vervangen stemmen",
-    "tally_voters_one": "{{count}} kiezer na verwijdering van vervangen stemmen"
+    "tally_voters_one": "{{count}} kiezer na verwijdering van vervangen stemmen",
+    "open_enrollment_early": "Inschrijving nu openen",
+    "open_enrollment_title": "Inschrijving eerder openen?",
+    "open_enrollment_desc": "Kiezers kunnen zich vanaf nu inschrijven. De sluitingsdatum verandert niet.",
+    "enrollment_opened_done": "Inschrijving is open"
   },
   "gas": {
     "title": "Gasbeheer",
     "deposit_title": "Gas storten",
-    "amount_hint": "Minimum 0,1 {{currency}}. Elke stem kost ongeveer 0,03 {{currency}}.",
+    "amount_hint": "Minimum 0,1 {{currency}}. Elke stem kost ongeveer {{cost}} {{currency}}.",
     "deposit_btn": "{{amount}} {{currency}} storten",
     "deposit_pending": "Storting in behandeling…",
     "history": "Transactiegeschiedenis",
@@ -457,7 +466,22 @@
     "undated_hidden": "{{n}} zonder leesbare datum zijn verborgen zolang je op datum filtert.",
     "view_on_explorer": "Bekijken in de blockexplorer",
     "copy_hash": "Transactiehash kopiëren",
-    "showing": "{{shown}} van {{total}} getoond"
+    "showing": "{{shown}} van {{total}} getoond",
+    "reserved_here": "Gereserveerd voor deze verkiezing",
+    "free_balance": "Vrij saldo",
+    "fund_election": "Gas reserveren voor deze verkiezing",
+    "release": "Ongebruikt gas terughalen",
+    "release_available": "Deze verkiezing is afgelopen. {{amount}} {{currency}} is nooit uitgegeven.",
+    "withdraw_title": "Opnemen",
+    "withdraw_btn": "{{amount}} {{currency}} opnemen",
+    "withdraw_confirm_body": "Er blijft {{left}} {{currency}} vrij. Je lopende verkiezingen hebben nog ongeveer {{needed}} {{currency}} nodig voor de {{voters}} ingeschreven mensen die niet gestemd hebben.",
+    "withdraw_danger": "Dat is minder dan je lopende verkiezingen nodig hebben. Kiezers kunnen mogelijk niet stemmen.",
+    "withdraw_nothing_owed": "Er blijft {{left}} {{currency}} vrij. Geen lopende verkiezing wacht erop.",
+    "movement_reserved": "Gereserveerd voor een verkiezing",
+    "movement_released": "Terug uit een verkiezing",
+    "reserve_note": "Gereserveerd gas kan niet worden opgenomen tot de verkiezing eindigt. Dat maakt het een belofte aan de kiezer.",
+    "reserve_source_balance": "Komt uit je saldo van {{amount}} {{currency}}. Aan je wallet wordt niets gevraagd.",
+    "reserve_source_split": "{{fromBalance}} {{currency}} uit je saldo en {{fromWallet}} {{currency}} uit je wallet."
   },
   "members": {
     "title": "Geregistreerde leden",
@@ -527,7 +551,8 @@
     "wallet_rejected": "De wallet-verbinding is geweigerd.",
     "wallet_answer_lost": "We konden het antwoord van je wallet niet bevestigen. Controleer de status voordat je het opnieuw probeert.",
     "wallet_request_rejected": "Je hebt het verzoek in je wallet geannuleerd. Er is niets gebeurd.",
-    "passkey_cancelled": "Je hebt het passkey-verzoek gesloten. Er is niets aangemaakt: je kunt het opnieuw proberen."
+    "passkey_cancelled": "Je hebt het passkey-verzoek gesloten. Er is niets aangemaakt: je kunt het opnieuw proberen.",
+    "list_unreadable": "Deze lijst kon niet van de chain gelezen worden, wat niet hetzelfde is als leeg zijn. Controleer de verbinding en probeer het opnieuw."
   },
   "demo": {
     "banner": "Demogegevens: geen contracten uitgerold. Niets hiervan staat on-chain."
@@ -762,5 +787,18 @@
     "sealed": "Passkey gekoppeld",
     "skip_confirm_title": "Doorgaan zonder passkey?",
     "skip_confirm_desc": "Je twaalf woorden blijven onversleuteld op dit apparaat staan en zijn je enige weg terug. Je kunt later vanuit je profiel een passkey koppelen, wanneer je maar wilt."
+  },
+  "schedule": {
+    "fixed": "Vaste data",
+    "fixed_desc": "De organisator heeft bij het aanmaken afgezien van de mogelijkheid om termijnen te verschuiven. De gepubliceerde data gelden.",
+    "movable": "Data die de organisator kan inkorten",
+    "movable_desc": "De organisator kan inschrijving of stemming vroeger sluiten, en ziet daarbij hoeveel mensen zich hebben ingeschreven en gestemd.",
+    "movable_short": "Inkortbare data"
+  },
+  "funding": {
+    "unfunded_title": "Deze verkiezing kan nu geen stemmen betalen",
+    "unfunded_body": "Elke stem wordt hier door de organisator betaald, zodat stemmen geen wallet vereist. Zijn saldo voor deze verkiezing is leeg. Er is niets mis met je identiteit: vraag om bij te vullen en kom terug.",
+    "short": "Er zijn nog ongeveer {{votes}} stemmen gefinancierd, en {{voters}} ingeschreven mensen hebben nog niet gestemd.",
+    "reserved_votes": "Er zijn ongeveer {{votes}} stemmen gereserveerd voor deze verkiezing."
   }
 }

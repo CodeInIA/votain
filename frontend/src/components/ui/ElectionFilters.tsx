@@ -11,7 +11,17 @@
  */
 import type React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Search, SlidersHorizontal, X, Globe, ShieldCheck } from 'lucide-react';
+import {
+  Search,
+  SlidersHorizontal,
+  X,
+  Globe,
+  ShieldCheck,
+  Clock,
+  BarChart3,
+  CalendarCheck,
+  CalendarClock,
+} from 'lucide-react';
 import { Badge } from './Badge';
 import { Button } from './Button';
 import { Input } from './Input';
@@ -187,6 +197,55 @@ export function ElectionFilters({ value, onChange, open, onToggleOpen, searchPla
               icon={ShieldCheck}
             >
               {t('discover.restricted_only')}
+            </FilterToggle>
+
+            {/* Whatever the next deadline is: an enrolling election is measured
+                against the close of enrolment and an active one against the
+                close of voting. To someone deciding where to spend the evening,
+                "the chance to join ends tonight" and "the chance to vote ends
+                tonight" are the same news. */}
+            <FilterToggle
+              active={value.closingSoon}
+              onClick={() => set({ closingSoon: !value.closingSoon })}
+              icon={Clock}
+            >
+              {t('discover.closing_soon')}
+            </FilterToggle>
+
+            {/* Deliberately not the same as the `closed` phase above: an
+                election can sit closed for weeks with nothing published, and
+                someone looking for something to READ would find it and leave
+                empty handed. */}
+            <FilterToggle
+              active={value.withResults}
+              onClick={() => set({ withResults: !value.withResults })}
+              icon={BarChart3}
+            >
+              {t('discover.with_results')}
+            </FilterToggle>
+          </FilterGroup>
+
+          {/* BOTH ANSWERS, unlike the verified-domain chip above, and for the
+              opposite reason. A missing domain is the normal state and a chip
+              for it would read as suspicion; here the two answers are two
+              deliberate choices the organizer made, and each is worth searching
+              for: one to find elections that cannot be cut short, the other to
+              audit the ones that can. Single choice, so picking one clears the
+              other. */}
+          <FilterGroup label={t('discover.group_schedule')}>
+            <FilterToggle
+              active={value.schedule === 'fixed'}
+              onClick={() => set({ schedule: value.schedule === 'fixed' ? null : 'fixed' })}
+              icon={CalendarCheck}
+            >
+              {t('schedule.fixed')}
+            </FilterToggle>
+            <FilterToggle
+              active={value.schedule === 'movable'}
+              onClick={() => set({ schedule: value.schedule === 'movable' ? null : 'movable' })}
+              icon={CalendarClock}
+            >
+              {t('schedule.movable_short')}
             </FilterToggle>
           </FilterGroup>
 

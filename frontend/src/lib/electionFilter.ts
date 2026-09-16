@@ -8,7 +8,8 @@
  * are standing.
  */
 import { matchesEligibilityFilter, isEligibilityFilterActive, type EligibilityFilter } from './eligibilityFilter';
-import { type Election, type ElectionPhase, type VotingType } from '../data/seed';
+import { hasPublishedResults, type Election, type ElectionPhase, type VotingType } from '../data/seed';
+import { closingSoon } from './phase';
 import { isEmptyPolicy } from './eligibility';
 
 /** Phases worth offering as a chip. Draft and terminal states are not useful filters. */
@@ -33,6 +34,26 @@ export interface ElectionFilterState {
    * them, the same way they narrow by phase.
    */
   votingType: VotingType | null;
+  /**
+   * Whether the organizer can still move the deadlines.
+   *
+   * Three states and not a toggle, because both answers are worth searching
+   * for. Someone choosing where to take part wants the elections that cannot be
+   * cut short; someone auditing the platform wants exactly the opposite. An
+   * election that predates the flag matches neither, since it did not make the
+   * promise and did not decline it.
+   */
+  schedule: 'fixed' | 'movable' | null;
+  /** Its next deadline falls within a day, whatever that deadline is. */
+  closingSoon: boolean;
+  /**
+   * Results are published and readable.
+   *
+   * Not the same as the `closed` phase, which is why it is its own filter: an
+   * election can be closed for weeks with nothing published, and someone
+   * looking for something to read would find it and leave empty handed.
+   */
+  withResults: boolean;
   eligibility: EligibilityFilter;
 }
 
@@ -42,6 +63,9 @@ export const EMPTY_FILTERS: ElectionFilterState = {
   domainOnly: false,
   restrictedOnly: false,
   votingType: null,
+  schedule: null,
+  closingSoon: false,
+  withResults: false,
   eligibility: {},
 };
 
@@ -57,6 +81,9 @@ export function isAnyFilterActive(filter: ElectionFilterState): boolean {
     filter.domainOnly ||
     filter.restrictedOnly ||
     Boolean(filter.votingType) ||
+    Boolean(filter.schedule) ||
+    filter.closingSoon ||
+    filter.withResults ||
     isEligibilityFilterActive(filter.eligibility)
   );
 }
@@ -97,5 +124,12 @@ export function matchesElectionFilter(
   if (filter.domainOnly && !isDomainVerified(election)) return false;
   if (filter.restrictedOnly && !isRestricted(election)) return false;
   if (filter.votingType && election.votingType !== filter.votingType) return false;
+  // Compared against `true` and `false` rather than truthiness: an election
+  // deployed before the flag existed carries `undefined`, and it belongs in
+  // neither answer.
+  if (filter.schedule === 'fixed' && election.fixedSchedule !== true) return false;
+  if (filter.schedule === 'movable' && election.fixedSchedule !== false) return false;
+  if (filter.closingSoon && !closingSoon(election)) return false;
+  if (filter.withResults && !hasPublishedResults(election)) return false;
   return matchesEligibilityFilter(election.eligibilityPolicy, filter.eligibility);
 }

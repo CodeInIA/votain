@@ -144,7 +144,10 @@
     "group_properties": "Elezione",
     "group_voting_type": "Si decide per",
     "group_eligibility": "Ho i requisiti",
-    "results_partial": "{{shown}} trovate finora"
+    "results_partial": "{{shown}} trovate finora",
+    "closing_soon": "Chiude entro un giorno",
+    "with_results": "Risultati pubblicati",
+    "group_schedule": "Date"
   },
   "election": {
     "by": "di",
@@ -356,7 +359,7 @@
     "blank_vote_note": "Un'opzione di voto in bianco è sempre inclusa automaticamente.",
     "privacy_quorum": "Quorum di privacy",
     "quorum_hint": "Voti minimi richiesti prima di rivelare i risultati.",
-    "deposit_hint": "Facoltativo. Ricarica il tuo serbatoio di gas condiviso, che paga le commissioni degli elettori di TUTTE le tue elezioni.",
+    "deposit_hint": "Facoltativo. Riservato a QUESTA elezione e non prelevabile fino alla sua fine: è questo a far vedere all’elettore che il suo voto è pagato. Puoi aggiungerne altro dopo.",
     "immutability_warning": "Una volta distribuiti, i parametri dell'elezione non possono essere modificati. Rivedi attentamente.",
     "deploy": "Distribuisci elezione",
     "deploy_confirm_title": "Distribuire sulla blockchain?",
@@ -396,7 +399,9 @@
     "personhood_document": "Un documento d'identità (consigliato)",
     "personhood_document_desc": "L'elettore dimostra il passaporto o la carta d'identità dal proprio telefono. Del documento non si rivela nulla, e una seconda iscrizione con lo stesso viene rifiutata.",
     "personhood_orb": "Un documento d'identità e un Orb World ID",
-    "personhood_orb_desc": "L'asticella più alta e più stretta: la verifica con Orb non è disponibile nei paesi da cui sono stati ritirati, e quegli elettori non potranno iscriversi."
+    "personhood_orb_desc": "L'asticella più alta e più stretta: la verifica con Orb non è disponibile nei paesi da cui sono stati ritirati, e quegli elettori non potranno iscriversi.",
+    "fixed_schedule": "Date fisse, per sempre",
+    "fixed_schedule_desc": "Rinuncia a poter chiudere in anticipo iscrizioni o voto. Gli elettori lo vedono sull’elezione e non si può annullare. Annullare l’elezione resta possibile."
   },
   "election_mgmt": {
     "actions": "Azioni",
@@ -438,12 +443,16 @@
     "entry_requirements": "Requisiti di accesso",
     "tally_voters_other": "{{count}} elettori dopo aver rimosso i voti sostituiti",
     "tally_voters_one": "{{count}} elettore dopo aver rimosso i voti sostituiti",
-    "tally_voters_many": "{{count}} elettori dopo aver rimosso i voti sostituiti"
+    "tally_voters_many": "{{count}} elettori dopo aver rimosso i voti sostituiti",
+    "open_enrollment_early": "Apri le iscrizioni ora",
+    "open_enrollment_title": "Aprire le iscrizioni in anticipo?",
+    "open_enrollment_desc": "Gli elettori potranno iscriversi da adesso. La data di chiusura non cambia.",
+    "enrollment_opened_done": "Iscrizioni aperte"
   },
   "gas": {
     "title": "Gestione Gas",
     "deposit_title": "Deposita gas",
-    "amount_hint": "Minimo 0,1 {{currency}}. Ogni voto costa circa 0,03 {{currency}}.",
+    "amount_hint": "Minimo 0,1 {{currency}}. Ogni voto costa circa {{cost}} {{currency}}.",
     "deposit_btn": "Deposita {{amount}} {{currency}}",
     "deposit_pending": "Deposito in corso…",
     "history": "Cronologia transazioni",
@@ -462,7 +471,22 @@
     "undated_hidden": "{{n}} senza data leggibile sono nascosti mentre filtri per data.",
     "view_on_explorer": "Vedi nell’explorer dei blocchi",
     "copy_hash": "Copia l’hash della transazione",
-    "showing": "Visualizzati {{shown}} di {{total}}"
+    "showing": "Visualizzati {{shown}} di {{total}}",
+    "reserved_here": "Riservato a questa elezione",
+    "free_balance": "Saldo libero",
+    "fund_election": "Riservare gas per questa elezione",
+    "release": "Recuperare il gas non speso",
+    "release_available": "Questa elezione è finita. {{amount}} {{currency}} non sono stati spesi.",
+    "withdraw_title": "Preleva",
+    "withdraw_btn": "Preleva {{amount}} {{currency}}",
+    "withdraw_confirm_body": "Ti resteranno {{left}} {{currency}} liberi. Le tue elezioni aperte hanno ancora bisogno di circa {{needed}} {{currency}} per le {{voters}} persone iscritte che non hanno votato.",
+    "withdraw_danger": "È meno di quanto serve alle tue elezioni aperte. Qualche elettore potrebbe non riuscire a votare.",
+    "withdraw_nothing_owed": "Ti resteranno {{left}} {{currency}} liberi. Nessuna elezione aperta ne dipende.",
+    "movement_reserved": "Riservato a un’elezione",
+    "movement_released": "Restituito da un’elezione",
+    "reserve_note": "Il gas riservato non si può prelevare finché l’elezione non finisce. È questo a renderlo una promessa all’elettore.",
+    "reserve_source_balance": "Preso dal tuo saldo di {{amount}} {{currency}}. Al wallet non viene chiesto nulla.",
+    "reserve_source_split": "{{fromBalance}} {{currency}} dal tuo saldo e {{fromWallet}} {{currency}} dal tuo wallet."
   },
   "members": {
     "title": "Membri Registrati",
@@ -532,7 +556,8 @@
     "wallet_rejected": "La connessione al portafoglio è stata rifiutata.",
     "wallet_answer_lost": "Non siamo riusciti a confermare la risposta del tuo wallet. Controlla lo stato prima di riprovare.",
     "wallet_request_rejected": "Hai annullato la richiesta nel tuo wallet. Non è stato fatto nulla.",
-    "passkey_cancelled": "Hai chiuso la richiesta della passkey. Non è stato creato nulla: puoi riprovare."
+    "passkey_cancelled": "Hai chiuso la richiesta della passkey. Non è stato creato nulla: puoi riprovare.",
+    "list_unreadable": "Non è stato possibile leggere questa lista dalla catena, che non è lo stesso che sia vuota. Controlla la connessione e riprova."
   },
   "demo": {
     "banner": "Dati dimostrativi: nessun contratto distribuito. Niente qui è on-chain."
@@ -768,5 +793,18 @@
     "sealed": "Passkey collegata",
     "skip_confirm_title": "Continuare senza passkey?",
     "skip_confirm_desc": "Le tue dodici parole resteranno salvate su questo dispositivo in chiaro e saranno il tuo unico modo per rientrare. Potrai collegare una passkey più avanti dal tuo profilo, quando vuoi."
+  },
+  "schedule": {
+    "fixed": "Date fisse",
+    "fixed_desc": "L’organizzatore ha rinunciato a poter spostare qualsiasi scadenza quando ha creato questa elezione. Le date pubblicate sono quelle che verranno rispettate.",
+    "movable": "Date che l’organizzatore può accorciare",
+    "movable_desc": "L’organizzatore può chiudere in anticipo le iscrizioni o il voto, e mentre decide vede quante persone si sono iscritte e hanno votato.",
+    "movable_short": "Date accorciabili"
+  },
+  "funding": {
+    "unfunded_title": "Questa elezione non può pagare voti in questo momento",
+    "unfunded_body": "Qui ogni voto lo paga l’organizzatore, così votare non richiede un wallet. Il suo saldo per questa elezione è vuoto. La tua identità è a posto: chiedigli di ricaricare e torna.",
+    "short": "Restano circa {{votes}} voti finanziati, e {{voters}} persone iscritte non hanno ancora votato.",
+    "reserved_votes": "Ci sono circa {{votes}} voti riservati a questa elezione."
   }
 }

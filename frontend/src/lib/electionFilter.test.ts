@@ -71,3 +71,56 @@ describe('filtering by how an election is decided', () => {
     expect(isAnyFilterActive(filters({ votingType: 'two_thirds' }))).toBe(true);
   });
 });
+
+describe('the new properties a reader can narrow by', () => {
+  const soon = new Date(Date.now() + 2 * 3_600_000);
+  const later = new Date(Date.now() + 5 * 86_400_000);
+  const at = (phase: Election['phase'], deadline: Date, over: Partial<Election> = {}) =>
+    election({ phase, voteEnd: deadline, enrollEnd: deadline, ...over });
+
+  it('finds elections whose next deadline is within a day', () => {
+    // Whatever that deadline is: enrolling is measured against the close of
+    // enrolment, active against the close of voting.
+    expect(matches(at('active', soon), { closingSoon: true })).toBe(true);
+    expect(matches(at('enrolling', soon), { closingSoon: true })).toBe(true);
+    expect(matches(at('active', later), { closingSoon: true })).toBe(false);
+    // A closed election has no next deadline at all.
+    expect(matches(at('closed', soon), { closingSoon: true })).toBe(false);
+  });
+
+  it('separates published results from a closed election', () => {
+    // The distinction this filter exists for: closed is not readable, and
+    // someone looking for something to READ would otherwise find it and leave
+    // empty handed.
+    const noTally = at('closed', later, { candidates: [{ id: 'a', name: 'A' }] });
+    const published = at('closed', later, { candidates: [{ id: 'a', name: 'A', votes: 3 }] });
+
+    expect(matches(noTally, { withResults: true })).toBe(false);
+    expect(matches(published, { withResults: true })).toBe(true);
+  });
+
+  it('tells a promise from a refusal from a silence', () => {
+    const promised = at('active', later, { fixedSchedule: true });
+    const declined = at('active', later, { fixedSchedule: false });
+    // Deployed before the flag existed: it made no promise and declined none,
+    // so it belongs in neither answer rather than in the unflattering one.
+    const unknown = at('active', later, { fixedSchedule: undefined });
+
+    expect(matches(promised, { schedule: 'fixed' })).toBe(true);
+    expect(matches(declined, { schedule: 'fixed' })).toBe(false);
+    expect(matches(unknown, { schedule: 'fixed' })).toBe(false);
+
+    expect(matches(declined, { schedule: 'movable' })).toBe(true);
+    expect(matches(promised, { schedule: 'movable' })).toBe(false);
+    expect(matches(unknown, { schedule: 'movable' })).toBe(false);
+  });
+
+  it('counts each of them as narrowing the list', () => {
+    // The dot on the collapsed bar and the "clear filters" link both read this,
+    // and a filter missing from it is one the reader cannot tell is on.
+    expect(isAnyFilterActive(filters({ closingSoon: true }))).toBe(true);
+    expect(isAnyFilterActive(filters({ withResults: true }))).toBe(true);
+    expect(isAnyFilterActive(filters({ schedule: 'fixed' }))).toBe(true);
+    expect(isAnyFilterActive(EMPTY_FILTERS)).toBe(false);
+  });
+});

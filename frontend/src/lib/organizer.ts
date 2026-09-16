@@ -10,6 +10,7 @@
 import { type Signer } from "ethers";
 import { getFactory, getElection, getPaymaster, getReadProvider } from "./contracts";
 import { queryLogsFrom } from "./logs";
+import { fetchOrganizerElectionAddresses } from "./chainElections";
 import { COUNTER_BASE, generateElectionKeys, type SerializedKeyPair } from "./paillier";
 import { deriveElectionKeys, newKeyNonce } from "./tallyKey";
 import {
@@ -22,6 +23,7 @@ import {
   type PersonhoodLevel,
 } from "./eligibility";
 import { hasDuplicateNames } from "./ballotNames";
+import { splitFunding } from "./gasNeeds";
 
 /** Mirrors `ElectionV4.PersonhoodLevel`. */
 const PERSONHOOD_ENUM: Record<PersonhoodLevel, number> = { device: 0, document: 1, orb: 2 };
@@ -93,6 +95,21 @@ export interface CreateElectionInput {
   organizerDomain?: string;
   candidates: { name: string; description?: string }[]; // blank vote excluded
   privacyQuorum: number;
+  /**
+   * The organizer gives up the power to move any deadline.
+   *
+   * A promise made once, at deployment, that the contract then keeps: closing
+   * enrolment or voting early is a lever whose effect the organizer can watch in
+   * real time, since the member and voter counts are public.
+   */
+  fixedSchedule: boolean;
+  /**
+   * What the organizer already holds in the paymaster, in wei.
+   *
+   * The reserve is taken from here before anything is asked of the wallet. Zero
+   * when unknown, which only costs a larger transaction, never a wrong one.
+   */
+  availableBalance?: bigint;
   enrollStart: Date;
   enrollEnd: Date;
   voteStart: Date;
@@ -237,11 +254,24 @@ export async function createElection(
     // refuse the publication. Kept in both places on purpose: the metadata copy
     // is what the interface reads to explain the rule before anyone votes.
     privacyQuorum: BigInt(input.privacyQuorum),
+    // Immutable in the contract, so this is the only moment it can be decided.
+    fixedSchedule: input.fixedSchedule,
   };
 
   const factory = getFactory(signer);
-  const value = ethers.parseEther(input.depositMatic || "0");
-  const tx = await factory.createElection(cfg, { value });
+  /**
+   * The reserve for this election, taken from the balance first.
+   *
+   * One signature for both sources, which is why the factory takes the second
+   * argument: creating and then reserving would leave the election unfunded
+   * whenever the second transaction was rejected, at the exact moment an
+   * organizer is most likely to give up and walk away.
+   */
+  const { fromBalance, fromWallet } = splitFunding(
+    ethers.parseEther(input.depositMatic || "0"),
+    input.availableBalance ?? 0n,
+  );
+  const tx = await factory.createElection(cfg, fromBalance, { value: fromWallet });
   const receipt = await tx.wait();
 
   // Parse the ElectionCreated event to get the new address
@@ -292,6 +322,12 @@ async function waitForLifecycleTx(tx: { wait: () => Promise<{ hash: string } | n
 
 export async function cancelElection(signer: Signer, address: string): Promise<string> {
   const tx = await getElection(address, signer).cancelElection();
+  return waitForLifecycleTx(tx);
+}
+
+/** Bring enrollment forward to now, from an election that has not opened yet. */
+export async function openEnrollmentEarly(signer: Signer, address: string): Promise<string> {
+  const tx = await getElection(address, signer).openEnrollmentEarly();
   return waitForLifecycleTx(tx);
 }
 
@@ -346,8 +382,79 @@ export async function getGasBalance(organizer: string): Promise<bigint> {
   return getPaymaster().gasBalance(organizer);
 }
 
+/**
+ * Commit gas to one election, from the balance first and the wallet for the rest.
+ *
+ * THE BALANCE COMES FIRST because it is already inside the contract: sending
+ * new value while a balance sits there would leave the organizer topping up
+ * twice and withdrawing the difference. The wallet is only asked for what the
+ * balance cannot cover, which is what makes the gas screen the single door
+ * money crosses.
+ *
+ * Two transactions only when both sources are needed, and in that order: the
+ * internal move first, so a rejected wallet prompt leaves an election funded
+ * with what was already available rather than with nothing.
+ */
+export async function fundElection(
+  signer: Signer,
+  election: string,
+  matic: string,
+  availableBalance: bigint,
+): Promise<string> {
+  const { ethers } = await import("ethers");
+  const { fromBalance, fromWallet } = splitFunding(ethers.parseEther(matic), availableBalance);
+
+  const paymaster = getPaymaster(signer);
+  let last = "";
+  if (fromBalance > 0n) {
+    last = await waitForLifecycleTx(await paymaster.reserveFromBalance(election, fromBalance));
+  }
+  if (fromWallet > 0n) {
+    last = await waitForLifecycleTx(
+      await paymaster.depositForElection(election, { value: fromWallet }),
+    );
+  }
+  return last;
+}
+
+/** Return an ended election's unspent reserve to the organizer's free balance. */
+export async function releaseElectionReserve(signer: Signer, election: string): Promise<string> {
+  const tx = await getPaymaster(signer).releaseReserve(election);
+  return waitForLifecycleTx(tx);
+}
+
+/**
+ * What is behind one election's sponsored gas.
+ *
+ * Two numbers and not a sum, because they are different promises. `reserved`
+ * cannot be taken away while the election can still take a vote. `free` will be
+ * spent if the reserve runs out, and can also be withdrawn at any moment, so a
+ * screen that added them together would be telling a voter the second kind is
+ * as good as the first.
+ */
+export interface ElectionFunding {
+  reserved: bigint;
+  free: bigint;
+}
+
+export async function getElectionFunding(election: string): Promise<ElectionFunding> {
+  const [reserved, free] = (await getPaymaster().electionFunding(election)) as [bigint, bigint];
+  return { reserved, free };
+}
+
 export interface GasMovement {
-  type: "deposit" | "withdraw" | "spent";
+  /**
+   * What moved.
+   *
+   * `reserved` is money arriving for ONE election, which is where a creation
+   * deposit now lands: without it the history would say nothing at all about
+   * the POL that left the organizer's wallet to start an election. `released`
+   * is the unspent part of that coming back to the free balance when the
+   * election ends, which is a transfer between two pots of the same tank rather
+   * than money arriving or leaving, and the screen shows it without a sign for
+   * exactly that reason.
+   */
+  type: "deposit" | "withdraw" | "spent" | "reserved" | "released";
   /** Signed amount in the chain's native token (negative when it leaves the tank). */
   amount: number;
   /**
@@ -378,13 +485,33 @@ export async function fetchGasHistory(organizer: string): Promise<GasMovement[]>
   const { formatEther } = await import("ethers");
   const paymaster = getPaymaster();
 
-  const [deposits, withdrawals, sponsored] = await Promise.all([
+  /**
+   * `ElectionFunded` is indexed by ELECTION, not by organizer, so it cannot be
+   * filtered down to one of them at the node. Every election's funding comes
+   * back and the organizer's own are picked out here, against the addresses the
+   * factory recorded for them.
+   */
+  const [deposits, withdrawals, sponsored, funded, released, mine] = await Promise.all([
     queryLogsFrom(paymaster, paymaster.filters.Deposited(organizer)),
     queryLogsFrom(paymaster, paymaster.filters.Withdrawn(organizer)),
     queryLogsFrom(paymaster, paymaster.filters.VoteSponsored(organizer)),
+    queryLogsFrom(paymaster, paymaster.filters.ElectionFunded()),
+    queryLogsFrom(paymaster, paymaster.filters.ReserveReleased(null, organizer)),
+    fetchOrganizerElectionAddresses(organizer),
   ]);
 
-  const logs = [...deposits, ...withdrawals, ...sponsored] as unknown as RawLog[];
+  const ours = new Set(mine.map(a => a.toLowerCase()));
+  const funding = (funded as unknown as Array<RawLog & { args?: { election?: string } }>).filter(
+    log => ours.has(String(log.args?.election ?? '').toLowerCase()),
+  );
+
+  const logs = [
+    ...deposits,
+    ...withdrawals,
+    ...sponsored,
+    ...funding,
+    ...released,
+  ] as unknown as RawLog[];
 
   /**
    * ONE BLOCK READ PER BLOCK, not per movement.
@@ -420,6 +547,8 @@ export async function fetchGasHistory(organizer: string): Promise<GasMovement[]>
     ...read(deposits as unknown as RawLog[], "deposit", 1, "amount"),
     ...read(withdrawals as unknown as RawLog[], "withdraw", -1, "amount"),
     ...read(sponsored as unknown as RawLog[], "spent", -1, "cost"),
+    ...read(funding as unknown as RawLog[], "reserved", 1, "amount"),
+    ...read(released as unknown as RawLog[], "released", 1, "amount"),
   ];
 
   // Sorted by the chain's own order rather than by the timestamp, which is the

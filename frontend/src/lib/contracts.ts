@@ -13,7 +13,7 @@ import { addresses, chainInfo } from "./deployments";
 // ────────────────────────────────────────────────
 
 export const ELECTION_FACTORY_ABI = [
-  "function createElection((string name, uint8 votingType, uint256 thresholdValue, uint256 numOptions, uint256 enrollStart, uint256 enrollEnd, uint256 voteStart, uint256 voteEnd, uint256 scope, string paillierPublicKey, string metadataJson, address eligibilityAttester, bytes32 eligibilityPolicyHash, uint8 personhood, uint256 privacyQuorum) cfg) payable returns (address)",
+  "function createElection((string name, uint8 votingType, uint256 thresholdValue, uint256 numOptions, uint256 enrollStart, uint256 enrollEnd, uint256 voteStart, uint256 voteEnd, uint256 scope, string paillierPublicKey, string metadataJson, address eligibilityAttester, bytes32 eligibilityPolicyHash, uint8 personhood, uint256 privacyQuorum, bool fixedSchedule) cfg, uint256 fromBalance) payable returns (address)",
   "function electionsCount() view returns (uint256)",
   "function getElections(uint256 offset, uint256 limit) view returns (address[])",
   "event ElectionCreated(address indexed electionAddress, address indexed organizer, string name, uint8 votingType, uint256 scope)",
@@ -43,6 +43,7 @@ export const ELECTION_ABI = [
   "function voteCount() view returns (uint256)",
   "function distinctVoters() view returns (uint256)",
   "function privacyQuorum() view returns (uint256)",
+  "function fixedSchedule() view returns (bool)",
   "function resultsPublished() view returns (bool)",
   "function resultsCid() view returns (string)",
   "function tally() view returns (uint256[])",
@@ -56,6 +57,7 @@ export const ELECTION_ABI = [
   "function personhood() view returns (uint8)",
   "function castVote(bytes voteCiphertext, uint256 nullifier, uint256 merkleRoot, uint256 merkleDepth, uint256[2] _pA, uint256[2][2] _pB, uint256[2] _pC)",
   "function cancelElection()",
+  "function openEnrollmentEarly()",
   "function closeEnrollmentEarly()",
   "function closeVotingEarly()",
   "function markVoided()",
@@ -68,9 +70,21 @@ export const ELECTION_ABI = [
 
 export const PAYMASTER_ABI = [
   "function gasBalance(address organizer) view returns (uint256)",
+  "function reservedFor(address election) view returns (uint256)",
+  "function electionFunding(address election) view returns (uint256 reserved, uint256 organizerFree)",
   "function depositFor(address organizer) payable",
+  "function depositForElection(address election) payable",
+  "function reserveFromBalance(address election, uint256 amount)",
+  "function releaseReserve(address election)",
   "function withdraw(uint256 amount)",
+  // Read by the ballot-cost estimate: the two ceilings the contract applies
+  // when it pays, so an estimate cannot promise more than a relay would get.
+  "function maxGasPrice() view returns (uint256)",
+  "function maxRelayGas() view returns (uint256)",
+  "function relayVote(address election, bytes voteCiphertext, uint256 nullifier, uint256 merkleRoot, uint256 merkleDepth, uint256[2] pA, uint256[2][2] pB, uint256[2] pC)",
   "event Deposited(address indexed organizer, address indexed from, uint256 amount)",
+  "event ElectionFunded(address indexed election, address indexed from, uint256 amount)",
+  "event ReserveReleased(address indexed election, address indexed organizer, uint256 amount)",
   "event Withdrawn(address indexed organizer, uint256 amount)",
   "event VoteSponsored(address indexed organizer, uint256 cost, address indexed chargedBy)",
 ] as const;

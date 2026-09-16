@@ -12,10 +12,12 @@ import { Spinner } from '../../components/ui/Spinner';
 import { DomainBadge } from '../../components/ui/DomainBadge';
 import { Modal } from '../../components/ui/Modal';
 import { LoadMore } from '../../components/ui/LoadMore';
+import { ListError } from '../../components/ui/ListError';
 import { useElectionPages } from '../../hooks/useElectionPages';
 import { usePageLimit } from '../../hooks/usePageLimit';
 import { ELECTIONS } from '../../data/seed';
 import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
+import { useVoteCost } from '../../hooks/useVoteCost';
 import { useRefreshOnReturn } from '../../hooks/useRefreshOnReturn';
 import {
   getGasBalance,
@@ -33,13 +35,14 @@ import {
 import { useVerifiedDomains } from '../../hooks/useVerifiedDomains';
 import { EligibilityChips } from '../../components/ui/EligibilityChips';
 
-/** Approximate native-token cost of one sponsored vote. */
-const VOTE_COST = 0.03;
+
 
 export default function OrganizerDashboard() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const wallet = useOrganizerWallet();
+  // Measured from past relays; the widget below quotes it as votes remaining.
+  const voteCost = useVoteCost();
   /**
    * This organizer's own elections, through the factory's own index.
    *
@@ -60,7 +63,7 @@ export default function OrganizerDashboard() {
     hydrateAll: true,
     keep: e => e.organizerAddress.toLowerCase() === wallet.address?.toLowerCase(),
   });
-  const { loading, live, refresh } = pages;
+  const { loading, live, refresh, error } = pages;
   const [gasBalance, setGasBalance] = useState(live ? 0 : 2.5);
   // Set once the organizer has answered or dismissed the name prompt, so it
   // does not reopen on the next render.
@@ -207,6 +210,8 @@ export default function OrganizerDashboard() {
               <CardContent className="p-0">
                 {loading ? (
                   <div className="flex justify-center py-10"><Spinner /></div>
+                ) : error ? (
+                  <ListError onRetry={() => void refresh()} />
                 ) : myElections.length === 0 ? (
                   <p className="px-5 py-8 text-center text-sm text-on-surface-meta">{t('dashboard.no_elections')}</p>
                 ) : visibleElections.length === 0 ? (
@@ -268,7 +273,7 @@ export default function OrganizerDashboard() {
           <div className="flex flex-col gap-4 order-1 lg:order-2">
             <GasWidget
               balance={gasBalance}
-              estimatedVotesLeft={Math.floor(gasBalance / VOTE_COST)}
+              estimatedVotesLeft={Math.floor(gasBalance / voteCost.matic)}
               onDeposit={() => navigate('/organizer/gas')}
             />
 

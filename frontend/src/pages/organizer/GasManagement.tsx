@@ -1,6 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Fuel, ArrowDownLeft, Search, Copy, Check, ExternalLink } from 'lucide-react';
+import {
+  Fuel,
+  ArrowDownLeft,
+  ArrowUpRight,
+  Lock,
+  Search,
+  Copy,
+  Check,
+  ExternalLink,
+  Undo2,
+  AlertTriangle,
+  Layers,
+  type LucideIcon,
+} from 'lucide-react';
 import { formatEther } from 'ethers';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Card } from '../../components/ui/Card';
@@ -8,6 +21,11 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { GasWidget } from '../../components/ui/GasWidget';
 import { LoadMore } from '../../components/ui/LoadMore';
+import { Modal } from '../../components/ui/Modal';
+import { useElectionPages } from '../../hooks/useElectionPages';
+import { getPaymaster } from '../../lib/contracts';
+import { openNeeds, totalShortfall } from '../../lib/gasNeeds';
+import { useVoteCost } from '../../hooks/useVoteCost';
 import { DatePicker } from '../../components/ui/DatePicker';
 import { usePageLimit } from '../../hooks/usePageLimit';
 import { shortenReference } from '../../lib/utils';
@@ -22,7 +40,13 @@ import { useToast } from '../../components/ui/useToast';
 import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
 import { useRefreshOnReturn } from '../../hooks/useRefreshOnReturn';
 import { isChainConfigured, chainInfo, explorerTxUrl } from '../../lib/deployments';
-import { depositGas, getGasBalance, fetchGasHistory, type GasMovement } from '../../lib/organizer';
+import {
+  depositGas,
+  withdrawGas,
+  getGasBalance,
+  fetchGasHistory,
+  type GasMovement,
+} from '../../lib/organizer';
 import { WalletAnswerLostError } from '../../lib/walletRequest';
 import { isUserRejection } from '../../lib/walletErrors';
 
@@ -33,7 +57,7 @@ const SEED_HISTORY: GasMovement[] = [
   { type: 'deposit', amount: 1.0,   date: new Date(Date.now() - 5 * 86_400_000), txHash: '0xabc1', blockNumber: 1 },
 ];
 
-const VOTE_COST = 0.03; // approx native token per sponsored vote
+
 
 /** Rows per page. Compact lines, so more of them fit than cards would. */
 const GAS_PAGE_SIZE = 25;
@@ -45,11 +69,93 @@ const GAS_PAGE_SIZE = 25;
  * to never call the same event two different names.
  */
 const TYPE_FILTERS: { key: GasMovement['type'] | null; labelKey: string }[] = [
-  { key: null,       labelKey: 'common.all'   },
-  { key: 'deposit',  labelKey: 'gas.deposit'  },
-  { key: 'spent',    labelKey: 'gas.used'     },
-  { key: 'withdraw', labelKey: 'gas.withdraw' },
+  { key: null,       labelKey: 'common.all'            },
+  { key: 'deposit',  labelKey: 'gas.deposit'           },
+  { key: 'reserved', labelKey: 'gas.movement_reserved' },
+  { key: 'spent',    labelKey: 'gas.used'              },
+  { key: 'released', labelKey: 'gas.movement_released' },
+  { key: 'withdraw', labelKey: 'gas.withdraw'          },
 ];
+
+/** Amounts that are money arriving or leaving, as opposed to moving between pots. */
+const SIGNED: GasMovement['type'][] = ['deposit', 'withdraw', 'spent', 'reserved'];
+
+/**
+ * A glyph per kind, because there are five kinds and they are not variations of
+ * each other.
+ *
+ * Three of them used to share two icons, so a deposit and a reservation looked
+ * identical while being the two things it matters most to tell apart: one is
+ * money you can still take back and the other is money you have promised to an
+ * election. The lock is the same one the reserve carries everywhere else.
+ */
+const MOVEMENT_ICON: Record<GasMovement['type'], LucideIcon> = {
+  deposit: ArrowDownLeft,   // into the free balance
+  reserved: Lock,           // committed to one election
+  spent: Fuel,              // a ballot was paid for
+  released: Undo2,          // back from an election that ended
+  withdraw: ArrowUpRight,   // out to the wallet
+};
+
+/**
+ * A colour per kind, arranged by WHERE THE MONEY WENT rather than picked one by
+ * one. Three colours for five kinds left gas used, returned and withdrawn all
+ * in the same grey, which is three different events wearing one face.
+ *
+ * The two that cross the wallet are the opposite ends of the palette: green
+ * arriving, amber leaving. The two that move between the tank's own columns are
+ * a related pair, blue out to an election and cyan back from it, so they read as
+ * one round trip. Gas used is the only kind that is CONSUMED rather than moved,
+ * so it gets a hue of its own and never passes for a transfer.
+ */
+interface MovementTone {
+  /** The round icon tile on a row. */
+  tile: string;
+  /** The figure on the right of a row. */
+  amount: string;
+  /** The filter chip while it is the one selected. */
+  chip: string;
+  /** The chip's icon, which keeps its colour even while the chip is not. */
+  chipIcon: string;
+}
+
+/**
+ * Written out in full rather than composed from the type name, because Tailwind
+ * reads these files as text: a class built at run time is a class that never
+ * reaches the stylesheet.
+ */
+const MOVEMENT_TONE: Record<GasMovement['type'], MovementTone> = {
+  deposit: {
+    tile: 'bg-success/10 text-success',
+    amount: 'text-success',
+    chip: 'bg-success/10 border-success/30 text-success',
+    chipIcon: 'text-success',
+  },
+  reserved: {
+    tile: 'bg-primary/10 text-primary',
+    amount: 'text-primary-dim',
+    chip: 'bg-primary/10 border-primary/30 text-primary-dim',
+    chipIcon: 'text-primary',
+  },
+  released: {
+    tile: 'bg-tertiary/10 text-tertiary',
+    amount: 'text-tertiary-dim',
+    chip: 'bg-tertiary/10 border-tertiary/30 text-tertiary-dim',
+    chipIcon: 'text-tertiary',
+  },
+  spent: {
+    tile: 'bg-secondary/10 text-secondary-dim',
+    amount: 'text-on-surface-meta',
+    chip: 'bg-secondary/10 border-secondary/30 text-secondary-dim',
+    chipIcon: 'text-secondary-dim',
+  },
+  withdraw: {
+    tile: 'bg-warning/10 text-warning',
+    amount: 'text-warning',
+    chip: 'bg-warning/10 border-warning/30 text-warning',
+    chipIcon: 'text-warning',
+  },
+};
 
 export default function GasManagement() {
   const { t } = useTranslation();
@@ -57,6 +163,16 @@ export default function GasManagement() {
   const wallet = useOrganizerWallet();
   const live = isChainConfigured();
   const [amount, setAmount] = useState('1.0');
+  /**
+   * Measured from past relays, not assumed.
+   *
+   * Every figure this screen quotes in ballots rests on it, including the hint
+   * under the deposit field, which used to have the number written into all
+   * thirteen translations.
+   */
+  const voteCost = useVoteCost();
+  const [withdrawAmount, setWithdrawAmount] = useState('0.5');
+  const [confirmingWithdraw, setConfirmingWithdraw] = useState(false);
   const [balance, setBalance] = useState(live ? 0 : 0.8);
   const [history, setHistory] = useState<GasMovement[]>(live ? [] : SEED_HISTORY);
   const [busy, setBusy] = useState(false);
@@ -96,6 +212,49 @@ export default function GasManagement() {
 
     return () => { cancelled = true; };
   }, [live, wallet.address, reloadToken]);
+
+  /**
+   * What the free balance is still holding up.
+   *
+   * "Warn when the balance is low" needs a definition of low, and a constant
+   * cannot have one: half a POL is nothing for two thousand voters and alarming
+   * for three. The figure the chain already publishes is the right one, which is
+   * how many people enrolled in a still-open election and have not voted. Every
+   * one of them was told their ballot would be paid for.
+   */
+  const mine = useElectionPages({
+    scope: 'mine',
+    organizer: wallet.address ?? null,
+    hydrateAll: true,
+    keep: e => e.organizerAddress.toLowerCase() === wallet.address?.toLowerCase(),
+  });
+  const [reserves, setReserves] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (!live || mine.all.length === 0) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const paymaster = getPaymaster();
+        const pairs = await Promise.all(
+          mine.all.map(async e => {
+            const wei: bigint = await paymaster.reservedFor(e.contractAddress);
+            return [e.contractAddress, Number(formatEther(wei))] as const;
+          }),
+        );
+        if (!cancelled) setReserves(Object.fromEntries(pairs));
+      } catch (e) {
+        console.error('Could not read what is reserved per election:', e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [live, mine.all, reloadToken]);
+
+  const needs = openNeeds(mine.all, e => reserves[e.contractAddress] ?? 0, voteCost.matic);
+  const owed = totalShortfall(needs);
+  const waitingVoters = needs.reduce((sum, need) => sum + need.remainingVoters, 0);
+  const leftAfterWithdrawal = balance - (Number(withdrawAmount) || 0);
+  const wouldStrandVoters = leftAfterWithdrawal < owed;
 
   const handleDeposit = async () => {
     if (!live) {
@@ -154,6 +313,43 @@ export default function GasManagement() {
   // is worse than one whose date is unknown.
   const undated = countUndated(history, filters);
 
+  const handleWithdraw = async () => {
+    setConfirmingWithdraw(false);
+    setBusy(true);
+    try {
+      if (!wallet.address) {
+        await wallet.connect();
+        return;
+      }
+      if (await wallet.isWrongNetwork()) await wallet.switchToAmoy();
+      const signer = await wallet.getSigner();
+      // Read first, so the chain can answer "did this land" when the wallet's
+      // reply does not come back. Same reason as the deposit above.
+      const before = await getGasBalance(wallet.address);
+      await wallet.withWalletApp(
+        () => withdrawGas(signer, withdrawAmount),
+        () => toast({ title: t('errors.confirm_in_wallet_app'), variant: 'info' }),
+        async () => ((await getGasBalance(wallet.address!)) < before ? 'confirmed' : undefined),
+      );
+      setReloadToken(n => n + 1);
+      toast({ title: t('gas.withdraw'), variant: 'success' });
+    } catch (e) {
+      if (isUserRejection(e)) return;
+      if (e instanceof WalletAnswerLostError) {
+        setReloadToken(n => n + 1);
+        toast({ title: t('errors.wallet_answer_lost'), variant: 'info' });
+        return;
+      }
+      toast({
+        title: t('errors.generic_title'),
+        description: e instanceof Error ? e.message : String(e),
+        variant: 'error',
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   /**
    * A page of movements at a time.
    *
@@ -182,7 +378,16 @@ export default function GasManagement() {
         <h1 className="text-2xl font-black tracking-tight text-white mb-6">{t('gas.title')}</h1>
 
         {/* Current balance */}
-        <GasWidget balance={balance} estimatedVotesLeft={Math.floor(balance / VOTE_COST)} onDeposit={handleDeposit} className="mb-6" />
+        {/* NO `onDeposit` here, deliberately. The widget's button exists to
+            take an organizer to the screen where they can top up, which is
+            this one: passing the handler put a second button on top of the
+            deposit form doing exactly what the form's own button does. The
+            dashboard still passes one, because there it navigates. */}
+        <GasWidget
+          balance={balance}
+          estimatedVotesLeft={Math.floor(balance / voteCost.matic)}
+          className="mb-6"
+        />
 
         {/* Deposit form */}
         <Card className="p-5 mb-6">
@@ -199,7 +404,10 @@ export default function GasManagement() {
                 min="0.1"
                 value={amount}
                 onChange={e => setAmount(e.target.value)}
-                hint={t('gas.amount_hint', { currency: chainInfo.currency })}
+                hint={t('gas.amount_hint', {
+                  currency: chainInfo.currency,
+                  cost: voteCost.matic.toFixed(4),
+                })}
               />
             </div>
           </div>
@@ -226,6 +434,82 @@ export default function GasManagement() {
           </Button>
         </Card>
 
+        {/* Withdraw.
+            Reaches the free balance only. Gas reserved for a running election
+            is not the organizer's to take back while voters are relying on it,
+            and the contract will not let them: this is the money that is
+            genuinely spare. */}
+        <Card className="p-5 mb-6">
+          <h2 className="text-sm font-semibold text-on-surface mb-4 flex items-center gap-2">
+            <Undo2 className="w-4 h-4 text-on-surface-meta" />
+            {t('gas.withdraw_title')}
+          </h2>
+          <div className="flex gap-2 items-end">
+            <div className="flex-1 min-w-0">
+              <Input
+                label={t('gas.amount_token', { currency: chainInfo.currency })}
+                type="number"
+                step="0.1"
+                min="0"
+                max={balance}
+                value={withdrawAmount}
+                onChange={e => setWithdrawAmount(e.target.value)}
+              />
+            </div>
+            <Button
+              variant="default"
+              className="rounded-full px-5 h-11 shrink-0"
+              disabled={busy || !live || Number(withdrawAmount) <= 0 || Number(withdrawAmount) > balance}
+              onClick={() => setConfirmingWithdraw(true)}
+            >
+              {t('gas.withdraw_btn', { amount: withdrawAmount, currency: chainInfo.currency })}
+            </Button>
+          </div>
+        </Card>
+
+        {/* Asked before the wallet is, and it says what it costs rather than
+            "are you sure": the number that matters is what the open elections
+            still need, not the one being withdrawn. */}
+        <Modal
+          open={confirmingWithdraw}
+          onClose={() => setConfirmingWithdraw(false)}
+          title={t('gas.withdraw_btn', { amount: withdrawAmount, currency: chainInfo.currency })}
+        >
+          <div className="flex flex-col gap-4">
+            <p className="text-sm text-on-surface-variant leading-relaxed">
+              {owed > 0
+                ? t('gas.withdraw_confirm_body', {
+                    left: Math.max(0, leftAfterWithdrawal).toFixed(4),
+                    needed: owed.toFixed(4),
+                    voters: waitingVoters,
+                    currency: chainInfo.currency,
+                  })
+                : t('gas.withdraw_nothing_owed', {
+                    left: Math.max(0, leftAfterWithdrawal).toFixed(4),
+                    currency: chainInfo.currency,
+                  })}
+            </p>
+            {wouldStrandVoters && (
+              <div className="flex gap-3 p-3 rounded-2xl bg-error/10 border border-error/25">
+                <AlertTriangle className="w-4 h-4 text-error shrink-0 mt-0.5" />
+                <p className="text-xs text-error leading-relaxed">{t('gas.withdraw_danger')}</p>
+              </div>
+            )}
+            <div className="flex gap-2 justify-end">
+              <Button variant="ghost" onClick={() => setConfirmingWithdraw(false)}>
+                {t('common.cancel')}
+              </Button>
+              <Button
+                variant={wouldStrandVoters ? 'default' : 'gradient'}
+                className="rounded-full px-5"
+                onClick={() => void handleWithdraw()}
+              >
+                {t('common.confirm')}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+
         {/* History */}
         <Card className="p-5">
           <div className="flex items-baseline justify-between gap-3 mb-4">
@@ -251,24 +535,51 @@ export default function GasManagement() {
                   onChange={e => setFilters(f => ({ ...f, query: e.target.value }))}
                 />
               </div>
-              {/* One kind at a time. Same chip treatment as the voter's tabs,
-                  which is the app's existing way of saying "pick one of these". */}
-              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-                {TYPE_FILTERS.map(option => (
-                  <button
-                    key={option.key ?? 'all'}
-                    type="button"
-                    onClick={() => setFilters(f => ({ ...f, type: option.key }))}
-                    className={[
-                      'shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer',
-                      filters.type === option.key
-                        ? 'bg-primary/10 border-primary/30 text-primary-dim'
-                        : 'bg-surface-low/30 border-outline-variant/20 text-on-surface-meta hover:text-on-surface',
-                    ].join(' ')}
-                  >
-                    {t(option.labelKey)}
-                  </button>
-                ))}
+              {/* One kind at a time, WRAPPED rather than scrolled sideways.
+                  Six chips whose labels name a kind of movement do not fit one
+                  row in most languages, and a horizontal scroll with no edge to
+                  hint at it hid the last two entirely: a filter nobody can see
+                  is a filter nobody has. Two lines is the cheaper cost.
+
+                  EACH CHIP WEARS ITS OWN COLOUR AND ICON, the same ones its
+                  rows do, so the filter row doubles as the legend for the list
+                  under it. Learning what the cyan circle means costs nothing if
+                  the thing that turns the list cyan is sitting right there
+                  saying "returned from an election".
+
+                  The icon keeps its colour even while the chip is not selected.
+                  Greying it out would hide exactly the association this is for,
+                  and the selected chip is already obvious from its fill. */}
+              <div className="flex flex-wrap gap-2">
+                {TYPE_FILTERS.map(option => {
+                  const active = filters.type === option.key;
+                  const tone = option.key ? MOVEMENT_TONE[option.key] : null;
+                  const Icon = option.key ? MOVEMENT_ICON[option.key] : Layers;
+                  return (
+                    <button
+                      key={option.key ?? 'all'}
+                      type="button"
+                      onClick={() => setFilters(f => ({ ...f, type: option.key }))}
+                      className={[
+                        'shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full',
+                        'text-xs font-semibold border transition-all cursor-pointer',
+                        active
+                          ? tone?.chip ?? 'bg-primary/10 border-primary/30 text-primary-dim'
+                          : 'bg-surface-low/30 border-outline-variant/20 text-on-surface-meta hover:text-on-surface hover:border-outline-variant/40',
+                      ].join(' ')}
+                      aria-pressed={active}
+                    >
+                      <Icon
+                        className={[
+                          'w-3.5 h-3.5 shrink-0',
+                          tone ? tone.chipIcon : 'text-on-surface-meta',
+                          active ? '' : 'opacity-70',
+                        ].join(' ')}
+                      />
+                      {t(option.labelKey)}
+                    </button>
+                  );
+                })}
               </div>
               {/* Two ends of one window, and the same control answers both
                   questions: a range, or one exact minute by putting the same
@@ -317,17 +628,22 @@ export default function GasManagement() {
                 <div key={`${h.txHash}-${h.type}-${h.amount}`} className="flex items-center gap-3">
                   <div className={[
                     'w-8 h-8 rounded-xl flex items-center justify-center shrink-0',
-                    h.type === 'deposit' ? 'bg-success/10 text-success' : 'bg-surface-high text-on-surface-meta',
+                    MOVEMENT_TONE[h.type].tile,
                   ].join(' ')}>
-                    {h.type === 'deposit' ? <ArrowDownLeft className="w-4 h-4" /> : <Fuel className="w-4 h-4" />}
+                    {(() => {
+                      const Icon = MOVEMENT_ICON[h.type];
+                      return <Icon className="w-4 h-4" />;
+                    })()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-on-surface">
-                      {h.type === 'deposit'
-                        ? t('gas.deposit')
-                        : h.type === 'withdraw'
-                          ? t('gas.withdraw')
-                          : t('gas.used')}
+                      {{
+                        deposit: t('gas.deposit'),
+                        withdraw: t('gas.withdraw'),
+                        spent: t('gas.used'),
+                        reserved: t('gas.movement_reserved'),
+                        released: t('gas.movement_released'),
+                      }[h.type]}
                     </p>
                     {/* The hash, and the two things anyone ever does with one.
                         It used to be ten characters of unselectable text, so
@@ -366,8 +682,19 @@ export default function GasManagement() {
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className={['text-sm font-semibold', h.amount > 0 ? 'text-success' : 'text-on-surface-meta'].join(' ')}>
-                      {h.amount > 0 ? '+' : ''}{h.amount.toFixed(4)} {chainInfo.currency}
+                    {/* A release moves money between two pots of the same tank,
+                        so it is shown without a sign: calling it an arrival
+                        would double count it against the deposit that put it
+                        there in the first place. */}
+                    {/* The amount wears the same colour as its icon, so a row
+                        is one thing rather than two. Gas used stays grey on
+                        purpose: it is the most frequent row by far and a
+                        coloured figure on every one of them would drown the
+                        handful that are worth noticing. */}
+                    <p className={['text-sm font-semibold', MOVEMENT_TONE[h.type].amount].join(' ')}>
+                      {SIGNED.includes(h.type) && h.amount > 0 ? '+' : ''}
+                      {(SIGNED.includes(h.type) ? h.amount : Math.abs(h.amount)).toFixed(4)}
+                      {' '}{chainInfo.currency}
                     </p>
                     {/* An unreadable block leaves no date. It used to fall
                         back to today, which put a movement nobody could read at

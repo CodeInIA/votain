@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Users, Calendar, ChevronRight, Clock } from 'lucide-react';
+import { Users, Calendar, ChevronRight, Clock, CalendarCheck, CalendarClock } from 'lucide-react';
 import { Badge } from './Badge';
 import { DomainBadge } from './DomainBadge';
 import { EligibilityChips } from './EligibilityChips';
@@ -39,21 +39,27 @@ export function ElectionCard({ election, voterView = false, className }: Electio
   // where it would be somebody else's clock.
   const urgent = voterView && endsSoon(election);
   /**
-   * Turnout, as closely as the chain can tell it.
+   * Turnout: PEOPLE who voted, over people enrolled.
    *
-   * `castVotes` counts BALLOTS, and a voter changing their mind casts a second
-   * one, so the raw ratio passes 100%: a card showing one enrolled voter who
-   * had voted twice read "200% voted". The chain keeps no count of distinct
-   * voters, only a per-nullifier nonce, so recovering the exact figure would
-   * mean reading every VoteCast event of every election in the list. Capped
-   * instead, which is right whenever the re-voters had already been counted and
-   * an over-estimate otherwise. Never absurd, which the raw number was.
+   * `castVotes` counts BALLOTS, and a voter who is coerced can vote again, so
+   * the raw ratio passes 100%: a card with one enrolled voter who had voted
+   * twice read "200% voted". This used to be capped at 100 to hide that, with a
+   * comment claiming the chain kept no count of distinct voters and that
+   * recovering the figure would mean reading every VoteCast event.
+   *
+   * That was simply wrong. `ElectionV4.distinctVoters()` exists, is read on
+   * every election, and has been sitting on this object the whole time. The
+   * capped estimate is gone: the number is exact.
+   *
+   * `castVotes` remains the fallback for seed elections, which carry no such
+   * count, and the cap with it.
    */
+  const voted = election.distinctVoters ?? Math.min(election.castVotes, election.totalEnrolled);
   const pct = election.totalEnrolled > 0
-    ? Math.min(100, Math.round((election.castVotes / election.totalEnrolled) * 100))
+    ? Math.min(100, Math.round((voted / election.totalEnrolled) * 100))
     : 0;
   const turnoutLabel = t('election.turnout_detail', {
-    voted: Math.min(election.castVotes, election.totalEnrolled),
+    voted,
     total: election.totalEnrolled,
   });
 
@@ -173,6 +179,21 @@ export function ElectionCard({ election, voterView = false, className }: Electio
           <Calendar className="w-3.5 h-3.5 shrink-0" />
           <span className="truncate">{election.voteEnd.toLocaleDateString()}</span>
         </span>
+        {/* Across the bottom of the grid rather than in a cell of its own: it is
+            the longest label here in every language, and squeezed into one
+            column it truncated to nothing. Nothing is drawn for an election
+            deployed before the flag existed, which neither made the promise nor
+            declined it. */}
+        {election.fixedSchedule !== undefined && (
+          <span className="col-span-2 row-start-3 flex items-center gap-1.5 min-w-0">
+            {election.fixedSchedule
+              ? <CalendarCheck className="w-3.5 h-3.5 shrink-0 text-success" />
+              : <CalendarClock className="w-3.5 h-3.5 shrink-0" />}
+            <span className="truncate">
+              {t(election.fixedSchedule ? 'schedule.fixed' : 'schedule.movable_short')}
+            </span>
+          </span>
+        )}
       </div>
 
       {/* Countdown to this phase's next boundary */}

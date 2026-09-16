@@ -142,7 +142,10 @@
     "group_properties": "選挙",
     "group_voting_type": "決まり方",
     "group_eligibility": "参加できるか",
-    "results_partial": "現在 {{shown}} 件"
+    "results_partial": "現在 {{shown}} 件",
+    "closing_soon": "1日以内に締切",
+    "with_results": "結果公表済み",
+    "group_schedule": "日程"
   },
   "election": {
     "by": "主催:",
@@ -350,7 +353,7 @@
     "blank_vote_note": "白票オプションは常に自動的に含まれます。",
     "privacy_quorum": "プライバシー定足数",
     "quorum_hint": "結果を公開するために必要な最低投票数。",
-    "deposit_hint": "任意です。共有ガス残高に加算され、あなたのすべての選挙の投票者の手数料に使われます。",
+    "deposit_hint": "任意。この選挙専用に確保され、終了まで引き出せません。だからこそ有権者は自分の票の費用が支払済みだと確かめられます。あとから追加できます。",
     "immutability_warning": "一度デプロイすると、選挙パラメータは変更できません。すべてを慎重に確認してください。",
     "deploy": "選挙をデプロイ",
     "deploy_confirm_title": "ブロックチェーンにデプロイ？",
@@ -390,7 +393,9 @@
     "personhood_document": "本人確認書類（推奨）",
     "personhood_document_desc": "有権者が自分の端末でパスポートまたは身分証明書を証明します。書類の内容は一切開示されず、同じ書類による2回目の登録は拒否されます。",
     "personhood_orb": "本人確認書類と World ID Orb",
-    "personhood_orb_desc": "最も高く、最も狭い基準です。Orb が撤収された国では検証を受けられず、その有権者は登録できません。"
+    "personhood_orb_desc": "最も高く、最も狭い基準です。Orb が撤収された国では検証を受けられず、その有権者は登録できません。",
+    "fixed_schedule": "日程を永続的に固定",
+    "fixed_schedule_desc": "登録や投票を早めに締め切る権限を放棄します。有権者に表示され、後から戻せません。選挙の中止は引き続き可能です。"
   },
   "election_mgmt": {
     "actions": "アクション",
@@ -430,12 +435,16 @@
     "key_imported": "復号鍵をインポートしました",
     "key_no_longer_needed": "復号鍵はもう必要ありません。集計は公開済みで変更できません。書き出した控えは削除してください。ブロックチェーン上の個々の投票を今も復号できてしまいます。",
     "entry_requirements": "参加条件",
-    "tally_voters_other": "上書きされた票を除いて {{count}} 人の投票者"
+    "tally_voters_other": "上書きされた票を除いて {{count}} 人の投票者",
+    "open_enrollment_early": "登録を今すぐ開始",
+    "open_enrollment_title": "予定より早く登録を開始しますか？",
+    "open_enrollment_desc": "有権者は今から登録できます。締切日は変わりません。",
+    "enrollment_opened_done": "登録を開始しました"
   },
   "gas": {
     "title": "ガス管理",
     "deposit_title": "ガスを入金",
-    "amount_hint": "最低0.1 {{currency}}。各投票は約0.03 {{currency}}かかります。",
+    "amount_hint": "最低0.1 {{currency}}。各投票は約{{cost}} {{currency}}かかります。",
     "deposit_btn": "{{amount}} {{currency}}を入金",
     "deposit_pending": "入金処理中…",
     "history": "トランザクション履歴",
@@ -452,7 +461,22 @@
     "undated_hidden": "日付で絞り込む間、日付を読めない {{n}} 件は非表示です。",
     "view_on_explorer": "ブロックエクスプローラーで見る",
     "copy_hash": "トランザクションハッシュをコピー",
-    "showing": "{{total}} 件中 {{shown}} 件を表示"
+    "showing": "{{total}} 件中 {{shown}} 件を表示",
+    "reserved_here": "この選挙のために確保",
+    "free_balance": "自由残高",
+    "fund_election": "この選挙のためにガスを確保",
+    "release": "未使用のガスを回収",
+    "release_available": "この選挙は終了しました。{{amount}} {{currency}} が未使用です。",
+    "withdraw_title": "引き出す",
+    "withdraw_btn": "{{amount}} {{currency}} を引き出す",
+    "withdraw_confirm_body": "自由残高は {{left}} {{currency}} になります。進行中の選挙には、登録済みで未投票の {{voters}} 人のために約 {{needed}} {{currency}} がまだ必要です。",
+    "withdraw_danger": "進行中の選挙に必要な額を下回ります。投票できない人が出るおそれがあります。",
+    "withdraw_nothing_owed": "自由残高は {{left}} {{currency}} になります。待っている選挙はありません。",
+    "movement_reserved": "選挙のために確保",
+    "movement_released": "選挙から返却",
+    "reserve_note": "確保したガスは選挙が終わるまで引き出せません。それが有権者への約束になります。",
+    "reserve_source_balance": "残高 {{amount}} {{currency}} から充当します。ウォレットには何も求めません。",
+    "reserve_source_split": "残高から {{fromBalance}} {{currency}}、ウォレットから {{fromWallet}} {{currency}}。"
   },
   "members": {
     "title": "登録メンバー",
@@ -522,7 +546,8 @@
     "wallet_rejected": "ウォレットの接続が拒否されました。",
     "wallet_answer_lost": "ウォレットの応答を確認できませんでした。状態を確認してからもう一度お試しください。",
     "wallet_request_rejected": "ウォレットでリクエストをキャンセルしました。何も実行されていません。",
-    "passkey_cancelled": "パスキーの要求を閉じました。何も作成されていません。もう一度お試しください。"
+    "passkey_cancelled": "パスキーの要求を閉じました。何も作成されていません。もう一度お試しください。",
+    "list_unreadable": "この一覧をチェーンから読み取れませんでした。空だったわけではありません。接続を確かめてやり直してください。"
   },
   "demo": {
     "banner": "デモデータ：コントラクト未デプロイ。ここにあるものはオンチェーンではありません。"
@@ -756,5 +781,18 @@
     "sealed": "パスキーを登録しました",
     "skip_confirm_title": "パスキーなしで続けますか？",
     "skip_confirm_desc": "12個の単語は暗号化されずにこの端末に保存され、唯一の戻り道になります。パスキーはあとから、いつでもプロフィールから登録できます。"
+  },
+  "schedule": {
+    "fixed": "日程固定",
+    "fixed_desc": "主催者はこの選挙を作成した時点で、期限を動かす権限を放棄しました。公表された日程がそのまま適用されます。",
+    "movable": "主催者が短縮できる日程",
+    "movable_desc": "主催者は登録や投票を早めに締め切れます。その判断の間、何人が登録し投票したかも見えています。",
+    "movable_short": "短縮できる日程"
+  },
+  "funding": {
+    "unfunded_title": "この選挙は今、投票の費用を払えません",
+    "unfunded_body": "ここでは主催者が各投票の費用を負担するため、ウォレットなしで投票できます。この選挙の残高が空です。あなたの本人確認に問題はありません。主催者に補充を依頼してからお越しください。",
+    "short": "あと約 {{votes}} 票分の費用があり、登録済みの {{voters}} 人がまだ投票していません。",
+    "reserved_votes": "この選挙には約 {{votes}} 票分が確保されています。"
   }
 }

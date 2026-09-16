@@ -143,7 +143,10 @@
     "group_properties": "Election",
     "group_voting_type": "Decided by",
     "group_eligibility": "Would I qualify",
-    "results_partial": "{{shown}} found so far"
+    "results_partial": "{{shown}} found so far",
+    "closing_soon": "Closing within a day",
+    "with_results": "Results published",
+    "group_schedule": "Dates"
   },
   "election": {
     "by": "by",
@@ -353,7 +356,7 @@
     "blank_vote_note": "A blank vote option is always included automatically.",
     "privacy_quorum": "Privacy quorum",
     "quorum_hint": "Minimum votes required before results are revealed.",
-    "deposit_hint": "Optional. Tops up your shared gas tank, which pays transaction fees for the voters of ALL your elections.",
+    "deposit_hint": "Optional. Reserved for THIS election and cannot be withdrawn until it ends, which is what lets voters see that their ballot is paid for. You can add more later.",
     "immutability_warning": "Once deployed, the election parameters cannot be changed. Review everything carefully.",
     "deploy": "Deploy election",
     "deploy_confirm_title": "Deploy to blockchain?",
@@ -393,7 +396,9 @@
     "personhood_document": "An identity document (recommended)",
     "personhood_document_desc": "The voter proves a passport or national ID card on their own phone. Nothing about the document is revealed, and a second enrolment behind the same one is refused.",
     "personhood_orb": "An identity document and a World ID Orb",
-    "personhood_orb_desc": "The strongest bar, and the narrowest: Orb verification is unavailable in countries where the Orbs were withdrawn, and those voters will not be able to enrol."
+    "personhood_orb_desc": "The strongest bar, and the narrowest: Orb verification is unavailable in countries where the Orbs were withdrawn, and those voters will not be able to enrol.",
+    "fixed_schedule": "Fixed dates, permanently",
+    "fixed_schedule_desc": "Give up the power to close enrolment or voting early. Voters see this on the election, and it cannot be undone. Cancelling the election is still possible."
   },
   "election_mgmt": {
     "actions": "Actions",
@@ -434,12 +439,16 @@
     "key_no_longer_needed": "The decryption key is no longer needed: the count is published and cannot change. Delete any copy you exported, since it would still decrypt the individual ballots stored on chain.",
     "entry_requirements": "Entry requirements",
     "tally_voters_other": "{{count}} voters after removing superseded votes",
-    "tally_voters_one": "{{count}} voter after removing superseded votes"
+    "tally_voters_one": "{{count}} voter after removing superseded votes",
+    "open_enrollment_early": "Open enrollment now",
+    "open_enrollment_title": "Open enrollment ahead of schedule?",
+    "open_enrollment_desc": "Voters will be able to enrol from this moment. The closing date does not change.",
+    "enrollment_opened_done": "Enrollment is open"
   },
   "gas": {
     "title": "Gas Management",
     "deposit_title": "Deposit gas",
-    "amount_hint": "Minimum 0.1 {{currency}}. Each vote costs approximately 0.03 {{currency}}.",
+    "amount_hint": "Minimum 0.1 {{currency}}. Each vote costs approximately {{cost}} {{currency}}.",
     "deposit_btn": "Deposit {{amount}} {{currency}}",
     "deposit_pending": "Deposit pending…",
     "history": "Transaction history",
@@ -457,7 +466,22 @@
     "undated_hidden": "{{n}} without a readable date are hidden while you filter by date.",
     "view_on_explorer": "View on block explorer",
     "copy_hash": "Copy transaction hash",
-    "showing": "Showing {{shown}} of {{total}}"
+    "showing": "Showing {{shown}} of {{total}}",
+    "reserved_here": "Reserved for this election",
+    "free_balance": "Free balance",
+    "fund_election": "Reserve gas for this election",
+    "release": "Recover unspent gas",
+    "release_available": "This election has ended. {{amount}} {{currency}} was never spent.",
+    "withdraw_title": "Withdraw",
+    "withdraw_btn": "Withdraw {{amount}} {{currency}}",
+    "withdraw_confirm_body": "This leaves {{left}} {{currency}} free. Your open elections still need about {{needed}} {{currency}} for the {{voters}} people who enrolled and have not voted.",
+    "withdraw_danger": "That is less than your open elections need. Voters may find they cannot cast their ballot.",
+    "withdraw_nothing_owed": "This leaves {{left}} {{currency}} free. No open election is waiting on it.",
+    "movement_reserved": "Reserved for an election",
+    "movement_released": "Returned from an election",
+    "reserve_note": "Reserved gas cannot be withdrawn until the election ends. That is what makes it a promise to the voter.",
+    "reserve_source_balance": "Taken from your {{amount}} {{currency}} balance. Your wallet is not asked for anything.",
+    "reserve_source_split": "{{fromBalance}} {{currency}} from your balance, and {{fromWallet}} {{currency}} from your wallet."
   },
   "members": {
     "title": "Registered Members",
@@ -527,7 +551,8 @@
     "wallet_rejected": "The wallet connection was declined.",
     "wallet_answer_lost": "We could not confirm your wallet’s answer. Check the state before trying again.",
     "wallet_request_rejected": "You cancelled the request in your wallet. Nothing was done.",
-    "passkey_cancelled": "You dismissed the passkey prompt. Nothing was created: you can try again."
+    "passkey_cancelled": "You dismissed the passkey prompt. Nothing was created: you can try again.",
+    "list_unreadable": "This list could not be read from the chain, which is not the same as it being empty. Check your connection and try again."
   },
   "demo": {
     "banner": "Demo data: no contracts deployed. Nothing here is on-chain."
@@ -762,5 +787,18 @@
     "sealed": "Passkey linked",
     "skip_confirm_title": "Continue without a passkey?",
     "skip_confirm_desc": "Your twelve words will stay stored on this device unencrypted, and they will be your only way back. You can link a passkey later from your profile, whenever you like."
+  },
+  "schedule": {
+    "fixed": "Fixed dates",
+    "fixed_desc": "The organizer gave up the power to move any deadline when this election was created. The published dates are the dates it will run to.",
+    "movable": "Dates the organizer can shorten",
+    "movable_desc": "The organizer can close enrolment or voting early. They can also see how many people have enrolled and voted while deciding.",
+    "movable_short": "Shortenable dates"
+  },
+  "funding": {
+    "unfunded_title": "This election cannot pay for ballots right now",
+    "unfunded_body": "Every ballot here is paid for by the organizer, so that voting needs no wallet. Their balance for this election is empty. Nothing is wrong with your identity: ask the organizer to top it up and come back.",
+    "short": "About {{votes}} more ballots are funded, and {{voters}} people who enrolled have not voted yet.",
+    "reserved_votes": "About {{votes}} ballots are reserved for this election."
   }
 }

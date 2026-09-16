@@ -142,7 +142,10 @@
     "group_properties": "선거",
     "group_voting_type": "결정 방식",
     "group_eligibility": "자격 여부",
-    "results_partial": "지금까지 {{shown}}개"
+    "results_partial": "지금까지 {{shown}}개",
+    "closing_soon": "하루 이내 마감",
+    "with_results": "결과 공개됨",
+    "group_schedule": "일정"
   },
   "election": {
     "by": "주최:",
@@ -350,7 +353,7 @@
     "blank_vote_note": "백지 투표 옵션은 항상 자동으로 포함됩니다.",
     "privacy_quorum": "프라이버시 정족수",
     "quorum_hint": "결과 공개 전 필요한 최소 투표 수.",
-    "deposit_hint": "선택 사항입니다. 모든 선거의 유권자 수수료를 지불하는 공용 가스 잔액을 충전합니다.",
+    "deposit_hint": "선택 사항. 이 선거를 위해 확보되며 선거가 끝날 때까지 출금할 수 없습니다. 그러기에 유권자가 자신의 표가 결제되었음을 확인할 수 있습니다. 나중에 더 넣을 수 있습니다.",
     "immutability_warning": "배포 후에는 선거 매개변수를 변경할 수 없습니다. 모든 것을 주의 깊게 검토하세요.",
     "deploy": "선거 배포",
     "deploy_confirm_title": "블록체인에 배포하시겠습니까?",
@@ -390,7 +393,9 @@
     "personhood_document": "신분증 (권장)",
     "personhood_document_desc": "유권자가 자신의 휴대폰으로 여권이나 주민등록증을 증명합니다. 신분증에 대해서는 아무것도 공개되지 않으며, 같은 신분증으로 두 번째 등록은 거부됩니다.",
     "personhood_orb": "신분증과 World ID Orb",
-    "personhood_orb_desc": "가장 높고 가장 좁은 기준입니다. Orb가 철수한 국가에서는 인증을 받을 수 없어 해당 유권자는 등록할 수 없습니다."
+    "personhood_orb_desc": "가장 높고 가장 좁은 기준입니다. Orb가 철수한 국가에서는 인증을 받을 수 없어 해당 유권자는 등록할 수 없습니다.",
+    "fixed_schedule": "일정을 영구히 고정",
+    "fixed_schedule_desc": "등록이나 투표를 일찍 닫는 권한을 포기합니다. 유권자에게 표시되며 되돌릴 수 없습니다. 선거 취소는 여전히 가능합니다."
   },
   "election_mgmt": {
     "actions": "작업",
@@ -430,12 +435,16 @@
     "key_imported": "복호화 키를 가져왔습니다",
     "key_no_longer_needed": "복호화 키는 더 이상 필요하지 않습니다. 집계가 공개되었고 변경할 수 없습니다. 내보낸 사본은 삭제하세요. 체인에 저장된 개별 투표를 여전히 복호화할 수 있습니다.",
     "entry_requirements": "참여 조건",
-    "tally_voters_other": "대체된 표를 제외하고 {{count}}명의 유권자"
+    "tally_voters_other": "대체된 표를 제외하고 {{count}}명의 유권자",
+    "open_enrollment_early": "지금 등록 열기",
+    "open_enrollment_title": "예정보다 먼저 등록을 여시겠습니까?",
+    "open_enrollment_desc": "유권자는 지금부터 등록할 수 있습니다. 마감일은 바뀌지 않습니다.",
+    "enrollment_opened_done": "등록이 열렸습니다"
   },
   "gas": {
     "title": "가스 관리",
     "deposit_title": "가스 입금",
-    "amount_hint": "최소 0.1 {{currency}}. 각 투표는 약 0.03 {{currency}} 소요.",
+    "amount_hint": "최소 0.1 {{currency}}. 각 투표는 약 {{cost}} {{currency}} 소요.",
     "deposit_btn": "{{amount}} {{currency}} 입금",
     "deposit_pending": "입금 처리 중…",
     "history": "트랜잭션 기록",
@@ -452,7 +461,22 @@
     "undated_hidden": "날짜로 거르는 동안 날짜를 읽을 수 없는 {{n}}건은 숨겨집니다.",
     "view_on_explorer": "블록 탐색기에서 보기",
     "copy_hash": "트랜잭션 해시 복사",
-    "showing": "{{total}}건 중 {{shown}}건 표시"
+    "showing": "{{total}}건 중 {{shown}}건 표시",
+    "reserved_here": "이 선거를 위해 확보됨",
+    "free_balance": "자유 잔액",
+    "fund_election": "이 선거를 위해 가스 확보",
+    "release": "쓰지 않은 가스 회수",
+    "release_available": "이 선거는 끝났습니다. {{amount}} {{currency}}를 쓰지 않았습니다.",
+    "withdraw_title": "출금",
+    "withdraw_btn": "{{amount}} {{currency}} 출금",
+    "withdraw_confirm_body": "자유 잔액은 {{left}} {{currency}}가 됩니다. 진행 중인 선거에는 등록했지만 투표하지 않은 {{voters}}명을 위해 약 {{needed}} {{currency}}가 더 필요합니다.",
+    "withdraw_danger": "진행 중인 선거에 필요한 금액보다 적습니다. 일부 유권자가 투표하지 못할 수 있습니다.",
+    "withdraw_nothing_owed": "자유 잔액은 {{left}} {{currency}}가 됩니다. 기다리는 선거는 없습니다.",
+    "movement_reserved": "선거를 위해 확보",
+    "movement_released": "선거에서 반환",
+    "reserve_note": "확보된 가스는 선거가 끝날 때까지 출금할 수 없습니다. 그것이 유권자에 대한 약속이 되는 이유입니다.",
+    "reserve_source_balance": "잔액 {{amount}} {{currency}}에서 처리됩니다. 지갑에서는 아무것도 요청하지 않습니다.",
+    "reserve_source_split": "잔액에서 {{fromBalance}} {{currency}}, 지갑에서 {{fromWallet}} {{currency}}."
   },
   "members": {
     "title": "등록된 회원",
@@ -522,7 +546,8 @@
     "wallet_rejected": "지갑 연결이 거부되었습니다.",
     "wallet_answer_lost": "지갑의 응답을 확인하지 못했습니다. 상태를 확인한 뒤 다시 시도하세요.",
     "wallet_request_rejected": "지갑에서 요청을 취소했습니다. 아무 작업도 수행되지 않았습니다.",
-    "passkey_cancelled": "패스키 요청을 닫았습니다. 아무것도 생성되지 않았습니다. 다시 시도할 수 있습니다."
+    "passkey_cancelled": "패스키 요청을 닫았습니다. 아무것도 생성되지 않았습니다. 다시 시도할 수 있습니다.",
+    "list_unreadable": "이 목록을 체인에서 읽지 못했습니다. 비어 있는 것과는 다릅니다. 연결을 확인하고 다시 시도하세요."
   },
   "demo": {
     "banner": "데모 데이터: 배포된 컨트랙트 없음. 여기 있는 것은 온체인이 아닙니다."
@@ -756,5 +781,18 @@
     "sealed": "패스키가 연결되었습니다",
     "skip_confirm_title": "패스키 없이 계속할까요?",
     "skip_confirm_desc": "열두 단어가 이 기기에 암호화되지 않은 채 저장되며, 돌아올 수 있는 유일한 수단이 됩니다. 패스키는 나중에 프로필에서 언제든 연결할 수 있습니다."
+  },
+  "schedule": {
+    "fixed": "고정된 일정",
+    "fixed_desc": "주최자는 이 선거를 만들 때 어느 기한도 옮길 수 있는 권한을 포기했습니다. 공개된 날짜가 그대로 지켜집니다.",
+    "movable": "주최자가 줄일 수 있는 일정",
+    "movable_desc": "주최자는 등록이나 투표를 일찍 닫을 수 있으며, 그 판단을 하는 동안 몇 명이 등록하고 투표했는지 보입니다.",
+    "movable_short": "단축 가능한 일정"
+  },
+  "funding": {
+    "unfunded_title": "이 선거는 지금 투표 비용을 낼 수 없습니다",
+    "unfunded_body": "여기서는 주최자가 모든 투표 비용을 냅니다. 그래서 지갑 없이도 투표할 수 있습니다. 이 선거를 위한 잔액이 비었습니다. 신원에는 문제가 없습니다. 주최자에게 충전을 요청한 뒤 다시 오세요.",
+    "short": "약 {{votes}}표 분의 비용이 남아 있고, 등록한 {{voters}}명이 아직 투표하지 않았습니다.",
+    "reserved_votes": "이 선거에 약 {{votes}}표 분이 확보되어 있습니다."
   }
 }

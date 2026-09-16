@@ -4,6 +4,7 @@ import { PageLayout } from '../../components/layout/PageLayout';
 import { ElectionCard } from '../../components/ui/ElectionCard';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { LoadMore } from '../../components/ui/LoadMore';
+import { ListError } from '../../components/ui/ListError';
 import { useElectionPages } from '../../hooks/useElectionPages';
 import { useVerifiedDomains } from '../../hooks/useVerifiedDomains';
 import { useAuth } from '../../contexts/AuthContext';
@@ -41,10 +42,11 @@ export default function Discover() {
    * "load more" control is offered even on an empty result so a reader who
    * narrows the list down to nothing can still keep looking.
    */
-  const { elections, all, loading, loadingMore, hasMore, loadMore, complete } = useElectionPages({
-    keep: e => matchesElectionFilter(e, filters, IGNORE_DOMAINS),
-    filterKey: JSON.stringify(filters),
-  });
+  const { elections, all, loading, loadingMore, hasMore, loadMore, complete, error, refresh } =
+    useElectionPages({
+      keep: e => matchesElectionFilter(e, filters, IGNORE_DOMAINS),
+      filterKey: JSON.stringify(filters),
+    });
 
   const isDomainVerified = useVerifiedDomains(elections);
 
@@ -92,6 +94,11 @@ export default function Discover() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-52" />)}
           </div>
+        ) : error ? (
+          /* A read that failed is not an empty result, and used to be reported
+             as one: "no elections found", with a load-more button underneath
+             that would fail the same way. */
+          <ListError onRetry={() => void refresh()} />
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <span className="text-5xl mb-4">🗳️</span>

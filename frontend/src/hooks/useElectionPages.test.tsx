@@ -189,3 +189,52 @@ describe('useElectionPages', () => {
     expect(estado.hidratadas).toEqual([]);
   });
 });
+
+describe('when there is nothing more to load', () => {
+  beforeEach(() => {
+    estado.todas = [];
+    estado.mias = [];
+    estado.inscritas = [];
+    estado.commitment = 1n;
+    estado.hidratadas = [];
+    estado.lecturasAmplias = 0;
+    vi.resetModules();
+  });
+
+  it('offers nothing more once a filter has matched everything it can', async () => {
+    // A search that matches nothing walks the whole source and then stops. The
+    // button must go: an empty list under a control that promises more is a
+    // promise nothing can keep, and pressing it would do nothing at all.
+    estado.todas = direcciones(60);
+    const { useElectionPages } = await import('./useElectionPages');
+    const { result } = renderHook(() => useElectionPages({ pageSize: 5, keep: () => false }));
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await waitFor(() => expect(result.current.complete).toBe(true));
+
+    expect(result.current.elections).toEqual([]);
+    expect(result.current.hasMore).toBe(false);
+  });
+
+  it('offers nothing more when the page is not even full', async () => {
+    estado.todas = direcciones(3);
+    const { useElectionPages } = await import('./useElectionPages');
+    const { result } = renderHook(() => useElectionPages({ pageSize: 12 }));
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.elections).toHaveLength(3);
+    expect(result.current.hasMore).toBe(false);
+  });
+
+  it('offers nothing more when the scope itself is empty', async () => {
+    estado.mias = [];
+    const { useElectionPages } = await import('./useElectionPages');
+    const { result } = renderHook(() =>
+      useElectionPages({ scope: 'mine', organizer: '0xmia' }),
+    );
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.hasMore).toBe(false);
+  });
+});

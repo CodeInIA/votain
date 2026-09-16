@@ -28,6 +28,7 @@ import {
 } from '../../lib/votingTypes';
 import { fetchOrganizerDomains } from '../../lib/organizerDomains';
 import { isChainConfigured, chainInfo } from '../../lib/deployments';
+import { splitFunding, toWei } from '../../lib/gasNeeds';
 import { getReadProvider } from '../../lib/contracts';
 import { createElection, getOrganizerName, type VOTING_TYPE_ENUM } from '../../lib/organizer';
 import {
@@ -64,6 +65,14 @@ interface FormState {
   /** How distinct a human the election insists each voter is. */
   personhood: PersonhoodLevel;
   privacyQuorum: string;
+  /**
+   * Give up the power to move any deadline, for good.
+   *
+   * Decided here because the contract stores it as an immutable: a flag the
+   * organizer could flip once it became inconvenient would promise exactly what
+   * they can already promise in words, which is nothing a voter can check.
+   */
+  fixedSchedule: boolean;
   depositAmount: string;
   /** Attribute restrictions. Off by default: an open election is the norm. */
   eligibilityEnabled: boolean;
@@ -84,6 +93,9 @@ const INITIAL: FormState = {
   // one account one vote, and accounts are not people; the organizer can still
   // choose that, but not by not noticing the question.
   personhood: 'document', privacyQuorum: '10', depositAmount: '0.05',
+  // Off by default, because it cannot be undone and an organizer should choose
+  // it rather than discover it. The wizard says what it buys.
+  fixedSchedule: false,
   eligibilityEnabled: false, minAge: '', countryMode: 'none', countries: [],
 };
 
@@ -333,9 +345,14 @@ export default function CreateElection() {
   const { t, i18n } = useTranslation();
   const wallet = useOrganizerWallet();
 
-  // The gas tank is per ORGANIZER, shared by all their elections, so a deposit
-  // here is topping up one pool rather than funding this election. Showing the
-  // current balance is what makes "you may not need to add anything" visible.
+  // What is attached here is RESERVED FOR THIS ELECTION and cannot be withdrawn
+  // until it ends, which is what lets a voter be told their ballot is paid for.
+  // It used to land in a shared per-organizer pool, withdrawable at any moment,
+  // and this comment said so for a while after that stopped being true.
+  //
+  // The shared balance still exists and still pays when a reserve runs out, so
+  // it is shown here: an organizer who already has funds is not necessarily
+  // obliged to add more.
   const [tankBalance, setTankBalance] = useState<number | null>(null);
   useEffect(() => {
     if (!isChainConfigured() || !wallet.address) return;
@@ -353,6 +370,11 @@ export default function CreateElection() {
   const live = isChainConfigured();
   const [step, setStep]       = useState(0);
   const [form, setForm]       = useState<FormState>(INITIAL);
+  /**
+   * The same split `createElection` will make, worked out here only so it can
+   * be said before the wallet opens. One rule in `gasNeeds`, not a copy.
+   */
+  const depositSplit = splitFunding(toWei(Number(form.depositAmount)), toWei(tankBalance ?? 0));
   const [deployModal, setDeployModal] = useState(false);
   const { toast } = useToast();
   const [txState, setTxState] = useState<TxState>('idle');
@@ -602,6 +624,11 @@ export default function CreateElection() {
         organizerDomain: activeDomain,
         candidates,
         privacyQuorum: Number(form.privacyQuorum),
+        fixedSchedule: form.fixedSchedule,
+        // Drawn on before the wallet is asked for anything, so an organizer who
+        // already holds gas is not made to send more and withdraw the
+        // difference afterwards.
+        availableBalance: toWei(tankBalance ?? 0),
         // No separate window: enrollment opens now and closes when voting does.
         // (The contract requires enrollStart < enrollEnd <= voteStart.)
         enrollStart: form.separateEnrollment ? new Date(form.enrollStart) : new Date(),
@@ -686,6 +713,15 @@ export default function CreateElection() {
               description={t('create.separate_enrollment_desc')}
               checked={form.separateEnrollment}
               onChange={v => set('separateEnrollment', v)}
+            />
+            {/* Next to the dates it is a promise about, and permanent: the
+                contract stores it as an immutable, so this is the only moment
+                it can be decided. */}
+            <Switch
+              label={t('create.fixed_schedule')}
+              description={t('create.fixed_schedule_desc')}
+              checked={form.fixedSchedule}
+              onChange={v => set('fixedSchedule', v)}
             />
             {/* One column on phones: a date + time label does not fit in a half-width field. */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -882,12 +918,29 @@ export default function CreateElection() {
               <div className="flex flex-col gap-1.5">
                 <Input label={t('create.deposit_token', { currency: chainInfo.currency })} type="number" step="0.01" min="0" value={form.depositAmount} onChange={e => set('depositAmount', e.target.value)} hint={t('create.deposit_hint')} error={err('depositAmount')} />
                 {tankBalance !== null && (
-                  <p className="text-xs text-on-surface-meta">
-                    {t('create.current_tank', {
-                      amount: tankBalance.toFixed(4),
-                      currency: chainInfo.currency,
-                    })}
-                  </p>
+                  <>
+                    <p className="text-xs text-on-surface-meta">
+                      {t('create.current_tank', {
+                        amount: tankBalance.toFixed(4),
+                        currency: chainInfo.currency,
+                      })}
+                    </p>
+                    {/* Which of the two pays, worked out before the wallet
+                        opens: the balance is already inside the contract, so
+                        only the shortfall is a transfer. */}
+                    <p className="text-xs text-on-surface-meta">
+                      {depositSplit.fromWallet > 0n
+                        ? t('gas.reserve_source_split', {
+                            fromBalance: (Number(depositSplit.fromBalance) / 1e18).toFixed(4),
+                            fromWallet: (Number(depositSplit.fromWallet) / 1e18).toFixed(4),
+                            currency: chainInfo.currency,
+                          })
+                        : t('gas.reserve_source_balance', {
+                            amount: (Number(depositSplit.fromBalance) / 1e18).toFixed(4),
+                            currency: chainInfo.currency,
+                          })}
+                    </p>
+                  </>
                 )}
               </div>
 

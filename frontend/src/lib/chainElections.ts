@@ -94,6 +94,7 @@ export async function fetchElection(address: string): Promise<Election> {
     resultsPublished,
     metadataJson,
     policyHashOnChain,
+    fixedSchedule,
   ] = await Promise.all([
     c.name(),
     c.organizer(),
@@ -111,6 +112,7 @@ export async function fetchElection(address: string): Promise<Election> {
     c.resultsPublished(),
     c.metadataJson(),
     c.eligibilityPolicyHash() as Promise<string>,
+    c.fixedSchedule() as Promise<boolean>,
   ]);
 
   const meta = parseMetadata(metadataJson);
@@ -279,6 +281,7 @@ export async function fetchElection(address: string): Promise<Election> {
     votingType: VOTING_TYPE_MAP[Number(votingType)] ?? "simple_plurality",
     thresholdValue: Number(thresholdValue),
     privacyQuorum: meta.privacyQuorum ?? (Number(thresholdValue) || 0),
+    fixedSchedule: Boolean(fixedSchedule),
     keyNonce: meta.keyNonce,
     isEnrolled,
     hasVoted,

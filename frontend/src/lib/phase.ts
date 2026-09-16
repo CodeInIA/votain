@@ -42,6 +42,39 @@ export function nextBoundary(
 export const ENDS_SOON_MS = 3_600_000;
 
 /**
+ * How near its next deadline an election is for someone BROWSING.
+ *
+ * A day, where `ENDS_SOON_MS` is an hour, because the two answer different
+ * questions. That one is a personal deadline turning red on an election the
+ * voter already joined, and an hour is when a warning stops being useful and
+ * starts being a fire alarm. This one is "what is worth my attention today",
+ * asked by someone looking through a list, and an hour would hide almost
+ * everything they could still act on.
+ */
+export const CLOSING_SOON_MS = 86_400_000;
+
+/**
+ * Whether this election's NEXT deadline is near, whatever that deadline is.
+ *
+ * Through `nextBoundary`, so an enrolling election is measured against the
+ * close of enrolment and an active one against the close of voting. For someone
+ * deciding where to spend the next hour, "the chance to join ends tonight" and
+ * "the chance to vote ends tonight" are the same news.
+ *
+ * Says nothing about the reader, unlike `endsSoon`: an election closing soon is
+ * closing soon for everybody.
+ */
+export function closingSoon(
+  election: Parameters<typeof nextBoundary>[0],
+  now: number = Date.now(),
+): boolean {
+  const boundary = nextBoundary(election);
+  if (!boundary) return false;
+  const left = boundary.deadline.getTime() - now;
+  return left > 0 && left < CLOSING_SOON_MS;
+}
+
+/**
  * A ballot the voter can still cast and is about to lose the chance to.
  *
  * All three conditions matter. Voting has to be open, because there is nothing

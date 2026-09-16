@@ -9,6 +9,7 @@ import { Card } from '../../components/ui/Card';
 import { ResultBarChart } from '../../components/ui/BarChart';
 import { BlockchainBadge, IPFSBadge } from '../../components/ui/BlockchainBadge';
 import { Spinner } from '../../components/ui/Spinner';
+import { tallyTotal } from '../../data/seed';
 import { useElection } from '../../hooks/useElections';
 import { explorerAddressUrl } from '../../lib/deployments';
 
@@ -38,7 +39,7 @@ export default function ElectionResults() {
     );
   }
 
-  const totalVotes = election.candidates.reduce((s, c) => s + (c.votes ?? 0), 0);
+  const totalVotes = tallyTotal(election);
   const winner     = election.candidates.find(c => c.isWinner);
   const hasTie     = election.candidates.some(c => c.isTie);
 
