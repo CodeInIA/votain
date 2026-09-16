@@ -814,8 +814,9 @@
     "movable_short": "Datas encurtáveis",
     "no_cancel": "Não pode ser cancelada",
     "no_cancel_desc": "O organizador abdicou de poder cancelar esta eleição quando a criou. Vai até ao fim seja qual for a participação.",
+    "no_cancel_short": "Nao cancelavel",
     "can_cancel": "O organizador pode cancelá-la",
-    "can_cancel_short": "Pode ser cancelada",
+    "can_cancel_short": "Cancelavel",
     "can_cancel_desc": "O organizador pode cancelar esta eleição enquanto decorre. Nesse caso não é publicado nenhum resultado."
   },
   "funding": {

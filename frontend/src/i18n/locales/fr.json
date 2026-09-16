@@ -814,8 +814,9 @@
     "movable_short": "Dates raccourcissables",
     "no_cancel": "Ne peut pas être annulée",
     "no_cancel_desc": "L’organisateur a renoncé au pouvoir d’annuler cette élection à sa création. Elle ira jusqu’au bout quelle que soit la participation.",
+    "no_cancel_short": "Non annulable",
     "can_cancel": "L’organisateur peut l’annuler",
-    "can_cancel_short": "Peut etre annulee",
+    "can_cancel_short": "Annulable",
     "can_cancel_desc": "L’organisateur peut annuler cette élection en cours de route. Aucun résultat n’est alors publié."
   },
   "funding": {

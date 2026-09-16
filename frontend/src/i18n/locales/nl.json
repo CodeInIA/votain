@@ -808,8 +808,9 @@
     "movable_short": "Inkortbare data",
     "no_cancel": "Kan niet worden afgeblazen",
     "no_cancel_desc": "De organisator heeft bij het aanmaken afgezien van de mogelijkheid deze verkiezing te annuleren. Ze loopt tot het einde, hoe de opkomst er ook uitziet.",
+    "no_cancel_short": "Niet afgelastbaar",
     "can_cancel": "De organisator kan haar afblazen",
-    "can_cancel_short": "Kan worden afgelast",
+    "can_cancel_short": "Afgelastbaar",
     "can_cancel_desc": "De organisator kan deze verkiezing tussentijds annuleren. Er wordt dan geen uitslag gepubliceerd."
   },
   "funding": {

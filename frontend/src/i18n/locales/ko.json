@@ -802,6 +802,7 @@
     "movable_short": "단축 가능한 일정",
     "no_cancel": "취소할 수 없음",
     "no_cancel_desc": "주최자는 이 선거를 만들 때 취소할 권한을 포기했습니다. 투표율이 어떻든 끝까지 진행됩니다.",
+    "no_cancel_short": "취소 불가",
     "can_cancel": "주최자가 취소할 수 있음",
     "can_cancel_short": "취소 가능",
     "can_cancel_desc": "주최자는 진행 중에 이 선거를 취소할 수 있습니다. 그러면 결과는 공개되지 않습니다."

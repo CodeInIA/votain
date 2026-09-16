@@ -802,8 +802,9 @@
     "movable_short": "可提前结束",
     "no_cancel": "无法取消",
     "no_cancel_desc": "组织者在创建时放弃了取消本次选举的权力。无论投票率如何，它都会进行到底。",
+    "no_cancel_short": "不可取消",
     "can_cancel": "组织者可以取消",
-    "can_cancel_short": "可以取消",
+    "can_cancel_short": "可取消",
     "can_cancel_desc": "组织者可以在选举进行中取消它。那样将不会公布任何结果。"
   },
   "funding": {

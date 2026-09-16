@@ -99,11 +99,13 @@ export function SchedulePromise({
             ? <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
             : <ShieldCheck className="w-3.5 h-3.5 shrink-0 text-success" />}
           {t(
-            cancellable
-              ? compact
+            compact
+              ? cancellable
                 ? 'schedule.can_cancel_short'
-                : 'schedule.can_cancel'
-              : 'schedule.no_cancel',
+                : 'schedule.no_cancel_short'
+              : cancellable
+                ? 'schedule.can_cancel'
+                : 'schedule.no_cancel',
           )}
         </span>
       )}

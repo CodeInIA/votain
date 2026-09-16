@@ -808,8 +808,9 @@
     "movable_short": "Kürzbare Termine",
     "no_cancel": "Kann nicht abgesagt werden",
     "no_cancel_desc": "Der Veranstalter hat bei der Erstellung darauf verzichtet, diese Wahl abzusagen. Sie läuft bis zum Ende, wie die Beteiligung auch aussieht.",
+    "no_cancel_short": "Nicht absagbar",
     "can_cancel": "Der Veranstalter kann sie absagen",
-    "can_cancel_short": "Kann abgesagt werden",
+    "can_cancel_short": "Absagbar",
     "can_cancel_desc": "Der Veranstalter kann diese Wahl während sie läuft absagen. Dann wird kein Ergebnis veröffentlicht."
   },
   "funding": {

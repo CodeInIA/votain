@@ -814,8 +814,9 @@
     "movable_short": "Fechas acortables",
     "no_cancel": "No se puede cancelar",
     "no_cancel_desc": "El organizador renunció a poder cancelar esta elección al crearla. Llegará hasta el final tenga la participación que tenga.",
+    "no_cancel_short": "No cancelable",
     "can_cancel": "El organizador puede cancelarla",
-    "can_cancel_short": "Se puede cancelar",
+    "can_cancel_short": "Cancelable",
     "can_cancel_desc": "El organizador puede cancelar esta elección mientras está en marcha. Si lo hace, no se publica ningún resultado."
   },
   "funding": {

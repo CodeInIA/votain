@@ -237,25 +237,43 @@ export function ElectionCard({ election, view = 'public', className }: ElectionC
             {election.totalEnrolled.toLocaleString()} {t('election.enrolled')}
           </span>
         </span>
-        {showsTurnout && (
+        {showsTurnout ? (
           <span className="truncate">
             {pct}% {t('election.voted')}
           </span>
+        ) : (
+          /* Holds the cell open rather than leaving it out.
+             Auto-placement fills the first free cell, so on an election with
+             no turnout to show the next item slid up beside the enrolled
+             count: a schedule promise sitting next to a headcount, with its
+             pair stranded on the row below. An empty cell keeps the promises
+             beginning a row together, which is the only thing about this
+             grid that has to be true rather than merely tidy. */
+          <span aria-hidden />
         )}
 
-        {/* Full width, because these are the only labels longer than half a
-            card: "No se puede cancelar" needs more than the 139px a column
-            gets. Nothing is drawn for an election deployed before the flags,
-            which made no promise and declined none.
+        {/* SIDE BY SIDE, one cell each, where they used to take a full-width
+            row apiece. Two rows of text that stopped halfway across, under a
+            row that already stopped halfway, made the card visibly heavier
+            down its left edge with nothing on the right.
 
-            The same component the detail pages use, where this card used to
-            draw its own copy of the fixed/movable line and had never been
-            taught the second promise at all. */}
+            They fit now because they were measured and then shortened. At the
+            width a card gets, a column is 138px: every label cleared it
+            except "No se puede cancelar" at 145, so the compact wording of
+            both cancel answers was cut down to a pair that fits and still
+            reads as a pair. The full sentences are in the tooltip and on the
+            detail pages, which have the room.
+
+            Nothing is drawn for an election deployed before the flags, which
+            made no promise and declined none. The same component the detail
+            pages use, where this card used to draw its own copy of the
+            fixed/movable line and had never been taught the second promise
+            at all. */}
         <SchedulePromise
           fixedSchedule={election.fixedSchedule}
           cancellable={election.cancellable}
           compact
-          className="col-span-2 min-w-0 [&>span]:truncate"
+          className="min-w-0 [&>span]:truncate"
         />
       </div>
 

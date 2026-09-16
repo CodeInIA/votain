@@ -802,8 +802,9 @@
     "movable_short": "短縮できる日程",
     "no_cancel": "中止できません",
     "no_cancel_desc": "主催者は作成時にこの選挙を中止する権限を放棄しました。投票率がどうであれ最後まで実施されます。",
+    "no_cancel_short": "中止不可",
     "can_cancel": "主催者は中止できます",
-    "can_cancel_short": "中止できる",
+    "can_cancel_short": "中止可",
     "can_cancel_desc": "主催者は進行中にこの選挙を中止できます。その場合、結果は公表されません。"
   },
   "funding": {
