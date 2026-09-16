@@ -201,7 +201,7 @@ export default function VerifyReceipt() {
           </div>
           <Button
             variant="gradient"
-            className="rounded-2xl px-5"
+            className="rounded-2xl px-5 h-11"
             onClick={runSearch}
             disabled={!ref.trim() || state === 'searching' || loading}
           >

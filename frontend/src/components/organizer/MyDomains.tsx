@@ -249,7 +249,7 @@ export function MyDomains({
                 variant="ghost"
                 disabled={busy || !draft.trim() || !address}
                 onClick={() => void showRecord()}
-                className="shrink-0 gap-2"
+                className="shrink-0 gap-2 h-11"
               >
                 <Plus className="w-4 h-4" />
                 {t('domain.add')}

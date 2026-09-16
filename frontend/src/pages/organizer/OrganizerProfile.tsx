@@ -53,10 +53,10 @@ export default function OrganizerProfile() {
                   autoFocus
                 />
               </div>
-              <Button variant="gradient" className="rounded-2xl px-4" onClick={saveName}>
+              <Button variant="gradient" className="rounded-2xl px-4 h-11" onClick={saveName}>
                 {t('common.save')}
               </Button>
-              <Button variant="ghost" className="rounded-2xl px-4" onClick={() => { setEditingName(false); setNameInput(displayName); }}>
+              <Button variant="ghost" className="rounded-2xl px-4 h-11" onClick={() => { setEditingName(false); setNameInput(displayName); }}>
                 {t('common.cancel')}
               </Button>
             </div>
