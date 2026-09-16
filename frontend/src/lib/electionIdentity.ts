@@ -110,6 +110,36 @@ export async function identityForElection(
   return identity;
 }
 
+/**
+ * The commitment this voter uses in each of these elections.
+ *
+ * With the secret, it derives (and remembers) one per address. Without it,
+ * which is a browser that has not unlocked the identity yet, it answers with
+ * whatever this device derived before and stays quiet about the rest: the
+ * alternative would be an authenticator prompt to draw a list.
+ */
+export async function commitmentsForElections(
+  master: Identity | null,
+  addresses: string[],
+): Promise<Map<string, bigint>> {
+  const out = new Map<string, bigint>();
+  for (const address of addresses) {
+    const key = keyFor(address);
+    if (master) {
+      out.set(key, (await identityForElection(master, address)).commitment);
+      continue;
+    }
+    const cached = storedElectionCommitment(address);
+    if (cached !== null) out.set(key, cached);
+  }
+  return out;
+}
+
+/** Whether this device has ever derived anything, without deriving now. */
+export function hasStoredElectionCommitments(): boolean {
+  return Object.keys(readCommitments()).length > 0;
+}
+
 /** Forgets every derived identity. Called when the voter signs out. */
 export function forgetElectionIdentities(): void {
   derived.clear();

@@ -23,7 +23,7 @@ import {
   fetchEnrolledElectionAddresses,
   type ElectionDigest,
 } from '../lib/chainElections';
-import { getStoredCommitment } from '../lib/semaphore';
+import { getStoredCommitment, getStoredIdentity } from '../lib/semaphore';
 
 export type { ElectionDigest };
 
@@ -61,8 +61,12 @@ export function useElectionDigests(scope: 'all' | 'enrolled' = 'all'): DigestSta
       try {
         let addresses: string[] | undefined;
         if (scope === 'enrolled') {
-          const commitment = getStoredCommitment();
-          addresses = commitment === null ? [] : await fetchEnrolledElectionAddresses(commitment);
+          // See `useElectionPages`: the derived commitments where the identity
+          // is unlocked, the platform one for elections from before that.
+          addresses = await fetchEnrolledElectionAddresses(
+            getStoredIdentity(),
+            getStoredCommitment(),
+          );
         }
         const read = await fetchElectionDigests(addresses);
         if (!cancelled) setDigests(read);

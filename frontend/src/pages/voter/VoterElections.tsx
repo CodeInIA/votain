@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Bell } from 'lucide-react';
+import { Bell, KeyRound } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { ElectionCard } from '../../components/ui/ElectionCard';
 import { endsSoon } from '../../lib/phase';
@@ -9,6 +9,9 @@ import { LoadMore } from '../../components/ui/LoadMore';
 import { ListError } from '../../components/ui/ListError';
 import { useElectionPages } from '../../hooks/useElectionPages';
 import { usePageLimit } from '../../hooks/usePageLimit';
+import { useVoterIdentity } from '../../hooks/useVoterIdentity';
+import { Button } from '../../components/ui/Button';
+import { isChainConfigured } from '../../lib/deployments';
 import type { ElectionPhase } from '../../data/seed';
 
 const TABS: { key: 'all' | ElectionPhase; labelKey: string }[] = [
@@ -22,6 +25,8 @@ const TABS: { key: 'all' | ElectionPhase; labelKey: string }[] = [
 export default function VoterElections() {
   const { t } = useTranslation();
   const [tab, setTab] = useState<'all' | ElectionPhase>('all');
+  const live = isChainConfigured();
+  const { ready: identityReady, unlocking, unlock } = useVoterIdentity(live);
   /**
    * Read in full, drawn a page at a time.
    *
@@ -97,6 +102,24 @@ export default function VoterElections() {
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <span className="text-4xl mb-3">📋</span>
             <p className="text-on-surface-variant text-sm">{t('voter_elections.empty')}</p>
+            {/* EMPTY CAN MEAN LOCKED. Each election holds a commitment derived
+                from the voter's secret, so finding their own elections needs
+                that secret: a browser that has not unlocked it reads an empty
+                list and cannot tell that from having joined nothing. Offered
+                rather than done on load, because opening the secret summons an
+                authenticator, and that is not something to do to somebody who
+                was only looking. */}
+            {live && !identityReady && (
+              <Button
+                variant="ghost"
+                className="mt-4 gap-2 rounded-2xl h-11"
+                disabled={unlocking}
+                onClick={() => { void unlock().then(() => refresh()); }}
+              >
+                <KeyRound className="w-4 h-4" />
+                {unlocking ? t('common.loading') : t('election.check_enrolment')}
+              </Button>
+            )}
           </div>
         ) : (
           <>

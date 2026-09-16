@@ -23,6 +23,7 @@ const { estado } = vi.hoisted(() => ({
     mias: [] as string[],
     inscritas: [] as string[],
     commitment: 1n as bigint | null,
+    identidad: null as unknown,
     /** Every address handed to the hydrator, in order. */
     hidratadas: [] as string[],
     /** Times the whole factory was asked for its addresses. */
@@ -32,7 +33,12 @@ const { estado } = vi.hoisted(() => ({
 
 vi.mock('../lib/deployments', () => ({ isChainConfigured: () => true }));
 vi.mock('../data/seed', () => ({ ELECTIONS: [] }));
-vi.mock('../lib/semaphore', () => ({ getStoredCommitment: () => estado.commitment }));
+vi.mock('../lib/semaphore', () => ({
+  getStoredCommitment: () => estado.commitment,
+  // Finding the voter's own elections needs the secret now, because each one
+  // holds a commitment derived from it. Null here is a locked device.
+  getStoredIdentity: () => estado.identidad,
+}));
 
 vi.mock('../lib/chainElections', () => ({
   fetchElectionAddresses: async () => {

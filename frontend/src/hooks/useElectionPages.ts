@@ -39,7 +39,7 @@ import {
   fetchOrganizerElectionAddresses,
   hydrateElections,
 } from '../lib/chainElections';
-import { getStoredCommitment } from '../lib/semaphore';
+import { getStoredCommitment, getStoredIdentity } from '../lib/semaphore';
 // One page means the same thing whichever half of the pagination draws it.
 import { DEFAULT_PAGE_SIZE } from './usePageLimit';
 
@@ -138,10 +138,12 @@ async function resolveScope(scope: ElectionScope, organizer?: string | null): Pr
     return organizer ? fetchOrganizerElectionAddresses(organizer) : [];
   }
   if (scope === 'enrolled') {
-    const commitment = getStoredCommitment();
-    // No identity on this device means nothing to look up. Reading every
-    // election to discover the same thing is a thousand calls to reach `[]`.
-    return commitment === null ? [] : fetchEnrolledElectionAddresses(commitment);
+    // BOTH, because the two eras of enrolment leave different leaves. The
+    // secret derives this voter's commitment for anything that enrols
+    // privately; the platform commitment answers for everything older. Neither
+    // prompts: an identity that is not already unlocked stays locked, and the
+    // list then falls back to whatever this device has derived before.
+    return fetchEnrolledElectionAddresses(getStoredIdentity(), getStoredCommitment());
   }
   return fetchElectionAddresses();
 }

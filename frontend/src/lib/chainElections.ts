@@ -4,7 +4,7 @@
  * Reads ElectionV4 state and converts it into the same `Election` shape the
  * Phase A screens already consume, so components stay presentation-only.
  */
-import { id, toBeHex, zeroPadValue } from "ethers";
+import { id } from "ethers";
 import { getElection, getFactory, getReadProvider } from "./contracts";
 import { queryLogsFrom, queryTopicLogs } from "./logs";
 import { withDistinctNames } from "./ballotNames";
@@ -14,8 +14,14 @@ import { withDistinctNames } from "./ballotNames";
 // retranslate an already-fetched election until it is refetched, which every
 // navigation does.
 import i18n from "../i18n/config";
-import { getStoredCommitment, getStoredVoteNullifier } from "./semaphore";
-import { storedElectionCommitment } from "./electionIdentity";
+import { getStoredCommitment, getStoredIdentity, getStoredVoteNullifier } from "./semaphore";
+import type { Identity } from "@semaphore-protocol/identity";
+import {
+  commitmentsForElections,
+  hasStoredElectionCommitments,
+  identityForElection,
+  storedElectionCommitment,
+} from "./electionIdentity";
 import type { Candidate, Election, ElectionPhase, VotingType } from "../data/seed";
 import { getVoterPersonhood } from "./voterSession";
 import {
@@ -74,6 +80,8 @@ function parseMetadata(json: string): ElectionMetadata {
 
 const toDate = (ts: bigint): Date => new Date(Number(ts) * 1000);
 
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+
 /** Reads one election's full state and maps it to the UI model. */
 export async function fetchElection(address: string): Promise<Election> {
   const c = getElection(address);
@@ -98,6 +106,7 @@ export async function fetchElection(address: string): Promise<Election> {
     fixedSchedule,
     cancellable,
     createdAt,
+    platformAttester,
   ] = await Promise.all([
     c.name(),
     c.organizer(),
@@ -118,6 +127,10 @@ export async function fetchElection(address: string): Promise<Election> {
     c.fixedSchedule() as Promise<boolean>,
     c.cancellable() as Promise<boolean>,
     c.createdAt() as Promise<bigint>,
+    // Which door this election enrols through, and therefore which commitment
+    // of ours its tree would hold. Elections from before private enrolment have
+    // no such function and revert rather than answering zero.
+    (c.platformAttester() as Promise<string>).catch(() => ZERO_ADDRESS),
   ]);
 
   const meta = parseMetadata(metadataJson);
@@ -223,11 +236,25 @@ export async function fetchElection(address: string): Promise<Election> {
   // Voter-specific view state. The PUBLIC commitment is enough for the enrolled
   // check and, unlike the full identity, is readable in PRF mode without a
   // passkey prompt (so it survives reloads / new sessions).
-  // The commitment THIS election would hold, which is a derived one wherever
-  // the election enrols privately: see `lib/electionIdentity`. Falls back to the
-  // platform commitment, which is what elections from before that carry, and
-  // which is also the answer for an election this device has never derived for.
-  const commitment = storedElectionCommitment(address) ?? getStoredCommitment();
+  /**
+   * The commitment THIS election would hold.
+   *
+   * Derived from the secret where the election enrols privately, and the
+   * platform commitment where it does not. Derived FIRST, before the cache:
+   * the cache only knows the elections this browser has already visited, which
+   * is why a second browser holding the same identity was told it had not
+   * enrolled in an election it had.
+   */
+  const master = getStoredIdentity();
+  let commitment: bigint | null;
+  if (platformAttester !== ZERO_ADDRESS) {
+    commitment = master
+      ? (await identityForElection(master, address)).commitment
+      : storedElectionCommitment(address);
+  } else {
+    commitment = getStoredCommitment();
+  }
+
   let isEnrolled: boolean | undefined;
   if (commitment !== null) {
     isEnrolled = await c.hasMember(commitment);
@@ -415,17 +442,55 @@ export async function fetchOrganizerElectionAddresses(organizer: string): Promis
  * voter's list of elections. Ordered by the factory, not by the logs, so the
  * result is in the same newest-first order as every other list.
  */
-export async function fetchEnrolledElectionAddresses(commitment: bigint): Promise<string[]> {
+export async function fetchEnrolledElectionAddresses(
+  master: Identity | null,
+  platformCommitment: bigint | null,
+): Promise<string[]> {
+  // NOTHING TO MATCH WITH, so nothing to read. A device with no identity and
+  // no derived commitments would otherwise pay for the factory list and a log
+  // query to arrive at an empty array.
+  if (!master && platformCommitment === null && !hasStoredElectionCommitments()) return [];
+
   const known = await fetchElectionAddresses();
+
+  /**
+   * One HKDF and one Semaphore identity per election, done locally and
+   * remembered, so a second visit costs nothing. Without the secret this reads
+   * back only what this device derived before.
+   */
+  const mine = await commitmentsForElections(master, known);
+
   try {
+    // EVERY enrolment, not this voter's. The index is keyed on the commitment,
+    // and since each election holds a different one of ours there is no single
+    // value to filter on any more: that is precisely what stops anybody else
+    // asking this question. So the log set comes back whole, in one query, and
+    // the matching happens here, where the secret is.
     const logs = await queryTopicLogs(getReadProvider(), [
       id("MemberEnrolled(uint256,uint256,uint256)"),
-      zeroPadValue(toBeHex(commitment), 32),
     ]);
-    const enrolled = new Set(logs.map(log => log.address.toLowerCase()));
-    return known.filter(address => enrolled.has(address.toLowerCase()));
+
+    const leaves = new Map<string, Set<string>>();
+    for (const log of logs) {
+      const address = log.address.toLowerCase();
+      const commitment = BigInt(log.topics[1]).toString();
+      const set = leaves.get(address) ?? new Set<string>();
+      set.add(commitment);
+      leaves.set(address, set);
+    }
+
+    return known.filter(address => {
+      const key = address.toLowerCase();
+      const set = leaves.get(key);
+      if (!set) return false;
+      const derived = mine.get(key);
+      // The derived one for anything deployed since enrolments went private,
+      // and the platform commitment for everything older, whose trees hold it.
+      if (derived !== undefined && set.has(derived.toString())) return true;
+      return platformCommitment !== null && set.has(platformCommitment.toString());
+    });
   } catch (error) {
-    console.warn("Could not read the voter's enrolment index; reading them all:", error);
+    console.warn("Could not read the enrolment index; reading them all:", error);
     return known;
   }
 }
