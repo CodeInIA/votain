@@ -29,7 +29,7 @@ import {
 import { fetchOrganizerDomains } from '../../lib/organizerDomains';
 import { isChainConfigured, chainInfo } from '../../lib/deployments';
 import { splitFunding, toWei } from '../../lib/gasNeeds';
-import { getReadProvider } from '../../lib/contracts';
+import { useChainNow, CLOCK_GAP_MS } from '../../hooks/useChainNow';
 import { createElection, getOrganizerName, type VOTING_TYPE_ENUM } from '../../lib/organizer';
 import {
   fetchAttester,
@@ -421,38 +421,11 @@ export default function CreateElection() {
     return () => { cancelled = true; };
   }, []);
 
-  // The chain's own clock. Deadlines are judged by `block.timestamp`, so the
-  // browser's clock is the wrong reference: a local node whose time was advanced
-  // by seeding can sit days ahead, and dates that look comfortably future here
-  // are already past there. Falls back to the browser clock when there is no
-  // chain to ask, which is the seed-data mode where nothing is deployed anyway.
-  const [chainNowMs, setChainNowMs] = useState<number | null>(null);
+  // The chain's own clock, which is what every deadline here is judged
+  // against. The timeline on the election pages needs the same answer for the
+  // same reason, so the reasoning lives in the hook rather than twice.
+  const { chainNowMs, browserNowMs, nowMs } = useChainNow();
 
-  useEffect(() => {
-    if (!live) return;
-    let cancelled = false;
-    void (async () => {
-      try {
-        const block = await getReadProvider().getBlock('latest');
-        if (!cancelled && block) setChainNowMs(Number(block.timestamp) * 1000);
-      } catch {
-        // Leave it null: the browser clock is a better guess than blocking the
-        // wizard on a chain read.
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [live]);
-
-  // Read once at mount through a lazy initializer: calling Date.now() during
-  // render is impure, and a clock that ticks between renders would make the
-  // same form validate differently from one keystroke to the next.
-  const [browserNowMs] = useState(() => Date.now());
-  const nowMs = chainNowMs ?? browserNowMs;
-
-  // A local node seeded with time jumps can sit days ahead of the wall clock.
-  // Only worth naming when the gap is real: a few seconds of block drift would
-  // make the message noise on a live network.
-  const CLOCK_GAP_MS = 5 * 60 * 1000;
   const chainNowLabel =
     chainNowMs !== null && chainNowMs - browserNowMs > CLOCK_GAP_MS
       ? new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeStyle: 'short' })

@@ -804,5 +804,15 @@
     "unfunded_body": "这里每一票的费用都由组织者承担，因此投票无需钱包。他为本次选举准备的余额已用尽。你的身份没有问题：请他充值后再回来。",
     "short": "还有约 {{votes}} 票的费用，另有 {{voters}} 名已登记的人尚未投票。",
     "reserved_votes": "本次选举已预留约 {{votes}} 票的费用。"
+  },
+  "timeline": {
+    "title": "时间安排",
+    "enrollment": "报名",
+    "gap": "报名与投票之间",
+    "voting": "投票",
+    "results": "计票与结果",
+    "from_date": "自 {{date}} 起",
+    "ended_early": "提前结束",
+    "abandoned": "本次选举已中止，因此该时间安排并未执行到底。"
   }
 }

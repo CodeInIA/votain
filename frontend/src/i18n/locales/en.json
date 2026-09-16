@@ -810,5 +810,15 @@
     "unfunded_body": "Every ballot here is paid for by the organizer, so that voting needs no wallet. Their balance for this election is empty. Nothing is wrong with your identity: ask the organizer to top it up and come back.",
     "short": "About {{votes}} more ballots are funded, and {{voters}} people who enrolled have not voted yet.",
     "reserved_votes": "About {{votes}} ballots are reserved for this election."
+  },
+  "timeline": {
+    "title": "Schedule",
+    "enrollment": "Enrollment",
+    "gap": "Between enrollment and voting",
+    "voting": "Voting",
+    "results": "Count and results",
+    "from_date": "From {{date}}",
+    "ended_early": "Ended early",
+    "abandoned": "This election was stopped, so this schedule was not followed to the end."
   }
 }

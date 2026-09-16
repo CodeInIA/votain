@@ -18,7 +18,7 @@ import { Card } from '../../components/ui/Card';
 import { Spinner } from '../../components/ui/Spinner';
 import { RadioGroup } from '../../components/ui/RadioCard';
 import { EligibilityRow } from '../../components/ui/EligibilityRow';
-import { Countdown } from '../../components/ui/Countdown';
+import { PhaseTimeline } from '../../components/ui/PhaseTimeline';
 import { StatusNotice } from '../../components/ui/StatusNotice';
 import { TransactionPendingModal, type TxState } from '../../components/ui/TransactionPendingModal';
 import { useElection } from '../../hooks/useElections';
@@ -37,7 +37,7 @@ import { relayErrorMessage, type EnrollAttestationInput } from '../../lib/relay'
 import { isEmptyPolicy } from '../../lib/eligibility';
 import { getStoredCommitment } from '../../lib/semaphore';
 import { useVoterIdentity } from '../../hooks/useVoterIdentity';
-import { nextBoundary, PULSE_PHASES } from '../../lib/phase';
+import { PULSE_PHASES } from '../../lib/phase';
 
 export default function ElectionDetail() {
   const { id } = useParams<{ id: string }>();
@@ -132,7 +132,6 @@ export default function ElectionDetail() {
   const isActivePhase = election.phase === 'active';
   const isLivePhase   = isEnrollPhase || isActivePhase;
   const hasResults     = hasPublishedResults(election);
-  const boundary      = nextBoundary(election);
   // The ballot is only interactive for an enrolled voter who has not voted yet;
   // every other case still gets to *see* the options, just read-only.
   const canPickCandidate = isActivePhase && election.isEnrolled && !election.hasVoted;
@@ -370,21 +369,26 @@ export default function ElectionDetail() {
           </div>
         </div>
 
-        {/* Countdown to the phase's next boundary (null in terminal phases). */}
-        {boundary && (
-          <Card className="p-4 mb-4 flex items-center gap-4 flex-wrap">
-            <div>
-              <p className="text-xs text-on-surface-meta mb-1">{t(boundary.labelKey)}</p>
-              <Countdown deadline={boundary.deadline} size="md" />
+        {/* The whole schedule, where a single countdown used to sit.
+            It ticked down to the next boundary and could say nothing about
+            what came after, so a voter reading it during enrolment had no way
+            to know when they would be asked to vote, or whether there was a
+            gap between the two windows at all. The countdown is still here,
+            on the step it belongs to.
+
+            Always drawn, where the countdown was conditional on there being a
+            next boundary: a closed or cancelled election has no deadline left
+            and its schedule is exactly what someone arriving late is trying to
+            reconstruct. */}
+        <Card className="p-4 mb-4 flex items-start gap-4 flex-wrap">
+          <PhaseTimeline election={election} className="flex-1 min-w-[15rem]" />
+          {isActivePhase && (
+            <div className="text-right ml-auto">
+              <p className="text-lg font-bold text-on-surface">{election.castVotes.toLocaleString()}</p>
+              <p className="text-xs text-on-surface-meta">{t('election.votes_cast')}</p>
             </div>
-            {isActivePhase && (
-              <div className="text-right ml-auto">
-                <p className="text-lg font-bold text-on-surface">{election.castVotes.toLocaleString()}</p>
-                <p className="text-xs text-on-surface-meta">{t('election.votes_cast')}</p>
-              </div>
-            )}
-          </Card>
-        )}
+          )}
+        </Card>
 
         {/* Gas warning banner */}
         {showGasWarning && isActivePhase && (

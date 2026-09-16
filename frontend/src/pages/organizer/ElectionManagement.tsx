@@ -18,7 +18,7 @@ import { useRefreshOnReturn } from '../../hooks/useRefreshOnReturn';
 import { WalletAnswerLostError } from '../../lib/walletRequest';
 import { fetchElection } from '../../lib/chainElections';
 import { Modal } from '../../components/ui/Modal';
-import { Countdown } from '../../components/ui/Countdown';
+import { PhaseTimeline } from '../../components/ui/PhaseTimeline';
 import { ResultBarChart } from '../../components/ui/BarChart';
 import { BlockchainBadge } from '../../components/ui/BlockchainBadge';
 import { Spinner } from '../../components/ui/Spinner';
@@ -39,7 +39,7 @@ import {
   publishResults,
 } from '../../lib/organizer';
 import { computeTally, hasTallyKey, resolveTallyKey, importTallyKey, MissingTallyKeyError, type TallyResult } from '../../lib/tally';
-import { nextBoundary, PULSE_PHASES } from '../../lib/phase';
+import { PULSE_PHASES } from '../../lib/phase';
 import { explorerAddressUrl } from '../../lib/deployments';
 import { ElectionGasCard } from '../../components/organizer/ElectionGasCard';
 import { isUserRejection } from '../../lib/walletErrors';
@@ -177,7 +177,6 @@ export default function ElectionManagement() {
    */
   const canOpenVote = scheduleMovable && election.phase === 'pending_vote';
   const canTally   = election.phase === 'tallying';
-  const boundary   = nextBoundary(election);
   // Known before the organizer clicks anything: without the key there is nothing
   // to try, so say so up front instead of failing on the button press.
   const tallyKeyPresent = hasTallyKey(election.contractAddress, election.keyNonce);
@@ -388,15 +387,18 @@ export default function ElectionManagement() {
         {/* This election's own gas, which is what a voter is promised. */}
         <ElectionGasCard election={election} />
 
-        {/* Countdown to the phase's next boundary (null in terminal phases). */}
-        {boundary && (
-          <Card className="p-4 mb-4 flex items-center gap-4 flex-wrap">
-            <div>
-              <p className="text-xs text-on-surface-meta mb-1">{t(boundary.labelKey)}</p>
-              <Countdown deadline={boundary.deadline} size="md" />
-            </div>
-          </Card>
-        )}
+        {/* THE SAME COMPONENT THE VOTER SEES, and deliberately so: these
+            dates are the organizer's promise, and a promise shown one way to
+            the person making it and another to the person relying on it is
+            worth less than one shown identically. What the organizer gets
+            extra is the controls, which are above.
+
+            Always drawn, where the countdown was conditional on a next
+            boundary existing: an organizer looking at a closed election is
+            often checking what the schedule actually was. */}
+        <Card className="p-4 mb-4">
+          <PhaseTimeline election={election} />
+        </Card>
 
         {/* Results (if closed) */}
         {hasResults && (

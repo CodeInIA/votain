@@ -810,5 +810,15 @@
     "unfunded_body": "Elke stem wordt hier door de organisator betaald, zodat stemmen geen wallet vereist. Zijn saldo voor deze verkiezing is leeg. Er is niets mis met je identiteit: vraag om bij te vullen en kom terug.",
     "short": "Er zijn nog ongeveer {{votes}} stemmen gefinancierd, en {{voters}} ingeschreven mensen hebben nog niet gestemd.",
     "reserved_votes": "Er zijn ongeveer {{votes}} stemmen gereserveerd voor deze verkiezing."
+  },
+  "timeline": {
+    "title": "Tijdlijn",
+    "enrollment": "Inschrijving",
+    "gap": "Tussen inschrijving en stemming",
+    "voting": "Stemming",
+    "results": "Telling en uitslag",
+    "from_date": "Vanaf {{date}}",
+    "ended_early": "Eerder gesloten",
+    "abandoned": "Deze verkiezing is gestopt, dus deze tijdlijn is niet tot het einde gevolgd."
   }
 }

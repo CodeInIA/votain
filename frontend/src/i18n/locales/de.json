@@ -810,5 +810,15 @@
     "unfunded_body": "Jede Stimme wird hier vom Veranstalter bezahlt, damit zum Wählen keine Wallet nötig ist. Sein Guthaben für diese Wahl ist leer. Mit Ihrer Identität ist alles in Ordnung: bitten Sie ihn aufzuladen und kommen Sie wieder.",
     "short": "Etwa {{votes}} weitere Stimmen sind finanziert, und {{voters}} angemeldete Personen haben noch nicht gewählt.",
     "reserved_votes": "Etwa {{votes}} Stimmen sind für diese Wahl reserviert."
+  },
+  "timeline": {
+    "title": "Zeitplan",
+    "enrollment": "Anmeldung",
+    "gap": "Zwischen Anmeldung und Abstimmung",
+    "voting": "Abstimmung",
+    "results": "Auszahlung und Ergebnisse",
+    "from_date": "Ab {{date}}",
+    "ended_early": "Vorzeitig beendet",
+    "abandoned": "Diese Wahl wurde gestoppt, dieser Zeitplan wurde daher nicht bis zum Ende eingehalten."
   }
 }

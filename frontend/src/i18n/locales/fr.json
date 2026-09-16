@@ -816,5 +816,15 @@
     "unfunded_body": "Ici chaque bulletin est payé par l’organisateur, pour que voter ne demande aucun portefeuille. Son solde pour cette élection est vide. Votre identité n’est pas en cause : demandez-lui de recharger et revenez.",
     "short": "Environ {{votes}} bulletins sont encore financés, et {{voters}} personnes inscrites n’ont pas voté.",
     "reserved_votes": "Environ {{votes}} bulletins sont réservés pour cette élection."
+  },
+  "timeline": {
+    "title": "Calendrier",
+    "enrollment": "Inscription",
+    "gap": "Entre l'inscription et le vote",
+    "voting": "Vote",
+    "results": "Depouillement et resultats",
+    "from_date": "A partir du {{date}}",
+    "ended_early": "Ecourte",
+    "abandoned": "Cette election a ete interrompue, ce calendrier n'a donc pas ete suivi jusqu'au bout."
   }
 }

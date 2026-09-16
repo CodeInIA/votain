@@ -816,5 +816,15 @@
     "unfunded_body": "Qui ogni voto lo paga l’organizzatore, così votare non richiede un wallet. Il suo saldo per questa elezione è vuoto. La tua identità è a posto: chiedigli di ricaricare e torna.",
     "short": "Restano circa {{votes}} voti finanziati, e {{voters}} persone iscritte non hanno ancora votato.",
     "reserved_votes": "Ci sono circa {{votes}} voti riservati a questa elezione."
+  },
+  "timeline": {
+    "title": "Calendario",
+    "enrollment": "Iscrizione",
+    "gap": "Tra iscrizione e voto",
+    "voting": "Votazione",
+    "results": "Spoglio e risultati",
+    "from_date": "Dal {{date}}",
+    "ended_early": "Chiusa in anticipo",
+    "abandoned": "Questa elezione e stata interrotta, quindi questo calendario non e stato rispettato fino alla fine."
   }
 }
