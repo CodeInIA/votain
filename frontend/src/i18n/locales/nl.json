@@ -499,6 +499,8 @@
   },
   "profile": {
     "title": "Profiel",
+    "nullifier_hint": "Jouw identificatie op Votain. World ID leidt die alleen voor deze app van jou af: ze voorkomt dat iemand zich twee keer registreert, ze is elke keer dezelfde en ze zegt niets over wie je bent. Je stemmen zijn er niet aan gekoppeld.",
+    "nullifier_show": "Volledige identificatie tonen",
     "display_name": "Weergavenaam",
     "sign_out": "Uitloggen",
     "sign_out_title": "Uitloggen?",

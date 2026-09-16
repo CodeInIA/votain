@@ -504,6 +504,8 @@
   },
   "profile": {
     "title": "Perfil",
+    "nullifier_hint": "O seu identificador no Votain. O World ID deriva-o de si só para esta aplicação: é o que impede uma pessoa de se registar duas vezes, é o mesmo sempre que volta e não diz quem é. Os seus boletins não estão ligados a ele.",
+    "nullifier_show": "Mostrar o identificador completo",
     "display_name": "Nome de exibição",
     "sign_out": "Sair",
     "sign_out_title": "Sair?",

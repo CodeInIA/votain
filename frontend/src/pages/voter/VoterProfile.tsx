@@ -1,13 +1,12 @@
 import { useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import { readOnDevice } from '../../lib/deviceSeal';
 import { useTranslation } from 'react-i18next';
-import { ShieldCheck, SearchCheck, RefreshCw } from 'lucide-react';
+import { SearchCheck, RefreshCw } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { LanguageSelector } from '../../components/ui/LanguageSelector';
 import { MyPasskeys } from '../../components/voter/MyPasskeys';
+import { VerifiedVoterCard } from '../../components/voter/VerifiedVoterCard';
 import { RecoveryPhraseCard } from '../../components/voter/RecoveryPhraseCard';
 import { OtherRoleCard } from '../../components/ui/OtherRoleCard';
 import { SignOutActions } from '../../components/ui/SignOutActions';
@@ -17,42 +16,13 @@ export default function VoterProfile() {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
-  /**
-   * Loaded rather than read during render, because it is sealed now and
-   * opening it means asking the browser to decrypt. Null until it arrives,
-   * which the card below already handles: it was null for anybody who had
-   * never verified.
-   */
-  const [nullifier, setNullifier] = useState<string | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    void readOnDevice('nullifier').then(value => {
-      if (!cancelled) setNullifier(value);
-    });
-    return () => { cancelled = true; };
-  }, []);
-
   return (
     <PageLayout role="voter" showNav>
       <div className="max-w-xl mx-auto pt-6 pb-24">
         <h1 className="text-2xl font-black tracking-tight text-white mb-6">{t('profile.title')}</h1>
 
-        {/* Verification status */}
-        <Card className="p-5 mb-4">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-green-500/15 border border-green-500/25 flex items-center justify-center shrink-0">
-              <ShieldCheck className="w-6 h-6 text-green-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-on-surface">{t('nav.verified_voter')}</p>
-              {nullifier && (
-                <p className="text-xs text-on-surface-meta font-mono truncate mt-0.5">
-                  {nullifier.slice(0, 20)}…
-                </p>
-              )}
-            </div>
-          </div>
-        </Card>
+        {/* Who this voter is to the platform, and what that number means. */}
+        <VerifiedVoterCard />
 
         {/* Quick links */}
         <Card className="p-5 mb-4">

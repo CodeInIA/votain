@@ -504,6 +504,8 @@
   },
   "profile": {
     "title": "Profil",
+    "nullifier_hint": "Votre identifiant sur Votain. World ID le dérive de vous pour cette seule application : c'est ce qui empêche une personne de s'inscrire deux fois, il est le même à chaque retour, et il ne dit rien de qui vous êtes. Vos bulletins n'y sont pas liés.",
+    "nullifier_show": "Afficher l'identifiant en entier",
     "display_name": "Nom affiché",
     "sign_out": "Se déconnecter",
     "sign_out_title": "Se déconnecter ?",

@@ -499,6 +499,8 @@
   },
   "profile": {
     "title": "Profile",
+    "nullifier_hint": "Your identifier on Votain. World ID derives it from you for this app alone: it is what stops one person registering twice, it is the same every time you come back, and it says nothing about who you are. Your ballots are not linked to it.",
+    "nullifier_show": "Show the whole identifier",
     "display_name": "Display name",
     "sign_out": "Sign out",
     "sign_out_title": "Sign out?",
