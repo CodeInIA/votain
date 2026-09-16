@@ -1046,3 +1046,60 @@ a committed CID cannot be taken back.
 | Contracts | Polygon Amoy (testnet) | Free EVM, Semaphore available |
 | IPFS tally | Pinata free (1 GB) | Immutable audit trail |
 | CI/CD | GitHub Actions (2000 min/month) | Free, automated |
+
+## "Only from our dApp" is not a thing a contract can check
+
+A recurring question about a deployed system: can the contracts be made to
+accept calls only from the Votain frontend? No, and it is worth writing down
+why, because the answer shapes where the real defences have to live.
+
+A transaction carries a sender, a target, calldata and a signature. It does not
+carry an origin: nothing in it says which page, wallet or script produced it,
+and there is nothing for a contract to compare against, since the frontend is
+public code served from IPFS and the RPC endpoints are public too. Anyone can
+replay the same call from a terminal. `tx.origin` does not help either. It names
+the externally owned account that started the transaction, not the software that
+built it, and using it for authorisation is a documented anti-pattern.
+
+So the question becomes a different one, which does have an answer: **what can
+somebody achieve by calling these contracts directly that they could not achieve
+through the dApp?** Function by function:
+
+| Entry point | Open to | What stops abuse |
+|---|---|---|
+| `PlatformRegistry.registerMember` / `rotateMember` / vault writes | the platform backend only | `onlyOwner`. A person becomes a member of the platform only through the World ID flow, so an outside caller cannot mint an identity |
+| `ElectionV4.enroll` | anyone | The commitment must already be a registered member, the human behind it must not be enrolled yet, and an election with an attribute policy refuses this path outright (`AttestationRequired`) |
+| `ElectionV4.enrollAttested` | anyone holding an attestation | An EIP-712 signature from the election's attester over (commitment, personhood nullifier, deadline), bound to that election and chain. Submitting it is deliberately open, so a voter can pay their own gas or hand it to the relayer |
+| `ElectionV4.castVote` | anyone holding a valid proof | A Semaphore membership proof against a current or recently valid root. Deliberately open: requiring our relayer would mean a voter we refuse to relay for cannot vote, which is exactly the power this design exists to remove |
+| `ElectionV4` organizer actions | the organizer | `onlyOrganizer`, plus the immutable promises (`fixedSchedule`, `cancellable`) that the contract enforces whatever any frontend says |
+| `ElectionPaymaster.relayEnroll` / `relayVote` | anyone | Reimbursement only happens if the underlying call succeeds, so relaying an invalid action costs the caller and pays nothing |
+| `ElectionPaymaster.withdraw` / `reserveFromBalance` | the organizer of that election | Ownership checks per election |
+| `OrganizerDomains.claim` | anyone | A claim is a statement, not a verification: the badge is drawn only when a DNS TXT record under that domain names the claiming wallet |
+| `ElectionFactory.createElection` | **anyone** | Nothing |
+
+That last row is the only door that is genuinely open, and what it opens is not
+the integrity of any election: an election created outside the dApp is still
+bound by the same contract, still needs platform-verified members to enrol, and
+still cannot produce a result its counters do not support. What it affects is
+the LIST. `Discover` pages `ElectionFactory.elections`, so anything deployed
+through the factory appears in the platform's own feed with whatever title and
+description its creator chose.
+
+Closing it is possible and cheap: the factory would take a platform attester,
+`createElection` would refuse when one is configured, and a
+`createElectionAttested` would take an EIP-712 voucher over (organizer, config
+hash, nonce, deadline), exactly as `enrollAttested` already does for enrolment.
+The dApp would fetch the voucher for an authenticated organizer and pass it
+through; anybody who wants to run an election without us could still deploy
+`ElectionV4` themselves, and simply would not be listed by us.
+
+It is not done, because it is a trade rather than a fix: it makes creating a
+listed election depend on our backend being up and willing, which is a form of
+censorship this project otherwise spends a lot of effort removing. Recorded here
+as a decision waiting for an owner rather than as an oversight.
+
+Sources for the impossibility above: [tx.origin, Consensys smart contract best
+practices](https://consensysdiligence.github.io/smart-contract-best-practices/development-recommendations/solidity-specific/tx-origin/),
+[Use of tx.origin, Smart Contract Security Field Guide](https://scsfg.io/hackers/tx-origin/),
+[How to only allow the dapp to call a function, OpenZeppelin
+forum](https://forum.openzeppelin.com/t/how-to-only-allow-the-dapp-to-call-a-function/16189).
