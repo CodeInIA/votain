@@ -21,6 +21,25 @@
 export const SESSION_EXPIRED_EVENT = 'votain:voter-session-expired';
 
 /**
+ * Fired when the session is fine and the IDENTITY behind it is not: the
+ * registry holds this human under a commitment this browser does not have.
+ * Not an ending, so it has an event of its own: the way out is a passkey or a
+ * recovery phrase, not another World ID scan.
+ */
+export const IDENTITY_MISMATCH_EVENT = 'votain:voter-identity-mismatch';
+
+/**
+ * Why the session ended, because the two reasons lead to different sentences.
+ *
+ *   expired       the credential ran out, or was revoked. Seven days is the
+ *                 ordinary case and there is nothing wrong.
+ *   unregistered  the chain has never heard of this human. The platform was
+ *                 redeployed, or this is a different one: the cookie outlived
+ *                 the registry it was issued against.
+ */
+export type SessionEndReason = 'expired' | 'unregistered';
+
+/**
  * How long one announcement silences the next.
  *
  * A screen that loads four authenticated things at once gets four 401s within
@@ -37,19 +56,33 @@ let announcedAt = 0;
  * Safe to call from anywhere, including a module with no React around it: it
  * dispatches on `window` and whoever is listening decides what to do.
  */
-export function announceSessionExpired(): void {
+export function announceSessionExpired(reason: SessionEndReason = 'expired'): void {
   if (typeof window === 'undefined') return;
 
   const now = Date.now();
   if (now - announcedAt < QUIET_MS) return;
   announcedAt = now;
 
-  window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+  window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT, { detail: { reason } }));
+}
+
+let mismatchAnnouncedAt = 0;
+
+/** The same courtesy for the identity notice: once per burst. */
+export function announceIdentityMismatch(): void {
+  if (typeof window === 'undefined') return;
+
+  const now = Date.now();
+  if (now - mismatchAnnouncedAt < QUIET_MS) return;
+  mismatchAnnouncedAt = now;
+
+  window.dispatchEvent(new Event(IDENTITY_MISMATCH_EVENT));
 }
 
 /** Lets a fresh sign-in be announced again without waiting out the quiet. */
 export function resetSessionExpiryNotice(): void {
   announcedAt = 0;
+  mismatchAnnouncedAt = 0;
 }
 
 /**

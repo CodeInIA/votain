@@ -6,11 +6,14 @@ import { clearOnDevice, sealOnDevice } from '../lib/deviceSeal';
 import { storeVoterPersonhood, clearVoterPersonhood } from '../lib/voterSession';
 import { onReturnToForeground } from '../lib/foreground';
 import {
+  announceIdentityMismatch,
   announceSessionExpired,
   msUntilExpiry,
   resetSessionExpiryNotice,
   SESSION_EXPIRED_EVENT,
 } from '../lib/sessionExpiry';
+import { checkPlatformMembership } from '../lib/platformMembership';
+import { getStoredCommitment } from '../lib/semaphore';
 import {
   clearRolePreference,
   noteSignedOutOf,
@@ -113,6 +116,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     releaseRole('voter');
   };
 
+  /**
+   * Checks the session against the chain, and acts only on a clear answer.
+   *
+   * SKIPPED FOR A VOTER WHO HAS NOT SET UP YET. Between signing in with World
+   * ID and writing their vault there is a real, ordinary moment where the
+   * registry has never heard of them, and it looks exactly like a wiped chain.
+   * Holding a commitment is what tells the two apart: this browser only has one
+   * once an identity exists for it.
+   *
+   * A chain that cannot answer changes nothing. Ending a working session
+   * because a node was briefly unreachable would be a worse bug than the one
+   * this fixes.
+   */
+  const reconcileMembership = async (nullifier: string) => {
+    const commitment = getStoredCommitment();
+    if (commitment === null) return;
+
+    const verdict = await checkPlatformMembership(nullifier, commitment);
+    if (verdict === 'not-registered') {
+      // The credential is valid and refers to a human this platform does not
+      // have. Verifying again is the way back, and it re-registers the same
+      // identity when the phrase is still here.
+      endExpiredVoterSession();
+      announceSessionExpired('unregistered');
+      return;
+    }
+    if (verdict === 'other-identity') {
+      // Registered, under a commitment this browser cannot produce: rotated
+      // elsewhere, or this copy is stale. The session stands, because their
+      // passkey or their phrase opens the right one; what must stop is the
+      // pretence that this device can vote.
+      announceIdentityMismatch();
+    }
+  };
+
   // The httpOnly voter_vc cookie is the SOURCE OF TRUTH for the voter session.
   // The localStorage flag is only an optimistic cache to avoid a flash on load;
   // it is spoofable, so we always reconcile against /api/me:
@@ -171,6 +209,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           storeVoterPersonhood(data.personhood);
           rememberVoterSession(true);
           resetSessionExpiryNotice();
+
+          // THE COOKIE IS NOT THE PLATFORM. A session says the backend issued
+          // this person a credential; being a member says the chain holds
+          // them, and the two part company whenever the registry is replaced
+          // under a live session, which on a local chain is every restart.
+          if (data.nullifier) void reconcileMembership(data.nullifier);
 
           // The credential's own deadline, from the credential. A tab open
           // across it ends the session at the right moment instead of carrying

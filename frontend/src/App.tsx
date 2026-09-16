@@ -4,7 +4,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { useRouteMeta } from './seo/usePageMeta';
 import { ToastProvider } from './components/ui/Toast';
 import { useToast } from './components/ui/useToast';
-import { SESSION_EXPIRED_EVENT } from './lib/sessionExpiry';
+import { IDENTITY_MISMATCH_EVENT, SESSION_EXPIRED_EVENT } from './lib/sessionExpiry';
 import { AuthProvider } from './contexts/AuthProvider';
 import { RequireVoter, RequireOrganizer } from './components/auth/RequireAuth';
 import Landing from './pages/Landing';
@@ -93,14 +93,32 @@ function SessionExpiryNotice() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const announce = () =>
+    const ended = (event: Event) => {
+      // Two ways to lose a session and two different things to do about it:
+      // a credential that ran out wants another World ID scan, a platform that
+      // never heard of you wants the same scan for a different reason, and
+      // saying "your session expired" to the second is a lie about a clock.
+      const reason = (event as CustomEvent<{ reason?: string }>).detail?.reason;
+      const unregistered = reason === 'unregistered';
       toast({
-        title: t('errors.session_expired'),
-        description: t('errors.session_expired_desc'),
+        title: t(unregistered ? 'errors.identity_unknown' : 'errors.session_expired'),
+        description: t(unregistered ? 'errors.identity_unknown_desc' : 'errors.session_expired_desc'),
         variant: 'info',
       });
-    window.addEventListener(SESSION_EXPIRED_EVENT, announce);
-    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, announce);
+    };
+    const mismatched = () =>
+      toast({
+        title: t('errors.identity_elsewhere'),
+        description: t('errors.identity_elsewhere_desc'),
+        variant: 'warning',
+      });
+
+    window.addEventListener(SESSION_EXPIRED_EVENT, ended);
+    window.addEventListener(IDENTITY_MISMATCH_EVENT, mismatched);
+    return () => {
+      window.removeEventListener(SESSION_EXPIRED_EVENT, ended);
+      window.removeEventListener(IDENTITY_MISMATCH_EVENT, mismatched);
+    };
   }, [toast, t]);
 
   return null;

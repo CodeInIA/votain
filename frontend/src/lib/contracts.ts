@@ -100,6 +100,9 @@ export const PAYMASTER_ABI = [
 export const REGISTRY_ABI = [
   "function verifiedMembers(uint256 identityCommitment) view returns (bool)",
   "function registeredNullifiers(uint256 nullifier) view returns (bool)",
+  /// The identity currently active for a human. A rotation moves it, so a
+  /// browser holding the old one is signed in as somebody who cannot enrol.
+  "function commitmentOf(uint256 nullifier) view returns (uint256)",
 ] as const;
 
 // ────────────────────────────────────────────────
