@@ -1,13 +1,9 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, ExternalLink, Users, Copy, Check, Lock } from 'lucide-react';
+import { AlertTriangle, ExternalLink, Copy, Check, Lock } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
-import { DomainBadge } from '../../components/ui/DomainBadge';
 import { Badge } from '../../components/ui/Badge';
-import { EligibilityChips } from '../../components/ui/EligibilityChips';
-import { ExpandableText } from '../../components/ui/ExpandableText';
-import { VotingRule } from '../../components/ui/VotingRule';
 import { Button } from '../../components/ui/Button';
 import { BackButton } from '../../components/ui/BackButton';
 import { useAuth } from '../../contexts/AuthContext';
@@ -18,7 +14,11 @@ import { Card } from '../../components/ui/Card';
 import { Spinner } from '../../components/ui/Spinner';
 import { RadioGroup } from '../../components/ui/RadioCard';
 import { EligibilityRow } from '../../components/ui/EligibilityRow';
-import { PhaseTimeline } from '../../components/ui/PhaseTimeline';
+import {
+  ElectionAbout,
+  ElectionHeader,
+  ElectionSchedule,
+} from '../../components/ui/ElectionSummary';
 import { StatusNotice } from '../../components/ui/StatusNotice';
 import { TransactionPendingModal, type TxState } from '../../components/ui/TransactionPendingModal';
 import { useElection } from '../../hooks/useElections';
@@ -28,7 +28,6 @@ import { ResultBarChart } from '../../components/ui/BarChart';
 import { hasPublishedResults, tallyTotal } from '../../data/seed';
 import { enrollInElection } from '../../lib/voting';
 import { FundingNotice } from '../../components/ui/FundingNotice';
-import { SchedulePromise } from '../../components/ui/SchedulePromise';
 import { useElectionFunding } from '../../hooks/useElectionFunding';
 import { canFundOneVote } from '../../lib/gasNeeds';
 import { useVoteCost } from '../../hooks/useVoteCost';
@@ -37,7 +36,6 @@ import { relayErrorMessage, type EnrollAttestationInput } from '../../lib/relay'
 import { isEmptyPolicy } from '../../lib/eligibility';
 import { getStoredCommitment } from '../../lib/semaphore';
 import { useVoterIdentity } from '../../hooks/useVoterIdentity';
-import { PULSE_PHASES } from '../../lib/phase';
 
 export default function ElectionDetail() {
   const { id } = useParams<{ id: string }>();
@@ -105,7 +103,6 @@ export default function ElectionDetail() {
     canFundOneVote(funding.reserved, funding.free, voteCost.matic);
   // Only the reserve is counted. The organizer's free balance would pay too, and
   // they can also withdraw it whenever they like, so it is not theirs to promise.
-  const reservedBallots = Math.floor(funding.reserved / voteCost.matic);
 
 
   if (loading) {
@@ -340,55 +337,12 @@ export default function ElectionDetail() {
           )}
         </div>
 
-        {/* Phase badge + title */}
-        <div className="mb-5">
-          <div className="flex flex-wrap items-center gap-2 mb-3">
-            <Badge variant={election.phase as Parameters<typeof Badge>[0]['variant']} dot={PULSE_PHASES.has(election.phase)}>
-              {t(`phase.${election.phase}`)}
-            </Badge>
-            {election.hasVoted && <Badge variant="voted" dot>{t('phase.voted')}</Badge>}
-            {/* Visible before anything is clicked. The requirements themselves
-                are spelled out in the eligibility card below; this is so nobody
-                has to scroll to learn the election is not open to everyone. */}
-            {/* The rules themselves, in the same chips the lists use. The
-                full sentences are further down the page; this row is for
-                things you can read at a glance. */}
-            <EligibilityChips policy={eligibilityPolicy} />
-          </div>
-          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white leading-tight break-words">
-            {election.title}
-          </h1>
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
-            <p className="text-xs text-on-surface-meta">{t('election.by')} {election.organizer}</p>
-            <DomainBadge
-              domain={election.organizerDomain}
-              organizerAddress={election.organizerAddress}
-              showCheckLink
-              interactive
-            />
-          </div>
-        </div>
+        <ElectionHeader
+          election={election}
+          extraBadges={election.hasVoted ? <Badge variant="voted" dot>{t('phase.voted')}</Badge> : null}
+        />
 
-        {/* The whole schedule, where a single countdown used to sit.
-            It ticked down to the next boundary and could say nothing about
-            what came after, so a voter reading it during enrolment had no way
-            to know when they would be asked to vote, or whether there was a
-            gap between the two windows at all. The countdown is still here,
-            on the step it belongs to.
-
-            Always drawn, where the countdown was conditional on there being a
-            next boundary: a closed or cancelled election has no deadline left
-            and its schedule is exactly what someone arriving late is trying to
-            reconstruct. */}
-        <Card className="p-4 mb-4 flex items-start gap-4 flex-wrap">
-          <PhaseTimeline election={election} className="flex-1 min-w-[15rem]" />
-          {isActivePhase && (
-            <div className="text-right ml-auto">
-              <p className="text-lg font-bold text-on-surface">{election.castVotes.toLocaleString()}</p>
-              <p className="text-xs text-on-surface-meta">{t('election.votes_cast')}</p>
-            </div>
-          )}
-        </Card>
+        <ElectionSchedule election={election} />
 
         {/* Gas warning banner */}
         {showGasWarning && isActivePhase && (
@@ -402,51 +356,7 @@ export default function ElectionDetail() {
           </div>
         )}
 
-        {/* Description: shown in every phase, so a finished election is never
-            just a bare title. */}
-        <Card className="p-5 mb-4">
-          <h2 className="text-sm font-semibold text-on-surface mb-2">{t('election.about')}</h2>
-          <ExpandableText text={election.description} />
-          <div className="mt-4 pt-4 border-t border-white/5">
-            <VotingRule type={election.votingType} thresholdValue={election.thresholdValue} />
-          </div>
-          <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-white/5 text-xs text-on-surface-meta">
-            <span className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5" />{election.totalEnrolled.toLocaleString()} {t('election.enrolled')}</span>
-            {/* NO DATES HERE. The schedule card above this one lists every
-                one of them, to the minute, with the phase each belongs to.
-                Repeating the closing date and the creation date underneath
-                it said the same two things a second time and less precisely,
-                which is how a reader learns that one of the two places is
-                not worth reading.
-
-                The public preview still shows them, and should: it has a
-                countdown rather than the schedule, so there they are the
-                only statement of when this happens. */}
-            {/* What is left is what the schedule does not say: who is in,
-                and what the organizer gave up. */}
-            <SchedulePromise
-              fixedSchedule={election.fixedSchedule}
-              cancellable={election.cancellable}
-            />
-            {/* WHAT IS RESERVED, stated as a fact among the other facts rather
-                than as a banner.
-                The warning below the enrol button only speaks when something is
-                wrong, which is right for a warning and wrong as the only way to
-                learn this. The reserve is a promise made to the voter on chain,
-                one the organizer cannot revoke, and a promise nobody can see is
-                worth a great deal less. The organizer's own screen shows this
-                number; the voter has more right to it than they do.
-                A line, not a coloured box: a box that appears when all is well
-                on every election is how people learn to stop reading the one
-                that appears when it is not. */}
-            {reservedBallots > 0 && (
-              <span className="flex items-center gap-1.5">
-                <Lock className="w-3.5 h-3.5" />
-                {t('funding.reserved_votes', { votes: reservedBallots })}
-              </span>
-            )}
-          </div>
-        </Card>
+        <ElectionAbout election={election} />
 
         {/* Eligibility (while the voter can still act on it) */}
         {isLivePhase && (

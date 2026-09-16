@@ -1,17 +1,17 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Users, Lock, ExternalLink } from 'lucide-react';
+import { Lock, ExternalLink } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
-import { Badge } from '../../components/ui/Badge';
-import { EligibilityChips } from '../../components/ui/EligibilityChips';
-import { DomainBadge } from '../../components/ui/DomainBadge';
 import { Button } from '../../components/ui/Button';
 import { BackButton } from '../../components/ui/BackButton';
 import { ViewAsSwitch } from '../../components/ui/ViewAsSwitch';
 import { organizerViewHref, canManageElection } from '../../lib/electionViews';
 import { Card } from '../../components/ui/Card';
-import { PhaseTimeline } from '../../components/ui/PhaseTimeline';
-import { BlockchainBadge } from '../../components/ui/BlockchainBadge';
+import {
+  ElectionAbout,
+  ElectionHeader,
+  ElectionSchedule,
+} from '../../components/ui/ElectionSummary';
 import { EligibilityRow } from '../../components/ui/EligibilityRow';
 import { Spinner } from '../../components/ui/Spinner';
 import { StatusNotice } from '../../components/ui/StatusNotice';
@@ -21,11 +21,6 @@ import { ResultBarChart } from '../../components/ui/BarChart';
 import { hasPublishedResults, tallyTotal } from '../../data/seed';
 import { useAuth } from '../../contexts/AuthContext';
 import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
-import { PULSE_PHASES } from '../../lib/phase';
-import { explorerAddressUrl } from '../../lib/deployments';
-import { SchedulePromise } from '../../components/ui/SchedulePromise';
-import { ExpandableText } from '../../components/ui/ExpandableText';
-import { VotingRule } from '../../components/ui/VotingRule';
 import { usePageMeta } from '../../seo/usePageMeta';
 
 export default function ElectionPreview() {
@@ -70,7 +65,6 @@ export default function ElectionPreview() {
     );
   }
 
-  const isActive   = election.phase === 'active';
   const hasResults = hasPublishedResults(election);
 
   const voterPage = `/voter/election/${election.id}`;
@@ -144,79 +138,11 @@ export default function ElectionPreview() {
           )}
         </div>
 
-        {/* Title block */}
-        <div className="mb-6">
-          <div className="flex flex-wrap items-center gap-2 mb-3">
-            <Badge variant={election.phase as Parameters<typeof Badge>[0]['variant']} dot={PULSE_PHASES.has(election.phase)}>
-              {t(`phase.${election.phase}`)}
-            </Badge>
-            {/* The rules themselves, in the same chips the lists use. The
-                full sentences are further down the page; this row is for
-                things you can read at a glance. */}
-            <EligibilityChips policy={election?.eligibilityPolicy} />
-            <BlockchainBadge href={explorerAddressUrl(election.contractAddress) ?? undefined} />
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white mb-2 break-words">
-            {election.title}
-          </h1>
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <p className="text-sm text-on-surface-meta">{t('election.by')} {election.organizer}</p>
-            {/* Public page: the check link belongs here most of all, since this
-                is where someone deciding whether to trust the election lands. */}
-            <DomainBadge
-              domain={election.organizerDomain}
-              organizerAddress={election.organizerAddress}
-              showCheckLink
-              interactive
-            />
-          </div>
-        </div>
+        <ElectionHeader election={election} />
 
-        {/* THE SAME SCHEDULE THE OTHER TWO VIEWS SHOW, where this page had a
-            countdown and only while voting was open. Two things were wrong
-            with that. It drifted: the voter's page and the organizer's both
-            moved to the schedule and this one did not, so the same election
-            told a different story depending on which link you followed. And
-            it left a hole: `isActive` meant an upcoming or closed election
-            showed no dates at all here, on the one page a shared link opens.
+        <ElectionSchedule election={election} />
 
-            The turnout figure stays for a live election, as on the voter's
-            page. The bar that used to sit beside it does not: the voter's
-            page has none, and it divided by `totalEnrolled` without checking
-            it, so an election nobody had joined computed a NaN width. */}
-        <Card className="p-4 mb-4 flex items-start gap-4 flex-wrap">
-          <PhaseTimeline election={election} className="flex-1 min-w-[15rem]" />
-          {isActive && (
-            <div className="text-right ml-auto">
-              <p className="text-lg font-bold text-on-surface">{election.castVotes.toLocaleString()}</p>
-              <p className="text-xs text-on-surface-meta">{t('election.votes_cast')}</p>
-            </div>
-          )}
-        </Card>
-
-        {/* Description */}
-        <Card className="p-5 mb-4">
-          <h2 className="text-sm font-semibold text-on-surface mb-2">{t('election.about')}</h2>
-          <ExpandableText text={election.description} />
-          <div className="mt-4 pt-4 border-t border-white/5">
-            <VotingRule type={election.votingType} thresholdValue={election.thresholdValue} />
-          </div>
-          <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-white/5 text-xs text-on-surface-meta">
-            <span className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5" />{election.totalEnrolled.toLocaleString()} {t('election.enrolled')}</span>
-            {/* No dates here either. The schedule above carries them, and
-                decides for itself whether the creation date needs a line of
-                its own. See `PhaseTimeline`. */}
-            {/* Public too: whether the dates can move, and whether it can be
-                called off at all, are part of deciding whether to take this
-                election seriously, and that decision is made here, before
-                anyone signs in. Together and last, since they are the longest
-                labels in the row. */}
-            <SchedulePromise
-              fixedSchedule={election.fixedSchedule}
-              cancellable={election.cancellable}
-            />
-          </div>
-        </Card>
+        <ElectionAbout election={election} />
 
         {/* Candidates, or the result once there is one. Someone opening a decided
             election's link is asking who won; the numbers are already on chain,
