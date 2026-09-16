@@ -814,6 +814,7 @@
   },
   "timeline": {
     "title": "일정",
+    "announced": "공지됨, 등록은 아직 시작 전",
     "enrollment": "등록",
     "gap": "등록과 투표 사이",
     "voting": "투표",

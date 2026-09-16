@@ -103,7 +103,7 @@ export type TimelineStatus = "done" | "current" | "upcoming" | "abandoned";
 
 export interface TimelineStep {
   /** Stable across renders and used as the React key. */
-  key: "enrolling" | "pending_vote" | "active" | "results";
+  key: "announced" | "enrolling" | "pending_vote" | "active" | "results";
   /** i18n key for the step's name. */
   labelKey: string;
   start: Date;
@@ -179,6 +179,7 @@ const PHASE_RANK: Record<ElectionPhase, number> = {
 const EARLY_MARGIN_MS = 5 * 60 * 1000;
 
 const STEP_RANK: Record<TimelineStep["key"], number> = {
+  announced: 0,
   enrolling: 1,
   pending_vote: 2,
   active: 3,
@@ -206,7 +207,10 @@ const STEP_RANK: Record<TimelineStep["key"], number> = {
  * schedule as not followed is the one thing that is certainly true.
  */
 export function phaseTimeline(
-  e: Pick<Election, "phase" | "enrollStart" | "enrollEnd" | "voteStart" | "voteEnd">,
+  e: Pick<
+    Election,
+    "phase" | "createdAt" | "enrollStart" | "enrollEnd" | "voteStart" | "voteEnd"
+  >,
   /**
    * Preferably `block.timestamp`, not the browser's clock.
    *
@@ -224,9 +228,43 @@ export function phaseTimeline(
   // The fields the loop below derives are left off here: what the schedule IS,
   // and where the election has got to in it, are two different questions.
   type Window = Pick<TimelineStep, "key" | "labelKey" | "start" | "end">;
-  const steps: Window[] = [
-    { key: "enrolling", labelKey: "timeline.enrollment", start: e.enrollStart, end: e.enrollEnd },
-  ];
+  const steps: Window[] = [];
+
+  /**
+   * DEPLOYED AND WAITING: the stretch between the election existing and
+   * enrolment opening.
+   *
+   * It gives UPCOMING a row of its own, which it never had. The timeline
+   * began at enrolment, so an election announced for next week showed its
+   * first step greyed out with nothing to say that it was already real and
+   * already public, which is exactly the state a voter planning around it is
+   * in.
+   *
+   * ONLY WHEN IT PRECEDES ENROLMENT. An election can be deployed with its
+   * enrolment window already open, which most of the seeded ones are, and
+   * then `createdAt` falls after `enrollStart`: putting it first would draw a
+   * timeline that runs backwards. Its creation is not a stage of that
+   * election's schedule, it is metadata, and the line under the schedule
+   * already carries it.
+   *
+   * Dropped as well when the chain never recorded a creation date, which is
+   * an election deployed before the immutable existed.
+   */
+  if (e.createdAt && e.enrollStart.getTime() > e.createdAt.getTime()) {
+    steps.push({
+      key: "announced",
+      labelKey: "timeline.announced",
+      start: e.createdAt,
+      end: e.enrollStart,
+    });
+  }
+
+  steps.push({
+    key: "enrolling",
+    labelKey: "timeline.enrollment",
+    start: e.enrollStart,
+    end: e.enrollEnd,
+  });
   if (e.voteStart.getTime() > e.enrollEnd.getTime()) {
     steps.push({ key: "pending_vote", labelKey: "timeline.gap", start: e.enrollEnd, end: e.voteStart });
   }
@@ -235,12 +273,23 @@ export function phaseTimeline(
     { key: "results", labelKey: "timeline.results", start: e.voteEnd, end: null },
   );
 
-  // An election that has not opened has no running step, so its clock hangs on
-  // the first one instead. Decided before the map, because it is a fact about
-  // the whole list and not about any step in it.
-  const countdownOnFirstStart = !abandoned && rank === PHASE_RANK.upcoming;
+  /**
+   * Whether the clock hangs on the enrolment step's START rather than on the
+   * end of whatever is running.
+   *
+   * A running step counts down to its own end, which is the ordinary case.
+   * The exception is an election that has not opened yet: what its reader
+   * wants is "enrolment opens in", so the clock goes on the enrolment step
+   * even though the announced step above it is the current one. Those are the
+   * same instant, and only one of them can be labelled in a way that answers
+   * the question.
+   *
+   * Decided before the map, because which step gets it is a fact about the
+   * whole list and not about any step in it.
+   */
+  const clockOnEnrolStart = !abandoned && rank === PHASE_RANK.upcoming;
 
-  return steps.map((step, i) => {
+  return steps.map(step => {
     if (abandoned) {
       return {
         ...step,
@@ -260,15 +309,24 @@ export function phaseTimeline(
       : step.key === "results" && e.phase === "closed" ? "done"
       : "current";
 
-    const countsToStart = countdownOnFirstStart && i === 0;
+    const countsToStart = clockOnEnrolStart && step.key === "enrolling";
     return {
       ...step,
       status,
       endedEarly:
         status === "done" && step.end !== null && step.end.getTime() - now > EARLY_MARGIN_MS,
+      // Two clocks, never one more. The announced step is the current one on
+      // an upcoming election and its end is the same instant as enrolment's
+      // start, so without `!clockOnEnrolStart` both would draw a countdown to
+      // the same moment, one labelled "ends in" and one "starts in".
+      //
       // The results step is `current` with no end, and rightly has no clock:
       // counting runs until the organizer publishes, which is not a deadline.
-      countdownTo: countsToStart ? step.start : status === "current" ? step.end : null,
+      countdownTo: countsToStart
+        ? step.start
+        : status === "current" && !clockOnEnrolStart
+          ? step.end
+          : null,
       countdownIsStart: countsToStart,
     };
   });

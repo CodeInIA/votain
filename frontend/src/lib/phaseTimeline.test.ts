@@ -171,3 +171,68 @@ describe('the phases that describe the reader instead of the election', () => {
     expect(statuses('voted').active).toBe('current');
   });
 });
+
+describe('the stretch before enrollment opens', () => {
+  // Deployed four days ago, enrolment opens in two: the announced window is
+  // the only part of this election that has happened.
+  const announced = (over: Partial<Election> = {}) =>
+    election('upcoming', {
+      createdAt: at(-4),
+      enrollStart: at(2),
+      enrollEnd: at(5),
+      voteStart: at(5),
+      voteEnd: at(9),
+      ...over,
+    });
+
+  it('gives an upcoming election a step it is actually in', () => {
+    // It used to start at enrolment, so an election announced for next week
+    // showed every step greyed out with nothing saying it was already real
+    // and already public, which is the state its reader is planning around.
+    const steps = phaseTimeline(announced(), now);
+    expect(steps.map(s => s.key)).toEqual(['announced', 'enrolling', 'active', 'results']);
+    expect(steps[0].status).toBe('current');
+    expect(steps[0].start).toEqual(at(-4));
+    expect(steps[0].end).toEqual(at(2));
+  });
+
+  it('counts down to enrollment opening, not to the announcement ending', () => {
+    // The same instant either way, and only one of them can be labelled in a
+    // way that answers the question the reader has.
+    const clock = phaseTimeline(announced(), now).filter(s => s.countdownTo !== null);
+    expect(clock).toHaveLength(1);
+    expect(clock[0].key).toBe('enrolling');
+    expect(clock[0].countdownIsStart).toBe(true);
+    expect(clock[0].countdownTo).toEqual(at(2));
+  });
+
+  it('is behind an election that has opened', () => {
+    const steps = phaseTimeline(announced({ phase: 'enrolling' }), now);
+    expect(steps.find(s => s.key === 'announced')?.status).toBe('done');
+    expect(steps.find(s => s.key === 'enrolling')?.status).toBe('current');
+  });
+
+  it('is left out when the election was deployed with enrollment already open', () => {
+    // `createdAt` after `enrollStart`, which is most of the seeded chain.
+    // Putting it first would draw a timeline that runs backwards, and its
+    // creation is not a stage of that election's schedule anyway.
+    const late = election('enrolling', { createdAt: at(1), enrollStart: at(-4) });
+    expect(phaseTimeline(late, now).map(s => s.key)).not.toContain('announced');
+  });
+
+  it('is left out when the chain never recorded a creation date', () => {
+    // Deployed before the immutable existed. The step would have no start.
+    const steps = phaseTimeline(election('upcoming', { enrollStart: at(2) }), now);
+    expect(steps.map(s => s.key)).not.toContain('announced');
+    // And the clock still finds enrollment, which is the fallback that
+    // existed before this step did.
+    const clock = steps.find(s => s.countdownTo !== null);
+    expect(clock?.key).toBe('enrolling');
+    expect(clock?.countdownIsStart).toBe(true);
+  });
+
+  it('is abandoned with the rest when the election is called off', () => {
+    const steps = phaseTimeline(announced({ phase: 'cancelled' }), now);
+    expect(steps.find(s => s.key === 'announced')?.status).toBe('abandoned');
+  });
+});

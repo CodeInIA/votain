@@ -820,6 +820,7 @@
   },
   "timeline": {
     "title": "Tijdlijn",
+    "announced": "Aangekondigd, inschrijving nog niet open",
     "enrollment": "Inschrijving",
     "gap": "Tussen inschrijving en stemming",
     "voting": "Stemming",

@@ -826,6 +826,7 @@
   },
   "timeline": {
     "title": "Calendario",
+    "announced": "Anunciada, inscricao ainda por abrir",
     "enrollment": "Inscricao",
     "gap": "Entre a inscricao e a votacao",
     "voting": "Votacao",

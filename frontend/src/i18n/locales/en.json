@@ -820,6 +820,7 @@
   },
   "timeline": {
     "title": "Schedule",
+    "announced": "Announced, enrollment not open yet",
     "enrollment": "Enrollment",
     "gap": "Between enrollment and voting",
     "voting": "Voting",
