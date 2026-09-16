@@ -10,6 +10,9 @@ import { SchedulePromise } from './SchedulePromise';
 import { CreatedOn } from './CreatedOn';
 import { Button } from './Button';
 import { cn } from '../../lib/utils';
+import { useAuth } from '../../contexts/AuthContext';
+import { electionHrefFor } from '../../lib/electionViews';
+import { getRememberedOrganizerAddress } from '../../hooks/useOrganizerWallet';
 import { endsSoon, nextBoundary } from '../../lib/phase';
 import type { Election, ElectionPhase } from '../../data/seed';
 import { VOTING_TYPE_ICONS, votingTypeLabelKey } from '../../lib/votingTypes';
@@ -58,6 +61,7 @@ interface ElectionCardProps {
 }
 
 export function ElectionCard({ election, view = 'public', className }: ElectionCardProps) {
+  const { activeRole, organizerLoggedIn } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation();
   const voterView = view === 'voter';
@@ -81,11 +85,26 @@ export function ElectionCard({ election, view = 'public', className }: ElectionC
 
   const VotingTypeIcon = VOTING_TYPE_ICONS[election.votingType];
 
-  // Two destinations, not three: the election reads the session itself now,
-  // so a voter and a visitor follow the same link to the same page.
-  const href = organizerView
-    ? `/organizer/election/${election.id}`
-    : `/election/${election.id}`;
+  /**
+   * Two destinations, not three: the election reads the session itself now, so
+   * a voter and a visitor follow the same link to the same page.
+   *
+   * The third case is not an audience but an owner. See `electionHrefFor`: an
+   * organizer wearing the role, looking at a list that is not their dashboard,
+   * goes to their own panel for their own elections.
+   *
+   * The wallet address is READ, not connected: this is a list item, and a hook
+   * that wakes the wallet for every card in it would be a heavy way to draw a
+   * link.
+   */
+  const href = electionHrefFor({
+    electionId: election.id,
+    listView: view,
+    activeRole,
+    organizerLoggedIn,
+    walletAddress: getRememberedOrganizerAddress(),
+    organizerAddress: election.organizerAddress,
+  });
 
   // See ORGANIZER_TURNOUT_PHASES. Everyone else sees it only while it moves.
   const showsTurnout = organizerView

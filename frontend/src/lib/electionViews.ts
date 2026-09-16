@@ -36,3 +36,36 @@ export function canManageElection(
   if (!organizerLoggedIn || !walletAddress || !organizerAddress) return false;
   return walletAddress.toLowerCase() === organizerAddress.toLowerCase();
 }
+
+/**
+ * Where a card in a LIST should lead.
+ *
+ * The organizer's own dashboard has always linked to their panel, and every
+ * other list linked to the public page, which is right until the person
+ * reading it owns the election: an organizer browsing Discover clicked one of
+ * their own and landed on the page their voters see, with the controls a click
+ * further away and nothing saying why.
+ *
+ * ONLY WHILE THEY ARE WEARING THE ROLE. Somebody with both sessions who is
+ * acting as a voter means it: they are looking at their own election as a
+ * voter would, which is a thing organizers do before opening enrolment, and
+ * the switch inside the page takes them across when they want it.
+ */
+export function electionHrefFor(options: {
+  electionId: string;
+  /** The list this card belongs to. `organizer` is their own dashboard. */
+  listView: 'public' | 'voter' | 'organizer';
+  /** The role the person is currently acting as. */
+  activeRole: string;
+  organizerLoggedIn: boolean;
+  walletAddress: string | undefined;
+  organizerAddress: string | undefined;
+}): string {
+  const { electionId, listView, activeRole, organizerLoggedIn } = options;
+  if (listView === 'organizer') return organizerViewHref(electionId);
+
+  const mine = canManageElection(organizerLoggedIn, options.walletAddress, options.organizerAddress);
+  return activeRole === 'organizer' && mine
+    ? organizerViewHref(electionId)
+    : voterViewHref(electionId);
+}
