@@ -123,6 +123,45 @@ describe('a window that closed before its date', () => {
   });
 });
 
+describe('which step carries the clock', () => {
+  const clock = (phase: ElectionPhase, over?: Partial<Election>) =>
+    phaseTimeline(election(phase, over), now).find(s => s.countdownTo !== null);
+
+  it('hangs it on the running step, counting to the end of that step', () => {
+    const step = clock('active');
+    expect(step?.key).toBe('active');
+    expect(step?.countdownIsStart).toBe(false);
+    expect(step?.countdownTo?.getTime()).toBe(at(3).getTime());
+  });
+
+  it('hangs it on the first step of an election that has not opened', () => {
+    // The gap this closes: `upcoming` has no running step, so nothing carried
+    // a countdown and the clock vanished from the one phase where "how long
+    // until this starts" is the only question anyone has.
+    const step = clock('upcoming', { enrollStart: at(2), enrollEnd: at(5), voteStart: at(5), voteEnd: at(9) });
+    expect(step?.key).toBe('enrolling');
+    expect(step?.countdownIsStart).toBe(true);
+    expect(step?.countdownTo?.getTime()).toBe(at(2).getTime());
+  });
+
+  it('puts it on exactly one step, never two', () => {
+    for (const phase of ['upcoming', 'enrolling', 'pending_vote', 'active'] as ElectionPhase[]) {
+      const withClock = phaseTimeline(election(phase), now).filter(s => s.countdownTo !== null);
+      expect(withClock).toHaveLength(1);
+    }
+  });
+
+  it('gives the count no clock, because publishing is not a deadline', () => {
+    expect(clock('tallying')).toBeUndefined();
+    expect(clock('closed')).toBeUndefined();
+  });
+
+  it('gives a stopped election no clock at all', () => {
+    expect(clock('cancelled')).toBeUndefined();
+    expect(clock('voided')).toBeUndefined();
+  });
+});
+
 describe('the phases that describe the reader instead of the election', () => {
   it('treats them as the election phase each one implies', () => {
     // `enrolled` and `voted` are badge states for the voter's own standing, and

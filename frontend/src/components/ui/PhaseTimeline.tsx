@@ -74,8 +74,21 @@ function Step({ step, last }: { step: TimelineStep; last: boolean }) {
           </span>
           {/* Only on the step it belongs to, which is what makes the timeline
               a replacement for the lone countdown rather than an addition to
-              it: the same clock, now with the steps around it. */}
-          {current && step.end && <Countdown deadline={step.end} size="sm" showTimezone={false} />}
+              it: the same clock, now with the steps around it. On an election
+              that has not opened, that step is the first one and the clock
+              runs to its START, so the label has to say which.
+
+              Labelled in both cases. Without it, "Enrollment 3d 1h" beside a
+              window that has not begun reads as three days left of enrolment,
+              which is the opposite of what it means. */}
+          {step.countdownTo && (
+            <span className="inline-flex items-baseline gap-1">
+              <span className="text-[10px] text-on-surface-meta">
+                {t(step.countdownIsStart ? 'election.starts_in' : 'election.ends_in')}
+              </span>
+              <Countdown deadline={step.countdownTo} size="sm" showTimezone={false} />
+            </span>
+          )}
           {/* Without this, a finished step sits next to a date still in the
               future and reads as a bug instead of as the organizer using the
               power their card says they kept. */}

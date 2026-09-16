@@ -123,6 +123,20 @@ export interface TimelineStep {
    * would make it about every election on the platform. See the `now` argument.
    */
   endedEarly: boolean;
+  /**
+   * The moment this step's own clock is running towards, on the ONE step that
+   * has one, and null on every other.
+   *
+   * Which step that is depends on whether the election has started. A running
+   * step counts towards its own end. An election that has not opened yet has
+   * no running step at all, and its clock belongs to the FIRST step, counting
+   * towards the moment it begins: the countdown vanished entirely on an
+   * upcoming election, which is the phase where "how long until this starts"
+   * is the only question anyone has.
+   */
+  countdownTo: Date | null;
+  /** Whether `countdownTo` is this step's start. "Starts in", not "ends in". */
+  countdownIsStart: boolean;
 }
 
 /**
@@ -207,7 +221,10 @@ export function phaseTimeline(
   const abandoned = e.phase === "cancelled" || e.phase === "voided";
   const rank = PHASE_RANK[e.phase];
 
-  const steps: Omit<TimelineStep, "status" | "endedEarly">[] = [
+  // The fields the loop below derives are left off here: what the schedule IS,
+  // and where the election has got to in it, are two different questions.
+  type Window = Pick<TimelineStep, "key" | "labelKey" | "start" | "end">;
+  const steps: Window[] = [
     { key: "enrolling", labelKey: "timeline.enrollment", start: e.enrollStart, end: e.enrollEnd },
   ];
   if (e.voteStart.getTime() > e.enrollEnd.getTime()) {
@@ -218,8 +235,21 @@ export function phaseTimeline(
     { key: "results", labelKey: "timeline.results", start: e.voteEnd, end: null },
   );
 
-  return steps.map(step => {
-    if (abandoned) return { ...step, status: "abandoned" as const, endedEarly: false };
+  // An election that has not opened has no running step, so its clock hangs on
+  // the first one instead. Decided before the map, because it is a fact about
+  // the whole list and not about any step in it.
+  const countdownOnFirstStart = !abandoned && rank === PHASE_RANK.upcoming;
+
+  return steps.map((step, i) => {
+    if (abandoned) {
+      return {
+        ...step,
+        status: "abandoned" as const,
+        endedEarly: false,
+        countdownTo: null,
+        countdownIsStart: false,
+      };
+    }
 
     const stepRank = STEP_RANK[step.key];
     const status: TimelineStatus =
@@ -230,11 +260,16 @@ export function phaseTimeline(
       : step.key === "results" && e.phase === "closed" ? "done"
       : "current";
 
+    const countsToStart = countdownOnFirstStart && i === 0;
     return {
       ...step,
       status,
       endedEarly:
         status === "done" && step.end !== null && step.end.getTime() - now > EARLY_MARGIN_MS,
+      // The results step is `current` with no end, and rightly has no clock:
+      // counting runs until the organizer publishes, which is not a deadline.
+      countdownTo: countsToStart ? step.start : status === "current" ? step.end : null,
+      countdownIsStart: countsToStart,
     };
   });
 }
