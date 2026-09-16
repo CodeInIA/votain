@@ -150,4 +150,33 @@ describe('the two promises are not one promise', () => {
     expect(matches(fixedAndFinal, { schedule: 'fixed' })).toBe(true);
     expect(matches(fixedButStoppable, { schedule: 'fixed' })).toBe(true);
   });
+
+  it('filters on the cancellation promise without touching the dates', () => {
+    // And the other way round, which is the combination nobody expects: dates
+    // the organizer can still bring forward on an election they can no longer
+    // call off. It is on the chain, so the filter has to be able to find it.
+    const movableAndFinal = election({
+      phase: 'active', voteEnd: later, fixedSchedule: false, cancellable: false,
+    });
+    const movableAndStoppable = election({
+      phase: 'active', voteEnd: later, fixedSchedule: false, cancellable: true,
+    });
+
+    expect(matches(movableAndFinal, { noCancel: true })).toBe(true);
+    expect(matches(movableAndStoppable, { noCancel: true })).toBe(false);
+    // The chip is off: it narrows nothing and both are still in the list.
+    expect(matches(movableAndStoppable, { noCancel: false })).toBe(true);
+  });
+
+  it('leaves out the election that never answered the question', () => {
+    // `undefined` is not `false`. Deployed before the flag, it made no promise,
+    // and a filter for the promise must not collect it: `!election.cancellable`
+    // would have.
+    const unknown = election({ phase: 'active', voteEnd: later, cancellable: undefined });
+    expect(matches(unknown, { noCancel: true })).toBe(false);
+  });
+
+  it('counts the cancel chip as narrowing the list', () => {
+    expect(isAnyFilterActive(filters({ noCancel: true }))).toBe(true);
+  });
 });

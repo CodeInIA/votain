@@ -20,6 +20,7 @@ import {
   Clock,
   CalendarCheck,
   CalendarClock,
+  Ban,
 } from 'lucide-react';
 import { Badge } from './Badge';
 import { Button } from './Button';
@@ -213,14 +214,21 @@ export function ElectionFilters({ value, onChange, open, onToggleOpen, searchPla
 
           </FilterGroup>
 
-          {/* BOTH ANSWERS, unlike the verified-domain chip above, and for the
-              opposite reason. A missing domain is the normal state and a chip
-              for it would read as suspicion; here the two answers are two
-              deliberate choices the organizer made, and each is worth searching
-              for: one to find elections that cannot be cut short, the other to
-              audit the ones that can. Single choice, so picking one clears the
+          {/* The two promises an organizer makes at deployment and cannot take
+              back. Named for the promises rather than for the dates, because
+              the second one is not about dates at all: an election can keep
+              every published date and still be called off tomorrow.
+
+              THE DATES CHIPS OFFER BOTH ANSWERS, unlike the verified-domain
+              chip above and unlike the cancel chip beside them. A missing
+              domain is the normal state and a chip for it would read as
+              suspicion, which is also true of "the organizer can call it off",
+              the default every election has. Fixed and movable are two
+              deliberate choices instead, and each is worth searching for: one
+              to find the elections that cannot be cut short, the other to audit
+              the ones that can. Single choice, so picking one clears the
               other. */}
-          <FilterGroup label={t('discover.group_schedule')}>
+          <FilterGroup label={t('discover.group_commitments')}>
             <FilterToggle
               active={value.schedule === 'fixed'}
               onClick={() => set({ schedule: value.schedule === 'fixed' ? null : 'fixed' })}
@@ -234,6 +242,17 @@ export function ElectionFilters({ value, onChange, open, onToggleOpen, searchPla
               icon={CalendarClock}
             >
               {t('schedule.movable_short')}
+            </FilterToggle>
+            {/* Independent of the two beside it, not a third state of them:
+                the combinations are real, and "dates that can move on an
+                election that cannot be called off" is a set someone can ask
+                for here. */}
+            <FilterToggle
+              active={value.noCancel}
+              onClick={() => set({ noCancel: !value.noCancel })}
+              icon={Ban}
+            >
+              {t('schedule.no_cancel')}
             </FilterToggle>
           </FilterGroup>
 

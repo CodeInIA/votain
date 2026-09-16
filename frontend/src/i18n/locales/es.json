@@ -146,7 +146,7 @@
     "group_eligibility": "Cumplo los requisitos",
     "results_partial": "{{shown}} encontradas hasta ahora",
     "closing_soon": "Cierra en menos de un día",
-    "group_schedule": "Fechas"
+    "group_commitments": "Compromisos"
   },
   "election": {
     "by": "por",

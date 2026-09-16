@@ -144,7 +144,7 @@
     "group_eligibility": "자격 여부",
     "results_partial": "지금까지 {{shown}}개",
     "closing_soon": "하루 이내 마감",
-    "group_schedule": "일정"
+    "group_commitments": "약속"
   },
   "election": {
     "by": "주최:",

@@ -63,6 +63,17 @@ export interface ElectionFilterState {
    * promise and did not decline it.
    */
   schedule: 'fixed' | 'movable' | null;
+  /**
+   * Only elections the organizer gave up the power to call off.
+   *
+   * A toggle where the one above has three states, and for the same reason the
+   * verified-domain chip is a toggle: keeping the power to cancel is the
+   * default every election has ever been created with, so a chip for it would
+   * collect almost the whole list and read as a category of suspicion. The
+   * promise is the rare thing, and the rare thing is what is worth searching
+   * for.
+   */
+  noCancel: boolean;
   /** Its next deadline falls within a day, whatever that deadline is. */
   closingSoon: boolean;
   eligibility: EligibilityFilter;
@@ -75,6 +86,7 @@ export const EMPTY_FILTERS: ElectionFilterState = {
   restrictedOnly: false,
   votingType: null,
   schedule: null,
+  noCancel: false,
   closingSoon: false,
   eligibility: {},
 };
@@ -92,6 +104,7 @@ export function isAnyFilterActive(filter: ElectionFilterState): boolean {
     filter.restrictedOnly ||
     Boolean(filter.votingType) ||
     Boolean(filter.schedule) ||
+    filter.noCancel ||
     filter.closingSoon ||
     isEligibilityFilterActive(filter.eligibility)
   );
@@ -138,6 +151,9 @@ export function matchesElectionFilter(
   // neither answer.
   if (filter.schedule === 'fixed' && election.fixedSchedule !== true) return false;
   if (filter.schedule === 'movable' && election.fixedSchedule !== false) return false;
+  // Again `=== false` and not `!`: an election from before the flag carries
+  // `undefined`, and it never made this promise either.
+  if (filter.noCancel && election.cancellable !== false) return false;
   if (filter.closingSoon && !closingSoon(election)) return false;
   return matchesEligibilityFilter(election.eligibilityPolicy, filter.eligibility);
 }

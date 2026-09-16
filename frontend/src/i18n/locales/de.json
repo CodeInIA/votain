@@ -145,7 +145,7 @@
     "group_eligibility": "Erfülle ich die Kriterien",
     "results_partial": "Bisher {{shown}} gefunden",
     "closing_soon": "Schließt binnen eines Tages",
-    "group_schedule": "Termine"
+    "group_commitments": "Zusagen"
   },
   "election": {
     "by": "von",

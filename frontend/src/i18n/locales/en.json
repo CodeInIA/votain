@@ -145,7 +145,7 @@
     "group_eligibility": "Would I qualify",
     "results_partial": "{{shown}} found so far",
     "closing_soon": "Closing within a day",
-    "group_schedule": "Dates"
+    "group_commitments": "Commitments"
   },
   "election": {
     "by": "by",
