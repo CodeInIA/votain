@@ -327,7 +327,14 @@ export default function ElectionManagement() {
 
   return (
     <PageLayout role="organizer" showNav>
-      <div className="max-w-3xl mx-auto pt-4 pb-24">
+      {/* THE SAME WIDTH THE VOTER READS THIS ELECTION AT.
+          The two pages show the same schedule card and the same About card and
+          switch to each other from a toggle in the header, so 768 here against
+          672 there moved the whole page sideways by 48px on the way across, and
+          rendered one card at two widths. The narrower one wins because it is
+          the measure the ballot is laid out for, and because everything this
+          page adds is a stacked full-width control. */}
+      <div className="max-w-2xl mx-auto pt-4 pb-24">
         {/* Explicit target rather than history back: this page is reached from
             the dashboard, from the members list and from a direct link, and
             after a reload there is no history to step into at all. */}
