@@ -172,9 +172,8 @@ describe('the phases that describe the reader instead of the election', () => {
   });
 });
 
-describe('the stretch before enrollment opens', () => {
-  // Deployed four days ago, enrolment opens in two: the announced window is
-  // the only part of this election that has happened.
+describe('when the election came into existence', () => {
+  // Deployed four days ago, enrolment opens in two.
   const announced = (over: Partial<Election> = {}) =>
     election('upcoming', {
       createdAt: at(-4),
@@ -185,20 +184,27 @@ describe('the stretch before enrollment opens', () => {
       ...over,
     });
 
-  it('gives an upcoming election a step it is actually in', () => {
-    // It used to start at enrolment, so an election announced for next week
-    // showed every step greyed out with nothing saying it was already real
-    // and already public, which is the state its reader is planning around.
+  it('opens the schedule with a moment that is already behind', () => {
     const steps = phaseTimeline(announced(), now);
-    expect(steps.map(s => s.key)).toEqual(['announced', 'enrolling', 'active', 'results']);
-    expect(steps[0].status).toBe('current');
+    expect(steps.map(s => s.key)).toEqual(['created', 'enrolling', 'active', 'results']);
     expect(steps[0].start).toEqual(at(-4));
-    expect(steps[0].end).toEqual(at(2));
+    // A moment, not a window: as a window it was the step an upcoming
+    // election was IN, so that one election drew a live first row where
+    // every other one drew a finished one.
+    expect(steps[0].end).toBeNull();
+    expect(steps[0].openEnded).toBe(false);
+    expect(steps[0].status).toBe('done');
   });
 
-  it('counts down to enrollment opening, not to the announcement ending', () => {
-    // The same instant either way, and only one of them can be labelled in a
-    // way that answers the question the reader has.
+  it('is done on every phase, so the list keeps one shape', () => {
+    const todas: ElectionPhase[] =
+      ['upcoming', 'enrolling', 'pending_vote', 'active', 'tallying', 'closed'];
+    for (const phase of todas) {
+      expect(phaseTimeline(announced({ phase }), now)[0].status).toBe('done');
+    }
+  });
+
+  it('leaves the countdown on enrollment, which is what happens next', () => {
     const clock = phaseTimeline(announced(), now).filter(s => s.countdownTo !== null);
     expect(clock).toHaveLength(1);
     expect(clock[0].key).toBe('enrolling');
@@ -206,50 +212,30 @@ describe('the stretch before enrollment opens', () => {
     expect(clock[0].countdownTo).toEqual(at(2));
   });
 
-  it('is behind an election that has opened', () => {
-    const steps = phaseTimeline(announced({ phase: 'enrolling' }), now);
-    expect(steps.find(s => s.key === 'announced')?.status).toBe('done');
-    expect(steps.find(s => s.key === 'enrolling')?.status).toBe('current');
-  });
-
-  it('becomes the instant of creation when enrollment was already open', () => {
+  it('draws the same shape when enrollment was already open at deployment', () => {
     // `createdAt` after `enrollStart`. The wizard cannot produce this, since
-    // it bounds the enrolment start to the chain's clock, but the factory
-    // takes it and the seed backdates windows to stage elections already in
-    // flight. There is no window to draw, so the step is the moment rather
-    // than a range that would run backwards.
+    // it bounds the enrolment start to the chain clock, but the factory takes
+    // it and the seed backdates windows to stage elections already in flight.
+    // A moment cannot run backwards, so there is nothing to special case.
     const late = phaseTimeline(election('enrolling', { createdAt: at(1), enrollStart: at(-4) }), now);
-    const first = late[0];
-
-    expect(first.key).toBe('announced');
-    expect(first.labelKey).toBe('timeline.created');
-    expect(first.start).toEqual(at(1));
-    expect(first.end).toBeNull();
-    // Not open ended: an election coming into existence is an instant, and
-    // "from this date onwards" is what the results step means, not this.
-    expect(first.openEnded).toBe(false);
+    expect(late[0].key).toBe('created');
+    expect(late[0].end).toBeNull();
+    expect(late[0].status).toBe('done');
   });
 
-  it('is a window whenever the election existed before enrollment opened', () => {
-    // Which is every election created through the product.
-    const normal = phaseTimeline(announced(), now);
-    expect(normal[0].labelKey).toBe('timeline.announced');
-    expect(normal[0].end).toEqual(at(2));
-  });
-
-  it('is the only step that can be a moment rather than a span', () => {
-    // The results step also has no end, and means the opposite: still going.
+  it('separates a moment from a step that has simply not ended', () => {
+    // Both carry no end and mean opposite things: counting runs from the
+    // close of voting onwards, creation is an instant.
     const steps = phaseTimeline(announced(), now);
-    const results = steps.find(s => s.key === 'results');
-    expect(results?.end).toBeNull();
-    expect(results?.openEnded).toBe(true);
+    expect(steps.find(s => s.key === 'created')?.openEnded).toBe(false);
+    expect(steps.find(s => s.key === 'results')?.openEnded).toBe(true);
   });
 
   it('is left out only when the chain never recorded a creation date', () => {
     // Deployed before the immutable existed. The step would have no start,
     // and nothing else on the election can be turned into one.
     const steps = phaseTimeline(election('upcoming', { enrollStart: at(2) }), now);
-    expect(steps.map(s => s.key)).not.toContain('announced');
+    expect(steps.map(s => s.key)).not.toContain('created');
     // And the clock still finds enrollment, which is the fallback that
     // existed before this step did.
     const clock = steps.find(s => s.countdownTo !== null);
@@ -257,8 +243,11 @@ describe('the stretch before enrollment opens', () => {
     expect(clock?.countdownIsStart).toBe(true);
   });
 
-  it('is abandoned with the rest when the election is called off', () => {
+  it('survives the election being called off, unlike every other step', () => {
+    // Cancelling does not un-create a thing. Striking this row through with
+    // the rest would say a schedule was abandoned before it began.
     const steps = phaseTimeline(announced({ phase: 'cancelled' }), now);
-    expect(steps.find(s => s.key === 'announced')?.status).toBe('abandoned');
+    expect(steps.find(s => s.key === 'created')?.status).toBe('done');
+    expect(steps.find(s => s.key === 'enrolling')?.status).toBe('abandoned');
   });
 });

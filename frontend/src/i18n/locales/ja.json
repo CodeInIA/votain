@@ -816,7 +816,6 @@
   "timeline": {
     "title": "スケジュール",
     "created": "作成",
-    "announced": "公表済み、登録はまだ開始前",
     "enrollment": "登録",
     "gap": "登録と投票のあいだ",
     "voting": "投票",

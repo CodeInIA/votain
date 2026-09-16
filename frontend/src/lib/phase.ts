@@ -103,7 +103,7 @@ export type TimelineStatus = "done" | "current" | "upcoming" | "abandoned";
 
 export interface TimelineStep {
   /** Stable across renders and used as the React key. */
-  key: "announced" | "enrolling" | "pending_vote" | "active" | "results";
+  key: "created" | "enrolling" | "pending_vote" | "active" | "results";
   /** i18n key for the step's name. */
   labelKey: string;
   start: Date;
@@ -189,7 +189,7 @@ const PHASE_RANK: Record<ElectionPhase, number> = {
 const EARLY_MARGIN_MS = 5 * 60 * 1000;
 
 const STEP_RANK: Record<TimelineStep["key"], number> = {
-  announced: 0,
+  created: 0,
   enrolling: 1,
   pending_vote: 2,
   active: 3,
@@ -241,36 +241,34 @@ export function phaseTimeline(
   const steps: Window[] = [];
 
   /**
-   * DEPLOYED AND WAITING: the stretch between the election existing and
-   * enrolment opening.
+   * WHEN THE ELECTION CAME INTO EXISTENCE. Always first, always a moment,
+   * and always behind: it happened, and nothing that follows can change
+   * that.
    *
-   * ALWAYS THE FIRST STEP, whenever the chain recorded a creation date. It
-   * was conditional at first, which left the creation date homeless on the
-   * elections that lacked the step and forced a second line under the
-   * schedule to carry it. One list that always has the same shape is worth
-   * more than that: the schedule now accounts for every moment of an
-   * election's life, from existing to published, and nothing else has to.
+   * A MOMENT AND NOT A WINDOW, which it was at first. Running it from
+   * `createdAt` to `enrollStart` made it the step an upcoming election was
+   * IN, so that one election drew a live first row where every other one
+   * drew a finished one, and the list changed shape depending on the phase.
+   * The waiting is still visible, as the gap between this date and the next,
+   * exactly like the gap between any other two.
    *
-   * TWO SHAPES, because of one case that cannot happen through the product.
-   * The wizard bounds `enrollStart` to the chain's clock, so an election
-   * created in Votain always exists before its enrolment opens and this is a
-   * window. The factory itself imposes no such rule, and the seed calls it
-   * directly with backdated windows to produce demo elections already in
-   * flight; there `createdAt` falls after `enrollStart` and there is no
-   * window to draw, so the step becomes the instant of creation instead of a
-   * range that would run backwards.
+   * It also removes a case that could not be drawn. The wizard bounds
+   * `enrollStart` to the chain's clock, so an election created in Votain
+   * always exists before its enrolment opens, but the factory imposes no
+   * such rule and the seed backdates windows to stage elections already in
+   * flight. As a window that ran backwards; as a moment there is nothing to
+   * run backwards.
    *
    * Absent only when the chain never recorded a creation date, which is an
    * election deployed before the immutable existed. There is nothing to show
-   * and nothing to guess from.
+   * and nothing to guess it from.
    */
   if (e.createdAt) {
-    const openedLater = e.enrollStart.getTime() > e.createdAt.getTime();
     steps.push({
-      key: "announced",
-      labelKey: openedLater ? "timeline.announced" : "timeline.created",
+      key: "created",
+      labelKey: "timeline.created",
       start: e.createdAt,
-      end: openedLater ? e.enrollStart : null,
+      end: null,
       openEnded: false,
     });
   }
@@ -314,6 +312,21 @@ export function phaseTimeline(
   const clockOnEnrolStart = !abandoned && rank === PHASE_RANK.upcoming;
 
   return steps.map(step => {
+    /**
+     * Creation is behind every election, including the ones that were called
+     * off. Cancelling does not un-create a thing, and striking this row
+     * through with the rest would say a schedule was abandoned before it
+     * began.
+     */
+    if (step.key === "created") {
+      return {
+        ...step,
+        status: "done" as const,
+        endedEarly: false,
+        countdownTo: null,
+        countdownIsStart: false,
+      };
+    }
     if (abandoned) {
       return {
         ...step,
