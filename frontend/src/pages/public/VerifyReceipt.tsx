@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Search, CheckCircle, XCircle, Copy, Check, Lock } from 'lucide-react';
+import { Search, X, CheckCircle, XCircle, Copy, Check, Lock } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
@@ -127,6 +127,21 @@ export default function VerifyReceipt() {
     void search(ref);
   };
 
+  /**
+   * Clears the box AND everything the box produced.
+   *
+   * Emptying the field alone would leave the answer to the old reference on
+   * screen, and the reference itself in the query string, so a copied link
+   * would still carry a receipt the page no longer shows a search for. What a
+   * reader means by the cross is "start again".
+   */
+  const clearSearch = () => {
+    setRef('');
+    setMatch(null);
+    setState('idle');
+    setParams({}, { replace: true });
+  };
+
   const copy = (value: string) => {
     void navigator.clipboard.writeText(value);
     setCopied(value);
@@ -171,6 +186,16 @@ export default function VerifyReceipt() {
               value={ref}
               onChange={e => setRef(e.target.value)}
               leftIcon={<Search className="w-4 h-4" />}
+              rightIcon={ref ? (
+                <button
+                  type="button"
+                  onClick={clearSearch}
+                  aria-label={t('common.clear')}
+                  className="cursor-pointer p-2 -m-2 hover:text-on-surface transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              ) : undefined}
               onKeyDown={e => e.key === 'Enter' && runSearch()}
             />
           </div>
