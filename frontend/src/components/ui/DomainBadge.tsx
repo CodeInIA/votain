@@ -18,6 +18,7 @@ export function DomainBadge({
   organizerAddress,
   showCheckLink = false,
   interactive = false,
+  own = false,
 }: {
   domain?: string;
   organizerAddress: string;
@@ -31,6 +32,14 @@ export function DomainBadge({
    * IS interactive, so nothing is out of reach.
    */
   interactive?: boolean;
+  /**
+   * The reader is the organizer whose domain this is.
+   *
+   * The hint is written for a voter deciding whether to trust an election, and
+   * on the organizer's own page it told them about themselves in the third
+   * person.
+   */
+  own?: boolean;
 }) {
   const { t } = useTranslation();
   const [status, setStatus] = useState<DomainStatus | 'checking'>('checking');
@@ -55,9 +64,12 @@ export function DomainBadge({
   // badge: that would punish an election whose DNS is perfectly fine.
   const lapsed = status === 'no_record' || status === 'address_mismatch';
 
+  // Addressed to whoever is reading: on the organizer's own page, "the
+  // organizer of this election controls example.org" is a sentence about them,
+  // written as though they were somebody else.
   const hint = lapsed
-    ? t('domain.lapsed_hint', { domain })
-    : t('domain.verified_hint', { domain });
+    ? t(own ? 'domain.lapsed_hint_own' : 'domain.lapsed_hint', { domain })
+    : t(own ? 'domain.verified_hint_own' : 'domain.verified_hint', { domain });
 
   const face = (
     <>

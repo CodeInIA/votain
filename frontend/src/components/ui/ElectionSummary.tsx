@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { EyeOff, Fuel, Info, Users, Vote } from 'lucide-react';
+import { EyeOff, Fuel, Info, Percent, Repeat2, Users, Vote } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '../../lib/utils';
 import { Badge } from './Badge';
@@ -16,6 +16,7 @@ import { useElectionFunding } from '../../hooks/useElectionFunding';
 import { useVoteCost } from '../../hooks/useVoteCost';
 import { explorerAddressUrl } from '../../lib/deployments';
 import { PULSE_PHASES } from '../../lib/phase';
+import { replacedBallots, turnoutPct, votersOf } from '../../lib/turnout';
 import type { Election } from '../../data/seed';
 
 /**
@@ -96,12 +97,15 @@ export function ElectionHeader({ election, extraBadges }: HeaderProps) {
  * rows apart at a glance.
  *
  * A FIGURE WITH AN EXPLANATION IS A BUTTON, and that is the whole reason this
- * is not just a `title`. A tooltip is a hover, and a phone has no hover, so
- * the explanation existed only for people on a mouse: the two figures that
- * need one, what the reserve pays for and what the quorum withholds, are
- * exactly the two a reader is least likely to already know. Pressing one
- * opens its sentence; `title` stays as well, so a mouse still gets it without
- * pressing anything.
+ * is not a `title`. A tooltip is a hover, and a phone has no hover, so the
+ * explanation existed only for people on a mouse: the figures that need one,
+ * what the reserve pays for, what the quorum withholds and why there are more
+ * ballots than voters, are exactly the ones a reader is least likely to
+ * already know.
+ *
+ * And ONLY a button. The tooltip stayed for a while beside it and was simply
+ * the same sentence twice, one of them slower to appear and in the operating
+ * system's styling rather than the page's.
  */
 function Figure({
   icon: Icon,
@@ -125,7 +129,11 @@ function Figure({
       <p className="text-lg font-bold text-on-surface tabular-nums leading-tight">{value}</p>
       <p className="flex items-center gap-1.5 text-xs text-on-surface-meta min-w-0">
         <Icon className={cn('w-3.5 h-3.5 shrink-0', tint)} strokeWidth={2.5} />
-        <span className="min-w-0">{label}</span>
+        {/* `break-words`: a label is one word in most languages and a very
+            long one in a few, and Russian's "Zaregistrirovano" is wider than
+            a third of a phone. Without this it does not wrap, it simply
+            draws over the figure beside it. */}
+        <span className="min-w-0 break-words">{label}</span>
         {hint && <Info className="w-3 h-3 shrink-0 opacity-50" />}
       </p>
     </>
@@ -136,7 +144,6 @@ function Figure({
   return (
     <button
       type="button"
-      title={hint}
       aria-expanded={open}
       onClick={onToggle}
       className={cn(
@@ -148,6 +155,17 @@ function Figure({
       {body}
     </button>
   );
+}
+
+/** One figure in the panel, before it is drawn. */
+interface FigureSpec {
+  id: string;
+  icon: typeof Users;
+  tint: string;
+  label: string;
+  value: string;
+  /** A sentence the reader can open. Only the figures that need one have it. */
+  hint?: string;
 }
 
 /**
@@ -166,14 +184,39 @@ function Figure({
  * promise the voter is relying on, that no result appears until enough
  * ballots exist for one to reveal nothing about any single person.
  *
+ * BOTH PAGES USE IT. The organizer's had a bare timeline and a separate row
+ * of stat cards saying the same numbers; the two flags below are the whole
+ * difference between what the two readers get.
+ *
  * ON A PHONE it wraps under the schedule and becomes a row of figures rather
  * than a column, which is why the panel sets its own direction at `sm` rather
  * than inheriting one.
  */
-export function ElectionSchedule({ election }: { election: Election }) {
+export function ElectionSchedule({
+  election,
+  showReserve = true,
+  showParticipation = false,
+}: {
+  election: Election;
+  /**
+   * The ballots the reserve can still pay for.
+   *
+   * Off for the organizer, whose page carries a whole gas card stating the
+   * same number next to the buttons that change it. One page should not
+   * report one fact twice.
+   */
+  showReserve?: boolean;
+  /**
+   * How many of the enrolled have voted, as a percentage.
+   *
+   * The organizer's figure rather than the voter's: it is what they came to
+   * check, and it tells a voter nothing they can act on.
+   */
+  showParticipation?: boolean;
+}) {
   const { t } = useTranslation();
   /**
-   * Which explanation is open, by label.
+   * Which explanation is open, by figure id.
    *
    * Shown UNDER the grid rather than inside the cell that was pressed, and
    * that is deliberate: a sentence inside a third of a phone would either
@@ -185,10 +228,95 @@ export function ElectionSchedule({ election }: { election: Election }) {
   const voteCost = useVoteCost();
   const reservedBallots = Math.floor(funding.reserved / voteCost.matic);
 
-  // Ballots, not people: `castVotes` counts re-votes too, which is the whole
-  // point of being able to change your mind. `tallyTotal` is what a published
-  // result adds up to, and that is drawn elsewhere.
-  const showVotes = election.castVotes > 0;
+  const voters = votersOf(election);
+  const replaced = replacedBallots(election);
+  const quorumMet = election.privacyQuorum > 0 && voters >= election.privacyQuorum;
+
+  /**
+   * The figures, in reading order, with the ones that do not apply left out.
+   *
+   * SHORT LABELS, and `quorum_short` is not the only one: "Ballots reserved"
+   * and "Votes cast" are sentences, and under a number in a third of a phone
+   * they wrapped onto a second line while their neighbours did not, which left
+   * the row ragged. The number says what it is; the label only has to name it.
+   */
+  const figures: FigureSpec[] = [
+    {
+      id: 'enrolled',
+      icon: Users,
+      tint: 'text-tertiary',
+      label: t('election.enrolled'),
+      value: election.totalEnrolled.toLocaleString(),
+    },
+  ];
+
+  // PEOPLE, which is what a reader means by "how many have voted". This panel
+  // used to show `castVotes` under the same word, so an election with one
+  // voter who changed their mind read "1 enrolled, 2 votes".
+  if (voters > 0) {
+    figures.push({
+      id: 'voters',
+      icon: Vote,
+      tint: 'text-primary',
+      label: t('election.voters_short'),
+      value: voters.toLocaleString(),
+    });
+  }
+
+  // ONLY WHEN THEY DIFFER, because that is the only time the difference says
+  // anything: somebody voted again, the later ballot replaced the earlier one,
+  // and the tally will still count one. A figure that repeats the one beside it
+  // on every ordinary election teaches people to stop reading the row.
+  if (replaced > 0) {
+    figures.push({
+      id: 'ballots',
+      icon: Repeat2,
+      tint: 'text-tertiary',
+      label: t('election.ballots_short'),
+      value: election.castVotes.toLocaleString(),
+      hint: t('election.ballots_hint'),
+    });
+  }
+
+  // Nobody enrolled is not 0% turnout, it is no turnout to speak of, and a
+  // bold "0%" beside the two other figures reads as a failure rather than as
+  // an election that has not opened yet.
+  if (showParticipation && election.totalEnrolled > 0) {
+    figures.push({
+      id: 'turnout',
+      icon: Percent,
+      tint: 'text-warning',
+      label: t('election.participation'),
+      value: `${turnoutPct(election)}%`,
+    });
+  }
+
+  if (showReserve && reservedBallots > 0) {
+    figures.push({
+      id: 'reserved',
+      icon: Fuel,
+      tint: 'text-success',
+      label: t('election.reserved_short'),
+      value: reservedBallots.toLocaleString(),
+      hint: t('election.reserved_hint'),
+    });
+  }
+
+  // PROGRESS, not a target. As a bare number it said what the rule was and
+  // nothing about whether it had been met, and the only screen that answered
+  // that was the tally dialog, at the moment of publishing: an organizer with
+  // a quorum of three and two voters found out by trying.
+  if (election.privacyQuorum > 0) {
+    figures.push({
+      id: 'quorum',
+      icon: EyeOff,
+      tint: quorumMet ? 'text-success' : 'text-secondary',
+      label: t('election.quorum_short'),
+      value: `${voters.toLocaleString()}/${election.privacyQuorum.toLocaleString()}`,
+      hint: `${t('create.quorum_hint')} ${t(quorumMet ? 'election.quorum_met' : 'election.quorum_pending')}`,
+    });
+  }
+
 
   return (
     <Card className="p-4 mb-4 flex flex-col sm:flex-row items-start gap-4">
@@ -199,54 +327,56 @@ export function ElectionSchedule({ election }: { election: Election }) {
           fit them all on one row. A fourth, which only exists once somebody
           has voted, starts a second row underneath and stays aligned with
           the first. */}
+      {/* `sm:self-stretch` so the rule down its left is the full height of the
+          card rather than the height of whatever is in the panel, and a fixed
+          width so the sentence below wraps the same way every time. */}
       <div
-        className="w-full sm:w-auto sm:min-w-[9.5rem] grid grid-cols-3 sm:flex sm:flex-col
+        className="w-full sm:w-[15rem] sm:shrink-0 sm:self-stretch grid grid-cols-3 sm:flex sm:flex-col
                    gap-x-3 gap-y-3 pt-3 sm:pt-0 border-t sm:border-t-0 sm:border-l
                    border-white/5 sm:pl-4"
       >
-        <Figure
-          icon={Users}
-          tint="text-tertiary"
-          label={t('election.enrolled')}
-          value={election.totalEnrolled.toLocaleString()}
-        />
-        {showVotes && (
+        {figures.map(figure => (
           <Figure
-            icon={Vote}
-            tint="text-primary"
-            label={t('election.votes_cast')}
-            value={election.castVotes.toLocaleString()}
+            key={figure.id}
+            icon={figure.icon}
+            tint={figure.tint}
+            label={figure.label}
+            value={figure.value}
+            hint={figure.hint}
+            open={openHint === figure.id}
+            onToggle={() => setOpenHint(openHint === figure.id ? null : figure.id)}
           />
-        )}
-        {reservedBallots > 0 && (
-          <Figure
-            icon={Fuel}
-            tint="text-success"
-            label={t('election.reserved_ballots')}
-            value={reservedBallots.toLocaleString()}
-            hint={t('election.reserved_ballots_hint')}
-            open={openHint === 'reserved'}
-            onToggle={() => setOpenHint(openHint === 'reserved' ? null : 'reserved')}
-          />
-        )}
-        {election.privacyQuorum > 0 && (
-          <Figure
-            icon={EyeOff}
-            tint="text-secondary"
-            label={t('election.quorum_short')}
-            value={election.privacyQuorum.toLocaleString()}
-            hint={t('create.quorum_hint')}
-            open={openHint === 'quorum'}
-            onToggle={() => setOpenHint(openHint === 'quorum' ? null : 'quorum')}
-          />
-        )}
-        {/* Spans the grid, so opening one changes the height of the panel and
-            nothing else about it. */}
-        {openHint && (
-          <p className="col-span-3 text-[11px] text-on-surface-meta leading-snug sm:max-w-[13rem]">
-            {t(openHint === 'reserved' ? 'election.reserved_ballots_hint' : 'create.quorum_hint')}
-          </p>
-        )}
+        ))}
+        {/* THE SLOT IS ALWAYS THERE on a wide screen, empty or not.
+            Letting it appear and vanish grew the card by 33px and with it the
+            rule down the panel's left, so pressing an info glyph shifted the
+            whole page under the reader's finger.
+
+            It reserves the room by DRAWING every sentence, stacked in one grid
+            cell with all but the open one invisible, so the height is the
+            tallest of them measured in the reader's own language and at the
+            reader's own text size. A hard-coded height was the same idea with
+            a number in place of the measurement, and a number that fits in
+            Spanish is a number that overflows in German.
+
+            On a phone nothing is reserved: the unopened ones are `hidden`
+            rather than invisible, the panel is the last thing in the card,
+            and it grows downwards into nothing. */}
+        <div className="col-span-3 sm:grid">
+          {figures
+            .filter(figure => figure.hint)
+            .map(figure => (
+              <p
+                key={figure.id}
+                className={cn(
+                  'text-[11px] text-on-surface-meta leading-snug sm:col-start-1 sm:row-start-1',
+                  openHint !== figure.id && 'hidden sm:block sm:invisible',
+                )}
+              >
+                {figure.hint}
+              </p>
+            ))}
+        </div>
       </div>
     </Card>
   );
@@ -260,7 +390,14 @@ export function ElectionSchedule({ election }: { election: Election }) {
  * No dates here: the schedule above carries all of them, to the minute, with
  * the phase each belongs to.
  */
-export function ElectionAbout({ election }: { election: Election }) {
+export function ElectionAbout({
+  election,
+  asOrganizer = false,
+}: {
+  election: Election;
+  /** The reader owns this election, so the promises speak to them. */
+  asOrganizer?: boolean;
+}) {
   const { t } = useTranslation();
 
   return (
@@ -274,9 +411,13 @@ export function ElectionAbout({ election }: { election: Election }) {
           the dates they are counted against. What is left is what no figure
           can say: the two promises the organizer cannot take back. */}
       <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-white/5 text-xs text-on-surface-meta">
+        {/* Askable here, where there is a page to open a sentence into. The
+            same badges on a card stay plain: see `explainable`. */}
         <SchedulePromise
           fixedSchedule={election.fixedSchedule}
           cancellable={election.cancellable}
+          explainable
+          asOrganizer={asOrganizer}
         />
       </div>
     </Card>

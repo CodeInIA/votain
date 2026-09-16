@@ -5,8 +5,6 @@ import { XCircle, Clock, BarChart3, Users, KeyRound, CalendarCheck } from 'lucid
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Badge } from '../../components/ui/Badge';
 import { EligibilityChips } from '../../components/ui/EligibilityChips';
-import { ExpandableText } from '../../components/ui/ExpandableText';
-import { VotingRule } from '../../components/ui/VotingRule';
 import { Button } from '../../components/ui/Button';
 import { BackButton } from '../../components/ui/BackButton';
 import { ViewAsSwitch } from '../../components/ui/ViewAsSwitch';
@@ -18,9 +16,10 @@ import { useRefreshOnReturn } from '../../hooks/useRefreshOnReturn';
 import { WalletAnswerLostError } from '../../lib/walletRequest';
 import { fetchElection } from '../../lib/chainElections';
 import { Modal } from '../../components/ui/Modal';
-import { PhaseTimeline } from '../../components/ui/PhaseTimeline';
+import { ElectionAbout, ElectionSchedule } from '../../components/ui/ElectionSummary';
 import { ResultBarChart } from '../../components/ui/BarChart';
-import { BlockchainBadge } from '../../components/ui/BlockchainBadge';
+import { BlockchainBadge, IPFSBadge } from '../../components/ui/BlockchainBadge';
+import { TallyCheck } from '../../components/ui/TallyCheck';
 import { Spinner } from '../../components/ui/Spinner';
 import { useToast } from '../../components/ui/useToast';
 import { useElection } from '../../hooks/useElections';
@@ -366,75 +365,61 @@ export default function ElectionManagement() {
                 domain={election.organizerDomain}
                 organizerAddress={election.organizerAddress}
                 interactive
+                own
               />
             </div>
           )}
         </div>
 
-        {/* How the election is decided, which no view of an election showed.
-            Its own card rather than a line in the description card below,
-            because that card is conditional on there being a description and
-            the rule is not optional: it is what the ballot means. */}
-        <Card className="p-5 mb-5">
-          <h2 className="text-sm font-semibold text-on-surface mb-3">{t('election.voting_rule')}</h2>
-          <VotingRule type={election.votingType} thresholdValue={election.thresholdValue} />
-        </Card>
+        {/* THE SAME CARD THE VOTER SEES, dates and figures together, and
+            deliberately so: a promise shown one way to the person making it
+            and another to the person relying on it is worth less than one
+            shown identically.
 
-        {/* The organizer wrote this and could not read it back: this view went
-            from the title straight to the counters, so the one person able to
-            correct a description was the only one never shown it. */}
-        {election.description && (
-          <Card className="p-5 mb-5">
-            <h2 className="text-sm font-semibold text-on-surface mb-2">{t('election.about')}</h2>
-            <ExpandableText text={election.description} />
-          </Card>
-        )}
+            It replaces a bare timeline further down and a row of three stat
+            cards up here, which between them said the same numbers twice and
+            left half of a wide screen empty beside the dates. The reserve is
+            left out because the gas card below states it with the buttons
+            that change it; turnout is added, which is the one figure this
+            page is read for. */}
+        <ElectionSchedule election={election} showReserve={false} showParticipation />
 
-        {/* Stats cards */}
-        <div className="grid grid-cols-3 gap-3 mb-5">
-          {[
-            { icon: Users,    value: election.totalEnrolled, labelKey: 'election.enrolled' },
-            { icon: BarChart3, value: election.castVotes,    labelKey: 'election.votes_cast' },
-            { icon: Clock,    value: `${election.totalEnrolled > 0 ? Math.min(100, Math.round((election.castVotes / election.totalEnrolled) * 100)) : 0}%`, labelKey: 'election.participation' },
-          ].map((s, i) => {
-            const Icon = s.icon;
-            return (
-              <Card key={i} className="p-4 flex flex-col items-center text-center">
-                <Icon className="w-4 h-4 text-on-surface-meta mb-1.5" />
-                <p className="text-lg font-bold text-on-surface">{s.value.toLocaleString()}</p>
-                <p className="text-xs text-on-surface-meta">{t(s.labelKey)}</p>
-              </Card>
-            );
-          })}
-        </div>
+        {/* WHAT THE ELECTION IS, in the voter's card rather than in a pair of
+            the organizer's own. This page had grown its own description card,
+            its own voting-rule card and, for a while, its own row of badges,
+            and each one said the same thing in a slightly different shape: a
+            heading the voter does not have, a rule split off from the text it
+            belongs with, promises the organizer only saw when one of them
+            took a button away.
+
+            One component for both readers is also the only way they stay the
+            same. What the organizer gets that a voter does not is the
+            controls, and those are further down. */}
+        <ElectionAbout election={election} asOrganizer />
 
         {/* This election's own gas, which is what a voter is promised. */}
         <ElectionGasCard election={election} />
 
-        {/* THE SAME COMPONENT THE VOTER SEES, and deliberately so: these
-            dates are the organizer's promise, and a promise shown one way to
-            the person making it and another to the person relying on it is
-            worth less than one shown identically. What the organizer gets
-            extra is the controls, which are above.
-
-            Always drawn, where the countdown was conditional on a next
-            boundary existing: an organizer looking at a closed election is
-            often checking what the schedule actually was. */}
-        <Card className="p-4 mb-4">
-          {/* The creation date used to be bolted on here. It moved inside,
-              because only the timeline knows whether its first step already
-              starts at that moment, and with the line outside the two
-              disagreed: an upcoming election showed it twice. */}
-          <PhaseTimeline election={election} />
-        </Card>
-
         {/* Results (if closed) */}
         {hasResults && (
           <Card className="p-5 mb-5">
-            <h2 className="text-sm font-semibold text-on-surface mb-4">{t('results.breakdown')}</h2>
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <h2 className="text-sm font-semibold text-on-surface">{t('results.breakdown')}</h2>
+              {/* WHERE THE NUMBERS LIVE, which this page never said. The
+                  organizer published the tally to IPFS and had no link to it:
+                  the reference every reader is invited to check was the one
+                  thing its author could not reach from here. */}
+              {election.ipfsCid && <IPFSBadge href={`https://ipfs.io/ipfs/${election.ipfsCid}`} />}
+            </div>
             <ResultBarChart candidates={election.candidates as Parameters<typeof ResultBarChart>[0]['candidates']} totalVotes={totalVotes} />
           </Card>
         )}
+
+        {/* THE SAME CHECK EVERY OTHER READER GETS on the result this page
+            published: the counters against the voters the contract counted.
+            It needs no key, it is the strongest thing an honest organizer can
+            point at, and it was the one card only other people could see. */}
+        <TallyCheck election={election} />
 
         {/* Entry restrictions. The organizer chose these at creation and cannot
             change them afterwards, so this is a record of what the election was
@@ -503,13 +488,13 @@ export default function ElectionManagement() {
           {election.cancellable === false && (
             <p className="text-xs text-on-surface-meta px-1 flex items-start gap-1.5">
               <CalendarCheck className="w-3.5 h-3.5 shrink-0 mt-0.5 text-success" />
-              {t('schedule.no_cancel_desc')}
+              {t('schedule.no_cancel_desc_own')}
             </p>
           )}
           {!scheduleMovable && (
             <p className="text-xs text-on-surface-meta px-1 flex items-start gap-1.5">
               <CalendarCheck className="w-3.5 h-3.5 shrink-0 mt-0.5 text-success" />
-              {t('schedule.fixed_desc')}
+              {t('schedule.fixed_desc_own')}
             </p>
           )}
           {canOpen && (
