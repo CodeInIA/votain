@@ -49,6 +49,7 @@ import {
 } from '../../lib/organizer';
 import { WalletAnswerLostError } from '../../lib/walletRequest';
 import { isUserRejection } from '../../lib/walletErrors';
+import { formatDateTime } from '../../lib/datetime';
 
 /** Sample movements shown only in demo mode (no contracts configured). */
 const SEED_HISTORY: GasMovement[] = [
@@ -705,9 +706,7 @@ export default function GasManagement() {
                         is exactly when someone comes looking: to match a
                         deposit against a receipt. */}
                     <p className="text-xs text-on-surface-meta whitespace-nowrap">
-                      {h.date
-                        ? `${h.date.toLocaleDateString()} ${h.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                        : '—'}
+                      {h.date ? formatDateTime(h.date) : '—'}
                     </p>
                   </div>
                 </div>

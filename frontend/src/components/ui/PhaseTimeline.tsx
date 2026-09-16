@@ -4,6 +4,7 @@ import { Countdown } from './Countdown';
 import { cn } from '../../lib/utils';
 import { phaseTimeline, type TimelineStep, type TimelineStatus } from '../../lib/phase';
 import { useChainNow } from '../../hooks/useChainNow';
+import { formatDateTime } from '../../lib/datetime';
 import type { Election } from '../../data/seed';
 
 const ICON: Record<TimelineStatus, typeof Check> = {
@@ -27,12 +28,11 @@ function Step({ step, last }: { step: TimelineStep; last: boolean }) {
   const Icon = ICON[step.status];
   const current = step.status === 'current';
 
-  // Dates, not times. The countdown answers "when" to the minute for the one
-  // step where the minute matters; on the others a wall of timestamps is four
-  // numbers to compare where two would do.
-  const range = step.end
-    ? `${step.start.toLocaleDateString()} - ${step.end.toLocaleDateString()}`
-    : t('timeline.from_date', { date: step.start.toLocaleDateString() });
+  // To the minute, through the same formatter the gas history uses. A window
+  // that closes "on the 17th" does not tell a voter whether they have until
+  // breakfast or until midnight, and that is the whole question someone reads
+  // a schedule to answer.
+  const start = formatDateTime(step.start);
 
   return (
     <li className="flex gap-3">
@@ -85,7 +85,16 @@ function Step({ step, last }: { step: TimelineStep; last: boolean }) {
             </span>
           )}
         </div>
-        <p className="text-[11px] text-on-surface-meta tabular-nums">{range}</p>
+        {/* Each end on its own span so a long pair wraps at the dash rather
+            than mid-timestamp, and each timestamp stays unbroken. */}
+        <p className="text-[11px] text-on-surface-meta tabular-nums flex flex-wrap gap-x-1">
+          <span className="whitespace-nowrap">
+            {step.end ? start : t('timeline.from_date', { date: start })}
+          </span>
+          {step.end && (
+            <span className="whitespace-nowrap">{'- '}{formatDateTime(step.end)}</span>
+          )}
+        </p>
       </div>
     </li>
   );
