@@ -102,6 +102,14 @@ then Phase C (H10 IPFS/Fleek, H11 Phala TEE).
 **Build**: ✅ clean, no sourcemaps.
 **Tests**: 410/410 unit tests in 50 files passing (Vitest, jsdom), covering the voter identity lifecycle (minting, sealing, the PRF read-back proof, rotation, adding further passkeys), WalletConnect return handling, the Paillier ballot encoding, the i18n plural tables, how the lists are paged and ordered, the schedule timeline both roles read, and turnout counted in people rather than ballots. Playwright E2E scaffold in `e2e/` (excluded from Vitest).
 
+**Enrolling stopped naming the enrolled** (2026-09-16): what goes into an election's
+merkle tree is a commitment derived from the voter's secret and that election's address,
+authorised by a platform signature and deduplicated by a tag only the server can compute.
+The chain no longer shows that the same person joined two elections: measured on the seeded
+local chain, 8 commitments across 38 elections (one of them in 17) became 69, each in
+exactly one, none of them known to the registry. The privacy page was corrected to match.
+See `Who joined what, and why the chain no longer says it` in `architecture.md`.
+
 **Gas, votes and deadlines** (2026-09-16): gas is reserved per election and cannot be
 withdrawn while voters may still need it; the wallet is crossed only at `deposit` and
 `withdraw`, everything else moves between the tank's two columns; an organizer can give up
