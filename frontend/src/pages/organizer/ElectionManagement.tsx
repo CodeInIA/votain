@@ -1,5 +1,5 @@
 import { useState, useRef, type ChangeEvent } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { Navigate, useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { XCircle, Clock, BarChart3, Users, KeyRound, CalendarCheck } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
@@ -42,6 +42,7 @@ import { PULSE_PHASES } from '../../lib/phase';
 import { explorerAddressUrl } from '../../lib/deployments';
 import { ElectionGasCard } from '../../components/organizer/ElectionGasCard';
 import { isUserRejection } from '../../lib/walletErrors';
+import { canManageElection } from '../../lib/electionViews';
 
 export default function ElectionManagement() {
   const { id } = useParams<{ id: string }>();
@@ -74,6 +75,32 @@ export default function ElectionManagement() {
   const [tallyPreview, setTallyPreview] = useState<TallyResult | null>(null);
   const [tallyError, setTallyError]     = useState<string | null>(null);
   const keyFileInput = useRef<HTMLInputElement>(null);
+
+  /**
+   * THIS ELECTION IS NOT YOURS.
+   *
+   * `RequireOrganizer` only asks for a session, so until this was here any
+   * organizer could open `/organizer/election/<somebody else's id>` and get
+   * the whole panel: the lifecycle buttons, the cancel dialog, the tally key
+   * import. Every write would have failed on chain, since the contract's
+   * `onlyOrganizer` is the real boundary, but offering them at all is a
+   * screen that lies about what it can do.
+   *
+   * To the dashboard rather than to the public view of this election.
+   * Somebody who arrives here is acting as an organizer, and their own list
+   * is the honest answer to a page that is not theirs.
+   *
+   * BOTH ANSWERS HAVE TO BE IN before this can fire. The wallet address
+   * arrives asynchronously and the election is read from the chain; treating
+   * "not known yet" as "not yours" would throw the real owner out while their
+   * own page was still loading.
+   */
+  const ownershipKnown = !loading && !!election && !!wallet.address;
+  const isNotMine =
+    ownershipKnown &&
+    !canManageElection(true, wallet.address, election.organizerAddress);
+
+  if (isNotMine) return <Navigate to="/organizer/dashboard" replace />;
 
   if (loading) {
     return (

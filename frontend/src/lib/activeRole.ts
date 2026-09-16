@@ -161,17 +161,32 @@ export function switchDestination(pathname: string, to: Role): string {
    * being told they were acting as an organizer while looking at their own
    * ballot.
    *
-   * To the organizer's home, and deliberately not to the organizer's view of
-   * THIS election. That crossing needs to know whether this wallet owns it,
-   * and a header cannot know: it would have to read the election to find out,
-   * and offering it blindly would walk a non-owner into a management page for
-   * somebody else's vote. `ViewAsSwitch`, which is on the election and has
-   * already read it, is where that belongs and is already there.
+   * TO THE ORGANIZER'S VIEW OF THE SAME ELECTION, which this used to refuse.
+   * The objection was that the crossing needs to know whether this wallet
+   * owns the election and a header cannot know, since it would have to read
+   * the election to find out. That was the wrong place to answer it: the
+   * management page has the election in hand and now refuses one it does not
+   * own, sending the person to their dashboard. So the header can offer the
+   * crossing and be wrong about it harmlessly, and the owner, who is who this
+   * is for, keeps their place instead of being dropped on a list.
    *
    * Switching TO voter stays put, because this page is that view.
    */
   if (pathname.startsWith('/election/')) {
-    return to === 'organizer' ? homeRouteFor(to) : pathname;
+    const id = pathname.slice('/election/'.length).split('/')[0];
+    return to === 'organizer' && id ? `/organizer/election/${id}` : pathname;
+  }
+  /**
+   * And back the other way, on the same election.
+   *
+   * The organizer's panel has no public twin to fall through to, so without
+   * this the prefix rule below would send them to the voter's list and lose
+   * the election they were managing. Nothing to check here: `/election/:id`
+   * is public, and anyone allowed on the panel is allowed on it.
+   */
+  if (pathname.startsWith('/organizer/election/')) {
+    const id = pathname.slice('/organizer/election/'.length).split('/')[0];
+    return to === 'voter' && id ? `/election/${id}` : pathname;
   }
   const belongsToARole = pathname.startsWith('/voter/') || pathname.startsWith('/organizer/');
   return belongsToARole ? homeRouteFor(to) : pathname;

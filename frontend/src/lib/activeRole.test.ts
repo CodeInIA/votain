@@ -128,12 +128,27 @@ describe('where switching leaves you', () => {
     expect(switchDestination('/voter/history', 'organizer')).toBe('/organizer/dashboard');
   });
 
-  it('does not cross between the two views of one election', () => {
-    // The organizer view only loads for the wallet that owns it, and a header
-    // cannot know whether this one does without reading the election. So it
-    // goes to the dashboard, and `ViewAsSwitch`, which is on the page and has
-    // already read it, is where that crossing lives.
-    expect(switchDestination('/election/0xabc', 'organizer')).toBe('/organizer/dashboard');
+  it('crosses to the organizer view of the same election', () => {
+    // Keeping the owner's place, which is who the switch is for. It refused
+    // to do this while nothing checked ownership, because the header cannot:
+    // the management page does it now, and sends a non-owner to their
+    // dashboard.
+    expect(switchDestination('/election/0xabc', 'organizer')).toBe('/organizer/election/0xabc');
+  });
+
+  it('crosses back to the same election from the organizer panel', () => {
+    // The panel has no public twin to fall through to, so without this the
+    // prefix rule sends them to the voter's list and loses the election they
+    // were managing.
+    expect(switchDestination('/organizer/election/0xabc', 'voter')).toBe('/election/0xabc');
+    // Switching to the role it already shows changes nothing.
+    expect(switchDestination('/organizer/election/0xabc', 'organizer')).toBe('/organizer/election/0xabc');
+  });
+
+  it('is not confused by a results page hanging off an election', () => {
+    // `/election/:id/results` is a public page in its own right and there is
+    // no organizer twin of it, so only the id is taken.
+    expect(switchDestination('/election/0xabc/results', 'organizer')).toBe('/organizer/election/0xabc');
   });
 
   it('stays on an election when switching to the role it is already showing', () => {
