@@ -17,6 +17,7 @@
  * deliberately boring serialiser rather than trusting a shared endpoint.
  */
 import { backendBase } from "./backend";
+import { noticeUnauthorized } from "./sessionExpiry";
 
 /**
  * How strongly the election insists the enrolling voter is a distinct human.
@@ -168,6 +169,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     credentials: "include",
     headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
   });
+  // A 401 here is the session, not the request: every one of these carries the
+  // cookie, so the server refusing all of them means there is nothing to carry.
+  noticeUnauthorized(response.status);
   const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
   if (!response.ok) throw new Error((body.error as string) ?? `request failed (${response.status})`);
   return body as T;

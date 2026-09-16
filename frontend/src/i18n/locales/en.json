@@ -542,6 +542,8 @@
     "not_found_desc": "The page you're looking for doesn't exist or has been moved.",
     "go_home": "Go home",
     "generic_title": "Something went wrong",
+    "session_expired": "Your session has expired",
+    "session_expired_desc": "Seven days is as long as a sign-in lasts. Verify with World ID again to carry on; nothing you set up on this device was lost.",
     "gas_tank_empty": "The organizer's gas tank is empty, so this election cannot cover the fee for your enrollment. Nothing is wrong on your side: ask the organizer to top it up and try again.",
     "enrollment_closed": "Enrollment is closed for this election.",
     "already_enrolled": "This identity is already enrolled in this election.",

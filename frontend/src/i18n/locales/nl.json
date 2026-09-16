@@ -542,6 +542,8 @@
     "not_found_desc": "De pagina die je zoekt bestaat niet of is verplaatst.",
     "go_home": "Naar home",
     "generic_title": "Er ging iets mis",
+    "session_expired": "Je sessie is verlopen",
+    "session_expired_desc": "Een aanmelding duurt zeven dagen. Verifieer je opnieuw met World ID om verder te gaan; niets van wat je op dit apparaat hebt ingesteld is verloren.",
     "gas_tank_empty": "De gasvoorraad van de organisator is leeg, dus deze verkiezing kan de kosten van je inschrijving niet betalen. Het ligt niet aan jou: vraag om bij te vullen en probeer het opnieuw.",
     "enrollment_closed": "De inschrijving voor deze verkiezing is gesloten.",
     "already_enrolled": "Deze identiteit is al ingeschreven voor deze verkiezing.",

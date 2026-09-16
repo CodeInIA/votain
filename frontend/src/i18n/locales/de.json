@@ -542,6 +542,8 @@
     "not_found_desc": "Die gesuchte Seite existiert nicht oder wurde verschoben.",
     "go_home": "Zur Startseite",
     "generic_title": "Etwas ist schiefgelaufen",
+    "session_expired": "Ihre Sitzung ist abgelaufen",
+    "session_expired_desc": "Eine Anmeldung gilt sieben Tage. Verifizieren Sie sich erneut mit World ID, um weiterzumachen; nichts von dem, was Sie auf diesem Gerät eingerichtet haben, ist verloren.",
     "gas_tank_empty": "Der Gas-Vorrat der organisierenden Person ist leer, daher kann diese Wahl die Gebühr für Ihre Anmeldung nicht tragen. Es liegt nicht an Ihnen: Bitten Sie um eine Aufladung und versuchen Sie es erneut.",
     "enrollment_closed": "Die Anmeldung für diese Wahl ist geschlossen.",
     "already_enrolled": "Diese Identität ist bereits für diese Wahl angemeldet.",

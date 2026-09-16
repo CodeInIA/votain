@@ -4,6 +4,13 @@ import { clearOrganizerKeyCache } from '../lib/organizerKey';
 import { clearIdentity } from '../lib/semaphore';
 import { clearOnDevice, sealOnDevice } from '../lib/deviceSeal';
 import { storeVoterPersonhood, clearVoterPersonhood } from '../lib/voterSession';
+import { onReturnToForeground } from '../lib/foreground';
+import {
+  announceSessionExpired,
+  msUntilExpiry,
+  resetSessionExpiryNotice,
+  SESSION_EXPIRED_EVENT,
+} from '../lib/sessionExpiry';
 import {
   clearRolePreference,
   noteSignedOutOf,
@@ -89,6 +96,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (v) setActiveRole('voter');
   };
 
+  /**
+   * Ends the voter session locally, without asking anybody.
+   *
+   * The counterpart to `voterSignOut`, and deliberately quieter: this runs when
+   * the session is ALREADY gone, so there is no cookie left to clear and no
+   * reason to touch the identity. A voter whose credential expired still owns
+   * their phrase, their passkeys and their sealed secret; what they have lost
+   * is permission to talk to this server until they verify again.
+   */
+  const endExpiredVoterSession = () => {
+    localStorage.removeItem(VOTER_KEY);
+    void clearOnDevice('nullifier');
+    clearVoterPersonhood();
+    setVoterLoggedInState(false);
+    releaseRole('voter');
+  };
+
   // The httpOnly voter_vc cookie is the SOURCE OF TRUTH for the voter session.
   // The localStorage flag is only an optimistic cache to avoid a flash on load;
   // it is spoofable, so we always reconcile against /api/me:
@@ -96,26 +120,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   //   - authenticated                      → confirm the flag.
   //   - network error / backend down       → keep the optimistic state (unknown,
   //                                           don't nuke a possibly-valid session).
+  //
+  // RUN MORE THAN ONCE, which is the part that was missing. It used to run at
+  // mount and never again, so a credential that expired while the tab was open,
+  // or while a laptop slept for a week, left the interface offering a session
+  // that had ended: the first anyone heard of it was an action failing. It now
+  // runs again whenever the tab comes back, and a timer wakes it when the
+  // credential's own expiry arrives.
   useEffect(() => {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 2000);
+    let cancelled = false;
+    let expiryTimer: number | undefined;
 
-    fetch(backendUrl('/api/me'), { credentials: 'include', signal: controller.signal })
-      .then(async res => {
-        if (res.status === 401) {
-          // Definitive "not authenticated": clear any (possibly spoofed) flag.
-          localStorage.removeItem(VOTER_KEY);
-          void clearOnDevice('nullifier');
-          clearVoterPersonhood();
-          setVoterLoggedInState(false);
-          return null;
-        }
-        return res.ok
-          ? (await res.json() as { authenticated?: boolean; nullifier?: string; personhood?: string })
-          : null;
-      })
-      .then(data => {
-        if (data?.authenticated) {
+    const reconcile = () => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 2000);
+
+      void fetch(backendUrl('/api/me'), { credentials: 'include', signal: controller.signal })
+        .then(async res => {
+          if (cancelled) return null;
+          if (res.status === 401) {
+            // ANNOUNCED ONLY IF WE BELIEVED OTHERWISE. This same branch runs
+            // for every anonymous visitor on their first paint, and telling a
+            // stranger their session expired would be a lie in the one place
+            // they have no way to check it.
+            const believed = localStorage.getItem(VOTER_KEY) === 'true';
+            // Definitive "not authenticated": clear any (possibly spoofed) flag.
+            endExpiredVoterSession();
+            if (believed) announceSessionExpired();
+            return null;
+          }
+          return res.ok
+            ? (await res.json() as {
+                authenticated?: boolean;
+                nullifier?: string;
+                personhood?: string;
+                expiresAt?: number;
+              })
+            : null;
+        })
+        .then(data => {
+          if (cancelled || !data?.authenticated) return;
           // Sealed rather than stored: see `deviceSeal`. Not awaited,
           // because nothing in this reconcile depends on it landing, and the
           // only reader loads it asynchronously anyway.
@@ -126,18 +170,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // it never carried.
           storeVoterPersonhood(data.personhood);
           rememberVoterSession(true);
-        }
-      })
-      .catch(() => { /* backend unreachable: keep optimistic state */ })
-      .finally(() => {
-        clearTimeout(timer);
-        setSessionChecked(true);
-      });
+          resetSessionExpiryNotice();
+
+          // The credential's own deadline, from the credential. A tab open
+          // across it ends the session at the right moment instead of carrying
+          // on until something fails.
+          const remaining = msUntilExpiry(data.expiresAt);
+          if (remaining === null) return;
+          window.clearTimeout(expiryTimer);
+          expiryTimer = window.setTimeout(
+            () => (remaining === 0 ? endExpiredVoterSession() : reconcile()),
+            remaining,
+          );
+        })
+        .catch(() => { /* backend unreachable: keep optimistic state */ })
+        .finally(() => {
+          clearTimeout(timeout);
+          if (!cancelled) setSessionChecked(true);
+        });
+    };
+
+    reconcile();
+    const stopWatchingReturn = onReturnToForeground(reconcile);
 
     return () => {
-      controller.abort();
-      clearTimeout(timer);
+      cancelled = true;
+      window.clearTimeout(expiryTimer);
+      stopWatchingReturn();
     };
+  }, []);
+
+  /**
+   * The backend saying "no" to something that carried the cookie.
+   *
+   * The clock and the reconcile catch an expiry eventually; a 401 is the
+   * server saying so now, and it is also the only thing that catches a
+   * credential REVOKED before its expiry.
+   */
+  useEffect(() => {
+    const onExpired = () => endExpiredVoterSession();
+    window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
   }, []);
 
   // Signing out has to take the voting identity with it, not just the session

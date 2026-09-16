@@ -1,7 +1,10 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { useRouteMeta } from './seo/usePageMeta';
 import { ToastProvider } from './components/ui/Toast';
+import { useToast } from './components/ui/useToast';
+import { SESSION_EXPIRED_EVENT } from './lib/sessionExpiry';
 import { AuthProvider } from './contexts/AuthProvider';
 import { RequireVoter, RequireOrganizer } from './components/auth/RequireAuth';
 import Landing from './pages/Landing';
@@ -77,12 +80,39 @@ function RouteMeta() {
   return null;
 }
 
+/**
+ * Says out loud that the session ran out.
+ *
+ * Its own component because the toast lives in a context `AuthProvider` sits
+ * OUTSIDE of, and because the session ending and the sentence about it ending
+ * are separate concerns: the provider is what stops trusting the cookie, this
+ * is what stops the voter wondering why the screen changed under them.
+ */
+function SessionExpiryNotice() {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const announce = () =>
+      toast({
+        title: t('errors.session_expired'),
+        description: t('errors.session_expired_desc'),
+        variant: 'info',
+      });
+    window.addEventListener(SESSION_EXPIRED_EVENT, announce);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, announce);
+  }, [toast, t]);
+
+  return null;
+}
+
 export default function App() {
   return (
     <AuthProvider>
     <ToastProvider>
       <Router>
         <RouteMeta />
+        <SessionExpiryNotice />
         {/* The phrase modal that used to live here is gone. It was mounted above
             the routes so that no entry point could mint an identity without
             showing the words, but it held them in a module variable and put them

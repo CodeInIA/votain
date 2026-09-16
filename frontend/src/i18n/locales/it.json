@@ -547,6 +547,8 @@
     "not_found_desc": "La pagina che stai cercando non esiste o è stata spostata.",
     "go_home": "Vai alla home",
     "generic_title": "Qualcosa è andato storto",
+    "session_expired": "La tua sessione è scaduta",
+    "session_expired_desc": "Un accesso dura sette giorni. Verificati di nuovo con World ID per continuare; nulla di ciò che hai configurato su questo dispositivo è andato perso.",
     "gas_tank_empty": "Il serbatoio di gas dell'organizzatore è vuoto, quindi questa elezione non può coprire la commissione della tua iscrizione. Non dipende da te: chiedi di ricaricarlo e riprova.",
     "enrollment_closed": "Le iscrizioni a questa elezione sono chiuse.",
     "already_enrolled": "Questa identità è già iscritta a questa elezione.",

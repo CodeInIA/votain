@@ -29,6 +29,16 @@ router.get('/me', async (req: Request, res: Response) => {
     // Absent on credentials issued before the claim existed, and the caller has
     // to read that absence as "unproved" rather than as the lowest level.
     personhood: session.personhood,
+    /**
+     * When this credential stops being one, in seconds.
+     *
+     * The cookie is httpOnly, so the browser cannot read its own expiry and
+     * had no way to know a session had run out other than by trying something
+     * and being refused. Telling the holder when their own credential expires
+     * gives nothing away and lets the page end the session at the moment it
+     * ends rather than at the next failed action.
+     */
+    expiresAt: session.payload.exp,
   });
 });
 

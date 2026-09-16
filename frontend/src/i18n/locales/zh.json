@@ -537,6 +537,8 @@
     "not_found_desc": "您访问的页面不存在或已移动。",
     "go_home": "返回首页",
     "generic_title": "出了点问题",
+    "session_expired": "你的会话已过期",
+    "session_expired_desc": "一次登录有效期为七天。请用 World ID 重新验证以继续；你在这台设备上设置的内容都没有丢失。",
     "gas_tank_empty": "组织者的 gas 余额已用尽，因此本次选举无法支付你的登记费用。这不是你的问题：请让组织者充值后再试。",
     "enrollment_closed": "本次选举的登记已关闭。",
     "already_enrolled": "该身份已登记参加本次选举。",

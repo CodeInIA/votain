@@ -547,6 +547,8 @@
     "not_found_desc": "La página que buscas no existe o ha sido movida.",
     "go_home": "Ir al inicio",
     "generic_title": "Algo salió mal",
+    "session_expired": "Tu sesión ha caducado",
+    "session_expired_desc": "Un inicio de sesión dura siete días. Vuelve a verificarte con World ID para continuar; no has perdido nada de lo que configuraste en este dispositivo.",
     "gas_tank_empty": "El depósito de gas del organizador está vacío, así que esta elección no puede cubrir la comisión de tu inscripción. No es un fallo tuyo: pide al organizador que lo recargue e inténtalo de nuevo.",
     "enrollment_closed": "La inscripción está cerrada para esta elección.",
     "already_enrolled": "Esta identidad ya está inscrita en esta elección.",

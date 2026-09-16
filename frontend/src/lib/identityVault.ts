@@ -14,6 +14,7 @@
  * Wrapping: HKDF-SHA256(prf, info) -> AES-256-GCM key; blob = iv ‖ ciphertext.
  */
 import { backendBase } from "./backend";
+import { noticeUnauthorized } from "./sessionExpiry";
 
 const HKDF_INFO = new TextEncoder().encode("votain:identity-vault:v1");
 const IV_BYTES = 12;
@@ -101,7 +102,14 @@ export async function fetchVault(): Promise<VaultState | null> {
   const res = await fetch(`${backendBase()}/api/identity/vault`, {
     credentials: "include",
   });
-  if (res.status === 401) return null;
+  // Null means "nothing readable here", which a caller treats as a voter with
+  // no vault. That is right for the caller and only half the story for the
+  // session: 401 is the server saying the cookie is gone, and nobody was
+  // listening.
+  if (res.status === 401) {
+    noticeUnauthorized(res.status);
+    return null;
+  }
   if (!res.ok) throw new Error(`Vault read failed: ${res.status}`);
   return (await res.json()) as Promise<VaultState>;
 }

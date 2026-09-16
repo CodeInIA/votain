@@ -547,6 +547,8 @@
     "not_found_desc": "A página que você está procurando não existe ou foi movida.",
     "go_home": "Ir para o início",
     "generic_title": "Algo deu errado",
+    "session_expired": "A sua sessão expirou",
+    "session_expired_desc": "Um início de sessão dura sete dias. Verifique-se novamente com o World ID para continuar; nada do que configurou neste dispositivo se perdeu.",
     "gas_tank_empty": "O depósito de gas do organizador está vazio, por isso esta eleição não consegue pagar a taxa da tua inscrição. Não é culpa tua: pede que o recarreguem e tenta novamente.",
     "enrollment_closed": "As inscrições para esta eleição estão encerradas.",
     "already_enrolled": "Esta identidade já está inscrita nesta eleição.",

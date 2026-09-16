@@ -9,7 +9,7 @@ issuer, voter + organizer flows and tally all wired and green.
 custom dark `DatePicker`, phase-aware voter/organizer/public screens, and shared phase helpers.
 **This pass**: WalletConnect works from a phone for every organizer action, and the voter's
 identity flow was rebuilt around the recovery phrase (see the milestone log).
-Tests: contracts 176/176, backend 116/116, frontend 417/417; prod build OK.
+Tests: contracts 176/176, backend 116/116, frontend 425/425; prod build OK.
 **Next milestone**: Live Amoy deployment (pending funding the deployer key). It must carry
 `PLATFORM_ATTESTER_ADDRESS`, the key the backend signs enrolments with: without it the
 factory deploys elections that enrol the old, publicly linkable way, which looks entirely
@@ -104,7 +104,7 @@ then Phase C (H10 IPFS/Fleek, H11 Phala TEE).
 | `@types/node` | 26.5.1 | Same: the `latest` tag lags at 22.x |
 
 **Build**: ✅ clean, no sourcemaps.
-**Tests**: 410/410 unit tests in 50 files passing (Vitest, jsdom), covering the voter identity lifecycle (minting, sealing, the PRF read-back proof, rotation, adding further passkeys), WalletConnect return handling, the Paillier ballot encoding, the i18n plural tables, how the lists are paged and ordered, the schedule timeline both roles read, and turnout counted in people rather than ballots. Playwright E2E scaffold in `e2e/` (excluded from Vitest).
+**Tests**: 425/425 unit tests in 52 files passing (Vitest, jsdom), covering the voter identity lifecycle (minting, sealing, the PRF read-back proof, rotation, adding further passkeys), the per-election identities that keep enrolments unlinkable, noticing an expired session, WalletConnect return handling, the Paillier ballot encoding, the i18n plural tables, how the lists are paged and ordered, the schedule timeline both roles read, and turnout counted in people rather than ballots. Playwright E2E scaffold in `e2e/` (excluded from Vitest).
 
 **Enrolling stopped naming the enrolled** (2026-09-16): what goes into an election's
 merkle tree is a commitment derived from the voter's secret and that election's address,

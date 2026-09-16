@@ -547,6 +547,8 @@
     "not_found_desc": "La page que vous cherchez n'existe pas ou a été déplacée.",
     "go_home": "Aller à l'accueil",
     "generic_title": "Une erreur est survenue",
+    "session_expired": "Votre session a expiré",
+    "session_expired_desc": "Une connexion dure sept jours. Vérifiez-vous à nouveau avec World ID pour continuer ; rien de ce que vous avez configuré sur cet appareil n'a été perdu.",
     "gas_tank_empty": "La réserve de gas de l'organisateur est vide, cette élection ne peut donc pas payer les frais de votre inscription. Rien ne vient de vous : demandez à l'organisateur de la recharger, puis réessayez.",
     "enrollment_closed": "Les inscriptions sont closes pour cette élection.",
     "already_enrolled": "Cette identité est déjà inscrite à cette élection.",

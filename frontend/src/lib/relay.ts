@@ -19,6 +19,7 @@
 import { chainInfo, addresses } from "./deployments";
 import i18n from "../i18n/config";
 import { backendBase } from "./backend";
+import { noticeUnauthorized } from "./sessionExpiry";
 
 
 export const LOCAL_CHAIN_ID = 31337;
@@ -85,6 +86,10 @@ async function post(
   });
 
   if (!res.ok) {
+    // Only the enrolment endpoint carries a session; the ballot deliberately
+    // does not, and answers 400 rather than 401 when it refuses. So a 401 here
+    // is always an enrolment refused for want of a session.
+    noticeUnauthorized(res.status);
     const detail = (await res.json().catch(() => ({}))) as { error?: string };
     if (isTankEmpty(detail.error ?? "")) throw new GasTankEmptyError();
     throw new Error(detail.error ?? `Relay failed: ${res.status}`);
