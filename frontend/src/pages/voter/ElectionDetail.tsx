@@ -421,6 +421,23 @@ export default function ElectionDetail() {
               <CalendarMinus className="w-3.5 h-3.5" />
               {t('election.ends_on', { date: election.voteEnd.toLocaleDateString() })}
             </span>
+            {/* NEXT TO THE CLOSING DATE, because the two dates are one thought
+                and the two promises below are another. It used to sit after
+                both promises, which put a date at the end of a run of
+                commitments and left the row reading as four unrelated facts
+                in a line. Same grouping the card uses.
+
+                Beside the domain badge in spirit: both answer "should I
+                believe this", and an election deployed an hour ago that looks
+                exactly like a well known one is the case they answer. */}
+            <CreatedOn date={election.createdAt} precise />
+            {/* The two promises, together and last: they are the longest
+                labels in the row, so wrapping takes both at once instead of
+                splitting a date away from its pair. */}
+            <SchedulePromise
+              fixedSchedule={election.fixedSchedule}
+              cancellable={election.cancellable}
+            />
             {/* WHAT IS RESERVED, stated as a fact among the other facts rather
                 than as a banner.
                 The warning below the enrol button only speaks when something is
@@ -432,14 +449,6 @@ export default function ElectionDetail() {
                 A line, not a coloured box: a box that appears when all is well
                 on every election is how people learn to stop reading the one
                 that appears when it is not. */}
-            <SchedulePromise
-              fixedSchedule={election.fixedSchedule}
-              cancellable={election.cancellable}
-            />
-            {/* Beside the domain badge in spirit: both answer "should I
-                believe this", and an election deployed an hour ago that looks
-                exactly like a well known one is the case they answer. */}
-            <CreatedOn date={election.createdAt} precise />
             {reservedBallots > 0 && (
               <span className="flex items-center gap-1.5">
                 <Lock className="w-3.5 h-3.5" />

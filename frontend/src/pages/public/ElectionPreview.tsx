@@ -210,17 +210,23 @@ export default function ElectionPreview() {
               <CalendarMinus className="w-3.5 h-3.5" />
               {t('election.ends_on', { date: election.voteEnd.toLocaleDateString() })}
             </span>
-            {/* Public too: whether the dates can move is part of deciding
-                whether to take this election seriously, and that decision is
-                made here, before anyone signs in. */}
+            {/* Next to the closing date, because the two dates are one thought
+                and the two promises after them are another. Same grouping as
+                the card and the voter's view.
+
+                Public too, and most useful here: this is the page a link in a
+                message opens, which is exactly where a copy of somebody
+                else's election gets read. */}
+            <CreatedOn date={election.createdAt} precise />
+            {/* Public too: whether the dates can move, and whether it can be
+                called off at all, are part of deciding whether to take this
+                election seriously, and that decision is made here, before
+                anyone signs in. Together and last, since they are the longest
+                labels in the row. */}
             <SchedulePromise
               fixedSchedule={election.fixedSchedule}
               cancellable={election.cancellable}
             />
-            {/* Public too, and most useful here: this is the page a link in a
-                message opens, which is exactly where a copy of somebody
-                else's election gets read. */}
-            <CreatedOn date={election.createdAt} precise />
           </div>
         </Card>
 
