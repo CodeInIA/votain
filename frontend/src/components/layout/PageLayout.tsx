@@ -41,14 +41,18 @@ export function PageLayout({
         className={cn(
           'relative z-10 flex-1 overflow-y-auto',
           !fullBleed && 'px-4 sm:px-6 lg:px-8',
-          role !== 'public' && 'pb-20 md:pb-4',
+          // Room for the fixed bottom bar, for exactly as long as there is
+          // one: the same breakpoint it hides at.
+          role !== 'public' && 'pb-20 lg:pb-4',
           className
         )}
       >
         {children}
       </main>
 
-      {showFooter && <div className="hidden md:block shrink-0"><Footer /></div>}
+      {/* The footer follows the same line: below it the bottom bar owns that
+          edge of the screen, and `SiteLinksCard` carries these links instead. */}
+      {showFooter && <div className="hidden lg:block shrink-0"><Footer /></div>}
       {showNav && <BottomTabNav />}
     </div>
   );
