@@ -3,6 +3,7 @@ import { signRequest } from '@worldcoin/idkit-core/signing';
 import { sdJwt, SELECTIVE_DISCLOSURE_FRAME, type VotainCredentialPayload } from '../sd/issuer.js';
 import { statusIndexFor, DEFAULT_LIST_ID } from '../status/statusList.js';
 import { verifySession } from '../auth/session.js';
+import { readSessionCookie, setSessionCookie, clearSessionCookie } from '../auth/cookie.js';
 import { verifyWorldIdProof, type WorldIdPayload } from '../auth/worldId.js';
 
 const router = Router();
@@ -14,9 +15,11 @@ router.get('/me', async (req: Request, res: Response) => {
   // The signature is checked, not just the payload decoded. Without that, a
   // handcrafted `header.{"sub":"…","exp":<future>}.garbage` cookie would be
   // accepted as any voter's session.
-  const session = await verifySession(req.cookies?.voter_vc);
+  const session = await verifySession(readSessionCookie(req));
   if (!session) {
-    res.clearCookie('voter_vc');
+    // Cleared with the attributes it was set with, or the browser keeps it and
+    // every later request arrives with a credential this server has refused.
+    clearSessionCookie(res);
     return res.status(401).json({ authenticated: false });
   }
 
@@ -46,11 +49,7 @@ router.get('/me', async (req: Request, res: Response) => {
 // POST /logout
 // ────────────────────────────────────────────────
 router.post('/logout', (_req: Request, res: Response) => {
-  res.clearCookie('voter_vc', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-  });
+  clearSessionCookie(res);
   return res.status(200).json({ success: true });
 });
 
@@ -146,13 +145,10 @@ router.post('/verify-human', async (req: Request, res: Response) => {
     // registers the resulting commitment. Doing it here would force a brand new
     // identity on every device, and a human with two identities can vote twice.
 
-    // Store SD-JWT as an httpOnly cookie: never exposed to JS
-    res.cookie('voter_vc', issuedCredential, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in ms
-    });
+    // The SD-JWT itself is the session, in an httpOnly cookie no script can
+    // read. Name and attributes live in `auth/cookie`: see it for why the
+    // name carries the `__Host-` prefix.
+    setSessionCookie(res, issuedCredential);
 
     return res.status(200).json({
       success: true,

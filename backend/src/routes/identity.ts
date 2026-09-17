@@ -21,6 +21,7 @@ import {
 } from '../identity/vault.js';
 import { registerOnChain, rotateOnChain, isRegistrarConfigured } from '../chain/registrar.js';
 import { verifySession } from '../auth/session.js';
+import { readSessionCookie } from '../auth/cookie.js';
 import { verifyWorldIdProof, type WorldIdPayload } from '../auth/worldId.js';
 
 const router = Router();
@@ -36,7 +37,7 @@ const recoverLimiter = rateLimit({
 
 /** Reads the voter's World ID nullifier from their verified session cookie. */
 async function sessionNullifier(req: Request): Promise<string | null> {
-  const session = await verifySession(req.cookies?.voter_vc);
+  const session = await verifySession(readSessionCookie(req));
   return session?.nullifier ?? null;
 }
 

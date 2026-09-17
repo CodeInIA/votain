@@ -19,6 +19,7 @@
 import { Router, Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import { verifySession } from '../auth/session.js';
+import { readSessionCookie } from '../auth/cookie.js';
 import { authorisePrivateEnrolment, isRefusal } from '../eligibility/enrolment.js';
 
 const router = Router();
@@ -31,7 +32,7 @@ const enrolmentLimiter = rateLimit({
 });
 
 router.post('/enrolment/voucher', enrolmentLimiter, async (req: Request, res: Response) => {
-  const voter = await verifySession(req.cookies?.voter_vc);
+  const voter = await verifySession(readSessionCookie(req));
   if (!voter) return res.status(401).json({ error: 'Not authenticated' });
 
   const { election, identityCommitment, sessionId } = req.body as {

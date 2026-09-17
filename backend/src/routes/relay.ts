@@ -28,6 +28,7 @@ import {
   type VoteCall,
 } from '../chain/relayer.js';
 import { verifySession } from '../auth/session.js';
+import { readSessionCookie } from '../auth/cookie.js';
 import { authorisePrivateEnrolment, isRefusal } from '../eligibility/enrolment.js';
 import { readEnrolmentMode } from '../chain/election.js';
 
@@ -47,7 +48,7 @@ router.post('/relay/enroll', relayLimiter, async (req: Request, res: Response) =
     return res.status(503).json({ error: 'Relayer not configured' });
   }
 
-  const session = await verifySession(req.cookies?.voter_vc);
+  const session = await verifySession(readSessionCookie(req));
   if (!session) return res.status(401).json({ error: 'Not authenticated' });
 
   const { election, identityCommitment, personhoodNullifier, deadline, signature, sessionId } =

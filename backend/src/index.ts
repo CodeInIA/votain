@@ -45,13 +45,31 @@ function trustProxySetting(): boolean | number | string {
 }
 app.set('trust proxy', trustProxySetting());
 
-app.use(cors(
-  isDev
-    ? // Development: accept any origin (mobile, localhost, local IP)
-      { origin: true, credentials: true }
-    : // Production: restrict to the real frontend domain
-      { origin: process.env.FRONTEND_URL, credentials: true }
-));
+/**
+ * Cross-origin access: OFF unless a deployment names who needs it.
+ *
+ * THE APP DOES NOT NEED IT. The browser calls `/api/...` on its own origin,
+ * in development through the tunnel and in production on the same domain, so
+ * every request the app makes is same-origin and CORS never enters into it.
+ *
+ * WHAT IT USED TO SAY. In development, `origin: true` with `credentials: true`,
+ * which reflects back whatever `Origin` the caller sends and tells the browser
+ * to include the session cookie. `SameSite=strict` means that cookie is not
+ * sent cross-site anyway, so nothing was exploitable, but the pair is the
+ * shape people quote as the CORS mistake and the reason it was there had gone
+ * away: it dated from the frontend and the backend being two origins.
+ *
+ * `CORS_ORIGINS` takes a comma separated list for a deployment that really does
+ * split them, and an exact allowlist with no reflection is what that gets.
+ */
+const corsOrigins = (process.env.CORS_ORIGINS ?? process.env.FRONTEND_URL ?? '')
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(Boolean);
+
+if (corsOrigins.length > 0) {
+  app.use(cors({ origin: corsOrigins, credentials: true }));
+}
 
 app.use(express.json());
 app.use(cookieParser());

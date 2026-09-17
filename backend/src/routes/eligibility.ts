@@ -22,6 +22,7 @@
 import { Router, Request, Response } from 'express';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { verifySession } from '../auth/session.js';
+import { readSessionCookie } from '../auth/cookie.js';
 import {
   readElectionEligibility,
   getChainId,
@@ -130,7 +131,7 @@ router.get('/eligibility/:election', async (req: Request, res: Response) => {
 });
 
 router.post('/eligibility/:election/session', eligibilityLimiter, async (req: Request, res: Response) => {
-  const voter = await verifySession(req.cookies?.voter_vc);
+  const voter = await verifySession(readSessionCookie(req));
   if (!voter) return res.status(401).json({ error: 'Not authenticated' });
   if (!isSelfConfigured()) return res.status(503).json({ error: 'Eligibility provider not configured' });
   if (!isAttesterConfigured()) return res.status(503).json({ error: 'Attester not configured' });
@@ -314,7 +315,7 @@ router.post('/eligibility/verify', verifyCallbackLimiter, async (req: Request, r
 
 /** Polled by the browser while the voter is scanning. */
 router.get('/eligibility/session/:sessionId', async (req: Request, res: Response) => {
-  const voter = await verifySession(req.cookies?.voter_vc);
+  const voter = await verifySession(readSessionCookie(req));
   if (!voter) return res.status(401).json({ error: 'Not authenticated' });
 
   const session = getSession(String(req.params.sessionId));
@@ -333,7 +334,7 @@ router.get('/eligibility/session/:sessionId', async (req: Request, res: Response
  * already tied to their World ID.
  */
 router.post('/eligibility/:election/attestation', eligibilityLimiter, async (req: Request, res: Response) => {
-  const voter = await verifySession(req.cookies?.voter_vc);
+  const voter = await verifySession(readSessionCookie(req));
   if (!voter) return res.status(401).json({ error: 'Not authenticated' });
   if (!isAttesterConfigured()) return res.status(503).json({ error: 'Attester not configured' });
 

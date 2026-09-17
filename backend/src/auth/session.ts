@@ -2,8 +2,9 @@
  * Voter session verification.
  *
  * The session IS the SD-JWT credential issued after World ID verification,
- * carried in the `voter_vc` httpOnly cookie. Its `sub` is the voter's World ID
- * nullifier, which every authenticated endpoint keys off.
+ * carried in an httpOnly cookie whose name and attributes live in
+ * `auth/cookie`. Its `sub` is the voter's World ID nullifier, which every
+ * authenticated endpoint keys off.
  *
  * The signature MUST be checked before that `sub` is trusted. Decoding the
  * payload alone is not authentication: a JWT is three base64url segments, so

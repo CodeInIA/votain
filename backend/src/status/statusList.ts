@@ -14,9 +14,18 @@
  * RPC round trip there would have been paid by every page load to publish a
  * fact that changes a handful of times in a deployment's life.
  *
- * The cache is therefore deliberate and its staleness is bounded: a revocation
- * takes effect within `CACHE_TTL_MS`, and `refreshRevocations` exists so a
- * revocation made through this server takes effect at once.
+ * TWO QUESTIONS, TWO READS, and conflating them was a scaling bug. Publishing
+ * the list needs every bit; a session check needs ONE. Both used to go through
+ * the whole-list read, which asks the chain once per registered human: sixty
+ * nine calls on the development chain and sixty nine thousand on a platform
+ * with that many voters, every time the cache expired under traffic. The
+ * session path now reads the single slot it is asking about, which is one
+ * `eth_call` whatever the population, and the full scan is paid only by
+ * whoever fetches the published credential.
+ *
+ * Both caches are deliberate and bounded: a revocation takes effect within
+ * `CACHE_TTL_MS`, and `refreshRevocations` exists so a revocation made through
+ * this server takes effect at once.
  *
  * Env:
  *   CHAIN_RPC_URL     RPC endpoint
@@ -40,6 +49,15 @@ const CACHE_TTL_MS = 30_000;
 
 let cache: { revoked: Set<number>; count: number; at: number } | null = null;
 
+/**
+ * One slot's verdict, for the session path.
+ *
+ * Keyed by index rather than by human, because that is what a credential
+ * carries. Small: it holds an entry per voter who has made a request inside
+ * the TTL, and each entry is a number and a boolean.
+ */
+const slotCache = new Map<number, { revoked: boolean; at: number }>();
+
 async function readRevocations(): Promise<{ revoked: Set<number>; count: number }> {
   const registry = getRegistryReader();
   const count = Number(await registry.memberCount());
@@ -62,9 +80,10 @@ async function snapshot(): Promise<{ revoked: Set<number>; count: number }> {
   return fresh;
 }
 
-/** Drops the cache, so a revocation made here is honoured immediately. */
+/** Drops both caches, so a revocation made here is honoured immediately. */
 export function refreshRevocations(): void {
   cache = null;
+  slotCache.clear();
 }
 
 /**
@@ -87,8 +106,16 @@ export async function revokeIndex(index: number): Promise<void> {
 }
 
 export async function isRevoked(index: number): Promise<boolean> {
-  const { revoked } = await snapshot();
-  return revoked.has(index);
+  if (!isRegistrarConfigured()) return false;
+
+  const cached = slotCache.get(index);
+  if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.revoked;
+
+  // A whole-list read would answer this too, and did: one call per registered
+  // human to learn one bit. See the note at the top of the file.
+  const revoked: boolean = await getRegistryReader().revokedStatus(index);
+  slotCache.set(index, { revoked, at: Date.now() });
+  return revoked;
 }
 
 /** gzip+base64url bitstring with revoked bits set, per StatusList2021. */

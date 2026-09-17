@@ -16,6 +16,7 @@
 import { Router, Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import { verifySession } from '../auth/session.js';
+import { readSessionCookie } from '../auth/cookie.js';
 import {
   getPreferences,
   setPreferences,
@@ -45,7 +46,7 @@ const writeLimiter = rateLimit({
 
 /** Reads the voter's World ID nullifier from their verified session cookie. */
 async function sessionNullifier(req: Request): Promise<string | null> {
-  const session = await verifySession(req.cookies?.voter_vc);
+  const session = await verifySession(readSessionCookie(req));
   return session?.nullifier ?? null;
 }
 
