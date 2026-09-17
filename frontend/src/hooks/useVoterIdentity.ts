@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
-import { getOrCreateIdentity, isIdentityLoaded } from '../lib/semaphore';
+import { useNavigate } from 'react-router-dom';
+import { getOrCreateIdentity, isIdentityLoaded, IdentityNotSetUpError } from '../lib/semaphore';
 
 /**
  * Whether the voter's Semaphore identity can be read, and how to ask for it.
@@ -27,6 +28,7 @@ export interface VoterIdentityState {
 }
 
 export function useVoterIdentity(live: boolean): VoterIdentityState {
+  const navigate = useNavigate();
   const [ready, setReady] = useState(() => !live || isIdentityLoaded());
   const [unlocking, setUnlocking] = useState(false);
 
@@ -36,13 +38,38 @@ export function useVoterIdentity(live: boolean): VoterIdentityState {
       await getOrCreateIdentity();
       setReady(true);
       return true;
-    } catch {
-      // Cancelled, or no passkey reachable here. The offer stays where it was.
+    } catch (error: unknown) {
+      /**
+       * A SESSION WITH NOTHING BEHIND IT, which is not the same as a locked
+       * one and used to look identical: nothing happened.
+       *
+       * `IdentityNotSetUpError` means this human has a World ID session and
+       * this browser can produce no identity for them at all: no phrase here,
+       * no passkey in the vault. A voter who set up without a passkey and lost
+       * this browser's storage lands exactly there, and pressing "unlock"
+       * summoned nothing and said nothing, on every page, forever.
+       *
+       * NOT A REASON TO SIGN THEM OUT, which is the tempting answer. The
+       * session is the proof of personhood and it is still true; it is also
+       * what the two ways back both need, since typing the phrase registers
+       * the restored commitment and recovery rotates the registry entry
+       * against a fresh World ID proof. Signing out would take away the thing
+       * they need and return them here.
+       *
+       * So they go to the screen that exists for this, which offers both
+       * doors and explains them.
+       */
+      if (error instanceof IdentityNotSetUpError) {
+        navigate('/voter/identity');
+        return false;
+      }
+      // Cancelled, or a vault this device cannot open. The offer stays where
+      // it was, which is the honest answer to both.
       return false;
     } finally {
       setUnlocking(false);
     }
-  }, []);
+  }, [navigate]);
 
   return { ready, unlocking, unlock };
 }
