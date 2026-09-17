@@ -34,6 +34,7 @@ import {
 import { Badge } from './Badge';
 import { Button } from './Button';
 import { Input } from './Input';
+import { ClearFiltersButton } from './ClearFiltersButton';
 import { EligibilityFilterControls } from './EligibilityFilterControls';
 import { SelectMenu } from './SelectMenu';
 import { DatePicker } from './DatePicker';
@@ -196,21 +197,10 @@ export function ClearFilters({
   onChange: (next: ElectionFilterState) => void;
   className?: string;
 }) {
-  const { t } = useTranslation();
   if (!isAnythingToClear(value)) return null;
-  return (
-    <button
-      type="button"
-      onClick={() => onChange(EMPTY_FILTERS)}
-      className={cn(
-        'inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline cursor-pointer',
-        className,
-      )}
-    >
-      <X className="w-3.5 h-3.5 shrink-0" />
-      {t('common.clear_filters')}
-    </button>
-  );
+  // The button is `ClearFiltersButton`, shared with the gas history, which
+  // narrows by other things entirely and should still look like this.
+  return <ClearFiltersButton onClick={() => onChange(EMPTY_FILTERS)} className={className} />;
 }
 
 interface Props {
@@ -406,6 +396,28 @@ export function ElectionFilters({
           // option to the length of whichever one happens to be chosen.
           contentClassName="w-max"
         />
+      </div>
+
+      {/* CLEARING, UNDER THE TOOLBAR AND ABOVE THE PANEL, on every list that
+          has filters. It used to live on each page's own count line, which put
+          one control in four different places: beside a results count, sharing
+          a card title, under a page heading.
+
+          HERE AND NOT UNDER THE PANEL, which is where it went first. Opening
+          the filters then carried it four hundred pixels down the screen,
+          away from the button that had just been pressed, so the one control
+          meant to undo what the panel does was the one thing that moved when
+          the panel appeared. Above it, expanding grows the block downwards and
+          this stays under the reader's eye.
+
+          THE ROW IS ALWAYS DRAWN, which is what makes that safe. This button
+          appears only when something is worth undoing, and the version of it
+          that lived under the collapsed panel came and went with a 28px shove
+          of everything below, at the exact moment the results changed. A row
+          of fixed height holds the space whether or not the button is in it,
+          so nothing below ever moves. */}
+      <div className="flex justify-end items-center min-h-5">
+        <ClearFilters value={value} onChange={onChange} />
       </div>
 
       {open && showFilterButton && (
@@ -672,21 +684,6 @@ export function ElectionFilters({
         </div>
       )}
 
-      {/* CLEARING, AT THE FOOT OF THE FILTERS, on every list that has them.
-          It used to live on each page's own count line, which put one control
-          in four different places: beside a results count, sharing a card
-          title, under a page heading. Here it is in the same corner of the
-          same block wherever a reader meets it, panel open or shut.
-
-          THE ROW IS ALWAYS DRAWN, which is what makes that safe. This button
-          appears only when something is worth undoing, and the version of it
-          that lived under the collapsed panel came and went with a 28px shove
-          of everything below, at the exact moment the results changed. A row
-          of fixed height holds the space whether or not the button is in it,
-          so the list underneath never moves. */}
-      <div className="flex justify-end items-center min-h-5">
-        <ClearFilters value={value} onChange={onChange} />
-      </div>
     </div>
   );
 }

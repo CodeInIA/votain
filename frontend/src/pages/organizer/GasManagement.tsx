@@ -23,6 +23,7 @@ import { Input } from '../../components/ui/Input';
 import { GasWidget } from '../../components/ui/GasWidget';
 import { LoadMore } from '../../components/ui/LoadMore';
 import { Modal } from '../../components/ui/Modal';
+import { ClearFiltersButton } from '../../components/ui/ClearFiltersButton';
 import { useElectionPages } from '../../hooks/useElectionPages';
 import { getPaymaster } from '../../lib/contracts';
 import { openNeeds, totalShortfall } from '../../lib/gasNeeds';
@@ -159,6 +160,18 @@ const MOVEMENT_TONE: Record<GasMovement['type'], MovementTone> = {
   },
 };
 
+/**
+ * Whether two readings of "reserved per election" say the same thing.
+ *
+ * Only ever used to avoid storing an answer that has not changed. Compared by
+ * value because the values are what the page draws: two objects built from two
+ * identical rounds of RPC calls are never the same object.
+ */
+function sameReserves(a: Record<string, number>, b: Record<string, number>): boolean {
+  const keys = Object.keys(a);
+  return keys.length === Object.keys(b).length && keys.every(k => a[k] === b[k]);
+}
+
 export default function GasManagement() {
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -232,6 +245,18 @@ export default function GasManagement() {
   });
   const [reserves, setReserves] = useState<Record<string, number>>({});
 
+  /**
+   * WHICH elections, as a string, and not the array they came in.
+   *
+   * `all` is rebuilt on every render of the hook that produces it, so it is a
+   * new array each time even when it holds exactly the same elections. As an
+   * effect dependency that was an infinite loop: read the reserve of every
+   * election, store it, re-render, get a new array, read them all again. With
+   * thirty-three elections that is thirty-three RPC calls a lap, for as long
+   * as the page is open.
+   */
+  const mineKey = mine.all.map(e => e.contractAddress).join(',');
+
   useEffect(() => {
     if (!live || mine.all.length === 0) return;
     let cancelled = false;
@@ -244,13 +269,22 @@ export default function GasManagement() {
             return [e.contractAddress, Number(formatEther(wei))] as const;
           }),
         );
-        if (!cancelled) setReserves(Object.fromEntries(pairs));
+        if (cancelled) return;
+        // KEPT IF NOTHING MOVED, which is the second lock on the same door.
+        // Storing an equal object is still a state change to React, so a
+        // caller that reintroduces an unstable dependency above would start
+        // the loop again; answering with the previous object ends it after
+        // one pass whatever the dependencies say.
+        setReserves(prev => (sameReserves(prev, Object.fromEntries(pairs)) ? prev : Object.fromEntries(pairs)));
       } catch (e) {
         console.error('Could not read what is reserved per election:', e);
       }
     })();
     return () => { cancelled = true; };
-  }, [live, mine.all, reloadToken]);
+    // `mine.all` is read inside and tracked by `mineKey`, which changes when
+    // the set of elections does and not when the array is rebuilt.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [live, mineKey, reloadToken]);
 
   const needs = openNeeds(mine.all, e => reserves[e.contractAddress] ?? 0, voteCost.matic);
   const owed = totalShortfall(needs);
@@ -612,15 +646,16 @@ export default function GasManagement() {
                   />
                 </div>
               </div>
-              {isGasFilterActive(filters) && (
-                <button
-                  type="button"
-                  className="self-start text-xs text-primary hover:underline cursor-pointer"
-                  onClick={() => setFilters(EMPTY_GAS_FILTER)}
-                >
-                  {t('common.clear_filters')}
-                </button>
-              )}
+              {/* At the foot of the filters and on the right, which is where
+                  every other list in the app puts it. This one was on the left
+                  and wore no cross: the same two words as the elections'
+                  control, near enough to be compared and different enough to
+                  have to be. */}
+              <div className="flex justify-end items-center min-h-5">
+                {isGasFilterActive(filters) && (
+                  <ClearFiltersButton onClick={() => setFilters(EMPTY_GAS_FILTER)} />
+                )}
+              </div>
               {undated > 0 && (
                 <p className="text-xs text-warning">{t('gas.undated_hidden', { n: undated })}</p>
               )}
