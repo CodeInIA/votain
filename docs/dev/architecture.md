@@ -47,7 +47,8 @@
    User → World ID App (Orb/Device)
    → Backend: POST /api/verify-human
    → Backend verifies World ID v4 proof (on-chain / off-chain)
-   → Backend issues SD-JWT (httpOnly cookie, 7 days)
+   → Backend issues SD-JWT (`__Host-` httpOnly cookie, Secure, SameSite=strict,
+     7 days). See "The voter's session" below
    → SD-JWT claims: nullifier_hash, verification_level, issued_at
 
 2. VOTING IDENTITY
@@ -938,6 +939,81 @@ a second passkey could open what the first had sealed. A master that is derived
 rather than stored has nothing to seal, so the contract, its tests and the
 interface for adding a second passkey are gone rather than left deployed and
 unused.
+
+
+## The voter's session, and what holding it lets somebody do
+
+**The session IS the credential.** There is no session table and no session id:
+the SD-JWT issued after World ID verification is itself what the browser sends
+back, and `verifySession` checks its Ed25519 signature before trusting a single
+claim in it. Decoding is not authentication, and the trap is worth naming: a
+JWT is three base64url segments, so `header.{"sub":"<anybody>","exp":<future>}.
+garbage` is trivial to write, and since the vault path registers the resulting
+commitment in `PlatformRegistry`, accepting one would let an attacker mint
+identities and end the Sybil resistance outright.
+
+**No server state, for the same reason as everything else here.** The issuer has
+no database. The identity vault and the preferences blob live on chain for that
+reason, and a session store would be the one stateful component in the system,
+bought in exchange for something the status list already provides.
+
+**How it is carried.**
+
+| Attribute | Why |
+|---|---|
+| `httpOnly` | Script cannot read it, so an XSS cannot carry the session off the machine |
+| `Secure`, in development too | The development tunnel is HTTPS, so the deployed path is the one exercised daily rather than a production-only branch nobody runs until launch. `COOKIE_INSECURE=1` covers plain HTTP |
+| `SameSite=strict` | No cross-site request carries it, so there is no CSRF to defend against and no token to manage. Free here because the frontend and the backend share a domain |
+| `__Host-` prefix | The browser refuses to store the cookie unless it is `Secure`, `Path=/` and carries no `Domain`, and those three are what stop a sibling subdomain writing a session for the parent domain. With one domain serving both halves, that was the vector left |
+| 7 days | Long enough not to be a re-verification treadmill, and bounded by revocation below |
+
+The name and attributes live in `backend/src/auth/cookie.ts`, which also clears
+them: a `clearCookie` whose attributes do not match the ones it was set with
+leaves the cookie in place, which is the classic way a "sign out" leaves
+somebody signed in.
+
+**It is revocable, which a stateless JWT usually is not.** Each human gets a
+StatusList2021 slot at registration, published in `PlatformRegistry`, and
+`verifySession` consults it on every authenticated request. That is what makes
+a seven day token defensible: the way to end a session early exists and does
+not depend on this server remembering anything.
+
+Two questions, two reads, and conflating them was a scaling bug worth recording:
+publishing the credential needs every bit of the list, a session check needs
+one. Both went through the whole-list read, which asks the chain once per
+registered human, so a platform with sixty nine thousand voters paid sixty nine
+thousand calls every time a thirty second cache expired under traffic. The
+request path now reads the single slot it is asking about.
+
+**What the cookie actually grants, stated plainly.** Being a platform-verified
+human, and nothing else. Somebody holding it can enrol or relay in that voter's
+name and fetch their vault and preferences blobs, which are ciphertext they
+cannot open. They cannot cast a ballot: that needs the Semaphore secret, which
+lives in the browser and in the authenticator and never in a cookie.
+
+### Future work: binding the session to a key
+
+`cnf` is in the credential payload type and is deliberately empty. Filling it
+would name the holder's public key, and every sensitive request would carry a
+fresh signature over method, path and a nonce, made with a private key that is
+non-extractable in the browser or held by the passkey.
+
+**What it would buy.** A stolen cookie stops being a session. A copied browser
+profile, a device backup, an extension that reads cookies, a proxy that
+terminates TLS, a shared machine: today each of those is seven days of access,
+and with binding each is an inert string without a key that never left the
+device. It narrows XSS too, though it does not close it: injected script could
+still sign while the page is open, but nothing it exfiltrates would be reusable
+afterwards.
+
+**Why it is not urgent.** The paragraph above, about what the cookie grants. A
+session is not a ballot and not a decryption key, so what a theft yields is
+enrolling as somebody and reading ciphertext.
+
+**What it costs.** A signature on every request, nonce and clock-skew handling
+on the server, and an answer for the key being lost, which today is simply
+verifying again. That is the trade, written down so the decision not to take it
+is a decision rather than an oversight.
 
 ## The organizer's badge is a domain, not a checkmark
 

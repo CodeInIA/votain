@@ -2386,3 +2386,94 @@ live and not lists, and it cannot go in their dashboard: that list is what they
 run, and a followed election among it would be a row they cannot manage and a
 total that no longer adds up. The page offers the state filters alone, since
 choosing happens in Discover and an organizer neither enrols nor votes.
+
+## A pass of defects, each reported from the running app
+
+Seven fixes, grouped because they arrived the same way: somebody using the
+thing found them, which is the part worth recording about each.
+
+**The passkey that did not let the phrase go.** Reported after linking a PRF
+passkey over a QR code to a phone: the seal worked, the vault entry was
+written, and the twelve words were still in the browser. The seal was never the
+missing part. "Add a passkey" calls `enrollThisDevice`, which sealed the phrase
+and left the device exactly as it found it, still in `local` mode and still
+holding the words; the bookkeeping that marks the identity as living behind a
+passkey and drops the local copy lived in `protectPhraseWithPasskey`, a wrapper
+with NO CALLERS. Two halves of one operation in two functions, and only one of
+them ran. `noteSealed` now runs where both paths converge, including the
+already-registered one, which earns it by the same proof: the refusal says the
+authenticator holds a credential the vault knows, and the assertion that
+follows opens it. A device that seals and cannot read back still keeps the
+words, which is the rule that whole dance exists for. A second symptom went
+with it: the profile decides whether to offer "protect this phrase" from the
+same flag, so it kept offering to protect a phrase already sealed.
+
+**A session with nothing behind it.** A voter who set up without a passkey has
+the phrase on one device and nowhere else. Lose that browser's storage and the
+World ID session survives in its cookie while nothing behind it does. That
+state looked exactly like a locked device and behaved worse: `unlock` caught
+every error alike, so the one button on screen summoned nothing and said
+nothing, for good. `IdentityNotSetUpError` now routes to `/voter/identity`.
+NOT A SIGN OUT, which is the tempting reading: the session proves the human,
+that proof is still true, and both ways back need it, since typing the phrase
+registers the restored commitment and recovery rotates the registry entry
+against a fresh World ID proof. What does end a session is the nullifier not
+being registered at all, which is checked elsewhere and already ends it.
+
+**The gas page read every reserve on every render, forever.** Found in the
+network panel, not by reading code: nothing on screen looked wrong. The effect
+that reads what each election has reserved depended on the ARRAY of elections,
+and that array is rebuilt on every render of the hook producing it. Read all of
+them, store, re-render because of the store, get a "new" array, read again:
+thirty three RPC calls a lap for as long as the page was open. It now depends
+on which elections, as a string of addresses, and the store answers with the
+previous object when nothing moved, so a dependency that goes unstable again
+costs one pass instead of an open tap.
+
+**The navigation switched over at a width, and no width was right.** The bar
+carries two links for a visitor, three for a voter and five for an organizer,
+in thirteen languages, so what it needs runs from about 610px to about 1080. At
+`md` the organizer's links were drawn over the role switch and the profile
+button; at `xl` a 1200px window got a phone's navigation with four hundred
+pixels to spare. `TopNav` now measures its own row and reports through
+`navFit`; the bottom bar, the footer and the links card that stands in for the
+footer read that one answer. The links stay in the document when they do not
+fit, `invisible` and out of flow, which keeps them measurable and keeps the
+measurement independent of the answer, so it cannot oscillate. Crossing over
+looked broken until the second half of this: the links carried `transition-all`,
+and `all` includes `visibility`, so each one animated its own disappearance for
+150ms while already positioned absolutely, drawn across the bar. They animate a
+hover, which is two colours.
+
+**Clearing the filters was in four places.** Beside Discover's count, in the
+dashboard card's title row, under two page headings. It is drawn by
+`ElectionFilters` now, between the toolbar and the panel, in the same corner
+whether the panel is open or shut, with the row always present so nothing below
+it moves when the link appears. The gas history had its own, on the left and
+without the cross; both are `ClearFiltersButton` now. The filter STATE is not
+shared and could not be, since elections are narrowed by phase and transactions
+by kind and date, but the look and the corner are what a reader learns.
+
+**Signing in changed what a card SAID.** The candidate count was drawn for the
+public view alone, so a visitor was told an election had two candidates and a
+voter beside them got an empty footer. One slot, decided in one place, and the
+count is its fallback rather than its public case.
+
+**The session path asked the chain about everybody.** See
+`architecture.md`, "The voter's session": `isRevoked` runs inside
+`verifySession` and answered by reading the whole revocation set, one call per
+registered human. Split from the published-list read, so a request costs one
+`eth_call` about one index. The cookie became `__Host-` prefixed and Secure in
+development too, which the HTTPS tunnel makes free and which means the deployed
+path is the one exercised daily; its name lived in eight routes and now lives
+in `auth/cookie`. CORS went off unless `CORS_ORIGINS` names somebody: the app
+is same-origin in both environments, and what was there reflected any origin
+back with `credentials: true`, which `SameSite=strict` made harmless and which
+had outlived the split origins it was written for.
+
+**Where the code went.** Frontend: `lib/semaphore.ts` (`enrollThisDevice`),
+`hooks/useVoterIdentity.ts`, `pages/organizer/GasManagement.tsx`,
+`components/layout/{navFit,TopNav,BottomTabNav,PageLayout,SiteLinksCard}`,
+`components/ui/{ElectionFilters,ClearFiltersButton,ElectionCard}`. Backend:
+`auth/cookie.ts`, `status/statusList.ts`, `index.ts`, and the six routes that
+named the cookie.

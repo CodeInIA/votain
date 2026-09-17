@@ -1,15 +1,19 @@
 # Votain. Current Project State
 
-**Last updated**: 2026-09-15 (WalletConnect on mobile, voter identity flow rebuilt)
+**Last updated**: 2026-09-17 (saved elections on chain, session hardening, a pass of reported defects)
 **Completed milestone**: Phase B (H5–H9), real integration code complete. Contracts, backend
 issuer, voter + organizer flows and tally all wired and green.
 **Since Phase B**: 8-phase lifecycle (`UPCOMING`/`PENDING_VOTE` added to the contract
 `phase()`), **in-app tally** with a Paillier key **derived from the organizer's wallet signature**
 (nothing stored at rest; CLI kept as the auditor path), organizer display-name persistence,
 custom dark `DatePicker`, phase-aware voter/organizer/public screens, and shared phase helpers.
-**This pass**: WalletConnect works from a phone for every organizer action, and the voter's
-identity flow was rebuilt around the recovery phrase (see the milestone log).
-Tests: contracts 176/176, backend 116/116, frontend 452/452; prod build OK.
+**This pass**: **saved elections**, encrypted per voter and per role in
+`PlatformRegistry.setPreferences`, with the bookmark on every card, a page of its own for the
+organizer and a chip in the filter panel; **session hardening** (revocation read per slot
+instead of per registered human, `__Host-` cookie with Secure in development too, CORS off
+unless asked for); and seven defects reported from the running app, including a passkey link
+that never dropped the local phrase and a render loop on the gas page. See the milestone log.
+Tests: registry 34/34 (nine new), backend 126/126, frontend 491/491.
 **Next milestone**: Live Amoy deployment (pending funding the deployer key). It must carry
 `PLATFORM_ATTESTER_ADDRESS`, the key the backend signs enrolments with: without it the
 factory deploys elections that enrol the old, publicly linkable way, which looks entirely
@@ -179,5 +183,6 @@ The project is released under **AGPL-3.0** (was MIT until H0 cleanup). All `pack
 | Phase A polish | 2026-07-15 | AuthContext (voter+organizer), auth-driven navigation, viewport layout (sticky header/pinned footer), Radix Select for LanguageSelector, themed scrollbars, i18n fixes, MemberList Select, tests green |
 | Deps refresh | 2026-07-15 | All 3 modules to latest: Hardhat 3.9.1, TS 7.0.2 (contracts+backend), sd-jwt 0.20 (OWF migration, types re-exported from core), IDKit 4.2, ethers 6.17, Vite 8.1.4. Frontend TS pinned at 6.0.3 (typescript-eslint constraint). All tests green |
 | Relay + vault | 2026-08 | ERC-4337 dropped for an own relay contract (a per-voter smart account publicly linked enrollment to ballot, and hosted paymasters cannot fund gas per organizer). Encrypted identity vault so one Semaphore identity unlocks from several passkeys, plus `rotateMember` recovery after losing them all. Session cookies now signature-checked. Contracts 66/66 (including a real-Groth16 E2E suite), backend 21/21, frontend 17/17 |
+| Saved elections + session hardening | 2026-09-17 | **Saved elections**: `PlatformRegistry.setPreferences`, one sealed blob per human holding a list per ROLE, AES-GCM under a key derived from the voter's own secret, so the chain stores what nobody but them can read; measured at 149 bytes for two elections and 59,368 gas a change (`scripts/e2e-preferences.ts`). Bookmark on the cards and the election page, "saved" chip in the participation band, `/organizer/saved` in both navigation bars. **Session**: `isRevoked` stopped reading the whole revocation set on every authenticated request, the cookie became `__Host-` prefixed and Secure in development, CORS is opt in, and holder binding is written up as future work in `architecture.md`. **Defects**: linking a passkey now drops the local phrase, a session with no identity is routed instead of silently failing, the gas page no longer loops, the top bar measures itself instead of guessing a breakpoint, one clear-filters control in one corner, and the candidate count no longer disappears on signing in |
 | Voter identity flow | 2026-09-15 | Two passes. **WalletConnect**: every organizer action works from a phone (idempotent provider, `rpcMap`, relay recovery on return, cancellation handled everywhere). **Voter identity**: registration on chain no longer rides on having a passkey, so an authenticator that cannot evaluate PRF no longer leaves a voter off the registry; the phrase modal became a two-step screen at `/voter/identity` that will not move on until the words are copied, and nothing mints a phrase outside it; recovery reuses those two steps and stopped demanding a passkey (`clearVault`); `MyDevices` became `MyPasskeys` and can link more than one; the PRF read-back proof is no longer skipped across authenticators. Contracts untouched. Backend 107/107, frontend 253/253 |
 | H5–H9 (Phase B) | 2026-07 | Real integration. Contracts rewritten (on-chain Semaphore group, VotingType, lifecycle, locked paymaster, 94% cov); frontend chain client (`lib/{contracts,paillier,semaphore,zerodev,voting,organizer}.ts`, ZeroDev passkeys, chain-aware hooks); backend on-chain registrar + SD + Status List 2021 + `/present` + rate limiting; `scripts-tally/` homomorphic tally + IPFS. New `viem` (frontend) + `ethers`/`express-rate-limit` (backend) deps. Contracts 28/28, backend 5/5, frontend 9/9. Live Amoy deploy pending user key. Branch `phase-b/real-integration` |
