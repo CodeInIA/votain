@@ -139,7 +139,7 @@ export function TopNav() {
       <div
         ref={linksRef}
         className={cn(
-          'flex items-center gap-1',
+          'flex items-center gap-1 transition-none',
           compact ? 'invisible absolute pointer-events-none' : 'flex-1',
         )}
       >
@@ -148,7 +148,13 @@ export function TopNav() {
             key={item.to}
             to={item.to}
             className={({ isActive }) => cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all',
+              // COLOURS ONLY, and `transition-all` is the reason. `all`
+              // includes `visibility`, so when the row stopped fitting and was
+              // hidden, each link animated its own disappearance over 150ms:
+              // already positioned absolutely, still painted, drawn across the
+              // rest of the bar, and then gone. What these links actually
+              // animate is a hover, which is two colours.
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-colors',
               isActive
                 ? 'bg-primary/10 text-primary-dim'
                 : 'text-on-surface-variant hover:text-on-surface hover:bg-white/5'
