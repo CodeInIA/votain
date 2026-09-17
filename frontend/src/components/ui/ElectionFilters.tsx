@@ -415,8 +415,16 @@ export function ElectionFilters({
           that lived under the collapsed panel came and went with a 28px shove
           of everything below, at the exact moment the results changed. A row
           of fixed height holds the space whether or not the button is in it,
-          so nothing below ever moves. */}
-      <div className="flex justify-end items-center min-h-5">
+          so nothing below ever moves.
+
+          AND IT COSTS 24 PIXELS, NOT 44. As an ordinary row of this column it
+          took a full gap above and another below and stood 20px tall, which
+          pushed the panel and the results that far clear of the search box
+          they belong to. The negative margins eat most of both gaps and the
+          row is as tall as the link inside it, so the band below sits about
+          where it did before this control existed, and the link reads as a
+          footnote to the bar rather than as a thing floating between two. */}
+      <div className="flex justify-end items-center min-h-4 -mt-2 -mb-2">
         <ClearFilters value={value} onChange={onChange} />
       </div>
 
