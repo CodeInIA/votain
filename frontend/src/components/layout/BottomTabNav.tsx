@@ -59,10 +59,10 @@ export function BottomTabNav() {
        * is padding driven by a real measurement on such a device, not by a
        * class name that looked like it was already doing the job.
        */
-      // `lg:hidden` and not `md:hidden`: this bar and the links in the top
+      // `xl:hidden` and not `md:hidden`: this bar and the links in the top
       // bar are two halves of one decision, so they change over at the same
-      // width. See `TopNav` for why that width moved.
-      className="fixed bottom-0 left-0 right-0 z-40 flex lg:hidden bg-surface/80 backdrop-blur-xl border-t border-white/5"
+      // width. See `TopNav` for the measurements behind that width.
+      className="fixed bottom-0 left-0 right-0 z-40 flex xl:hidden bg-surface/80 backdrop-blur-xl border-t border-white/5"
       aria-label="Main navigation"
     >
       {tabs.map(tab => (

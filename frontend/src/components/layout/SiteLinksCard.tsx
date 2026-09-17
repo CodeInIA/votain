@@ -24,12 +24,12 @@ export function SiteLinksCard({ omit = [] }: Props) {
   const { t } = useTranslation();
   const links = SITE_LINKS.filter(link => !omit.includes(link.to));
 
-  // Shown for exactly as long as the footer is hidden, which is `lg` and no
+  // Shown for exactly as long as the footer is hidden, which is `xl` and no
   // longer `md`: these are the footer's links, and between the two
   // breakpoints they would otherwise be nowhere.
 
   return (
-    <Card className="p-2 mb-4 lg:hidden">
+    <Card className="p-2 mb-4 xl:hidden">
       {links.map(({ to, labelKey, icon: Icon }) => (
         <Link
           key={to}

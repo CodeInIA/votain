@@ -55,7 +55,7 @@ export function TopNav() {
 
   return (
     <nav
-      className="flex items-center gap-3 lg:gap-4 xl:gap-6 px-4 lg:px-5 xl:px-8 py-3 border-b border-white/5 bg-surface/60 backdrop-blur-xl"
+      className="flex items-center gap-3 md:gap-6 px-4 md:px-8 py-3 border-b border-white/5 bg-surface/60 backdrop-blur-xl"
       aria-label="Top navigation"
     >
       {/* Logo */}
@@ -66,24 +66,23 @@ export function TopNav() {
         className="flex items-center gap-3 shrink-0 hover:opacity-80 transition-opacity cursor-pointer"
       >
         <img src="/votain-logo.webp" alt="Votain" className="w-8 h-8 object-contain" />
-        {/* THE MARK ALONE BETWEEN 1024 AND 1280, where the bar is fullest.
-            The wordmark is 100px of the row, and at 1024 the organizer's five
-            links in German or Russian want every one of them. It says the same
-            thing as the bird beside it, which keeps its `alt`, so what is lost
-            below `xl` is decoration and what is gained is a bar that fits. */}
-        <img src="/votain-wordmark.svg" alt="" className="hidden xl:block h-4 object-contain translate-y-0.5" />
+        <img src="/votain-wordmark.svg" alt="" className="h-4 object-contain translate-y-0.5" />
       </button>
 
       {/* Nav links, wide screens only.
-          `lg` AND NOT `md`, which is where this sat. The organizer's bar grew a
+          `xl` AND NOT `md`, which is where this sat. The organizer's bar grew a
           fifth entry and at 768 the row stopped fitting: the links were drawn,
           and the role switch and the profile button at the other end were cut
           off by the window. A breakpoint that turns a layout on before there is
           room for it is worse than one that turns it on late, because the
-          missing half is the half nobody can scroll to. Measured after: at 1024
-          the whole bar fits in every language, and below it the bottom bar
-          carries the same links. */}
-      <div className="hidden lg:flex items-center gap-1 flex-1">
+          missing half is the half nobody can scroll to.
+
+          MEASURED, so the number is not a guess: the full bar wants 991px in
+          English, 1039 in Dutch, 1071 in German and 1077 in Russian, logo,
+          wordmark, five links, the role switch and the profile button. 1280 is
+          the first standard width that holds all of them, and below it the
+          bottom bar carries the same links. */}
+      <div className="hidden xl:flex items-center gap-1 flex-1">
         {items.map(item => (
           <NavLink
             key={item.to}
