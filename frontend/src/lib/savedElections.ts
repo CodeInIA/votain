@@ -336,7 +336,29 @@ export async function openEntries(master: Identity | null, blob: string): Promis
 // The copy on the chain
 // ────────────────────────────────────────────────
 
+/**
+ * Whether there is a voter session to carry these requests.
+ *
+ * THE STORE IS THE VOTER'S, keyed by their World ID nullifier, so an organizer
+ * signed in with a wallet alone has nowhere to put a list: the endpoint would
+ * answer 401 and the app would announce an expired session that nobody had.
+ * Their saved elections stay on the device, which is the same bargain a locked
+ * voter device already makes, and the moment they sign in as a voter the list
+ * goes up with everything else.
+ *
+ * Read from storage rather than through the auth context: this is a library
+ * called from a click handler and a timer, neither of which is a component.
+ */
+function hasVoterSession(): boolean {
+  try {
+    return localStorage.getItem("votain_voter_logged_in") === "true";
+  } catch {
+    return false;
+  }
+}
+
 async function fetchBlob(): Promise<string | null> {
+  if (!hasVoterSession()) return null;
   const res = await fetch(`${backendBase()}/api/preferences`, { credentials: "include" });
   if (res.status === 401) {
     noticeUnauthorized(res.status);
@@ -348,6 +370,7 @@ async function fetchBlob(): Promise<string | null> {
 }
 
 async function putBlob(blob: string): Promise<boolean> {
+  if (!hasVoterSession()) return false;
   const res = await fetch(`${backendBase()}/api/preferences`, {
     method: "PUT",
     credentials: "include",
