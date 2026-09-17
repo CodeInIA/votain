@@ -170,18 +170,22 @@ function FilterGroup({
 }
 
 /**
- * "Clear", for a page to place on a line it already draws.
+ * "Clear", drawn at the foot of the filters by `ElectionFilters` itself.
  *
- * IT USED TO SIT UNDER THE COLLAPSED PANEL, and that is what made choosing an
- * order feel like the list reloading. A non-default order is something to
- * clear, so picking one made this button appear, which pushed everything
- * below it down 28px at the very instant the cards themselves changed. Two
- * things moving at once read as a jolt even when neither is wrong.
+ * IT LIVED ON EACH PAGE'S COUNT LINE, and every page put it somewhere slightly
+ * different: beside a results count here, sharing a card title there, tucked
+ * under a page heading on a third. Four placements for one control, and a
+ * reader moving between the lists had to find it again each time.
  *
- * There is nowhere inside the filter bar to put it that does not add a row:
- * on a phone the toolbar's second line is already the filter button and the
- * order control. So the page places it instead, on a row that is always
- * there anyway, and nothing reflows.
+ * WHY IT WAS THERE, and why that reason is now answered differently. Under the
+ * panel it used to appear only when there was something to clear, so choosing
+ * an order made it materialise and shove the results down 28px at the instant
+ * the cards themselves changed: two things moving at once, which reads as a
+ * jolt. The row it sits in is now always drawn and always the same height, so
+ * the button can come and go inside it without anything below moving.
+ *
+ * Still exported, because the empty states use it to offer a way out when a
+ * filter has hidden everything.
  */
 export function ClearFilters({
   value,
@@ -665,17 +669,24 @@ export function ElectionFilters({
             />
           </FilterGroup>
           )}
-          {/* CLEARING IS NOT HERE ANY MORE. It was, from when the only other
-              one appeared in the empty state, and every page that draws this
-              panel has since put a `ClearFilters` beside its count: opening
-              the panel showed two identical links, one under the bands and one
-              above them, and neither did anything the other did not.
-
-              Beside the count is the one that stays. The count is what says a
-              list is being narrowed, so undoing it belongs there, and it is
-              reachable with the panel shut. */}
         </div>
       )}
+
+      {/* CLEARING, AT THE FOOT OF THE FILTERS, on every list that has them.
+          It used to live on each page's own count line, which put one control
+          in four different places: beside a results count, sharing a card
+          title, under a page heading. Here it is in the same corner of the
+          same block wherever a reader meets it, panel open or shut.
+
+          THE ROW IS ALWAYS DRAWN, which is what makes that safe. This button
+          appears only when something is worth undoing, and the version of it
+          that lived under the collapsed panel came and went with a 28px shove
+          of everything below, at the exact moment the results changed. A row
+          of fixed height holds the space whether or not the button is in it,
+          so the list underneath never moves. */}
+      <div className="flex justify-end items-center min-h-5">
+        <ClearFilters value={value} onChange={onChange} />
+      </div>
     </div>
   );
 }

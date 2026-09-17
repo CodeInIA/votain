@@ -9,15 +9,11 @@ import { ListError } from '../../components/ui/ListError';
 import { useElectionPages } from '../../hooks/useElectionPages';
 import { useVerifiedDomains } from '../../hooks/useVerifiedDomains';
 import { useAuth } from '../../contexts/AuthContext';
-import { ElectionFilters, ClearFilters, DISCOVER_GROUPS } from '../../components/ui/ElectionFilters';
+import { ElectionFilters, DISCOVER_GROUPS } from '../../components/ui/ElectionFilters';
 import { useSavedElections } from '../../hooks/useSavedElections';
 import { usePageMeta } from '../../seo/usePageMeta';
 import { useElectionFilterParams } from '../../hooks/useElectionFilterParams';
-import {
-  matchesElectionFilter,
-  isAnyFilterActive,
-  EMPTY_FILTERS,
-} from '../../lib/electionFilter';
+import { matchesElectionFilter } from '../../lib/electionFilter';
 import { sortElections, sortNeedsEverything } from '../../lib/electionSort';
 
 /** Always true: the domain filter is applied after paging, not inside it. */
@@ -168,18 +164,11 @@ export default function Discover() {
             <span className="text-5xl mb-4">🗳️</span>
             <h2 className="text-xl font-bold text-on-surface mb-2">{t('discover.empty_title')}</h2>
             <p className="text-on-surface-variant text-sm max-w-xs">{t('discover.empty_desc')}</p>
-            {/* Resets EVERY filter. The old version cleared three of them by
-                name and silently left the age and nationality inputs on, so
-                "clear filters" could leave the list still empty. */}
-            {(filters.query || isAnyFilterActive(filters)) && (
-              <button
-                type="button"
-                className="mt-4 text-sm text-primary hover:underline cursor-pointer"
-                onClick={() => setFilters(EMPTY_FILTERS)}
-              >
-                {t('common.clear_filters')}
-              </button>
-            )}
+            {/* NO CLEAR BUTTON HERE ANY MORE. The filters carry one at their
+                foot now, on every list and whether or not the panel is open,
+                and it sits about forty pixels above this spot: two identical
+                links in one eyeful, which is what having it in two places
+                always meant on a screen narrowed down to nothing. */}
             <LoadMore hasMore={hasMore} loading={loadingMore} onClick={loadMore} />
           </div>
         ) : (
@@ -214,11 +203,6 @@ export default function Discover() {
               <span className="inline-flex w-3 h-3 shrink-0 items-center justify-center">
                 {settling && <Spinner size="sm" className="w-3 h-3" />}
               </span>
-              {/* On the count line, which is always here: it is a statement
-                  about what the filters did, and undoing them belongs beside
-                  it. Under the panel it added a row and shoved the results
-                  down the moment an order was chosen. */}
-              <ClearFilters value={filters} onChange={setFilters} className="ml-auto" />
             </p>
             {/* NOT DIMMED WHILE IT SETTLES, which the first attempt did.
                 Fading to 60% and back takes 200ms each way and the new

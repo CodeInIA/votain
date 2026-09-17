@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { Bookmark, Compass } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { ElectionCard } from '../../components/ui/ElectionCard';
-import { ElectionFilters, ClearFilters } from '../../components/ui/ElectionFilters';
+import { ElectionFilters } from '../../components/ui/ElectionFilters';
 import { Spinner } from '../../components/ui/Spinner';
 import { LoadMore } from '../../components/ui/LoadMore';
 import { ListError } from '../../components/ui/ListError';
@@ -77,11 +77,8 @@ export default function SavedElections() {
             <Bookmark className="w-5 h-5 text-primary" />
             {t('saved.title')}
           </h1>
-          <p className="text-xs text-on-surface-meta mt-0.5 flex items-center gap-3">
-            <span>{ids.length} {t('saved.count')}</span>
-            {/* Beside the count, as everywhere else: the count is what says
-                something is being hidden. */}
-            <ClearFilters value={filters} onChange={setFilters} />
+          <p className="text-xs text-on-surface-meta mt-0.5">
+            {ids.length} {t('saved.count')}
           </p>
         </div>
 

@@ -11,7 +11,7 @@ import { useElectionPages } from '../../hooks/useElectionPages';
 import { usePageLimit } from '../../hooks/usePageLimit';
 import { useVoterIdentity } from '../../hooks/useVoterIdentity';
 import { useElectionFilterParams } from '../../hooks/useElectionFilterParams';
-import { ElectionFilters, ClearFilters } from '../../components/ui/ElectionFilters';
+import { ElectionFilters } from '../../components/ui/ElectionFilters';
 import { matchesQuery, canVoteNow } from '../../lib/electionFilter';
 import { syncSavedElections } from '../../lib/savedElections';
 import { useSavedElections } from '../../hooks/useSavedElections';
@@ -130,11 +130,8 @@ export default function VoterElections() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-black tracking-tight text-white">{t('voter_elections.title')}</h1>
-            <p className="text-xs text-on-surface-meta mt-0.5 flex items-center gap-3">
-              <span>{myElections.length} {t('voter_elections.subtitle')}</span>
-              {/* Beside the count, as on Discover: the count is what says
-                  something is being hidden, and undoing it belongs there. */}
-              <ClearFilters value={filters} onChange={setFilters} />
+            <p className="text-xs text-on-surface-meta mt-0.5">
+              {myElections.length} {t('voter_elections.subtitle')}
             </p>
           </div>
           {urgentCount > 0 && (

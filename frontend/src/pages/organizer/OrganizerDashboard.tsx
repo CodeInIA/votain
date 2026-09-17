@@ -25,7 +25,7 @@ import {
   recoverOrganizerName,
   setOrganizerName,
 } from '../../lib/organizer';
-import { ElectionFilters, ClearFilters } from '../../components/ui/ElectionFilters';
+import { ElectionFilters } from '../../components/ui/ElectionFilters';
 import { matchesElectionFilter } from '../../lib/electionFilter';
 import { sortElections } from '../../lib/electionSort';
 import { useVerifiedDomains } from '../../hooks/useVerifiedDomains';
@@ -213,12 +213,7 @@ export default function OrganizerDashboard() {
               {/* No "view all" link: this list is already every election this
                   organizer has, and there is no fuller page to send them to. */}
               <CardHeader className="flex flex-col gap-3">
-                {/* Clear shares the title's row, which is always drawn, so
-                    choosing an order cannot add a row and push the list. */}
-                <div className="flex items-center justify-between gap-3">
-                  <CardTitle>{t('dashboard.my_elections')}</CardTitle>
-                  <ClearFilters value={filters} onChange={setFilters} />
-                </div>
+                <CardTitle>{t('dashboard.my_elections')}</CardTitle>
                 {/* The same component Discover uses, not a copy of it. The two
                     had drifted: this list had the eligibility inputs but no
                     phase chips, so an organizer could not narrow by state at
