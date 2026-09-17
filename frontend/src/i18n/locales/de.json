@@ -247,6 +247,7 @@
     "unlock_hint": "Dieser Browser kennt noch keine Stimme. Falls Sie von einem anderen Gerät gewählt haben, findet eine Passkey-Bestätigung sie und merkt sie sich hier."
   },
   "saved": {
+    "title": "Gespeicherte Wahlen",
     "add": "Wahl speichern",
     "remove": "Aus Gespeicherten entfernen",
     "filter": "Gespeichert"

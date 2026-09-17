@@ -247,6 +247,7 @@
     "unlock_hint": "This browser knows of no ballot yet. If you voted from another device, one passkey tap will find those and remember them here."
   },
   "saved": {
+    "title": "Saved elections",
     "add": "Save election",
     "remove": "Remove from saved",
     "filter": "Saved"

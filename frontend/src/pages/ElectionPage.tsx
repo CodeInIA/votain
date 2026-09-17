@@ -68,7 +68,7 @@ export default function ElectionPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { election, loading, live, refresh } = useElection(id);
-  const { voterLoggedIn, organizerLoggedIn } = useAuth();
+  const { voterLoggedIn, organizerLoggedIn, activeRole } = useAuth();
   const { isSaved, toggle } = useSavedElections();
   // Public and crawlable, so the tab and the crawler snapshot need the real
   // title rather than the site name. Falls back until the chain answers.
@@ -424,7 +424,10 @@ export default function ElectionPage() {
 
                 Not for the organizer of this election, who has a panel for it
                 and no reason to follow their own vote. */}
-            {voterLoggedIn && !canManage && (
+            {/* The role being worn, as on the cards: with both sessions live
+                this is still one person in one role, and `canManage` above
+                reads the same pair. */}
+            {(activeRole === 'voter' || activeRole === 'organizer') && !canManage && (
               <Button
                 variant="ghost"
                 size="sm"

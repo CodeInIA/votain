@@ -47,6 +47,7 @@ import {
   type ElectionFilterState,
 } from '../../lib/electionFilter';
 import { SORT_OPTIONS, type ElectionSort } from '../../lib/electionSort';
+import { useAuth } from '../../contexts/AuthContext';
 
 /** One icon per ordering, so the trigger says which is on without being read. */
 const SORT_ICONS: Record<ElectionSort, typeof Globe> = {
@@ -230,6 +231,24 @@ interface Props {
   groups?: FilterGroupName[];
 }
 
+/**
+ * Discover's bands: everything, with the reader's own place in the list
+ * straight after the election's state.
+ *
+ * Not `ALL_GROUPS`, which the organizer's dashboard uses by default: that list
+ * is their own elections, and every chip in the participation band is about an
+ * election somebody else runs.
+ */
+export const DISCOVER_GROUPS: FilterGroupName[] = [
+  'status',
+  'participation',
+  'properties',
+  'commitments',
+  'voting_type',
+  'created',
+  'eligibility',
+];
+
 export type FilterGroupName =
   | 'status'
   /**
@@ -273,7 +292,32 @@ export function ElectionFilters({
   groups = ALL_GROUPS,
 }: Props) {
   const { t } = useTranslation();
+  const { activeRole } = useAuth();
   const set = (patch: Partial<ElectionFilterState>) => onChange({ ...value, ...patch });
+
+  /**
+   * A CHIP THAT CANNOT BE ANSWERED IS NOT DRAWN, and the ROLE BEING WORN
+   * decides, not which sessions happen to exist.
+   *
+   * That distinction is the whole of the dual session case, and it is the rule
+   * the rest of the app already follows: somebody holding both sessions and
+   * acting as an organizer is treated as an organizer, which is why clicking
+   * their own election in Discover takes them to their panel. Reading
+   * `voterLoggedIn` here would have handed them the voter's chips while they
+   * were wearing the other hat, and left the app disagreeing with itself about
+   * who is reading.
+   *
+   * Saving is offered in both roles, because an organizer follows other
+   * people's elections like anybody else. Enrolled, still to vote and voted are
+   * facts about a VOTER, false everywhere for an organizer, so those chips
+   * would empty a list while explaining nothing.
+   *
+   * Deciding it here rather than through a prop keeps one rule in one place.
+   * The alternative was every page that draws this panel repeating the same
+   * conditions, and eventually one of them disagreeing.
+   */
+  const showsSaved = activeRole === 'voter' || activeRole === 'organizer';
+  const showsVoterChips = activeRole === 'voter';
   const shows = (group: FilterGroupName) => groups.includes(group);
   const showFilterButton = groups.length > 0;
   // The first group drawn carries no rule above it, whichever one it is.
@@ -383,7 +427,7 @@ export function ElectionFilters({
           </FilterGroup>
           )}
 
-          {shows('participation') && (
+          {shows('participation') && (showsSaved || showsVoterChips) && (
           <FilterGroup label={t('discover.group_participation')} first={firstShown === 'participation'}>
             {/* ICON CHIPS, NOT PHASE PILLS, though the voted one was a pill
                 when it lived in the band above. The rule this file already
@@ -397,6 +441,7 @@ export function ElectionFilters({
             {/* FIRST, because it is the only one here the voter decided.
                 Enrolled, voted and still to vote are things that happened to
                 them; saved is a list they made. */}
+            {showsSaved && (
             <FilterToggle
               active={value.savedOnly}
               onClick={() => set({ savedOnly: !value.savedOnly })}
@@ -404,6 +449,9 @@ export function ElectionFilters({
             >
               {t('saved.filter')}
             </FilterToggle>
+            )}
+            {showsVoterChips && (
+            <>
             <FilterToggle
               active={value.enrolledOnly}
               onClick={() => set({ enrolledOnly: !value.enrolledOnly })}
@@ -427,6 +475,8 @@ export function ElectionFilters({
             >
               {t('phase.voted')}
             </FilterToggle>
+            </>
+            )}
           </FilterGroup>
           )}
 

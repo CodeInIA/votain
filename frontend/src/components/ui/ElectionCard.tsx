@@ -12,7 +12,7 @@ import { Button } from './Button';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSavedElections } from '../../hooks/useSavedElections';
-import { electionHrefFor } from '../../lib/electionViews';
+import { electionHrefFor, canManageElection } from '../../lib/electionViews';
 import { getRememberedOrganizerAddress } from '../../hooks/useOrganizerWallet';
 import { endsSoon, nextBoundary } from '../../lib/phase';
 import type { Election, ElectionPhase } from '../../data/seed';
@@ -62,7 +62,7 @@ interface ElectionCardProps {
 }
 
 export function ElectionCard({ election, view = 'public', className }: ElectionCardProps) {
-  const { activeRole, organizerLoggedIn, voterLoggedIn } = useAuth();
+  const { activeRole, organizerLoggedIn } = useAuth();
   const { isSaved, toggle } = useSavedElections();
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -101,7 +101,27 @@ export function ElectionCard({ election, view = 'public', className }: ElectionC
    * cannot happen; an organizer looking at their own elections is not choosing
    * which to follow.
    */
-  const savable = voterLoggedIn && !organizerView;
+  /**
+   * Saving is for elections somebody else runs.
+   *
+   * ORGANIZERS TOO, and that was the gap: an organizer is a person who follows
+   * other people's votes, and the star was drawn for a voter session alone. Not
+   * on their own elections, which they reach from their dashboard and have no
+   * reason to follow, and not on the dashboard itself, where every row is
+   * theirs.
+   *
+   * THE ROLE BEING WORN, not the sessions that exist, for the same reason
+   * `electionHrefFor` reads it two lines down: somebody holding both sessions
+   * is one person in one role at a time, and every control on this card has to
+   * agree about which.
+   */
+  const runsThisElection = canManageElection(
+    organizerLoggedIn,
+    getRememberedOrganizerAddress(),
+    election.organizerAddress,
+  );
+  const wearingARole = activeRole === 'voter' || activeRole === 'organizer';
+  const savable = wearingARole && !organizerView && !runsThisElection;
   const saved = savable && isSaved(election.id);
 
   /**

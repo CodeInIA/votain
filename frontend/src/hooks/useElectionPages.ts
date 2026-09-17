@@ -50,7 +50,7 @@ import { DEFAULT_PAGE_SIZE } from './usePageLimit';
  * `all` walks the factory. `mine` and `enrolled` ask the chain's own indexes
  * first, so they never read an election that was never going to be shown.
  */
-export type ElectionScope = 'all' | 'mine' | 'enrolled';
+export type ElectionScope = 'all' | 'mine' | 'enrolled' | 'saved';
 
 export interface ElectionPagesOptions {
   scope?: ElectionScope;
@@ -137,6 +137,12 @@ async function resolveScope(scope: ElectionScope, organizer?: string | null): Pr
   if (scope === 'mine') {
     // The caller holds this back until the wallet answers; see `organizer`.
     return organizer ? fetchOrganizerElectionAddresses(organizer) : [];
+  }
+  if (scope === 'saved') {
+    // Straight from the addresses this device holds, rather than walking the
+    // factory and asking each election whether it was saved. The saved set is
+    // small and already known, and the walk is what the paging exists to avoid.
+    return savedElectionIds();
   }
   if (scope === 'enrolled') {
     // BOTH, because the two eras of enrolment leave different leaves. The

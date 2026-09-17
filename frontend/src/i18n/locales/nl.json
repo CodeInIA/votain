@@ -247,6 +247,7 @@
     "unlock_hint": "Deze browser kent nog geen stem. Als je vanaf een ander apparaat hebt gestemd, vindt één passkey-tik ze en onthoudt ze hier."
   },
   "saved": {
+    "title": "Opgeslagen stemmingen",
     "add": "Stemming opslaan",
     "remove": "Uit opgeslagen verwijderen",
     "filter": "Opgeslagen"

@@ -249,6 +249,7 @@
     "unlock_hint": "Questo browser non conosce ancora alcun voto. Se hai votato da un altro dispositivo, un tocco della passkey li trova e li ricorda qui."
   },
   "saved": {
+    "title": "Elezioni salvate",
     "add": "Salva elezione",
     "remove": "Rimuovi dai salvati",
     "filter": "Salvate"
