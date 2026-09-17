@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Compass, Vote, Clock, LayoutDashboard, Users, Zap } from 'lucide-react';
+import { Compass, Vote, Clock, LayoutDashboard, Users, Zap, Bookmark } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -21,6 +21,9 @@ const ORGANIZER_TABS: Tab[] = [
   { to: '/discover',            icon: <Compass         className="w-5 h-5" />, labelKey: 'nav.discover'  },
   { to: '/organizer/members',   icon: <Users           className="w-5 h-5" />, labelKey: 'nav.members'   },
   { to: '/organizer/gas',       icon: <Zap             className="w-5 h-5" />, labelKey: 'nav.gas'       },
+  // Here as well as in the top bar: on a phone this IS the navigation, and a
+  // page reachable only on a desktop is a page most people never see.
+  { to: '/organizer/saved',     icon: <Bookmark        className="w-5 h-5" />, labelKey: 'saved.nav'     },
 ];
 
 const PUBLIC_TABS: Tab[] = [

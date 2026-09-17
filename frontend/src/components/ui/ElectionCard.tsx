@@ -114,6 +114,13 @@ export function ElectionCard({ election, view = 'public', className }: ElectionC
    * `electionHrefFor` reads it two lines down: somebody holding both sessions
    * is one person in one role at a time, and every control on this card has to
    * agree about which.
+   *
+   * WHICH IS ALSO WHY OWNERSHIP ONLY VETOES IN THE ORGANIZER'S ROLE. Holding
+   * an organizer session does not stop somebody being a voter: an election
+   * they run is, to their voter self, an election like any other, and the two
+   * roles keep separate lists. Reading ownership regardless of role took the
+   * bookmark off an election the VOTER had saved, on a screen dressed for the
+   * voter, with no way to unsave it.
    */
   const runsThisElection = canManageElection(
     organizerLoggedIn,
@@ -121,7 +128,8 @@ export function ElectionCard({ election, view = 'public', className }: ElectionC
     election.organizerAddress,
   );
   const wearingARole = activeRole === 'voter' || activeRole === 'organizer';
-  const savable = wearingARole && !organizerView && !runsThisElection;
+  const savable =
+    wearingARole && !organizerView && !(activeRole === 'organizer' && runsThisElection);
   const saved = savable && isSaved(election.id);
 
   /**

@@ -249,6 +249,10 @@
     "unlock_hint": "Ce navigateur ne connaît encore aucun bulletin. Si vous avez voté depuis un autre appareil, une pression sur votre passkey les trouvera et les retiendra ici."
   },
   "saved": {
+    "nav": "Enregistrées",
+    "count": "Élections enregistrées",
+    "empty": "Vous n'avez encore enregistré aucune élection.",
+    "search_placeholder": "Rechercher dans vos enregistrées…",
     "title": "Élections enregistrées",
     "add": "Enregistrer l'élection",
     "remove": "Retirer des enregistrées",

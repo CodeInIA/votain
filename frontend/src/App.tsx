@@ -55,6 +55,7 @@ const OrganizerDashboard = lazy(() => import('./pages/organizer/OrganizerDashboa
 const CreateElection = lazy(() => import('./pages/organizer/CreateElection'));
 const ElectionManagement = lazy(() => import('./pages/organizer/ElectionManagement'));
 const GasManagement = lazy(() => import('./pages/organizer/GasManagement'));
+const SavedElections = lazy(() => import('./pages/organizer/SavedElections'));
 const MemberList = lazy(() => import('./pages/organizer/MemberList'));
 const OrganizerProfile = lazy(() => import('./pages/organizer/OrganizerProfile'));
 
@@ -195,6 +196,7 @@ export default function App() {
           <Route path="/organizer/elections/new"  element={<RequireOrganizer><CreateElection /></RequireOrganizer>} />
           <Route path="/organizer/election/:id"   element={<RequireOrganizer><ElectionManagement /></RequireOrganizer>} />
           <Route path="/organizer/gas"            element={<RequireOrganizer><GasManagement /></RequireOrganizer>} />
+          <Route path="/organizer/saved"          element={<RequireOrganizer><SavedElections /></RequireOrganizer>} />
           <Route path="/organizer/members"        element={<RequireOrganizer><MemberList /></RequireOrganizer>} />
           <Route path="/organizer/profile"        element={<RequireOrganizer><OrganizerProfile /></RequireOrganizer>} />
 

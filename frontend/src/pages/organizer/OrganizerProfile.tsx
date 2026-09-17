@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
-import { User, Wallet, Bookmark, ChevronRight } from 'lucide-react';
+import { User, Wallet } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Card } from '../../components/ui/Card';
 import { OtherRoleCard } from '../../components/ui/OtherRoleCard';
@@ -13,12 +12,10 @@ import { LanguageSelector } from '../../components/ui/LanguageSelector';
 import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
 import { MyDomains } from '../../components/organizer/MyDomains';
 import { getOrganizerName, setOrganizerName } from '../../lib/organizer';
-import { useSavedElections } from '../../hooks/useSavedElections';
 
 export default function OrganizerProfile() {
   const { t } = useTranslation();
   const wallet = useOrganizerWallet();
-  const { ids: savedIds } = useSavedElections();
 
   const [displayName, setDisplayName] = useState(getOrganizerName);
   const [editingName, setEditingName] = useState(false);
@@ -94,28 +91,6 @@ export default function OrganizerProfile() {
           ) : (
             <p className="text-sm text-on-surface-meta">{t('profile.no_wallet_linked')}</p>
           )}
-        </Card>
-
-        {/* THE WAY BACK TO WHAT THEY SAVED.
-            An organizer has no "my elections" list holding other people's
-            votes: their dashboard is what they run. So the saved ones are
-            reached from here, and the chip in Discover's panel is the same
-            list from the other direction. The count is the point of the row:
-            it says whether there is anything to go and see. */}
-        <Card className="p-5 mb-4">
-          <Link
-            to="/discover?saved=1"
-            className="flex items-center justify-between gap-3 group cursor-pointer"
-          >
-            <span className="flex items-center gap-2 text-sm font-semibold text-on-surface">
-              <Bookmark className="w-4 h-4 text-primary" />
-              {t('saved.title')}
-            </span>
-            <span className="flex items-center gap-2 text-xs text-on-surface-meta">
-              {savedIds.length}
-              <ChevronRight className="w-4 h-4 group-hover:text-on-surface transition-colors" />
-            </span>
-          </Link>
         </Card>
 
         {/* Language */}

@@ -1,6 +1,6 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Compass, Vote, Clock, User, LayoutDashboard, Users, Zap, ShieldCheck } from 'lucide-react';
+import { Compass, Vote, Clock, User, LayoutDashboard, Users, Zap, ShieldCheck, Bookmark } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
@@ -25,6 +25,9 @@ const ORGANIZER_ITEMS: NavItem[] = [
   { to: '/discover',            labelKey: 'nav.discover',  icon: <Compass         className="w-4 h-4" /> },
   { to: '/organizer/members',   labelKey: 'nav.members',   icon: <Users           className="w-4 h-4" /> },
   { to: '/organizer/gas',       labelKey: 'nav.gas',       icon: <Zap             className="w-4 h-4" /> },
+  // Last, because it is the only one that is not about running an election:
+  // it is the elections this organizer follows, which belong to other people.
+  { to: '/organizer/saved',     labelKey: 'saved.nav',     icon: <Bookmark        className="w-4 h-4" /> },
 ];
 
 // The verifier belongs here and not only in the voter's profile. It takes no

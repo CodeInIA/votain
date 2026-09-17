@@ -424,10 +424,11 @@ export default function ElectionPage() {
 
                 Not for the organizer of this election, who has a panel for it
                 and no reason to follow their own vote. */}
-            {/* The role being worn, as on the cards: with both sessions live
-                this is still one person in one role, and `canManage` above
-                reads the same pair. */}
-            {(activeRole === 'voter' || activeRole === 'organizer') && !canManage && (
+            {/* The role being worn, as on the cards. Ownership only stops the
+                organizer: to the same person's voter self, an election they
+                run is an election, and the two roles keep separate lists. */}
+            {(activeRole === 'voter' || activeRole === 'organizer') &&
+              !(activeRole === 'organizer' && canManage) && (
               <Button
                 variant="ghost"
                 size="sm"

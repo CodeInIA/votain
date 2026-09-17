@@ -2369,3 +2369,20 @@ does not erase the history, as with everything else written to a chain.
 `lib/savedElections.ts`, `hooks/useSavedElections.ts`, the bookmark on
 `ElectionCard`, the `saved` chip in the participation band, and `useElectionPages`
 adding saved addresses to the `enrolled` scope.
+
+**Follow-up: one list per role.** A person holding both sessions is two
+readers. With a single list their voter's bookmarks turned up in their
+organizer's, and the rule that an organizer cannot save an election they run
+reached across and stripped the bookmark off an election their VOTER self had
+saved, on a screen dressed for the voter, leaving no way to unsave it. The
+plaintext is version 2 now, `{v, e, o}`: `e` is the voter's list, which is what
+a version 1 blob already was, and `o` the organizer's. One blob still, sealed
+and synced together, because it is one device and one secret. Ownership now
+vetoes saving only while the organizer's role is worn.
+
+The organizer reaches theirs at `/organizer/saved`, a fifth entry in both
+navigation bars. It was a row in their profile first, which is where settings
+live and not lists, and it cannot go in their dashboard: that list is what they
+run, and a followed election among it would be a row they cannot manage and a
+total that no longer adds up. The page offers the state filters alone, since
+choosing happens in Discover and an organizer neither enrols nor votes.

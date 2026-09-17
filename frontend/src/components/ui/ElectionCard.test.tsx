@@ -1,9 +1,28 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import { ElectionCard } from './ElectionCard';
 import type { Election, ElectionPhase } from '../../data/seed';
+
+/** The session, as the card reads it. Reset before each test. */
+const auth = {
+  activeRole: 'public' as 'public' | 'voter' | 'organizer',
+  organizerLoggedIn: false,
+};
+
+vi.mock('../../contexts/AuthContext', () => ({ useAuth: () => auth }));
+
+const ORGANIZER_WALLET = '0xorganizer';
+vi.mock('../../hooks/useOrganizerWallet', () => ({
+  getRememberedOrganizerAddress: () => ORGANIZER_WALLET,
+}));
+
+beforeEach(() => {
+  auth.activeRole = 'public';
+  auth.organizerLoggedIn = false;
+  localStorage.clear();
+});
 
 /**
  * What a voter can tell about their own standing from the card alone.
@@ -189,5 +208,48 @@ describe('ElectionCard, what it tells everybody', () => {
     setup(makeElection({ isEnrolled: true }), true);
     expect(screen.queryByText(/election.candidates/)).not.toBeInTheDocument();
     expect(screen.getByText('election.already_enrolled')).toBeInTheDocument();
+  });
+});
+
+describe('the bookmark, and who is allowed to press it', () => {
+  const saveButton = () =>
+    document.querySelector('button[aria-label="saved.add"], button[aria-label="saved.remove"]');
+
+  it('is there for a voter', () => {
+    auth.activeRole = 'voter';
+    setup(makeElection(), true);
+    expect(saveButton()).not.toBeNull();
+  });
+
+  it("is there for an organizer, on somebody else's election", () => {
+    auth.activeRole = 'organizer';
+    auth.organizerLoggedIn = true;
+    setup(makeElection({ organizerAddress: '0xsomebodyelse' }), false);
+    expect(saveButton()).not.toBeNull();
+  });
+
+  it('is not there for the organizer who runs it', () => {
+    auth.activeRole = 'organizer';
+    auth.organizerLoggedIn = true;
+    setup(makeElection({ organizerAddress: ORGANIZER_WALLET }), false);
+    expect(saveButton()).toBeNull();
+  });
+
+  it('stays for the voter self of the person who runs it', () => {
+    // THE DUAL SESSION CASE. Holding an organizer session does not stop
+    // somebody being a voter: acting as one, an election they happen to run is
+    // an election like any other, and the two roles keep separate lists.
+    // Reading ownership regardless of role took the bookmark off an election
+    // the voter had saved, on a screen dressed for the voter, leaving no way
+    // to unsave it.
+    auth.activeRole = 'voter';
+    auth.organizerLoggedIn = true;
+    setup(makeElection({ organizerAddress: ORGANIZER_WALLET }), true);
+    expect(saveButton()).not.toBeNull();
+  });
+
+  it('is not there for a visitor with no session', () => {
+    setup(makeElection(), false);
+    expect(saveButton()).toBeNull();
   });
 });

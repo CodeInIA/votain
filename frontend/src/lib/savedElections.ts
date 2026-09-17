@@ -35,7 +35,11 @@ import { getStoredIdentity } from "./semaphore";
 /** Info string. Changing it changes the key, so it is versioned. */
 const HKDF_INFO = "votain/preferences-key/v1";
 const IV_BYTES = 12;
-const PLAINTEXT_VERSION = 1;
+/**
+ * 2 since the lists were split per role. A version 1 blob is one list, read as
+ * the voter's, which is what it always was.
+ */
+const PLAINTEXT_VERSION = 2;
 
 /** Where the plaintext lives between visits, so a locked device still works. */
 const STORAGE_KEY = "votain_saved_elections";
@@ -65,10 +69,35 @@ const MAX_ENTRIES = 120;
  */
 type Entries = Record<string, number>;
 
+/**
+ * ONE LIST PER ROLE, because one person in two roles is two readers.
+ *
+ * The same human holds both sessions, and an election means different things
+ * to each: as a voter it is something to take part in, as an organizer it is
+ * somebody else's vote they are watching. With a single list their voter's
+ * bookmarks turned up in their organizer's, and the rule that an organizer
+ * cannot save their own election reached across and stripped the star off an
+ * election their VOTER self had saved, on a screen dressed for the voter.
+ *
+ * Kept in one blob, sealed and synced together: it is one device and one
+ * secret, and splitting the storage as well as the lists would buy nothing.
+ */
+interface Lists {
+  voter: Entries;
+  organizer: Entries;
+}
+
+export type SavedRole = 'voter' | 'organizer';
+
 interface Plaintext {
   v: number;
+  /** The voter's list. Named `e` since version 1, where it was the only one. */
   e: Entries;
+  /** The organizer's. Absent in version 1 blobs and in any list never used. */
+  o?: Entries;
 }
+
+const emptyLists = (): Lists => ({ voter: {}, organizer: {} });
 
 const keyFor = (electionId: string): string => electionId.toLowerCase().replace(/^0x/, "");
 const nowSeconds = (): number => Math.floor(Date.now() / 1000);
@@ -77,23 +106,35 @@ const nowSeconds = (): number => Math.floor(Date.now() / 1000);
 // The copy on this device
 // ────────────────────────────────────────────────
 
-function readLocal(): Entries {
+/** A stored or sealed payload of either version, as the two lists. */
+export function listsFromPlaintext(parsed: unknown): Lists | null {
+  if (!parsed || typeof parsed !== "object") return null;
+  const payload = parsed as Plaintext;
+  if (!payload.e || typeof payload.e !== "object") return null;
+  // A version 1 blob carries the voter's list alone, which is what it was.
+  return { voter: payload.e, organizer: payload.o ?? {} };
+}
+
+function readLocal(): Lists {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw) as Plaintext;
-    return parsed && typeof parsed === "object" && parsed.e ? parsed.e : {};
+    if (!raw) return emptyLists();
+    return listsFromPlaintext(JSON.parse(raw)) ?? emptyLists();
   } catch {
     // Private mode, a full quota, or something else wrote here. An unreadable
     // list is an empty one, never an error: this is a convenience, and it must
     // not be able to stop a page rendering.
-    return {};
+    return emptyLists();
   }
 }
 
-function writeLocal(entries: Entries): void {
+function toPlaintext(lists: Lists): Plaintext {
+  return { v: PLAINTEXT_VERSION, e: lists.voter, o: lists.organizer };
+}
+
+function writeLocal(lists: Lists): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ v: PLAINTEXT_VERSION, e: entries }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(toPlaintext(lists)));
   } catch {
     // Nothing to do and nothing to say: the in-memory answer is still right for
     // this page, and the next device to sync will bring it back.
@@ -101,22 +142,22 @@ function writeLocal(entries: Entries): void {
   window.dispatchEvent(new CustomEvent(SAVED_CHANGED_EVENT));
 }
 
-/** Whether this voter saved this election. */
-export function isSaved(electionId: string): boolean {
-  return (readLocal()[keyFor(electionId)] ?? 0) > 0;
+/** Whether this person, in this role, saved this election. */
+export function isSaved(electionId: string, role: SavedRole = 'voter'): boolean {
+  return (readLocal()[role][keyFor(electionId)] ?? 0) > 0;
 }
 
-/** Every election saved, as the lower case addresses the lists use. */
-export function savedElectionIds(): string[] {
-  const entries = readLocal();
+/** Every election saved in this role, as the lower case addresses lists use. */
+export function savedElectionIds(role: SavedRole = 'voter'): string[] {
+  const entries = readLocal()[role];
   return Object.keys(entries)
     .filter(id => entries[id] > 0)
     .map(id => `0x${id}`);
 }
 
 /** Whether anything has ever been saved here, tombstones included. */
-export function hasSavedAnything(): boolean {
-  return Object.keys(readLocal()).length > 0;
+export function hasSavedAnything(role: SavedRole = 'voter'): boolean {
+  return Object.keys(readLocal()[role]).length > 0;
 }
 
 /**
@@ -125,12 +166,13 @@ export function hasSavedAnything(): boolean {
  * Local and immediate. The push to the chain is scheduled, never awaited: a
  * star that waited for a transaction would be a star nobody presses twice.
  */
-export function toggleSaved(electionId: string): boolean {
-  const entries = readLocal();
+export function toggleSaved(electionId: string, role: SavedRole = 'voter'): boolean {
+  const lists = readLocal();
+  const entries = lists[role];
   const id = keyFor(electionId);
   const saved = (entries[id] ?? 0) > 0;
   entries[id] = saved ? -nowSeconds() : nowSeconds();
-  writeLocal(prune(entries));
+  writeLocal({ ...lists, [role]: prune(entries) });
   schedulePush();
   return !saved;
 }
@@ -164,6 +206,13 @@ function prune(entries: Entries): Entries {
  * devices, and the unsave is kept: undoing a save the voter no longer wanted is
  * a smaller surprise than resurrecting one they removed.
  */
+export function mergeLists(mine: Lists, theirs: Lists): Lists {
+  return {
+    voter: prune(mergeEntries(mine.voter, theirs.voter)),
+    organizer: prune(mergeEntries(mine.organizer, theirs.organizer)),
+  };
+}
+
 export function mergeEntries(mine: Entries, theirs: Entries): Entries {
   const out: Entries = { ...mine };
   for (const [id, at] of Object.entries(theirs)) {
@@ -289,7 +338,7 @@ async function preferencesKey(master: Identity | null): Promise<CryptoKey | null
   return key;
 }
 
-export async function sealEntries(master: Identity | null, entries: Entries): Promise<string | null> {
+export async function sealEntries(master: Identity | null, lists: Lists): Promise<string | null> {
   const key = await preferencesKey(master);
   if (!key) return null;
   const iv = crypto.getRandomValues(new Uint8Array(IV_BYTES));
@@ -297,7 +346,7 @@ export async function sealEntries(master: Identity | null, entries: Entries): Pr
     await crypto.subtle.encrypt(
       { name: "AES-GCM", iv },
       key,
-      new TextEncoder().encode(JSON.stringify({ v: PLAINTEXT_VERSION, e: entries })),
+      new TextEncoder().encode(JSON.stringify(toPlaintext(lists))),
     ),
   );
   const blob = new Uint8Array(iv.length + ciphertext.length);
@@ -314,8 +363,8 @@ export async function sealEntries(master: Identity | null, entries: Entries): Pr
  * remote copy is unusable, so keep what is here and write over it. A settings
  * list is not worth a screen saying the chain returned something odd.
  */
-export async function openEntries(master: Identity | null, blob: string): Promise<Entries | null> {
-  if (!blob) return {};
+export async function openEntries(master: Identity | null, blob: string): Promise<Lists | null> {
+  if (!blob) return emptyLists();
   const key = await preferencesKey(master);
   if (!key) return null;
   try {
@@ -325,8 +374,7 @@ export async function openEntries(master: Identity | null, blob: string): Promis
       key,
       raw.slice(IV_BYTES),
     );
-    const parsed = JSON.parse(new TextDecoder().decode(plaintext)) as Plaintext;
-    return parsed && typeof parsed === "object" && parsed.e ? parsed.e : null;
+    return listsFromPlaintext(JSON.parse(new TextDecoder().decode(plaintext)));
   } catch {
     return null;
   }
@@ -399,12 +447,15 @@ export async function syncSavedElections(master: Identity | null = getStoredIden
   if (blob === null) return; // no session, or the store is not reachable
 
   const theirs = await openEntries(master, blob);
-  const merged = prune(mergeEntries(mine, theirs ?? {}));
+  const merged = mergeLists(mine, theirs ?? emptyLists());
   writeLocal(merged);
 
   // Written back only when the chain is not already holding this answer. A
   // sync that always wrote would turn opening the app into a transaction.
-  const changed = theirs === null || !sameEntries(theirs, merged);
+  const changed =
+    theirs === null ||
+    !sameEntries(theirs.voter, merged.voter) ||
+    !sameEntries(theirs.organizer, merged.organizer);
   if (!changed) return;
   const sealed = await sealEntries(master, merged);
   if (sealed !== null) await putBlob(sealed);

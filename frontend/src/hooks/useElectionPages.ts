@@ -40,7 +40,7 @@ import {
   hydrateElections,
 } from '../lib/chainElections';
 import { getStoredCommitment, getStoredIdentity } from '../lib/semaphore';
-import { savedElectionIds } from '../lib/savedElections';
+import { savedElectionIds, type SavedRole } from '../lib/savedElections';
 // One page means the same thing whichever half of the pagination draws it.
 import { DEFAULT_PAGE_SIZE } from './usePageLimit';
 
@@ -63,6 +63,11 @@ export interface ElectionPagesOptions {
    * them leaves a disconnected organizer watching a spinner that never stops.
    */
   organizer?: string | null;
+  /**
+   * Whose saved list `scope: 'saved'` means. One person can hold both roles and
+   * keeps a list in each.
+   */
+  savedRole?: SavedRole;
   /**
    * Which of those elections this list shows: search, tab, phase. Called during
    * render, so it always reflects the filter as it is now.
@@ -133,7 +138,11 @@ const CHUNK = 12;
 const EMPTY_MAP: ReadonlyMap<string, Election> = new Map();
 const EMPTY_SET: ReadonlySet<string> = new Set();
 
-async function resolveScope(scope: ElectionScope, organizer?: string | null): Promise<string[]> {
+async function resolveScope(
+  scope: ElectionScope,
+  organizer?: string | null,
+  savedRole: SavedRole = 'voter',
+): Promise<string[]> {
   if (scope === 'mine') {
     // The caller holds this back until the wallet answers; see `organizer`.
     return organizer ? fetchOrganizerElectionAddresses(organizer) : [];
@@ -142,7 +151,7 @@ async function resolveScope(scope: ElectionScope, organizer?: string | null): Pr
     // Straight from the addresses this device holds, rather than walking the
     // factory and asking each election whether it was saved. The saved set is
     // small and already known, and the walk is what the paging exists to avoid.
-    return savedElectionIds();
+    return savedElectionIds(savedRole);
   }
   if (scope === 'enrolled') {
     // BOTH, because the two eras of enrolment leave different leaves. The
@@ -173,6 +182,7 @@ export function useElectionPages(options: ElectionPagesOptions = {}): ElectionPa
     filterKey,
     hydrateAll = false,
     order = 'newest',
+    savedRole = 'voter',
   } = options;
   const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE;
   const live = isChainConfigured();
@@ -278,7 +288,7 @@ export function useElectionPages(options: ElectionPagesOptions = {}): ElectionPa
 
     void (async () => {
       try {
-        const list = await resolveScope(scope, organizer);
+        const list = await resolveScope(scope, organizer, savedRole);
         if (cancelled) return;
         // Stored as the chain gave them, newest first. `ordered` applies the
         // reader's choice, so this effect has no reason to run again when
