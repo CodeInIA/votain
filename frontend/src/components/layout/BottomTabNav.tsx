@@ -15,6 +15,7 @@ const VOTER_TABS: Tab[] = [
   { to: '/voter/elections', icon: <Vote    className="w-5 h-5" />, labelKey: 'nav.elections' },
   { to: '/discover',        icon: <Compass className="w-5 h-5" />, labelKey: 'nav.discover'  },
   { to: '/voter/history',   icon: <Clock   className="w-5 h-5" />, labelKey: 'nav.history'   },
+  { to: '/voter/saved',     icon: <Bookmark className="w-5 h-5" />, labelKey: 'saved.nav'     },
 ];
 
 const ORGANIZER_TABS: Tab[] = [

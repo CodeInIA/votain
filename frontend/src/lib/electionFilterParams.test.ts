@@ -32,7 +32,6 @@ describe('carrying the filters in the URL', () => {
       enrolledOnly: true,
       votedOnly: true,
       canVoteNow: true,
-      savedOnly: true,
       sort: 'closing',
       eligibility: {
         minAgeFrom: 18,

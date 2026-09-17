@@ -20,6 +20,9 @@ const VOTER_ITEMS: NavItem[] = [
   { to: '/voter/elections', labelKey: 'nav.elections', icon: <Vote    className="w-4 h-4" /> },
   { to: '/discover',        labelKey: 'nav.discover',  icon: <Compass className="w-4 h-4" /> },
   { to: '/voter/history',   labelKey: 'nav.history',   icon: <Clock   className="w-4 h-4" /> },
+  // Last, as it is for the organizer: the elections they kept, which is a list
+  // they made rather than one the chain hands them.
+  { to: '/voter/saved',     labelKey: 'saved.nav',     icon: <Bookmark className="w-4 h-4" /> },
 ];
 
 const ORGANIZER_ITEMS: NavItem[] = [

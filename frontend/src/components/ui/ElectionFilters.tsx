@@ -29,7 +29,6 @@ import {
   UserCheck,
   CheckCheck,
   Vote,
-  Bookmark,
 } from 'lucide-react';
 import { Badge } from './Badge';
 import { Button } from './Button';
@@ -39,6 +38,7 @@ import { EligibilityFilterControls } from './EligibilityFilterControls';
 import { SelectMenu } from './SelectMenu';
 import { DatePicker } from './DatePicker';
 import { cn } from '../../lib/utils';
+import type { ElectionPhase } from '../../data/seed';
 import { VOTING_TYPE_ICONS, VOTING_TYPES, votingTypeLabelKey } from '../../lib/votingTypes';
 import {
   EMPTY_FILTERS,
@@ -223,6 +223,13 @@ interface Props {
    * An empty list leaves the panel, and the button that opens it, out entirely.
    */
   groups?: FilterGroupName[];
+  /**
+   * Which phases the state band offers. All of them unless a page says
+   * otherwise, and a page only says otherwise when a phase CANNOT occur in the
+   * list it is drawing: see the voter's own elections, where an election they
+   * are enrolled in has by definition passed the start of its enrolment.
+   */
+  phases?: ElectionPhase[];
 }
 
 /**
@@ -284,6 +291,7 @@ export function ElectionFilters({
   onToggleOpen,
   searchPlaceholder,
   groups = ALL_GROUPS,
+  phases = PHASE_FILTERS,
 }: Props) {
   const { t } = useTranslation();
   const { activeRole } = useAuth();
@@ -313,29 +321,14 @@ export function ElectionFilters({
   const shows = (group: FilterGroupName) => groups.includes(group);
 
   /**
-   * SAVED IS NOT PART OF "MY PARTICIPATION", which is where it started.
+   * Enrolled, still to vote and voted: the three that are about TAKING PART,
+   * which only a voter does. An organizer neither enrols nor votes as
+   * themselves, so for them the band has no answers and is not drawn.
    *
-   * Enrolled, still to vote and voted are things that HAPPENED to the reader
-   * inside an election. Saving is a list they made, and it says nothing about
-   * whether they joined anything: a voter saves elections they have not
-   * enrolled in, which is most of the point of it. Under that caption it was
-   * answering a different question from the three beside it.
-   *
-   * So it sits in the toolbar, beside the filter button and the order, where
-   * it is one press instead of three and where the reader can see whether it
-   * is on without opening anything. It is the only filter promoted there, and
-   * it earns it by being the only one the reader built themselves.
-   *
-   * ASKED FOR THROUGH `participation`, which is the group that means "this
-   * reader's relationship with these elections matters on this page". The
-   * organizer's dashboard does not ask for it, and should not: every row there
-   * is an election they RUN, and nobody saves their own. The page of saved
-   * elections does not ask for it either, since filtering a saved list by
-   * saved is a control that can only do nothing.
+   * Saving used to be a fourth chip here and then a button in the toolbar. It
+   * is neither now: a list the reader made is a place, and it has one. See
+   * `electionFilter.ts`.
    */
-  const showsSaved =
-    shows('participation') && (activeRole === 'voter' || activeRole === 'organizer');
-  /** The three that are about taking part, which only a voter does. */
   const showsVoterChips = activeRole === 'voter';
   const showFilterButton = groups.length > 0;
   // The first group drawn carries no rule above it, whichever one it is.
@@ -381,51 +374,16 @@ export function ElectionFilters({
           className="gap-2 h-11 px-3 sm:px-4 rounded-2xl text-sm text-on-surface-variant hover:text-on-surface"
         >
           <SlidersHorizontal className="w-4 h-4" />
-          {/* ICON ONLY ON A PHONE, and it has been both. It was labelled at
-              every width while this row held two controls and they fitted;
-              a third arrived, and at 390 the three labelled came to about
-              444px in a row 358px wide, so the order control dropped to a
-              line of its own and the toolbar stood three rows tall above
-              every list.
-
-              THE TWO TOGGLES GIVE UP THEIR WORDS AND THE DROPDOWN KEEPS ITS
-              OWN, which is not an inconsistency: a toggle says what it does
-              and a dropdown says what is CHOSEN, so hiding the order's text
-              would hide the only thing it is there to tell you. The names are
-              still announced, and both icons appear on the cards these lists
-              draw. Measured after: one row at 390, 312px of 358. */}
-          <span className="hidden sm:inline">{t('common.filter')}</span>
+          {/* LABELLED AT EVERY WIDTH, and it has been both. It went icon
+              only when a third control shared this row and the three labels
+              came to more than a phone's width; that control is a page of its
+              own now, so the row is the search, this and the order again, and
+              there is room for the word. An icon-only button beside a fully
+              labelled dropdown reads as one of them being unfinished. */}
+          <span>{t('common.filter')}</span>
           {/* Any active filter, not just the phase: with only the domain chip
               on, the collapsed bar gave no sign the list was being filtered. */}
           {isAnyFilterActive(value) && <span className="w-2 h-2 rounded-full bg-primary" />}
-        </Button>
-        )}
-
-        {/* SAVED, AT THE TOP LEVEL, on Discover and on the voter's own list.
-            The list a reader curated is the one they come back for, and behind
-            the button it was three presses and invisible until the panel was
-            open. Drawn as a pressed button rather than a chip, because that is
-            what everything else in this row is.
-
-            FOR AN ORGANIZER TOO. They follow other people's elections, which
-            is the whole of what `/organizer/saved` is, and it is the one
-            question about the reader that an organizer can answer at all. For
-            a visitor with no session there is no list, so there is no
-            control. */}
-        {showsSaved && (
-        <Button
-          onClick={() => set({ savedOnly: !value.savedOnly })}
-          aria-pressed={value.savedOnly}
-          aria-label={t('saved.filter')}
-          className={cn(
-            'gap-2 h-11 px-3 sm:px-4 rounded-2xl text-sm',
-            value.savedOnly
-              ? 'text-primary ring-1 ring-primary/40 bg-primary/10 hover:text-primary'
-              : 'text-on-surface-variant hover:text-on-surface',
-          )}
-        >
-          <Bookmark className={cn('w-4 h-4', value.savedOnly && 'fill-current')} />
-          <span className="hidden sm:inline">{t('saved.filter')}</span>
         </Button>
         )}
 
@@ -498,7 +456,7 @@ export function ElectionFilters({
         <div className="flex flex-col gap-3">
           {shows('status') && (
           <FilterGroup label={t('discover.group_status')} first={firstShown === 'status'}>
-            {PHASE_FILTERS.map(p => (
+            {phases.map(p => (
               <button
                 key={p}
                 type="button"

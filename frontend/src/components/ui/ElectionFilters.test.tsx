@@ -12,10 +12,9 @@ import { EMPTY_FILTERS } from '../../lib/electionFilter';
  * to vote" and "voted" are facts about a voter, so for an organizer they are
  * false everywhere and would empty a list while explaining nothing.
  *
- * SAVED IS NOT ONE OF THEM. It is a list the reader made rather than something
- * that happened to them inside an election, so it left that band for the
- * toolbar, where it is one press and visible with the panel shut. Both roles
- * get it: an organizer follows other people's elections like everybody else.
+ * SAVED IS NOT HERE AT ALL any more, in the band or in the toolbar. A list the
+ * reader made is not a way of narrowing the list they are looking at, it is a
+ * different list, and it has a page of its own for each role.
  *
  * THE ROLE AND NOT THE SESSIONS, which is the dual session case: one person can
  * hold both at once, and the app dresses for the one they are wearing. Reading
@@ -50,39 +49,37 @@ beforeEach(() => {
 });
 
 describe('the participation band and who is reading it', () => {
-  it('offers a voter everything about themselves', () => {
+  it('offers a voter everything about taking part', () => {
     auth.activeRole = 'voter';
     setup();
 
-    expect(screen.getByText('saved.filter')).toBeInTheDocument();
     expect(screen.getByText('phase.enrolled')).toBeInTheDocument();
     expect(screen.getByText('discover.pending_vote_only')).toBeInTheDocument();
     expect(screen.getByText('phase.voted')).toBeInTheDocument();
   });
 
-  it('offers an organizer the saved list and nothing about enrolling', () => {
+  it('draws nothing about taking part for an organizer', () => {
     // Both sessions can be live at once, and this is the one wearing the
-    // organizer's hat: they follow other people's elections, but they do not
-    // enrol or vote as themselves, so the other three would match nothing.
+    // organizer's hat: they do not enrol or vote as themselves, so all three
+    // would match nothing at all.
     auth.activeRole = 'organizer';
     setup();
 
-    expect(screen.getByText('saved.filter')).toBeInTheDocument();
     expect(screen.queryByText('discover.group_participation')).not.toBeInTheDocument();
     expect(screen.queryByText('phase.enrolled')).not.toBeInTheDocument();
     expect(screen.queryByText('discover.pending_vote_only')).not.toBeInTheDocument();
     expect(screen.queryByText('phase.voted')).not.toBeInTheDocument();
   });
 
-  it('keeps saved out of the panel, where it is three presses away', () => {
-    // In the toolbar, so it is reachable and readable with the panel shut.
-    auth.activeRole = 'voter';
-    const { container } = setup();
-
-    const saved = screen.getByText('saved.filter').closest('button');
-    const panel = container.querySelector('[class*="rounded-3xl"]');
-    expect(saved).not.toBeNull();
-    expect(panel?.contains(saved as Node)).not.toBe(true);
+  it('offers no saved control anywhere, in either role', () => {
+    // It was a chip here and then a button in the toolbar. A list the reader
+    // made is a place, and it has one: `/voter/saved`, `/organizer/saved`.
+    for (const role of ['voter', 'organizer'] as const) {
+      auth.activeRole = role;
+      const { unmount } = setup();
+      expect(screen.queryByText('saved.filter')).not.toBeInTheDocument();
+      unmount();
+    }
   });
 
   it('draws nothing about the reader for a visitor with no session', () => {

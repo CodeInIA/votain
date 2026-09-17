@@ -134,6 +134,19 @@ const EQUIVALENT: Record<string, Record<Role, string>> = {
     organizer: '/organizer/profile',
     public: '/',
   },
+  /**
+   * The saved list, which is one page reading two lists.
+   *
+   * The same human keeps different things as somebody taking part and as
+   * somebody running elections, so the lists differ, but the page does not:
+   * switching role here is looking at the same shelf from the other side,
+   * which is exactly what this table is for.
+   */
+  saved: {
+    voter: '/voter/saved',
+    organizer: '/organizer/saved',
+    public: '/',
+  },
 };
 
 /**

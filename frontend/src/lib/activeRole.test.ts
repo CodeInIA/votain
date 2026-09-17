@@ -216,3 +216,14 @@ describe('the sign-out mark', () => {
     expect(signInRouteFor('voter')).toBe('/voter/signin');
   });
 });
+
+describe('switching on a page both roles have', () => {
+  it('crosses between the two saved lists instead of going home', () => {
+    // One page reading two lists: the same human keeps different things as a
+    // voter and as an organizer, and switching here is looking at the same
+    // shelf from the other side. Being dropped on a dashboard for that would
+    // lose the place for nothing, which is the rule this table exists for.
+    expect(switchDestination('/voter/saved', 'organizer')).toBe('/organizer/saved');
+    expect(switchDestination('/organizer/saved', 'voter')).toBe('/voter/saved');
+  });
+});

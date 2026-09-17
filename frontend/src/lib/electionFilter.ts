@@ -35,6 +35,19 @@ export const PHASE_FILTERS: ElectionPhase[] = [
   'cancelled',
 ];
 
+/**
+ * The phases a list of the voter's OWN elections can hold.
+ *
+ * Everything except `upcoming`, and not as a matter of taste: an election in
+ * that list is one they enrolled in, enrolling needs enrolment to be open, and
+ * `ElectionV4` only ever brings that date forward (`openEnrollmentEarly` sets
+ * it to now and nothing moves it later). So no election they have joined can
+ * be waiting for its enrolment to begin. Offered on the saved list, where it
+ * is the ordinary case: keeping one that has not opened yet is most of why
+ * saving exists.
+ */
+export const ENROLLED_PHASE_FILTERS: ElectionPhase[] = PHASE_FILTERS.filter(p => p !== 'upcoming');
+
 export interface ElectionFilterState {
   query: string;
   phase: ElectionPhase | null;
@@ -127,18 +140,20 @@ export interface ElectionFilterState {
    * for its own window to open and says nothing about the reader.
    */
   canVoteNow: boolean;
-  /**
-   * Only the elections this voter saved.
-   *
-   * NOT ANSWERED BY `matchesElectionFilter`, unlike every other field here, and
-   * that is deliberate rather than an omission. The saved set is the voter's
-   * own, sealed on chain and kept in this browser; an election carries no field
-   * saying whether somebody bookmarked it, and reading the store from inside a
-   * pure predicate would make one list's rule depend on a device. The page that
-   * offers the chip applies it, next to the set it already holds.
-   */
-  savedOnly: boolean;
 }
+
+/**
+ * SAVED IS NOT IN HERE, and it was: a `savedOnly` flag, a chip, later a button
+ * in the toolbar. What it never was is a filter. The saved set is a list the
+ * reader made, held in their browser and sealed on chain, and an election
+ * carries no field saying whether somebody bookmarked it: the code that
+ * implemented it had to resolve a different set of ADDRESSES rather than
+ * narrow the ones in hand, which is the definition of a different list.
+ *
+ * So it is a place now, `/voter/saved` and `/organizer/saved`, and this object
+ * describes how to narrow whichever list you are standing in, that one
+ * included.
+ */
 
 export const EMPTY_FILTERS: ElectionFilterState = {
   query: '',
@@ -156,7 +171,6 @@ export const EMPTY_FILTERS: ElectionFilterState = {
   enrolledOnly: false,
   votedOnly: false,
   canVoteNow: false,
-  savedOnly: false,
 };
 
 /**
@@ -178,7 +192,6 @@ export function isAnyFilterActive(filter: ElectionFilterState): boolean {
     filter.enrolledOnly ||
     filter.votedOnly ||
     filter.canVoteNow ||
-    filter.savedOnly ||
     isEligibilityFilterActive(filter.eligibility)
   );
 }
@@ -293,8 +306,6 @@ export function matchesElectionFilter(
   if (filter.enrolledOnly && !election.isEnrolled) return false;
   if (filter.votedOnly && !election.hasVoted) return false;
   if (filter.canVoteNow && !canVoteNow(election)) return false;
-  // `savedOnly` is missing on purpose. See the field: the answer is not on the
-  // election, so the page that draws the chip applies it.
 
   if (!matchesQuery(election, filter.query.trim().toLowerCase())) return false;
   if (filter.domainOnly && !isDomainVerified(election)) return false;

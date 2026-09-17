@@ -10,7 +10,6 @@ import { useElectionPages } from '../../hooks/useElectionPages';
 import { useVerifiedDomains } from '../../hooks/useVerifiedDomains';
 import { useAuth } from '../../contexts/AuthContext';
 import { ElectionFilters, DISCOVER_GROUPS } from '../../components/ui/ElectionFilters';
-import { useSavedElections } from '../../hooks/useSavedElections';
 import { usePageMeta } from '../../seo/usePageMeta';
 import { useElectionFilterParams } from '../../hooks/useElectionFilterParams';
 import { matchesElectionFilter } from '../../lib/electionFilter';
@@ -43,27 +42,9 @@ export default function Discover() {
    * "load more" control is offered even on an empty result so a reader who
    * narrows the list down to nothing can still keep looking.
    */
-  // The role decides WHICH saved list, and both halves have to agree about
-  // it: the scope resolves the addresses and `keep` filters what came back.
-  const { isSaved, role: savedRole } = useSavedElections();
   const { elections, all, loading, loadingMore, hasMore, loadMore, complete, error, refresh } =
     useElectionPages({
-      /**
-       * "Saved" is not a narrower catalogue, it is a different list.
-       *
-       * As a filter it would walk the factory asking every election whether
-       * this browser had bookmarked it, which is the exact walk the paging
-       * exists to avoid. The addresses are already here, so the scope changes
-       * instead and the chain is asked only about those.
-       */
-      scope: filters.savedOnly ? 'saved' : 'all',
-      savedRole,
-      keep: e =>
-        matchesElectionFilter(e, filters, IGNORE_DOMAINS) &&
-        // Belt and braces for the scope above: an address saved on another
-        // device arrives through the sync, and an election unsaved in another
-        // tab should not linger in this one.
-        (!filters.savedOnly || isSaved(e.id)),
+      keep: e => matchesElectionFilter(e, filters, IGNORE_DOMAINS),
       filterKey: JSON.stringify(filters),
       // Creation order is settled by which end of the address list the pager
       // walks, not by sorting what came back: see `order` on the hook.

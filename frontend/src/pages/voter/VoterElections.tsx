@@ -12,9 +12,8 @@ import { usePageLimit } from '../../hooks/usePageLimit';
 import { useVoterIdentity } from '../../hooks/useVoterIdentity';
 import { useElectionFilterParams } from '../../hooks/useElectionFilterParams';
 import { ElectionFilters } from '../../components/ui/ElectionFilters';
-import { matchesQuery, canVoteNow } from '../../lib/electionFilter';
+import { matchesQuery, canVoteNow, ENROLLED_PHASE_FILTERS } from '../../lib/electionFilter';
 import { syncSavedElections } from '../../lib/savedElections';
-import { useSavedElections } from '../../hooks/useSavedElections';
 import { sortElections } from '../../lib/electionSort';
 import { Button } from '../../components/ui/Button';
 import { isChainConfigured } from '../../lib/deployments';
@@ -35,13 +34,10 @@ export default function VoterElections() {
    * who is warned about none of their deadlines because the election was on the
    * second page has been failed by the feature.
    */
-  const { isSaved } = useSavedElections();
   const { all: myElections, loading, error, refresh } = useElectionPages({
     scope: 'enrolled',
     hydrateAll: true,
-    // Saved as well as joined: an election kept for later has no leaf with
-    // this voter in it, which is exactly why it was worth saving.
-    keep: e => Boolean(e.isEnrolled || e.hasVoted || isSaved(e.id)),
+    keep: e => Boolean(e.isEnrolled || e.hasVoted),
   });
 
   // Snapshot the clock once at mount so render stays pure (the count doesn't
@@ -102,7 +98,6 @@ export default function VoterElections() {
    */
   const byTab = myElections.filter(e => {
     if (filters.phase && e.phase !== filters.phase) return false;
-    if (filters.savedOnly && !isSaved(e.id)) return false;
     if (filters.enrolledOnly && !e.isEnrolled) return false;
     if (filters.votedOnly && !e.hasVoted) return false;
     if (filters.canVoteNow && !canVoteNow(e)) return false;
@@ -118,7 +113,7 @@ export default function VoterElections() {
   const { visible, hasMore, loadMore } = usePageLimit(
     filtered,
     undefined,
-    `${filters.phase ?? ''}${filters.savedOnly}${filters.enrolledOnly}${filters.votedOnly}${filters.canVoteNow}${filters.query}${filters.sort}`,
+    `${filters.phase ?? ''}${filters.enrolledOnly}${filters.votedOnly}${filters.canVoteNow}${filters.query}${filters.sort}`,
   );
 
   const urgentCount = myElections.filter(e => endsSoon(e, now)).length;
@@ -162,6 +157,13 @@ export default function VoterElections() {
               // they came with. Discover keeps the other order, where
               // choosing an election is what the panel is for.
               groups={['participation', 'status']}
+              // UPCOMING IS NOT OFFERED HERE, because it cannot happen. An
+              // election in this list is one they enrolled in, and enrolling
+              // is only possible once enrolment has opened; `ElectionV4` only
+              // ever moves that date earlier, so no election here can be
+              // waiting for it. It is a real state for a SAVED election,
+              // which is where the chip still is.
+              phases={ENROLLED_PHASE_FILTERS}
             />
           </div>
         )}

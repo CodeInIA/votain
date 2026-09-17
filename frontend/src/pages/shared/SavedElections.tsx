@@ -15,35 +15,40 @@ import { useElectionFilterParams } from '../../hooks/useElectionFilterParams';
 import { useSavedElections } from '../../hooks/useSavedElections';
 import { matchesQuery } from '../../lib/electionFilter';
 import { sortElections } from '../../lib/electionSort';
-import { syncSavedElections } from '../../lib/savedElections';
+import { syncSavedElections, type SavedRole } from '../../lib/savedElections';
 
 /**
- * The elections an organizer is following, which are somebody else's.
+ * The elections this reader kept, whichever role they are wearing.
  *
- * WHY IT IS ITS OWN PAGE. An organizer has no "my elections" holding other
- * people's votes: their dashboard is what they run, and mixing a followed
- * election into it would put a row they cannot manage among rows that are all
- * about managing, and poison every total that dashboard adds up. This was a
- * row in their profile first, which is where settings live, not lists.
+ * WHY IT IS A PAGE AND NOT A FILTER, which it was twice: a chip in the
+ * participation band, then a button in the toolbar. A saved list is not a
+ * narrowing of the list you are looking at, it is a different list. The code
+ * said so before the interface did, because "saved" resolves a different set
+ * of ADDRESSES rather than filtering the ones in hand.
+ *
+ * ONE PAGE, TWO ROUTES. `/voter/saved` and `/organizer/saved` differ in which
+ * list they read and which navigation they wear, and in nothing else. The two
+ * lists are separate on purpose: the same human saves different things as
+ * somebody taking part and as somebody running elections.
  *
  * WHY THE STATE FILTERS AND NOTHING ELSE. The panel's other bands are for
- * CHOOSING an election, and Discover is where choosing happens. What a
- * follower asks of a list they already curated is where each one stands now,
- * and the participation band has no answer for them: they do not enrol or vote
- * as an organizer.
+ * CHOOSING an election, and Discover is where choosing happens. What a reader
+ * asks of a list they curated themselves is where each one stands now.
  *
- * The list is the role's own. The same person's voter self keeps a separate
- * one, which appears in their own elections instead.
+ * AN ELECTION CAN BE HERE AND IN "MY ELECTIONS" AT ONCE, and that is not a
+ * duplicate: the two answer different questions, "what am I taking part in"
+ * and "what did I keep", and being enrolled in something you also saved is the
+ * ordinary case.
  */
-export default function SavedElections() {
+export default function SavedElections({ role }: { role: SavedRole }) {
   const { t } = useTranslation();
-  const { isSaved, ids } = useSavedElections('organizer');
+  const { isSaved, ids } = useSavedElections(role);
   const [filters, setFilters] = useElectionFilterParams();
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const { all: saved, loading, error, refresh } = useElectionPages({
     scope: 'saved',
-    savedRole: 'organizer',
+    savedRole: role,
     hydrateAll: true,
     keep: e => isSaved(e.id),
   });
@@ -70,7 +75,7 @@ export default function SavedElections() {
   );
 
   return (
-    <PageLayout role="organizer" showNav>
+    <PageLayout role={role} showNav>
       <div className="max-w-3xl mx-auto pt-6 pb-24">
         <div className="mb-6">
           <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
@@ -126,11 +131,13 @@ export default function SavedElections() {
         ) : (
           <>
             <div className="flex flex-col gap-3">
-              {/* The public view: an organizer following somebody else's
-                  election is not enrolled in it, and the voter's buttons would
-                  be offering them something they cannot do. */}
+              {/* A VOTER SEES THEIR OWN STANDING, an organizer does not.
+                  Saved elections belong to other people, so for an organizer
+                  the voter's buttons would offer something they cannot do,
+                  while a voter may well be enrolled in what they saved and
+                  should see the same badges as anywhere else. */}
               {visible.map(e => (
-                <ElectionCard key={e.id} election={e} view="public" />
+                <ElectionCard key={e.id} election={e} view={role === 'voter' ? 'voter' : 'public'} />
               ))}
             </div>
             <LoadMore hasMore={hasMore} loading={false} onClick={loadMore} />
