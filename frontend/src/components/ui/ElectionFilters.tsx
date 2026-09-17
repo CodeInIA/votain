@@ -310,6 +310,8 @@ export function ElectionFilters({
    * The alternative was every page that draws this panel repeating the same
    * conditions, and eventually one of them disagreeing.
    */
+  const shows = (group: FilterGroupName) => groups.includes(group);
+
   /**
    * SAVED IS NOT PART OF "MY PARTICIPATION", which is where it started.
    *
@@ -323,11 +325,18 @@ export function ElectionFilters({
    * it is one press instead of three and where the reader can see whether it
    * is on without opening anything. It is the only filter promoted there, and
    * it earns it by being the only one the reader built themselves.
+   *
+   * ASKED FOR THROUGH `participation`, which is the group that means "this
+   * reader's relationship with these elections matters on this page". The
+   * organizer's dashboard does not ask for it, and should not: every row there
+   * is an election they RUN, and nobody saves their own. The page of saved
+   * elections does not ask for it either, since filtering a saved list by
+   * saved is a control that can only do nothing.
    */
-  const showsSaved = activeRole === 'voter' || activeRole === 'organizer';
+  const showsSaved =
+    shows('participation') && (activeRole === 'voter' || activeRole === 'organizer');
   /** The three that are about taking part, which only a voter does. */
   const showsVoterChips = activeRole === 'voter';
-  const shows = (group: FilterGroupName) => groups.includes(group);
   const showFilterButton = groups.length > 0;
   // The first group drawn carries no rule above it, whichever one it is.
   const firstShown = groups[0];
@@ -341,7 +350,12 @@ export function ElectionFilters({
           touch were the two that had no room. The search takes the first
           line to itself below `sm` and the two controls share the second,
           which costs one row and gives all three their full size. */}
-      <div className="flex flex-wrap items-center gap-3">
+      {/* A TIGHTER GAP ON A PHONE, which is the last eight pixels the second
+          row needed. Measured across the thirteen languages: with 12px gaps
+          and the roomier buttons below, Portuguese, Spanish and French came to
+          about 355px in a 348px row and dropped the order control onto a line
+          of its own. */}
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         <div className="basis-full sm:basis-0 sm:flex-1 min-w-0">
           <Input
             placeholder={searchPlaceholder}
@@ -363,15 +377,24 @@ export function ElectionFilters({
         {showFilterButton && (
         <Button
           onClick={onToggleOpen}
-          className="gap-2 h-11 px-4 rounded-2xl text-sm text-on-surface-variant hover:text-on-surface"
+          aria-label={t('common.filter')}
+          className="gap-2 h-11 px-3 sm:px-4 rounded-2xl text-sm text-on-surface-variant hover:text-on-surface"
         >
           <SlidersHorizontal className="w-4 h-4" />
-          {/* Labelled at every width. It was icon-only below `sm`, from when
-              all three controls shared one line and the room was not there.
-              The row wraps now, so the second line is this and the order
-              control, and an icon-only button beside a fully labelled
-              dropdown reads as one of them being unfinished. */}
-          <span>{t('common.filter')}</span>
+          {/* ICON ONLY ON A PHONE, and it has been both. It was labelled at
+              every width while this row held two controls and they fitted;
+              a third arrived, and at 390 the three labelled came to about
+              444px in a row 358px wide, so the order control dropped to a
+              line of its own and the toolbar stood three rows tall above
+              every list.
+
+              THE TWO TOGGLES GIVE UP THEIR WORDS AND THE DROPDOWN KEEPS ITS
+              OWN, which is not an inconsistency: a toggle says what it does
+              and a dropdown says what is CHOSEN, so hiding the order's text
+              would hide the only thing it is there to tell you. The names are
+              still announced, and both icons appear on the cards these lists
+              draw. Measured after: one row at 390, 312px of 358. */}
+          <span className="hidden sm:inline">{t('common.filter')}</span>
           {/* Any active filter, not just the phase: with only the domain chip
               on, the collapsed bar gave no sign the list was being filtered. */}
           {isAnyFilterActive(value) && <span className="w-2 h-2 rounded-full bg-primary" />}
@@ -393,15 +416,16 @@ export function ElectionFilters({
         <Button
           onClick={() => set({ savedOnly: !value.savedOnly })}
           aria-pressed={value.savedOnly}
+          aria-label={t('saved.filter')}
           className={cn(
-            'gap-2 h-11 px-4 rounded-2xl text-sm',
+            'gap-2 h-11 px-3 sm:px-4 rounded-2xl text-sm',
             value.savedOnly
               ? 'text-primary ring-1 ring-primary/40 bg-primary/10 hover:text-primary'
               : 'text-on-surface-variant hover:text-on-surface',
           )}
         >
           <Bookmark className={cn('w-4 h-4', value.savedOnly && 'fill-current')} />
-          <span>{t('saved.filter')}</span>
+          <span className="hidden sm:inline">{t('saved.filter')}</span>
         </Button>
         )}
 
