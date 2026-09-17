@@ -116,6 +116,19 @@ export function clearSignedOutMark(): void {
   sessionStorage.removeItem(SIGNED_OUT_KEY);
 }
 
+/**
+ * Which role a route belongs to, or null for the pages that belong to nobody.
+ *
+ * Discover, the receipt verifier, an election and the landing page are the same
+ * page for everybody, so they answer null and leave the hat where it is. The
+ * prefixes are the whole rule, which is also what the guards use.
+ */
+export function roleOwningRoute(pathname: string): Role | null {
+  if (pathname.startsWith('/voter/')) return 'voter';
+  if (pathname.startsWith('/organizer/')) return 'organizer';
+  return null;
+}
+
 export function homeRouteFor(role: Role): string {
   if (role === 'organizer') return '/organizer/dashboard';
   if (role === 'voter') return '/voter/elections';

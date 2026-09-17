@@ -4,6 +4,7 @@ import {
   resolveActiveRole,
   homeRouteFor,
   switchDestination,
+  roleOwningRoute,
   readRolePreference,
   storeRolePreference,
   clearRolePreference,
@@ -225,5 +226,27 @@ describe('switching on a page both roles have', () => {
     // lose the place for nothing, which is the rule this table exists for.
     expect(switchDestination('/voter/saved', 'organizer')).toBe('/organizer/saved');
     expect(switchDestination('/organizer/saved', 'voter')).toBe('/voter/saved');
+  });
+});
+
+describe('which role a route belongs to', () => {
+  it('names the role for the pages that have one', () => {
+    expect(roleOwningRoute('/voter/saved')).toBe('voter');
+    expect(roleOwningRoute('/voter/elections')).toBe('voter');
+    expect(roleOwningRoute('/organizer/dashboard')).toBe('organizer');
+    expect(roleOwningRoute('/organizer/election/0xabc')).toBe('organizer');
+  });
+
+  it('leaves the pages that belong to nobody alone', () => {
+    // The same page from both sides. Re-dressing somebody for opening one
+    // would undo the choice they just made in the header.
+    for (const page of ['/', '/discover', '/verify-receipt', '/election/0xabc', '/how-it-works']) {
+      expect(roleOwningRoute(page)).toBeNull();
+    }
+  });
+
+  it('is not fooled by a path that merely starts with the word', () => {
+    expect(roleOwningRoute('/voterish/thing')).toBeNull();
+    expect(roleOwningRoute('/organizers')).toBeNull();
   });
 });

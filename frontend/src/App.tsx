@@ -1,11 +1,13 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { useRouteMeta } from './seo/usePageMeta';
 import { ToastProvider } from './components/ui/Toast';
 import { useToast } from './components/ui/useToast';
 import { IDENTITY_MISMATCH_EVENT, SESSION_EXPIRED_EVENT } from './lib/sessionExpiry';
 import { AuthProvider } from './contexts/AuthProvider';
+import { useAuth } from './contexts/AuthContext';
+import { roleOwningRoute } from './lib/activeRole';
 import { RequireVoter, RequireOrganizer } from './components/auth/RequireAuth';
 import Landing from './pages/Landing';
 
@@ -89,6 +91,42 @@ function RouteMeta() {
  * are separate concerns: the provider is what stops trusting the cookie, this
  * is what stops the voter wondering why the screen changed under them.
  */
+/**
+ * ARRIVING SOMEWHERE PUTS THE RIGHT HAT ON.
+ *
+ * Only ever an issue for somebody holding both sessions, which the app is built
+ * for. The role decides the navigation and nothing else, and it was stored as a
+ * preference that only the switch in the header ever wrote. So opening
+ * `/voter/saved` from a link, a bookmark or the address bar while the organizer
+ * hat was on drew the organizer's navigation around the voter's list: five
+ * links to places that page is not, and the switch showing the role they were
+ * not looking at.
+ *
+ * The guards are untouched by this and stay the authority: they ask the
+ * SESSIONS. This only moves the chrome to agree with the page, and only when
+ * the session for that role is live, so it can never dress somebody as a role
+ * they do not hold.
+ *
+ * Pages that belong to nobody leave it alone, which is the same rule
+ * `switchDestination` follows in the other direction: Discover, an election and
+ * the verifier are the same page from both sides, and being re-dressed for
+ * opening one would undo a choice the person just made in the header.
+ */
+function RoleFromRoute() {
+  const { pathname } = useLocation();
+  const { voterLoggedIn, organizerLoggedIn, activeRole, setActiveRole } = useAuth();
+
+  useEffect(() => {
+    const owner = roleOwningRoute(pathname);
+    if (!owner || owner === activeRole) return;
+    if (owner === 'voter' && !voterLoggedIn) return;
+    if (owner === 'organizer' && !organizerLoggedIn) return;
+    setActiveRole(owner);
+  }, [pathname, activeRole, voterLoggedIn, organizerLoggedIn, setActiveRole]);
+
+  return null;
+}
+
 function SessionExpiryNotice() {
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -131,6 +169,7 @@ export default function App() {
     <ToastProvider>
       <Router>
         <RouteMeta />
+        <RoleFromRoute />
         <SessionExpiryNotice />
         {/* The phrase modal that used to live here is gone. It was mounted above
             the routes so that no entry point could mint an identity without
