@@ -777,26 +777,6 @@ export function phraseIsUnprotected(): boolean {
   return localStorage.getItem(IDENTITY_MODE_KEY) === "local" && hasPhraseOnDevice();
 }
 
-/**
- * Seals the phrase under a passkey on this device, asked for out loud.
- *
- * The same work `enrollThisDevice` does, plus the bookkeeping that says the
- * phrase now has a home other than localStorage. Only a PRF-capable passkey
- * gets this far: `enrollPrfPasskey` returns nothing for an authenticator that
- * cannot hold a secret, and that throws rather than pretending.
- *
- * The local copy MAY SURVIVE, and that is deliberate. It is dropped once this
- * device has proven it can read a sealed copy back; until then, removing it
- * would strand a voter on Windows, where a credential can be created and then
- * refuse to be evaluated.
- */
-export async function protectPhraseWithPasskey(): Promise<void> {
-  const result = await enrollThisDevice();
-  if (result.alreadyRegistered) return;
-  const phrase = await readPhraseOnDevice();
-  if (phrase) await noteSealed(phrase);
-}
-
 export async function enrollThisDevice(): Promise<{
   credentialId: string;
   /** True when the authenticator already held a registered passkey. */
@@ -847,6 +827,23 @@ export async function enrollThisDevice(): Promise<{
       throw new IdentityLockedError();
     }
     await sealPhraseForPasskey(phrase, identity, assertion);
+    /**
+     * AND THE BOOKKEEPING, which is what was missing.
+     *
+     * This is the function the "add a passkey" button calls, and it sealed the
+     * phrase into the vault and then left the device exactly as it found it:
+     * still in `local` mode, still holding the twelve words. So a voter linked
+     * a passkey, was told it worked, and their phrase stayed on the machine
+     * with nothing asking it to leave. It also meant the profile kept offering
+     * to protect a phrase that was already protected, since that offer reads
+     * the same flag.
+     *
+     * `noteSealed` is the one place that decides what a device may stop
+     * holding: it marks the identity as living behind a passkey, and drops the
+     * local copy only once this device has PROVEN it can read a sealed one
+     * back, which `enrollPrfPasskey` establishes before it returns.
+     */
+    await noteSealed(phrase);
     return { credentialId: assertion.credentialId, alreadyRegistered: false };
   } catch (error: unknown) {
     if (!(error instanceof PasskeyAlreadyRegisteredError)) throw error;
@@ -857,6 +854,13 @@ export async function enrollThisDevice(): Promise<{
     // instead of going on offering to add it.
     const existing = await assertPrf(known);
     if (!existing) throw error;
+    // THE SAME BOOKKEEPING, and it is earned here too. The refusal says this
+    // authenticator already holds a credential from the vault, and the
+    // assertion just opened it: the phrase is therefore reachable through a
+    // passkey from this machine, whether or not this browser was the one that
+    // sealed it, so the copy at rest has nothing left to protect against.
+    const local = await readPhraseOnDevice();
+    if (local) await noteSealed(local);
     return { credentialId: existing.credentialId, alreadyRegistered: true };
   }
 }

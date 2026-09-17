@@ -211,3 +211,83 @@ describe('a device that can read back', () => {
     expect(localStorage.getItem(PHRASE_KEY)).toBeNull();
   });
 });
+
+describe('linking a passkey to a phrase that was already here', () => {
+  /**
+   * The case a voter reported: set up without a passkey, later added one from
+   * their profile over a QR code to their phone, and the twelve words were
+   * still sitting in this browser afterwards.
+   *
+   * The seal had worked. What never ran was the bookkeeping that says the
+   * identity now lives behind a passkey and the copy at rest can go: the
+   * button calls `enrollThisDevice`, and the only code that did that
+   * bookkeeping was a wrapper with no callers.
+   */
+  it('lets the local copy go once the passkey can open it', async () => {
+    const sem = await freshSemaphore();
+    const minted = await sem.beginNewIdentity();
+    await sem.completeWithoutPasskey(minted.phrase, minted.identity);
+
+    expect(localStorage.getItem(MODE_KEY)).toBe('local');
+    expect(localStorage.getItem(PHRASE_KEY)).toBeTruthy();
+
+    // The link. The real `enrollPrfPasskey` proves the read-back before it
+    // returns an assertion, and records that proof; the mock says so too,
+    // because the decision to drop the copy is made from that record.
+    fetchVault.mockResolvedValue({ entries: [], commitment: minted.identity.commitment.toString() });
+    enrollPrfPasskey.mockImplementation(async () => {
+      localStorage.setItem(READBACK_KEY, 'ok');
+      return { credentialId: 'cred-phone', secret: SECRET };
+    });
+    putVaultEntry.mockResolvedValue(undefined);
+
+    await sem.enrollThisDevice();
+
+    expect(putVaultEntry).toHaveBeenCalled();
+    expect(localStorage.getItem(MODE_KEY)).toBe('prf');
+    expect(localStorage.getItem(PHRASE_KEY)).toBeNull();
+  });
+
+  it('keeps it when the passkey seals but cannot be read back', async () => {
+    // Windows again, through the same door: the vault entry is written and
+    // nothing on this machine can open it, so the words stay where they are.
+    const sem = await freshSemaphore();
+    const minted = await sem.beginNewIdentity();
+    await sem.completeWithoutPasskey(minted.phrase, minted.identity);
+
+    fetchVault.mockResolvedValue({ entries: [], commitment: minted.identity.commitment.toString() });
+    enrollPrfPasskey.mockResolvedValue({ credentialId: 'cred-1', secret: SECRET });
+    putVaultEntry.mockResolvedValue(undefined);
+
+    await sem.enrollThisDevice();
+
+    expect(localStorage.getItem(MODE_KEY)).toBe('prf');
+    expect(localStorage.getItem(PHRASE_KEY)).toBeTruthy();
+  });
+
+  it('lets it go when the authenticator already held the passkey', async () => {
+    // Adding one this authenticator already has: it refuses with
+    // InvalidStateError and the app asserts instead, which opens the entry the
+    // vault already holds. That is the same proof by another route.
+    const sem = await freshSemaphore();
+    const minted = await sem.beginNewIdentity();
+    await sem.completeWithoutPasskey(minted.phrase, minted.identity);
+
+    fetchVault.mockResolvedValue({
+      entries: [{ credentialId: 'cred-1', blob: 'sealed', addedAt: Date.now() }],
+      commitment: minted.identity.commitment.toString(),
+    });
+    const { PasskeyAlreadyRegisteredError } = await import('./passkeyPrf');
+    enrollPrfPasskey.mockRejectedValue(new PasskeyAlreadyRegisteredError());
+    assertPrf.mockImplementation(async () => {
+      localStorage.setItem(READBACK_KEY, 'ok');
+      return { credentialId: 'cred-1', secret: SECRET };
+    });
+
+    const result = await sem.enrollThisDevice();
+
+    expect(result.alreadyRegistered).toBe(true);
+    expect(localStorage.getItem(MODE_KEY)).toBe('prf');
+    expect(localStorage.getItem(PHRASE_KEY)).toBeNull();
+  });
+});
