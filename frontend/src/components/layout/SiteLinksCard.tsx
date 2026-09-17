@@ -9,6 +9,7 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Card } from '../ui/Card';
+import { useNavFit } from './navFit';
 import { SITE_LINKS } from './siteLinks';
 
 interface Props {
@@ -22,14 +23,16 @@ interface Props {
 
 export function SiteLinksCard({ omit = [] }: Props) {
   const { t } = useTranslation();
+  const { compact } = useNavFit();
   const links = SITE_LINKS.filter(link => !omit.includes(link.to));
 
-  // Shown for exactly as long as the footer is hidden, which is `xl` and no
-  // longer `md`: these are the footer's links, and between the two
-  // breakpoints they would otherwise be nowhere.
+  // Shown for exactly as long as the footer is hidden: these are the footer's
+  // links, and while the bottom bar owns the foot of the screen they would
+  // otherwise be nowhere. See `navFit` for who decides that.
+  if (!compact) return null;
 
   return (
-    <Card className="p-2 mb-4 xl:hidden">
+    <Card className="p-2 mb-4">
       {links.map(({ to, labelKey, icon: Icon }) => (
         <Link
           key={to}

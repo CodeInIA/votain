@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { TopNav } from './TopNav';
+import { NavFitProvider, useNavFit } from './navFit';
 import { BottomTabNav } from './BottomTabNav';
 import { Footer } from './Footer';
 import { DemoDataBanner } from './DemoDataBanner';
@@ -14,7 +15,21 @@ interface PageLayoutProps {
   fullBleed?: boolean;
 }
 
-export function PageLayout({
+/**
+ * Wrapped so everything inside can read one answer to "do the links fit".
+ *
+ * The provider has to sit above `TopNav`, which measures, and above the
+ * content, which contains the card of links that stands in for the footer.
+ */
+export function PageLayout(props: PageLayoutProps) {
+  return (
+    <NavFitProvider>
+      <PageShell {...props} />
+    </NavFitProvider>
+  );
+}
+
+function PageShell({
   children,
   role = 'public',
   showNav = true,
@@ -22,6 +37,7 @@ export function PageLayout({
   className,
   fullBleed = false,
 }: PageLayoutProps) {
+  const { compact } = useNavFit();
   return (
     <div className="relative flex flex-col h-dvh bg-background text-on-surface font-body overflow-x-hidden">
       {/* Ambient background */}
@@ -42,17 +58,18 @@ export function PageLayout({
           'relative z-10 flex-1 overflow-y-auto',
           !fullBleed && 'px-4 sm:px-6 lg:px-8',
           // Room for the fixed bottom bar, for exactly as long as there is
-          // one: the same breakpoint it hides at.
-          role !== 'public' && 'pb-20 xl:pb-4',
+          // one. Measured, not assumed: see `navFit`.
+          role !== 'public' && (compact ? 'pb-20' : 'pb-4'),
           className
         )}
       >
         {children}
       </main>
 
-      {/* The footer follows the same line: below it the bottom bar owns that
-          edge of the screen, and `SiteLinksCard` carries these links instead. */}
-      {showFooter && <div className="hidden xl:block shrink-0"><Footer /></div>}
+      {/* The footer follows the same answer: when the bottom bar is out, it
+          owns that edge of the screen and `SiteLinksCard` carries these links
+          instead. */}
+      {showFooter && !compact && <div className="shrink-0"><Footer /></div>}
       {showNav && <BottomTabNav />}
     </div>
   );

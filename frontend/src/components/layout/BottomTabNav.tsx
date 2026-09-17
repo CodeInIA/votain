@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Compass, Vote, Clock, LayoutDashboard, Users, Zap, Bookmark } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNavFit } from './navFit';
 
 interface Tab {
   to: string;
@@ -33,11 +34,16 @@ const PUBLIC_TABS: Tab[] = [
 export function BottomTabNav() {
   const { t } = useTranslation();
   const { activeRole } = useAuth();
+  const { compact } = useNavFit();
   // Same source as `TopNav`, so the bar at the top and the bar at the bottom
   // can never disagree about which role is on screen.
   const tabs = activeRole === 'organizer' ? ORGANIZER_TABS :
                activeRole === 'voter'     ? VOTER_TABS :
                                              PUBLIC_TABS;
+  // The other half of one decision: this bar carries the links exactly when
+  // the top bar has no room for them, which `TopNav` measures rather than
+  // guesses from a width. See `navFit`.
+  if (!compact) return null;
   return (
     <nav
       /* NO `safe-area-pb` HERE, and that is not an oversight.
@@ -59,10 +65,7 @@ export function BottomTabNav() {
        * is padding driven by a real measurement on such a device, not by a
        * class name that looked like it was already doing the job.
        */
-      // `xl:hidden` and not `md:hidden`: this bar and the links in the top
-      // bar are two halves of one decision, so they change over at the same
-      // width. See `TopNav` for the measurements behind that width.
-      className="fixed bottom-0 left-0 right-0 z-40 flex xl:hidden bg-surface/80 backdrop-blur-xl border-t border-white/5"
+      className="fixed bottom-0 left-0 right-0 z-40 flex bg-surface/80 backdrop-blur-xl border-t border-white/5"
       aria-label="Main navigation"
     >
       {tabs.map(tab => (

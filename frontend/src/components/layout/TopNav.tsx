@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Compass, Vote, Clock, User, LayoutDashboard, Users, Zap, ShieldCheck, Bookmark } from 'lucide-react';
@@ -6,6 +7,7 @@ import { Button } from '../ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
 import { homeRouteFor } from '../../lib/activeRole';
 import { RoleSwitch } from './RoleSwitch';
+import { useNavFit } from './navFit';
 import { rememberReturnTo } from '../../lib/returnTo';
 
 interface NavItem {
@@ -42,10 +44,16 @@ const PUBLIC_ITEMS: NavItem[] = [
 // is not needed here. Which role that is comes from `activeRole` rather than
 // from the flags directly, because someone holding both sessions gets to say.
 export function TopNav() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { activeRole } = useAuth();
+  const { compact, report } = useNavFit();
+
+  const navRef = useRef<HTMLElement>(null);
+  const logoRef = useRef<HTMLButtonElement>(null);
+  const linksRef = useRef<HTMLDivElement>(null);
+  const actionsRef = useRef<HTMLDivElement>(null);
 
   const items = activeRole === 'organizer' ? ORGANIZER_ITEMS :
                 activeRole === 'voter'     ? VOTER_ITEMS :
@@ -53,13 +61,67 @@ export function TopNav() {
 
   const homeRoute = homeRouteFor(activeRole);
 
+  /**
+   * DOES THIS ROW FIT, asked of the row itself.
+   *
+   * Every breakpoint tried here was wrong for something. The bar carries two
+   * links for a visitor, three for a voter and five for an organizer, in
+   * thirteen languages, so the width it needs runs from about 700px to about
+   * 1080. One number either cut the organizer's bar off at 768 or handed a
+   * 1200px window a phone's navigation.
+   *
+   * The links are measured at their natural width whether or not they are
+   * shown: when they do not fit they are made `invisible` and taken out of
+   * flow, which leaves them laid out and measurable while removing them from
+   * the page, the tab order and the accessibility tree. That is also what
+   * keeps this from oscillating, since the measurement does not depend on the
+   * answer.
+   *
+   * Before paint, so the first frame is already right, and again whenever the
+   * bar is resized or the fonts land, which change every width in here.
+   */
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    const logo = logoRef.current;
+    const links = linksRef.current;
+    const actions = actionsRef.current;
+    if (!nav || !logo || !links || !actions) return;
+
+    const measure = () => {
+      const bar = getComputedStyle(nav);
+      const gap = parseFloat(bar.columnGap) || 0;
+      const padding = parseFloat(bar.paddingLeft) + parseFloat(bar.paddingRight);
+      const linkGap = parseFloat(getComputedStyle(links).columnGap) || 0;
+      const items = Array.from(links.children) as HTMLElement[];
+      const linksWidth =
+        items.reduce((sum, el) => sum + el.offsetWidth, 0) +
+        linkGap * Math.max(items.length - 1, 0);
+      // A few pixels of margin: `offsetWidth` is rounded, and a bar that fits
+      // by half a pixel is a bar that looks wrong.
+      const needed = logo.offsetWidth + linksWidth + actions.offsetWidth + gap * 2 + padding + 8;
+      report(needed > nav.clientWidth);
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(nav);
+    // Web fonts arrive after the first paint and every label gets wider.
+    void document.fonts?.ready.then(measure).catch(() => {});
+    return () => observer.disconnect();
+  }, [report, items, i18n.language]);
+
   return (
     <nav
-      className="flex items-center gap-3 md:gap-6 px-4 md:px-8 py-3 border-b border-white/5 bg-surface/60 backdrop-blur-xl"
+      ref={navRef}
+      // `relative` and clipped for the sake of the measuring copy of the links
+      // below, which sits at its static position and would otherwise be able to
+      // stretch the page sideways.
+      className="relative overflow-hidden flex items-center gap-3 md:gap-6 px-4 md:px-8 py-3 border-b border-white/5 bg-surface/60 backdrop-blur-xl"
       aria-label="Top navigation"
     >
       {/* Logo */}
       <button
+        ref={logoRef}
         type="button"
         data-nav-href={homeRoute}
         onClick={() => navigate(homeRoute)}
@@ -69,20 +131,18 @@ export function TopNav() {
         <img src="/votain-wordmark.svg" alt="" className="h-4 object-contain translate-y-0.5" />
       </button>
 
-      {/* Nav links, wide screens only.
-          `xl` AND NOT `md`, which is where this sat. The organizer's bar grew a
-          fifth entry and at 768 the row stopped fitting: the links were drawn,
-          and the role switch and the profile button at the other end were cut
-          off by the window. A breakpoint that turns a layout on before there is
-          room for it is worse than one that turns it on late, because the
-          missing half is the half nobody can scroll to.
-
-          MEASURED, so the number is not a guess: the full bar wants 991px in
-          English, 1039 in Dutch, 1071 in German and 1077 in Russian, logo,
-          wordmark, five links, the role switch and the profile button. 1280 is
-          the first standard width that holds all of them, and below it the
-          bottom bar carries the same links. */}
-      <div className="hidden xl:flex items-center gap-1 flex-1">
+      {/* The links, drawn here when they fit and measured here when they do
+          not. See the effect above for why they stay in the document either
+          way. `invisible` is doing real work: it keeps the layout, and takes
+          the row out of the tab order and out of what a screen reader
+          announces, which `opacity-0` would not. */}
+      <div
+        ref={linksRef}
+        className={cn(
+          'flex items-center gap-1',
+          compact ? 'invisible absolute pointer-events-none' : 'flex-1',
+        )}
+      >
         {items.map(item => (
           <NavLink
             key={item.to}
@@ -101,7 +161,7 @@ export function TopNav() {
       </div>
 
       {/* Right actions */}
-      <div className="flex items-center gap-3 shrink-0 ml-auto">
+      <div ref={actionsRef} className="flex items-center gap-3 shrink-0 ml-auto">
         <RoleSwitch />
         {activeRole === 'organizer' ? (
           <button
