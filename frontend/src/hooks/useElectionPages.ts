@@ -305,7 +305,10 @@ export function useElectionPages(options: ElectionPagesOptions = {}): ElectionPa
     return () => {
       cancelled = true;
     };
-  }, [live, scope, organizer, waitingForScope, reloadToken]);
+    // `savedRole` belongs here: the role settles a moment after the first
+    // render, and without it the addresses stay whichever list was read
+    // before anyone knew who was reading.
+  }, [live, scope, organizer, savedRole, waitingForScope, reloadToken]);
 
   // Filling the page: hydrate in chunks until there are enough MATCHES.
   useEffect(() => {

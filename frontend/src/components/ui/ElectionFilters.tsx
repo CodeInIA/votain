@@ -310,7 +310,22 @@ export function ElectionFilters({
    * The alternative was every page that draws this panel repeating the same
    * conditions, and eventually one of them disagreeing.
    */
+  /**
+   * SAVED IS NOT PART OF "MY PARTICIPATION", which is where it started.
+   *
+   * Enrolled, still to vote and voted are things that HAPPENED to the reader
+   * inside an election. Saving is a list they made, and it says nothing about
+   * whether they joined anything: a voter saves elections they have not
+   * enrolled in, which is most of the point of it. Under that caption it was
+   * answering a different question from the three beside it.
+   *
+   * So it sits in the toolbar, beside the filter button and the order, where
+   * it is one press instead of three and where the reader can see whether it
+   * is on without opening anything. It is the only filter promoted there, and
+   * it earns it by being the only one the reader built themselves.
+   */
   const showsSaved = activeRole === 'voter' || activeRole === 'organizer';
+  /** The three that are about taking part, which only a voter does. */
   const showsVoterChips = activeRole === 'voter';
   const shows = (group: FilterGroupName) => groups.includes(group);
   const showFilterButton = groups.length > 0;
@@ -360,6 +375,33 @@ export function ElectionFilters({
           {/* Any active filter, not just the phase: with only the domain chip
               on, the collapsed bar gave no sign the list was being filtered. */}
           {isAnyFilterActive(value) && <span className="w-2 h-2 rounded-full bg-primary" />}
+        </Button>
+        )}
+
+        {/* SAVED, AT THE TOP LEVEL, on Discover and on the voter's own list.
+            The list a reader curated is the one they come back for, and behind
+            the button it was three presses and invisible until the panel was
+            open. Drawn as a pressed button rather than a chip, because that is
+            what everything else in this row is.
+
+            FOR AN ORGANIZER TOO. They follow other people's elections, which
+            is the whole of what `/organizer/saved` is, and it is the one
+            question about the reader that an organizer can answer at all. For
+            a visitor with no session there is no list, so there is no
+            control. */}
+        {showsSaved && (
+        <Button
+          onClick={() => set({ savedOnly: !value.savedOnly })}
+          aria-pressed={value.savedOnly}
+          className={cn(
+            'gap-2 h-11 px-4 rounded-2xl text-sm',
+            value.savedOnly
+              ? 'text-primary ring-1 ring-primary/40 bg-primary/10 hover:text-primary'
+              : 'text-on-surface-variant hover:text-on-surface',
+          )}
+        >
+          <Bookmark className={cn('w-4 h-4', value.savedOnly && 'fill-current')} />
+          <span>{t('saved.filter')}</span>
         </Button>
         )}
 
@@ -451,7 +493,7 @@ export function ElectionFilters({
           </FilterGroup>
           )}
 
-          {shows('participation') && (showsSaved || showsVoterChips) && (
+          {shows('participation') && showsVoterChips && (
           <FilterGroup label={t('discover.group_participation')} first={firstShown === 'participation'}>
             {/* ICON CHIPS, NOT PHASE PILLS, though the voted one was a pill
                 when it lived in the band above. The rule this file already
@@ -462,18 +504,6 @@ export function ElectionFilters({
                 The words are the badges' own, `phase.enrolled` and
                 `phase.voted`, so a chip cannot come to say something
                 different from the label on the card it filters for. */}
-            {/* FIRST, because it is the only one here the voter decided.
-                Enrolled, voted and still to vote are things that happened to
-                them; saved is a list they made. */}
-            {showsSaved && (
-            <FilterToggle
-              active={value.savedOnly}
-              onClick={() => set({ savedOnly: !value.savedOnly })}
-              icon={Bookmark}
-            >
-              {t('saved.filter')}
-            </FilterToggle>
-            )}
             {showsVoterChips && (
             <>
             <FilterToggle

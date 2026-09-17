@@ -5,14 +5,17 @@ import { ElectionFilters } from './ElectionFilters';
 import { EMPTY_FILTERS } from '../../lib/electionFilter';
 
 /**
- * Which chips the participation band offers, which is a question about the
- * ROLE BEING WORN and not about the page.
+ * Which controls the panel offers, which is a question about the ROLE BEING
+ * WORN and not about the page.
  *
- * The rule: a chip that cannot be answered is not drawn. "Enrolled", "still to
- * vote" and "voted" are facts about a voter, so for an organizer they are false
- * everywhere and would empty a list while explaining nothing. Saving belongs to
- * both roles, because an organizer follows other people's elections like
- * everybody else.
+ * The rule: a control that cannot be answered is not drawn. "Enrolled", "still
+ * to vote" and "voted" are facts about a voter, so for an organizer they are
+ * false everywhere and would empty a list while explaining nothing.
+ *
+ * SAVED IS NOT ONE OF THEM. It is a list the reader made rather than something
+ * that happened to them inside an election, so it left that band for the
+ * toolbar, where it is one press and visible with the panel shut. Both roles
+ * get it: an organizer follows other people's elections like everybody else.
  *
  * THE ROLE AND NOT THE SESSIONS, which is the dual session case: one person can
  * hold both at once, and the app dresses for the one they are wearing. Reading
@@ -57,30 +60,32 @@ describe('the participation band and who is reading it', () => {
     expect(screen.getByText('phase.voted')).toBeInTheDocument();
   });
 
-  it('offers an organizer only what an organizer has', () => {
-    // They follow other people's elections, but they do not enrol or vote as
-    // themselves, so the other three chips would match nothing at all.
+  it('offers an organizer the saved list and nothing about enrolling', () => {
+    // Both sessions can be live at once, and this is the one wearing the
+    // organizer's hat: they follow other people's elections, but they do not
+    // enrol or vote as themselves, so the other three would match nothing.
     auth.activeRole = 'organizer';
     setup();
 
     expect(screen.getByText('saved.filter')).toBeInTheDocument();
+    expect(screen.queryByText('discover.group_participation')).not.toBeInTheDocument();
     expect(screen.queryByText('phase.enrolled')).not.toBeInTheDocument();
     expect(screen.queryByText('discover.pending_vote_only')).not.toBeInTheDocument();
-  });
-
-  it('gives an organizer wearing the hat the same band, whatever else they hold', () => {
-    // Both sessions live, acting as organizer. The voter cookie in the same
-    // browser is not an answer to "have I enrolled": the person reading is
-    // wearing the other hat, and the rest of the app already treats them that
-    // way, down to where their own elections link.
-    auth.activeRole = 'organizer';
-    setup();
-
-    expect(screen.getByText('saved.filter')).toBeInTheDocument();
     expect(screen.queryByText('phase.voted')).not.toBeInTheDocument();
   });
 
-  it('draws no band at all for a visitor with no session', () => {
+  it('keeps saved out of the panel, where it is three presses away', () => {
+    // In the toolbar, so it is reachable and readable with the panel shut.
+    auth.activeRole = 'voter';
+    const { container } = setup();
+
+    const saved = screen.getByText('saved.filter').closest('button');
+    const panel = container.querySelector('[class*="rounded-3xl"]');
+    expect(saved).not.toBeNull();
+    expect(panel?.contains(saved as Node)).not.toBe(true);
+  });
+
+  it('draws nothing about the reader for a visitor with no session', () => {
     setup();
 
     expect(screen.queryByText('discover.group_participation')).not.toBeInTheDocument();

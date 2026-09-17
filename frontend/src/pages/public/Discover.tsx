@@ -43,7 +43,9 @@ export default function Discover() {
    * "load more" control is offered even on an empty result so a reader who
    * narrows the list down to nothing can still keep looking.
    */
-  const { isSaved } = useSavedElections();
+  // The role decides WHICH saved list, and both halves have to agree about
+  // it: the scope resolves the addresses and `keep` filters what came back.
+  const { isSaved, role: savedRole } = useSavedElections();
   const { elections, all, loading, loadingMore, hasMore, loadMore, complete, error, refresh } =
     useElectionPages({
       /**
@@ -55,6 +57,7 @@ export default function Discover() {
        * instead and the chain is asked only about those.
        */
       scope: filters.savedOnly ? 'saved' : 'all',
+      savedRole,
       keep: e =>
         matchesElectionFilter(e, filters, IGNORE_DOMAINS) &&
         // Belt and braces for the scope above: an address saved on another

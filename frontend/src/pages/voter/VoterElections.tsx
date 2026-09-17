@@ -157,7 +157,11 @@ export default function VoterElections() {
               open={filtersOpen}
               onToggleOpen={() => setFiltersOpen(open => !open)}
               searchPlaceholder={t('voter_elections.search_placeholder')}
-              groups={['status', 'participation']}
+              // Their own standing first, the election's second: on a list
+              // they already joined, "where am I in this" is the question
+              // they came with. Discover keeps the other order, where
+              // choosing an election is what the panel is for.
+              groups={['participation', 'status']}
             />
           </div>
         )}
