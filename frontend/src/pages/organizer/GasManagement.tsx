@@ -53,6 +53,7 @@ import {
 import { WalletAnswerLostError } from '../../lib/walletRequest';
 import { isUserRejection } from '../../lib/walletErrors';
 import { formatDateTime } from '../../lib/datetime';
+import { roleAccent } from '../../lib/activeRole';
 
 /** Sample movements shown only in demo mode (no contracts configured). */
 const SEED_HISTORY: GasMovement[] = [
@@ -413,7 +414,7 @@ export default function GasManagement() {
     <PageLayout role="organizer" showNav>
       <div className="max-w-xl mx-auto pt-6 pb-24">
         <h1 className="text-2xl font-black tracking-tight text-white mb-6 flex items-start gap-2">
-          <Zap className="w-5 h-5 text-primary shrink-0 mt-1.5" />
+          <Zap className={`w-5 h-5 shrink-0 mt-1.5 ${roleAccent('organizer')}`} />
           {t('gas.title')}
         </h1>
 

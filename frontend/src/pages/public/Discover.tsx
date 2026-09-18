@@ -10,6 +10,7 @@ import { ListError } from '../../components/ui/ListError';
 import { useElectionPages } from '../../hooks/useElectionPages';
 import { useVerifiedDomains } from '../../hooks/useVerifiedDomains';
 import { useAuth } from '../../contexts/AuthContext';
+import { roleAccent } from '../../lib/activeRole';
 import { ElectionFilters, DISCOVER_GROUPS } from '../../components/ui/ElectionFilters';
 import { usePageMeta } from '../../seo/usePageMeta';
 import { useElectionFilterParams } from '../../hooks/useElectionFilterParams';
@@ -22,7 +23,7 @@ const IGNORE_DOMAINS = () => true;
 export default function Discover() {
   const { t } = useTranslation();
   usePageMeta({ title: t('discover.title'), description: t('discover.subtitle') });
-  const { voterLoggedIn } = useAuth();
+  const { voterLoggedIn, activeRole } = useAuth();
   // In the address bar, so opening an election and pressing back comes home
   // to the list the reader had narrowed rather than to all of them.
   const [filters, setFilters] = useElectionFilterParams();
@@ -114,7 +115,7 @@ export default function Discover() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl font-black tracking-tight text-white mb-2 flex items-start gap-2">
-            <Compass className="w-5 h-5 text-primary shrink-0 mt-1.5" />
+            <Compass className={`w-5 h-5 shrink-0 mt-1.5 ${roleAccent(activeRole)}`} />
             {t('discover.title')}
           </h1>
           <p className="text-on-surface-variant text-sm">{t('discover.subtitle')}</p>

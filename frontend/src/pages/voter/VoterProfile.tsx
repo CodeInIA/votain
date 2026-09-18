@@ -11,6 +11,7 @@ import { RecoveryPhraseCard } from '../../components/voter/RecoveryPhraseCard';
 import { OtherRoleCard } from '../../components/ui/OtherRoleCard';
 import { SignOutActions } from '../../components/ui/SignOutActions';
 import { SiteLinksCard } from '../../components/layout/SiteLinksCard';
+import { roleAccent } from '../../lib/activeRole';
 
 export default function VoterProfile() {
   const navigate = useNavigate();
@@ -20,7 +21,7 @@ export default function VoterProfile() {
     <PageLayout role="voter" showNav>
       <div className="max-w-xl mx-auto pt-6 pb-24">
         <h1 className="text-2xl font-black tracking-tight text-white mb-6 flex items-start gap-2">
-          <User className="w-5 h-5 text-primary shrink-0 mt-1.5" />
+          <User className={`w-5 h-5 shrink-0 mt-1.5 ${roleAccent('voter')}`} />
           {t('profile.title')}
         </h1>
 

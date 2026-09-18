@@ -20,6 +20,7 @@ import {
   fetchElectionMembers,
   fetchOrganizerElectionAddresses,
 } from '../../lib/chainElections';
+import { roleAccent } from '../../lib/activeRole';
 
 interface Member {
   id: string;
@@ -167,7 +168,7 @@ export default function MemberList() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
           <div>
             <h1 className="text-2xl font-black tracking-tight text-white flex items-start gap-2">
-              <Users className="w-5 h-5 text-primary shrink-0 mt-1.5" />
+              <Users className={`w-5 h-5 shrink-0 mt-1.5 ${roleAccent('organizer')}`} />
               {t('members.title')}
             </h1>
             <p className="text-xs text-on-surface-meta mt-0.5">{filtered.length} {t('members.count')}</p>

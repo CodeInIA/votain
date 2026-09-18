@@ -24,6 +24,25 @@
 
 export type Role = 'voter' | 'organizer' | 'public';
 
+/**
+ * The colour a role wears, for the accents that say which hat is on.
+ *
+ * `TopNav` has dressed the avatar this way from the start: a voter is cyan and
+ * an organizer is blue. Nothing else followed it, so the header icons added
+ * later were all `text-primary`, and on a voter's own screen the icon beside
+ * the title disagreed with the avatar three centimetres above it. Two colours
+ * for one role at the same time is not restraint, it is an oversight.
+ *
+ * Here rather than inline, because a colour that MEANS something has to be
+ * decided once. Nine copies of a ternary is how the two drift apart again.
+ *
+ * Public keeps the brand blue: there is no session to echo, and a grey icon on
+ * a page somebody is browsing before signing in reads as disabled.
+ */
+export function roleAccent(role: Role): string {
+  return role === 'voter' ? 'text-tertiary' : 'text-primary';
+}
+
 const ROLE_KEY = 'votain_active_role';
 
 export interface RoleSessions {

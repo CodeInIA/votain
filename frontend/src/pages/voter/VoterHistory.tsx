@@ -14,6 +14,7 @@ import { shortenReference } from '../../lib/utils';
 import { formatDateTime } from '../../lib/datetime';
 import { Input } from '../../components/ui/Input';
 import { SelectMenu } from '../../components/ui/SelectMenu';
+import { roleAccent } from '../../lib/activeRole';
 
 interface HistoryRow {
   electionId: string;
@@ -163,7 +164,7 @@ export default function VoterHistory() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
           <div>
             <h1 className="text-2xl font-black tracking-tight text-white flex items-start gap-2">
-              <Clock className="w-5 h-5 text-primary shrink-0 mt-1.5" />
+              <Clock className={`w-5 h-5 shrink-0 mt-1.5 ${roleAccent('voter')}`} />
               {t('history.title')}
             </h1>
             {/* No count while the identity is locked: zero is not what is known,

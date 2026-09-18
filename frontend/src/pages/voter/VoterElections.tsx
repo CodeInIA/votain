@@ -17,6 +17,7 @@ import { syncSavedElections } from '../../lib/savedElections';
 import { sortElections } from '../../lib/electionSort';
 import { Button } from '../../components/ui/Button';
 import { isChainConfigured } from '../../lib/deployments';
+import { roleAccent } from '../../lib/activeRole';
 
 export default function VoterElections() {
   const { t } = useTranslation();
@@ -125,7 +126,7 @@ export default function VoterElections() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
           <div>
             <h1 className="text-2xl font-black tracking-tight text-white flex items-start gap-2">
-              <Vote className="w-5 h-5 text-primary shrink-0 mt-1.5" />
+              <Vote className={`w-5 h-5 shrink-0 mt-1.5 ${roleAccent('voter')}`} />
               {t('voter_elections.title')}
             </h1>
             <p className="text-xs text-on-surface-meta mt-0.5">

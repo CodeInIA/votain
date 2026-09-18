@@ -16,6 +16,7 @@ import { useSavedElections } from '../../hooks/useSavedElections';
 import { matchesQuery } from '../../lib/electionFilter';
 import { sortElections } from '../../lib/electionSort';
 import { syncSavedElections, type SavedRole } from '../../lib/savedElections';
+import { roleAccent } from '../../lib/activeRole';
 
 /**
  * The elections this reader kept, whichever role they are wearing.
@@ -79,7 +80,7 @@ export default function SavedElections({ role }: { role: SavedRole }) {
       <div className="max-w-3xl mx-auto pt-6 pb-24">
         <div className="mb-6">
           <h1 className="text-2xl font-black tracking-tight text-white flex items-start gap-2">
-            <Bookmark className="w-5 h-5 text-primary shrink-0 mt-1.5" />
+            <Bookmark className={`w-5 h-5 shrink-0 mt-1.5 ${roleAccent(role)}`} />
             {t('saved.title')}
           </h1>
           <p className="text-xs text-on-surface-meta mt-0.5">

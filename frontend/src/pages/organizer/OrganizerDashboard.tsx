@@ -29,6 +29,7 @@ import { ElectionFilters } from '../../components/ui/ElectionFilters';
 import { matchesElectionFilter } from '../../lib/electionFilter';
 import { sortElections } from '../../lib/electionSort';
 import { useVerifiedDomains } from '../../hooks/useVerifiedDomains';
+import { roleAccent } from '../../lib/activeRole';
 
 
 
@@ -177,7 +178,7 @@ export default function OrganizerDashboard() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-8">
           <div>
             <h1 className="text-2xl font-black tracking-tight text-white flex items-start gap-2">
-              <LayoutDashboard className="w-5 h-5 text-primary shrink-0 mt-1.5" />
+              <LayoutDashboard className={`w-5 h-5 shrink-0 mt-1.5 ${roleAccent('organizer')}`} />
               {t('dashboard.title')}
             </h1>
             <p className="text-xs text-on-surface-meta mt-0.5">{t('dashboard.subtitle')}</p>

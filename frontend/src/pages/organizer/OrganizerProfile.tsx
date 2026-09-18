@@ -12,6 +12,7 @@ import { LanguageSelector } from '../../components/ui/LanguageSelector';
 import { useOrganizerWallet } from '../../hooks/useOrganizerWallet';
 import { MyDomains } from '../../components/organizer/MyDomains';
 import { getOrganizerName, setOrganizerName } from '../../lib/organizer';
+import { roleAccent } from '../../lib/activeRole';
 
 export default function OrganizerProfile() {
   const { t } = useTranslation();
@@ -36,7 +37,7 @@ export default function OrganizerProfile() {
             is reached from the avatar in the header, exactly like the voter
             profile beside it, which never had one. */}
         <h1 className="text-2xl font-black tracking-tight text-white mb-6 flex items-start gap-2">
-          <User className="w-5 h-5 text-primary shrink-0 mt-1.5" />
+          <User className={`w-5 h-5 shrink-0 mt-1.5 ${roleAccent('organizer')}`} />
           {t('profile.title')}
         </h1>
 
