@@ -8,7 +8,10 @@
  */
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Smartphone, Plus, Trash2, Check, ShieldAlert } from 'lucide-react';
+import { Smartphone, Plus, Trash2, Check, ShieldAlert, Fingerprint } from 'lucide-react';
+
+import { roleAccent } from '../../lib/activeRole';
+import { cn } from '../../lib/utils';
 import { Link } from 'react-router-dom';
 import { Card } from '../ui/Card';
 import { Modal } from '../ui/Modal';
@@ -167,7 +170,10 @@ export function MyPasskeys() {
 
   return (
     <Card className="p-5 mb-4">
-      <p className="text-sm font-semibold text-on-surface">{t('devices.title')}</p>
+      <p className="text-sm font-semibold text-on-surface flex items-center gap-2">
+        <Fingerprint className={cn('w-4 h-4 shrink-0', roleAccent('voter'))} />
+        {t('devices.title')}
+      </p>
       <p className="text-xs text-on-surface-meta mt-1 mb-4">{t('devices.desc')}</p>
 
       {/* A passkey that works and never reached the chain. Set during setup when

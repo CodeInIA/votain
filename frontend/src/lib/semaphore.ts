@@ -59,13 +59,79 @@ import {
 const IDENTITY_MODE_KEY = "votain_identity_mode"; // "prf" | "local"
 
 /**
- * The phrase is now sealed under a passkey. Keep the local copy until this
- * device has PROVEN it can read one back, and no longer.
+ * A stable pattern for this voter, drawn from the words and from nothing public.
  *
- * The copy is the weaker store, exposed to anything that can run script here,
- * so it is not kept a moment past its usefulness. It is also the only thing
- * standing between a voter on Windows and a phrase they can no longer reach.
+ * NOT THE COMMITMENT, and that is the whole point. `CommitmentFingerprint` is
+ * built for the member list, where the commitment is the only thing the chain
+ * knows and is already published in every election's merkle tree. Drawing the
+ * voter's OWN badge from it would put a recognisable token of that public value
+ * in the top bar of every screen, permanently: anyone who saw the screen, over a
+ * shoulder or in a screenshot, could compute the same pattern for every
+ * commitment in the public registry, find theirs, and read off which elections
+ * they had joined. The ballot would still be secret; the enrolments would not,
+ * and keeping those two apart is what most of this file is for. The nullifier is
+ * no better, since `PlatformRegistry.commitmentOf` maps one to the other in
+ * public.
+ *
+ * So it comes from the phrase through its own salt, exactly as the identity and
+ * the tally key take separate salts from separate secrets. One way, so the
+ * stored value hands the phrase back to nobody, and absent from every chain and
+ * every server, so there is nothing to correlate it against. It is the same on
+ * every device the voter restores, because the words are.
  */
+const AVATAR_SEED_KEY = "votain_avatar_seed";
+
+async function noteAvatarSeed(phrase: string): Promise<void> {
+  // NEVER THROWS, and a test caught why that matters. `crypto.subtle` does not
+  // exist in an insecure context, which is exactly how this app is reached from
+  // a phone during development (http on a LAN address), and `noteSealed` awaits
+  // this before recording that the phrase is now sealed. A decorative badge was
+  // one rejected promise away from leaving a voter's identity mode unwritten.
+  try {
+    const material = new TextEncoder().encode(`votain:avatar:v1:${phrase}`);
+    const digest = await crypto.subtle.digest("SHA-256", material);
+    // TWENTY-FOUR BITS, and not one more, because that is all the picture says.
+    //
+    // A twelve-word phrase from a 128-word list is 2^84, and the pattern shows a
+    // hue and fifteen mirrored cells: about 2^23.5. Keeping the whole SHA-256
+    // stored a value that identifies the phrase exactly, brute-forceable at 2^84
+    // by anyone with the budget, and it sat in localStorage in the clear while
+    // `deviceSeal` was busy encrypting the phrase three keys away. Truncating
+    // makes the stored token no more telling than looking at the screen: a
+    // confirmed match still leaves around 2^60 phrases, which answers nothing.
+    const bytes = new Uint8Array(digest).slice(0, 3);
+    localStorage.setItem(
+      AVATAR_SEED_KEY,
+      [...bytes].map(b => b.toString(16).padStart(2, "0")).join(""),
+    );
+  } catch {
+    // No badge on this device, which the avatar already draws a fallback for.
+  }
+}
+
+/** The voter's own pattern, or null before an identity has been resolved here. */
+export function avatarSeed(): string | null {
+  return localStorage.getItem(AVATAR_SEED_KEY);
+}
+
+/**
+ * Words into a voter, and the badge that stands for them.
+ *
+ * The seed used to be written only where a phrase was STORED, which missed the
+ * path that matters most: a device in local mode reads its phrase, derives the
+ * identity and writes nothing, so that voter would have carried the fallback
+ * glyph forever. Turning words into a voter is an event of its own, and every
+ * derivation in this file goes through here.
+ *
+ * `keepPhraseOnDevice` and `noteSealed` note the seed too, and that is not the
+ * same call twice: they mark the phrase ARRIVING on this device, which happens
+ * on paths that store or re-seal words whose voter was derived long ago.
+ */
+async function voterFromPhrase(phrase: string): Promise<Identity> {
+  void noteAvatarSeed(phrase);
+  return identityFromPhrase(phrase);
+}
+
 /**
  * The phrase lives on this device, in the clear.
  *
@@ -81,10 +147,24 @@ async function keepPhraseOnDevice(phrase: string): Promise<void> {
   // including what that is and is not worth.
   await sealPhraseOnDevice(phrase);
   localStorage.setItem(IDENTITY_MODE_KEY, "local");
+  await noteAvatarSeed(phrase);
 }
 
+/**
+ * The phrase is now sealed under a passkey. Keep the local copy until this
+ * device has PROVEN it can read one back, and no longer.
+ *
+ * The copy is the weaker store, exposed to anything that can run script here,
+ * so it is not kept a moment past its usefulness. It is also the only thing
+ * standing between a voter on Windows and a phrase they can no longer reach.
+ */
 async function noteSealed(phrase: string): Promise<void> {
   localStorage.setItem(IDENTITY_MODE_KEY, "prf");
+  // AFTER the mode, and not awaited. Awaiting it first delayed this write by a
+  // microtask, which was long enough for a `keepPhraseOnDevice` still in flight
+  // to land its "local" on top of it: a decorative badge had inserted itself
+  // into a race over which store holds the voter's phrase. A test caught it.
+  void noteAvatarSeed(phrase);
   if (prfReadbackProven()) {
     await clearPhraseOnDevice();
   } else {
@@ -190,7 +270,7 @@ export async function getOrCreateIdentity(): Promise<Identity> {
   // phrase derives the same identity with no prompt at all.
   if (localStorage.getItem(IDENTITY_MODE_KEY) === "local" || prfReadbackFailed()) {
     const stored = await readPhraseOnDevice();
-    if (stored) return remember(await identityFromPhrase(stored));
+    if (stored) return remember(await voterFromPhrase(stored));
   }
 
   const outcome = await resolveIdentityFromVault();
@@ -216,7 +296,7 @@ export async function getOrCreateIdentity(): Promise<Identity> {
         "This device sealed the phrase under a passkey but cannot evaluate it on an " +
           "assertion. Using the local copy from now on.",
       );
-      return remember(await identityFromPhrase(stored));
+      return remember(await voterFromPhrase(stored));
     }
     throw new IdentityLockedError();
   }
@@ -225,7 +305,7 @@ export async function getOrCreateIdentity(): Promise<Identity> {
   // read back by the branch at the top of this function, which reconstructs the
   // voter by deriving from whatever it finds.
   const stored = await readPhraseOnDevice();
-  if (stored) return remember(await identityFromPhrase(stored));
+  if (stored) return remember(await voterFromPhrase(stored));
 
   // AND OTHERWISE, NOTHING IS MINTED HERE. This used to generate a phrase,
   // write it to disk and hand back an identity, trusting a modal somewhere to
@@ -313,7 +393,7 @@ async function resolveIdentityFromVault(): Promise<VaultOutcome> {
         // What the vault holds is the RECOVERY PHRASE, not an exported
         // identity: the identity is a function of it, so the same words rebuild
         // the same voter on a device that has no passkey at all.
-        const identity = await identityFromPhrase(secret);
+        const identity = await voterFromPhrase(secret);
         // A passkey that unlocked the vault but has no entry of its own is a
         // device the voter authenticated from remotely: give it local access.
         // Sealing the same phrase that was just read out of the vault.
@@ -370,7 +450,7 @@ export async function beginNewIdentity(): Promise<{ phrase: string; identity: Id
   const existing = await readPhraseOnDevice();
   const phrase = existing ?? generateRecoveryPhrase();
   if (!existing) await keepPhraseOnDevice(phrase);
-  return { phrase, identity: await identityFromPhrase(phrase) };
+  return { phrase, identity: await voterFromPhrase(phrase) };
 }
 
 /**
@@ -576,7 +656,7 @@ async function registrationOfPhrase(
 export async function adoptRecoveryPhrase(
   phrase: string,
 ): Promise<{ identity: Identity }> {
-  const identity = await identityFromPhrase(phrase);
+  const identity = await voterFromPhrase(phrase);
 
   // Before anything is remembered. Adopting first and checking after would
   // leave the wrong identity on this device.
@@ -713,7 +793,7 @@ export async function rotateToNewIdentity(
   // theirs at all on a shared browser, and rotating onto a commitment whose
   // phrase somebody else holds is the opposite of a recovery.
   const phrase = generateRecoveryPhrase();
-  const identity = await identityFromPhrase(phrase);
+  const identity = await voterFromPhrase(phrase);
 
   // NO PASSKEY HERE, and that is the change. Recovery used to demand one
   // because it called `resetVault`, which the contract refuses to run with an
@@ -921,6 +1001,9 @@ export function clearIdentity(): void {
   localStorage.removeItem(IDENTITY_MODE_KEY);
   clearPrfReadback();
   localStorage.removeItem(IDENTITY_COMMITMENT_KEY);
+  // The badge goes with the identity it stands for: the next person at this
+  // browser must not inherit the pattern of whoever was here before.
+  localStorage.removeItem(AVATAR_SEED_KEY);
   // Drop this device's per-election vote records too.
   for (const k of Object.keys(localStorage)) {
     if (k.startsWith(VOTE_NULLIFIER_PREFIX)) localStorage.removeItem(k);

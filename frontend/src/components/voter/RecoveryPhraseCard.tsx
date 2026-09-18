@@ -20,6 +20,8 @@ import { Button } from '../ui/Button';
 import { Spinner } from '../ui/Spinner';
 import { useToast } from '../ui/useToast';
 import { revealRecoveryPhrase } from '../../lib/semaphore';
+import { roleAccent } from '../../lib/activeRole';
+import { cn } from '../../lib/utils';
 
 export function RecoveryPhraseCard() {
   const { t } = useTranslation();
@@ -68,7 +70,9 @@ export function RecoveryPhraseCard() {
   return (
     <Card className="p-5 mb-4">
       <h2 className="text-sm font-semibold text-on-surface flex items-center gap-2 mb-1">
-        <KeyRound className="w-4 h-4 text-primary" />
+        {/* The voter's accent, not the organizer's: this card sat in the voter
+            profile wearing #4F8EF7, which is the other role's colour. */}
+        <KeyRound className={cn('w-4 h-4 shrink-0', roleAccent('voter'))} />
         {t('recovery.show_title')}
       </h2>
       <p className="text-xs text-on-surface-meta leading-relaxed mb-4">

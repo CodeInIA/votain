@@ -11,6 +11,9 @@ import { useRefreshOnReturn } from '../../hooks/useRefreshOnReturn';
 import { useTranslation } from 'react-i18next';
 import type { Signer } from 'ethers';
 import { Globe, Plus, Trash2, Copy, Check, AlertTriangle } from 'lucide-react';
+
+import { roleAccent } from '../../lib/activeRole';
+import { cn } from '../../lib/utils';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -199,7 +202,10 @@ export function MyDomains({
 
   return (
     <Card className="p-5 mb-4">
-      <p className="text-sm font-semibold text-on-surface">{t('domain.title')}</p>
+      <p className="text-sm font-semibold text-on-surface flex items-center gap-2">
+        <Globe className={cn('w-4 h-4 shrink-0', roleAccent('organizer'))} />
+        {t('domain.title')}
+      </p>
       <p className="text-xs text-on-surface-meta mt-1 mb-4">{t('domain.desc')}</p>
 
       {loading ? (

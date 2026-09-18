@@ -141,6 +141,25 @@ pages/voter/Onboarding.tsx      PascalCase
 --warning: #FBBF24;
 ```
 
+### Card heading icons
+
+Every card heading in both profiles carries a small icon before its text, at
+`w-4 h-4`, coloured by `roleAccent(role)` from `lib/activeRole`: `text-primary`
+under the organizer, `text-tertiary` under the voter. The same function colours
+each screen's `h1` icon, so there is one source of truth for "what colour is
+this role".
+
+Two exceptions, and both say something the accent cannot:
+
+- **A state.** The green `ShieldCheck` on "verified voter" reports a fact about
+  the voter, not a section, so it keeps the green and follows the text.
+- **The other role.** `OtherRoleCard` wears `text-secondary`, deliberately not
+  the colour of the role reading it, because the card is about the other one.
+
+A card that carries the identity drawing takes no small glyph in its heading:
+the drawing is that card's icon, and a second mark beside it reads as a second
+identity.
+
 ### Touch target minimums
 
 - Buttons on mobile: minimum **44×44px** (WCAG 2.5.5).
