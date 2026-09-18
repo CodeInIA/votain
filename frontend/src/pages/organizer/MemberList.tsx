@@ -163,10 +163,13 @@ export default function MemberList() {
 
   return (
     <PageLayout role="organizer" showNav>
-      <div className="max-w-3xl mx-auto pt-4 pb-24">
-        <div className="flex items-center justify-between mb-6">
+      <div className="max-w-3xl mx-auto pt-6 pb-24">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-white">{t('members.title')}</h1>
+            <h1 className="text-2xl font-black tracking-tight text-white flex items-start gap-2">
+              <Users className="w-5 h-5 text-primary shrink-0 mt-1.5" />
+              {t('members.title')}
+            </h1>
             <p className="text-xs text-on-surface-meta mt-0.5">{filtered.length} {t('members.count')}</p>
           </div>
           <Button variant="ghost" className="gap-2 rounded-2xl" onClick={exportCSV}>

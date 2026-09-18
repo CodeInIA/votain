@@ -515,7 +515,7 @@
     "reserve_source_split": "{{fromBalance}} {{currency}} с баланса и {{fromWallet}} {{currency}} из кошелька."
   },
   "members": {
-    "title": "Зарегистрированные участники",
+    "title": "Участники",
     "count": "участников",
     "search_placeholder": "Поиск по обязательству идентичности…",
     "all_elections": "Все выборы",

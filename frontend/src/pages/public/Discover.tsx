@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Compass } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { ElectionCard } from '../../components/ui/ElectionCard';
 import { Skeleton } from '../../components/ui/Skeleton';
@@ -112,7 +113,8 @@ export default function Discover() {
       <div className="max-w-5xl mx-auto pt-6 pb-24">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white mb-2">
+          <h1 className="text-2xl font-black tracking-tight text-white mb-2 flex items-start gap-2">
+            <Compass className="w-5 h-5 text-primary shrink-0 mt-1.5" />
             {t('discover.title')}
           </h1>
           <p className="text-on-surface-variant text-sm">{t('discover.subtitle')}</p>

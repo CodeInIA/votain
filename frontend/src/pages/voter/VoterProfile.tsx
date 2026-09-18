@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { SearchCheck, RefreshCw } from 'lucide-react';
+import { SearchCheck, RefreshCw, User } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -19,7 +19,10 @@ export default function VoterProfile() {
   return (
     <PageLayout role="voter" showNav>
       <div className="max-w-xl mx-auto pt-6 pb-24">
-        <h1 className="text-2xl font-black tracking-tight text-white mb-6">{t('profile.title')}</h1>
+        <h1 className="text-2xl font-black tracking-tight text-white mb-6 flex items-start gap-2">
+          <User className="w-5 h-5 text-primary shrink-0 mt-1.5" />
+          {t('profile.title')}
+        </h1>
 
         {/* Who this voter is to the platform, and what that number means. */}
         <VerifiedVoterCard />

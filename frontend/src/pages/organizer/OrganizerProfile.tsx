@@ -35,7 +35,10 @@ export default function OrganizerProfile() {
             INTO from a list: an election, its results, the create wizard. This
             is reached from the avatar in the header, exactly like the voter
             profile beside it, which never had one. */}
-        <h1 className="text-2xl font-black tracking-tight text-white mb-6">{t('profile.title')}</h1>
+        <h1 className="text-2xl font-black tracking-tight text-white mb-6 flex items-start gap-2">
+          <User className="w-5 h-5 text-primary shrink-0 mt-1.5" />
+          {t('profile.title')}
+        </h1>
 
         {/* Display name */}
         <Card className="p-5 mb-4">

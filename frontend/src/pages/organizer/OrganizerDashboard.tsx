@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus, Vote, Users, TrendingUp, Settings } from 'lucide-react';
+import { LayoutDashboard, Plus, Vote, Users, TrendingUp, Settings } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Button } from '../../components/ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
@@ -174,9 +174,12 @@ export default function OrganizerDashboard() {
     <PageLayout role="organizer" showNav>
       <div className="max-w-5xl mx-auto pt-6 pb-24">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-white">{t('dashboard.title')}</h1>
+            <h1 className="text-2xl font-black tracking-tight text-white flex items-start gap-2">
+              <LayoutDashboard className="w-5 h-5 text-primary shrink-0 mt-1.5" />
+              {t('dashboard.title')}
+            </h1>
             <p className="text-xs text-on-surface-meta mt-0.5">{t('dashboard.subtitle')}</p>
           </div>
           <Button

@@ -78,8 +78,8 @@ export default function SavedElections({ role }: { role: SavedRole }) {
     <PageLayout role={role} showNav>
       <div className="max-w-3xl mx-auto pt-6 pb-24">
         <div className="mb-6">
-          <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
-            <Bookmark className="w-5 h-5 text-primary" />
+          <h1 className="text-2xl font-black tracking-tight text-white flex items-start gap-2">
+            <Bookmark className="w-5 h-5 text-primary shrink-0 mt-1.5" />
             {t('saved.title')}
           </h1>
           <p className="text-xs text-on-surface-meta mt-0.5">

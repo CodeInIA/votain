@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Bell, KeyRound } from 'lucide-react';
+import { Bell, KeyRound, Vote } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { ElectionCard } from '../../components/ui/ElectionCard';
 import { endsSoon } from '../../lib/phase';
@@ -122,9 +122,12 @@ export default function VoterElections() {
     <PageLayout role="voter" showNav>
       <div className="max-w-3xl mx-auto pt-6 pb-24">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-white">{t('voter_elections.title')}</h1>
+            <h1 className="text-2xl font-black tracking-tight text-white flex items-start gap-2">
+              <Vote className="w-5 h-5 text-primary shrink-0 mt-1.5" />
+              {t('voter_elections.title')}
+            </h1>
             <p className="text-xs text-on-surface-meta mt-0.5">
               {myElections.length} {t('voter_elections.subtitle')}
             </p>

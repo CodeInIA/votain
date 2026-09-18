@@ -13,6 +13,7 @@ import {
   Undo2,
   AlertTriangle,
   Layers,
+  Zap,
   type LucideIcon,
 } from 'lucide-react';
 import { formatEther } from 'ethers';
@@ -411,7 +412,10 @@ export default function GasManagement() {
   return (
     <PageLayout role="organizer" showNav>
       <div className="max-w-xl mx-auto pt-6 pb-24">
-        <h1 className="text-2xl font-black tracking-tight text-white mb-6">{t('gas.title')}</h1>
+        <h1 className="text-2xl font-black tracking-tight text-white mb-6 flex items-start gap-2">
+          <Zap className="w-5 h-5 text-primary shrink-0 mt-1.5" />
+          {t('gas.title')}
+        </h1>
 
         {/* Current balance */}
         {/* NO `onDeposit` here, deliberately. The widget's button exists to

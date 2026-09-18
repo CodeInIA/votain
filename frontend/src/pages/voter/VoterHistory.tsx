@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronRight, Download, Copy, Check, ShieldCheck, Lock, Search, X, ArrowDown, ArrowUp } from 'lucide-react';
+import { ChevronRight, Clock, Download, Copy, Check, ShieldCheck, Lock, Search, X, ArrowDown, ArrowUp } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
@@ -160,9 +160,12 @@ export default function VoterHistory() {
   return (
     <PageLayout role="voter" showNav>
       <div className="max-w-3xl mx-auto pt-6 pb-24">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-white">{t('history.title')}</h1>
+            <h1 className="text-2xl font-black tracking-tight text-white flex items-start gap-2">
+              <Clock className="w-5 h-5 text-primary shrink-0 mt-1.5" />
+              {t('history.title')}
+            </h1>
             {/* No count while the identity is locked: zero is not what is known,
                 it is what cannot be looked up, and the sentence below already
                 says so. */}
