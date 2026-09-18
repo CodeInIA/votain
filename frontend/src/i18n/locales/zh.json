@@ -538,7 +538,11 @@
     "cancel_signup": "取消注册",
     "cancel_signup_title": "取消注册？",
     "cancel_signup_desc": "目前还没有任何东西被注册：你的身份不在登记表中。在本设备上生成的十二个词会被丢弃，你的 World ID 会话也会结束。你可以随时重新开始。",
-    "reverify_hint": "丢了设备，或者被盗了？轮换身份会废除旧身份，连同你已经参与的所有选举。"
+    "reverify_hint": "丢了设备，或者被盗了？轮换身份会废除旧身份，连同你已经参与的所有选举。",
+    "avatar_title": "你的图案",
+    "avatar_desc": "一个只属于你的图案，可以用来替代顶部栏的个人资料图标。",
+    "avatar_toggle": "用作我的个人资料图标",
+    "avatar_none": "在本设备解锁身份后即可使用。"
   },
   "tx": {
     "title_pending": "交易进行中",

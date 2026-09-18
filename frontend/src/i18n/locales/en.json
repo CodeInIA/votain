@@ -543,7 +543,11 @@
     "cancel_signup": "Cancel sign-up",
     "cancel_signup_title": "Cancel sign-up?",
     "cancel_signup_desc": "Nothing has been registered yet: your identity is not on the registry. The twelve words generated on this device are discarded and your World ID session ends. You can start again whenever you like.",
-    "reverify_hint": "Lost a device, or had one stolen? Rotating your identity revokes the old one, and with it every election you had already joined."
+    "reverify_hint": "Lost a device, or had one stolen? Rotating your identity revokes the old one, and with it every election you had already joined.",
+    "avatar_title": "Your pattern",
+    "avatar_desc": "A drawing that is only yours, which you can use instead of the profile icon in the top bar.",
+    "avatar_toggle": "Use it as my profile icon",
+    "avatar_none": "Available once you unlock your identity on this device."
   },
   "tx": {
     "title_pending": "Transaction in progress",

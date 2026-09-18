@@ -2531,3 +2531,61 @@ WebAuthn with no Votain code in the way: create with `prf.eval`, assert with the
 extension, assert the same credential without it. Both were scaffolding and both
 were removed. Anything claimed above that is not in this list was not
 measured.
+
+
+## A voter can wear their own pattern, and it gives nothing away (2026-09-18)
+
+Both roles wore the same `User` silhouette in the top bar, told apart by colour
+alone: #4F8EF7 and #00D4FF, a blue and a cyan that protanopia and deuteranopia
+bring much closer together than they look. The voter's also carried a dot in the
+bottom-right corner, the position and shape every interface uses for "online" or
+"unread", meaning neither and drawn for one role and not the other. Decoration
+shaped like a status.
+
+Both profiles now open with a generated pattern, and a switch moves it into the
+top bar in place of the glyph. Off by default: a coloured pattern is not
+obviously the way to your own account, so it is introduced where it can be
+explained and only travels if asked for.
+
+WHERE EACH ONE COMES FROM, which is the only part with a security argument.
+
+    organizer   the wallet address. Public by intent, drawn the way every wallet
+                draws an address.
+    voter       twenty-four bits from the recovery phrase under its own salt.
+
+NOT THE COMMITMENT, and not the nullifier. `CommitmentFingerprint` exists for
+the member list, where the commitment is the only thing the chain knows and is
+already published in every election's merkle tree. Drawing the voter's own badge
+from it would put a recognisable token of that public value on every screen:
+anyone who saw it, over a shoulder or in a screenshot, could compute the same
+pattern for every commitment in the public registry, find theirs, and read off
+which elections they had joined. The ballot would still be secret; the
+enrolments would not. The nullifier is no better, since
+`PlatformRegistry.commitmentOf` maps one to the other in public.
+
+TWENTY-FOUR BITS, and not one more, because that is all the picture says: a hue
+and fifteen mirrored cells, about 2^23.5. The first version stored the whole
+SHA-256 of the phrase, in the clear in localStorage, while `deviceSeal` was
+encrypting that same phrase three keys away — a value that pins a 2^84 phrase
+exactly, for a badge. Truncated, a confirmed match still leaves around 2^60
+candidates, so the stored token is no more telling than the screen already is.
+
+Verified in the running app rather than argued: the seed was `1273e1`, the
+nullifier printed on the same card hashes to `cc0423`, and no stored identity
+value reproduces the seed.
+
+TWO NEW KEYS, both per browser. `votain_avatar_seed` is cleared by
+`clearIdentity` with the identity it stands for, so the next person at a shared
+browser does not inherit a pattern. `votain_avatar_icon` holds the preference
+and is deliberately NOT on chain: it would cost a transaction and publish a new
+public fact tied to the voter, and it would not even work, since a new device
+has no pattern to show until the phrase is unlocked there anyway.
+
+TWO BUGS THE WRITING CAUSED, both caught by tests rather than by reading. The
+seed write is async, and `crypto.subtle` does not exist in an insecure context,
+which is exactly how this app is reached from a phone in development: awaiting
+it inside `noteSealed` left the identity mode unwritten. Awaiting it BEFORE the
+mode was worse — it delayed that write by a microtask, long enough for a
+`keepPhraseOnDevice` still in flight to land its "local" on top of the "prf". A
+decorative badge had inserted itself into a race over which store holds a
+voter's phrase.

@@ -543,7 +543,11 @@
     "cancel_signup": "Anmeldung abbrechen",
     "cancel_signup_title": "Anmeldung abbrechen?",
     "cancel_signup_desc": "Es ist noch nichts registriert: deine Identität steht nicht im Register. Die auf diesem Gerät erzeugten zwölf Wörter werden verworfen und deine World-ID-Sitzung endet. Du kannst jederzeit neu anfangen.",
-    "reverify_hint": "Ein Gerät verloren oder gestohlen? Die Rotation deiner Identität widerruft die alte, und mit ihr jede Wahl, an der du bereits teilgenommen hast."
+    "reverify_hint": "Ein Gerät verloren oder gestohlen? Die Rotation deiner Identität widerruft die alte, und mit ihr jede Wahl, an der du bereits teilgenommen hast.",
+    "avatar_title": "Dein Muster",
+    "avatar_desc": "Eine Zeichnung, die nur dir gehört und die du statt des Profilsymbols in der oberen Leiste verwenden kannst.",
+    "avatar_toggle": "Als Profilsymbol verwenden",
+    "avatar_none": "Verfügbar, sobald du deine Identität auf diesem Gerät entsperrst."
   },
   "tx": {
     "title_pending": "Transaktion läuft",

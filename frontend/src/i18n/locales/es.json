@@ -548,7 +548,11 @@
     "cancel_signup": "Cancelar el alta",
     "cancel_signup_title": "¿Cancelar el alta?",
     "cancel_signup_desc": "Todavía no hay nada registrado: tu identidad no se ha inscrito en el registro. Se descartan las doce palabras generadas en este dispositivo y termina tu sesión de World ID. Puedes empezar de nuevo cuando quieras.",
-    "reverify_hint": "¿Has perdido un dispositivo o te lo han robado? Rotar tu identidad revoca la anterior, y con ella todas las elecciones en las que ya estabas inscrito."
+    "reverify_hint": "¿Has perdido un dispositivo o te lo han robado? Rotar tu identidad revoca la anterior, y con ella todas las elecciones en las que ya estabas inscrito.",
+    "avatar_title": "Tu patrón",
+    "avatar_desc": "Un dibujo único tuyo, que puedes usar en lugar del icono de perfil de la barra superior.",
+    "avatar_toggle": "Usarlo como icono de perfil",
+    "avatar_none": "Disponible en cuanto desbloquees tu identidad en este dispositivo."
   },
   "tx": {
     "title_pending": "Transacción en progreso",

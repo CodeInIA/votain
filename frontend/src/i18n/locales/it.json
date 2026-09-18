@@ -548,7 +548,11 @@
     "cancel_signup": "Annulla la registrazione",
     "cancel_signup_title": "Annullare la registrazione?",
     "cancel_signup_desc": "Non c’è ancora nulla di registrato: la tua identità non è nel registro. Le dodici parole generate su questo dispositivo vengono scartate e la tua sessione World ID termina. Puoi ricominciare quando vuoi.",
-    "reverify_hint": "Hai perso un dispositivo o te l’hanno rubato? Ruotare la tua identità revoca quella precedente, e con essa tutte le elezioni a cui eri già iscritto."
+    "reverify_hint": "Hai perso un dispositivo o te l’hanno rubato? Ruotare la tua identità revoca quella precedente, e con essa tutte le elezioni a cui eri già iscritto.",
+    "avatar_title": "Il tuo motivo",
+    "avatar_desc": "Un disegno solo tuo, che puoi usare al posto dell’icona del profilo nella barra in alto.",
+    "avatar_toggle": "Usalo come icona del profilo",
+    "avatar_none": "Disponibile appena sblocchi la tua identità su questo dispositivo."
   },
   "tx": {
     "title_pending": "Transazione in corso",
