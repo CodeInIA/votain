@@ -1,10 +1,11 @@
 import { useLayoutEffect, useRef } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Compass, Vote, Clock, User, LayoutDashboard, Users, Zap, ShieldCheck, Bookmark } from 'lucide-react';
+import { Compass, Vote, Clock, LayoutDashboard, Users, Zap, ShieldCheck, Bookmark } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
+import { ProfileAvatar } from './ProfileAvatar';
 import { homeRouteFor } from '../../lib/activeRole';
 import { RoleSwitch } from './RoleSwitch';
 import { useNavFit } from './navFit';
@@ -173,25 +174,9 @@ export function TopNav() {
       <div ref={actionsRef} className="flex items-center gap-3 shrink-0 ml-auto">
         <RoleSwitch />
         {activeRole === 'organizer' ? (
-          <button
-            type="button"
-            data-nav-href="/organizer/profile"
-            onClick={() => navigate('/organizer/profile')}
-            className="relative w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center hover:bg-primary/20 transition-colors cursor-pointer"
-            aria-label={t('nav.profile')}
-          >
-            <User className="w-4 h-4 text-primary" />
-          </button>
+          <ProfileAvatar role="organizer" />
         ) : activeRole === 'voter' ? (
-          <button
-            type="button"
-            onClick={() => navigate('/voter/profile')}
-            className="relative w-8 h-8 rounded-full bg-tertiary/10 border border-tertiary/20 flex items-center justify-center hover:bg-tertiary/20 transition-colors cursor-pointer"
-            aria-label={t('nav.profile')}
-          >
-            <User className="w-4 h-4 text-tertiary" />
-            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-tertiary border-2 border-background" />
-          </button>
+          <ProfileAvatar role="voter" />
         ) : (
           <Button
             variant="default"

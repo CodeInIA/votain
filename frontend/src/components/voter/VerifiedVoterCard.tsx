@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ShieldCheck, Copy, Check } from 'lucide-react';
 import { Card } from '../ui/Card';
+import { CommitmentFingerprint } from '../ui/CommitmentFingerprint';
 import { cn } from '../../lib/utils';
 import { readOnDevice } from '../../lib/deviceSeal';
+import { avatarSeed } from '../../lib/semaphore';
 
 /**
  * Who this voter is to the platform, and what that number is.
@@ -20,6 +22,18 @@ import { readOnDevice } from '../../lib/deviceSeal';
  * words "verified voter", with no label and nothing to press: enough to look
  * like an identifier, not enough to be one. A voter could neither tell what it
  * was nor do anything with it.
+ *
+ * IT ALSO CARRIES THE PATTERN, when this device has one. A profile opens with
+ * a picture of you, and the picture belongs beside the identifier it is drawn
+ * from rather than three cards down next to its own switch: standing here it
+ * explains where it comes from without a line of text. It is NOT the icon
+ * preference and does not read it — that switch decides what the top bar wears,
+ * and this is the profile showing you yourself.
+ *
+ * When the phrase has not been unlocked on this device there is no pattern, and
+ * the card says nothing about that: it wears the shield it always wore. An
+ * absent decoration is not news, and the voter who sees it is the one who has
+ * just arrived without their identity and has better things to read.
  *
  * WHOLE ON A WIDE SCREEN, cut on a phone. Sixty-six monospace characters fit
  * across this card on a desktop and take three lines of a phone, so the phone
@@ -44,6 +58,12 @@ export function VerifiedVoterCard() {
     return () => { cancelled = true; };
   }, []);
 
+  /**
+   * Read at render rather than held: it is written outside React, by the unlock
+   * that may well be what brought this screen here.
+   */
+  const patron = avatarSeed();
+
   const [showFull, setShowFull] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -56,12 +76,29 @@ export function VerifiedVoterCard() {
 
   return (
     <Card className="p-5 mb-4">
-      <div className="flex items-start gap-4">
-        <div className="w-12 h-12 rounded-full bg-green-500/15 border border-green-500/25 flex items-center justify-center shrink-0">
-          <ShieldCheck className="w-6 h-6 text-green-400" />
-        </div>
+      {/* `items-center`. Pinned to the top it sat level with the title while
+          three lines ran on below it, which is what read as off centre.
+
+          NOT stretched to the card's height: `self-stretch` with `aspect-square`
+          feeds back on itself here, because the square's width narrows the text
+          column, the text grows taller, and the square follows it. It settled at
+          302 pixels. A fixed size, centred against the block, is the stable way
+          to say the same thing. */}
+      <div className="flex items-center gap-4">
+        {patron ? (
+          <CommitmentFingerprint value={patron} className="w-14 h-14 shrink-0" />
+        ) : (
+          <div className="w-14 h-14 rounded-full bg-green-500/15 border border-green-500/25 flex items-center justify-center shrink-0">
+            <ShieldCheck className="w-7 h-7 text-green-400" />
+          </div>
+        )}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-on-surface">{t('nav.verified_voter')}</p>
+          <p className="text-sm font-semibold text-on-surface flex items-center gap-1.5">
+            {t('nav.verified_voter')}
+            {/* Verified is a state, not an ornament, so it follows the words
+                rather than disappearing with the disc it used to fill. */}
+            {patron && <ShieldCheck className="w-4 h-4 text-green-400 shrink-0" />}
+          </p>
           {nullifier && (
             <>
               <p className="text-xs text-on-surface-meta mt-1 leading-snug">

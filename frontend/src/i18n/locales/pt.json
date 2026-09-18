@@ -548,7 +548,11 @@
     "cancel_signup": "Cancelar o registo",
     "cancel_signup_title": "Cancelar o registo?",
     "cancel_signup_desc": "Ainda não há nada registado: a sua identidade não está no registo. As doze palavras geradas neste dispositivo são descartadas e a sua sessão World ID termina. Pode recomeçar quando quiser.",
-    "reverify_hint": "Perdeu um dispositivo ou roubaram-lho? Rodar a sua identidade revoga a anterior e, com ela, todas as eleições a que já tinha aderido."
+    "reverify_hint": "Perdeu um dispositivo ou roubaram-lho? Rodar a sua identidade revoga a anterior e, com ela, todas as eleições a que já tinha aderido.",
+    "avatar_title": "O seu padrão",
+    "avatar_desc": "Um desenho só seu, que pode usar em vez do ícone de perfil na barra superior.",
+    "avatar_toggle": "Usar como ícone de perfil",
+    "avatar_none": "Disponível assim que desbloquear a sua identidade neste dispositivo."
   },
   "tx": {
     "title_pending": "Transação em andamento",

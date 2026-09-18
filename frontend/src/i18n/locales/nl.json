@@ -543,7 +543,11 @@
     "cancel_signup": "Registratie annuleren",
     "cancel_signup_title": "Registratie annuleren?",
     "cancel_signup_desc": "Er is nog niets geregistreerd: je identiteit staat niet in het register. De twaalf woorden die op dit apparaat zijn gemaakt worden weggegooid en je World ID-sessie eindigt. Je kunt altijd opnieuw beginnen.",
-    "reverify_hint": "Een apparaat kwijt of gestolen? Je identiteit roteren trekt de oude in, en daarmee elke verkiezing waaraan je al deelnam."
+    "reverify_hint": "Een apparaat kwijt of gestolen? Je identiteit roteren trekt de oude in, en daarmee elke verkiezing waaraan je al deelnam.",
+    "avatar_title": "Jouw patroon",
+    "avatar_desc": "Een tekening die alleen van jou is en die je kunt gebruiken in plaats van het profielpictogram in de bovenbalk.",
+    "avatar_toggle": "Gebruiken als profielpictogram",
+    "avatar_none": "Beschikbaar zodra je je identiteit op dit apparaat ontgrendelt."
   },
   "tx": {
     "title_pending": "Transactie bezig",

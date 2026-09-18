@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 
 /**
@@ -65,5 +65,31 @@ describe('the verified voter card', () => {
     await waitFor(() => expect(screen.getByText('nav.verified_voter')).toBeInTheDocument());
     expect(screen.queryByText('profile.nullifier_hint')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'common.copy' })).not.toBeInTheDocument();
+  });
+  /**
+   * The pattern took over the slot the green disc used to fill, so the card had
+   * to keep saying "verified" some other way. These pin both halves of that: the
+   * drawing appears when this device has one, and the shield survives the move.
+   */
+  describe('the pattern beside the number', () => {
+    afterEach(() => localStorage.clear());
+
+    it('draws it when this device has one, and keeps the shield', async () => {
+      localStorage.setItem('votain_avatar_seed', '1273e1');
+      const { container } = render(<VerifiedVoterCard />);
+      await screen.findByText('nav.verified_voter');
+
+      expect(container.querySelector('svg.lucide-shield-check')).not.toBeNull();
+      // The green disc is gone; what stands there now is the drawing.
+      expect(container.querySelector('[class*="bg-green-500"]')).toBeNull();
+      expect(container.querySelector('svg:not(.lucide-shield-check):not(.lucide-copy)')).not.toBeNull();
+    });
+
+    it('falls back to the disc when the identity is still locked here', async () => {
+      const { container } = render(<VerifiedVoterCard />);
+      await screen.findByText('nav.verified_voter');
+
+      expect(container.querySelector('[class*="bg-green-500"]')).not.toBeNull();
+    });
   });
 });

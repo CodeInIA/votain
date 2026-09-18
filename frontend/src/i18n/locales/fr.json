@@ -548,7 +548,11 @@
     "cancel_signup": "Annuler l’inscription",
     "cancel_signup_title": "Annuler l’inscription ?",
     "cancel_signup_desc": "Rien n’est encore enregistré : votre identité ne figure pas au registre. Les douze mots générés sur cet appareil sont abandonnés et votre session World ID prend fin. Vous pourrez recommencer quand vous voudrez.",
-    "reverify_hint": "Un appareil perdu ou volé ? Faire tourner votre identité révoque l’ancienne, et avec elle toutes les élections que vous aviez déjà rejointes."
+    "reverify_hint": "Un appareil perdu ou volé ? Faire tourner votre identité révoque l’ancienne, et avec elle toutes les élections que vous aviez déjà rejointes.",
+    "avatar_title": "Votre motif",
+    "avatar_desc": "Un dessin qui n’appartient qu’à vous, utilisable à la place de l’icône de profil dans la barre du haut.",
+    "avatar_toggle": "L’utiliser comme icône de profil",
+    "avatar_none": "Disponible dès que vous déverrouillez votre identité sur cet appareil."
   },
   "tx": {
     "title_pending": "Transaction en cours",
