@@ -586,7 +586,8 @@
     "wallet_answer_lost": "Impossible de confirmer la réponse de votre portefeuille. Vérifiez l’état avant de réessayer.",
     "wallet_request_rejected": "Vous avez annulé la demande dans votre portefeuille. Rien n’a été fait.",
     "passkey_cancelled": "Vous avez fermé la demande de passkey. Rien n’a été créé : vous pouvez réessayer.",
-    "list_unreadable": "Cette liste n’a pas pu être lue depuis la chaîne, ce qui n’est pas la même chose qu’une liste vide. Vérifiez la connexion et réessayez."
+    "list_unreadable": "Cette liste n’a pas pu être lue depuis la chaîne, ce qui n’est pas la même chose qu’une liste vide. Vérifiez la connexion et réessayez.",
+    "passkey_unproven": "La passkey a été créée, mais nous n’avons pas encore pu confirmer qu’elle peut déchiffrer. Appuyez à nouveau : c’est la même qui sera interrogée, sans en créer de nouvelle."
   },
   "demo": {
     "banner": "Données de démonstration: aucun contrat déployé. Rien ici n'est sur la blockchain."

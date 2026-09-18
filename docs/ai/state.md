@@ -2477,3 +2477,57 @@ had outlived the split origins it was written for.
 `components/ui/{ElectionFilters,ClearFiltersButton,ElectionCard}`. Backend:
 `auth/cookie.ts`, `status/statusList.ts`, `index.ts`, and the six routes that
 named the cookie.
+
+## "Windows Hello cannot do PRF" was one desktop, not a platform (2026-09-18)
+
+This file and `passkeyPrf.ts` have said for weeks that Windows Hello returns a
+PRF secret while creating a credential and then refuses to evaluate it on every
+assertion. The measurement was real. The attribution was wrong, and it was wrong
+in the way that matters: a machine was generalised into a platform, and code and
+documentation were written around a defect that most Windows machines do not
+have.
+
+A second Windows laptop, same app, same flow, same build, links a passkey first
+time and reads it back.
+
+Re-measured on the failing desktop with raw WebAuthn, outside this app, so
+nothing here could be blamed:
+
+    create with prf.eval    ok, prf present, enabled: true, secret returned
+    assert WITH prf         NotAllowedError
+    assert WITHOUT prf      ok, same credential
+
+The extension is what is refused, not the assertion. Nothing in the machine's
+configuration accounts for it: TPM 2.0 present and healthy, Windows 11 25H2 at
+26200.9457 fully patched, no PassportForWork or Chrome policy, and Chrome
+reporting a platform authenticator. A winutil pass had touched the machine but
+only telemetry and SmartScreen keys, which are unrelated. The cause is not
+visible from the operating system, and that is where the investigation stops.
+
+Four behaviours are now measured, and the code has to survive all of them:
+
+| Authenticator | Create | Assertion with PRF |
+|---|---|---|
+| That desktop's Hello | secret, `enabled: true` | NotAllowedError, always |
+| Another Windows laptop | same | works, first time |
+| Android's own browser | same | first: no `prf` key at all; asked again: works |
+| The same phone by QR | same | works, first time |
+
+Android's is a different failure from the desktop's and was being read as the
+same one: there the extension never runs, here it runs and is refused. Both used
+to end in "this passkey is no use", and only one of them was ever true.
+
+The defensive code stays exactly as it is, because the desktop proves that state
+exists. What changed is that nothing decides anything from a platform name: a
+device is believed only once an assertion has actually returned a secret, and a
+single empty or refused answer concludes nothing.
+
+HOW IT WAS MEASURED, since neither instrument survives in the tree and the
+method is the part worth keeping. A phone has no devtools, so the console was
+temporarily mirrored onto the page to read what an assertion came back with;
+that is how `prfPresent: false` on Android was seen at all. The desktop verdict
+came from a probe injected into the page and driven by a real click, doing raw
+WebAuthn with no Votain code in the way: create with `prf.eval`, assert with the
+extension, assert the same credential without it. Both were scaffolding and both
+were removed. Anything claimed above that is not in this list was not
+measured.

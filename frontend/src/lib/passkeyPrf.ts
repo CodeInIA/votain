@@ -20,8 +20,9 @@ const CRED_ID_KEY = "votain_prf_credential_id";
  *
  * "ok" is written by `assertPrf` and by nothing else, because an assertion
  * that hands back a secret is the only proof that exists. Sealing proves
- * nothing: Chrome and Firefox on Windows evaluate the extension while a
- * credential is being created and refuse to on an assertion.
+ * nothing: there are machines that evaluate the extension while a credential is
+ * being created and refuse to on an assertion, which is why this is recorded
+ * per device rather than assumed from a platform name.
  *
  * It answers a question the WebAuthn API does not: when an assertion for a
  * known credential id comes back empty, is that a platform that cannot
@@ -100,13 +101,15 @@ const IDENTITY_SALT = new TextEncoder().encode("votain:semaphore-identity:v1");
  * PRF secrets evaluated during THIS page's life, keyed by salt.
  *
  * Creating a credential returns the secret; asserting one returns it again, and
- * on most platforms the second is how it is obtained whenever it is needed,
- * which is why nothing is kept. Chrome with Windows Hello does the first and
- * refuses the second: measured across seven combinations of residency,
- * allowCredentials and user verification, over http://localhost and over HTTPS,
- * always NotAllowedError. An organizer there could sign in and then not open
- * their own tally vault, so creating an election failed on the device that had
- * just created the passkey.
+ * on most machines the second is how it is obtained whenever it is needed, which
+ * is why nothing is kept. ONE DESKTOP here does the first and refuses the
+ * second: measured across seven combinations of residency, allowCredentials and
+ * user verification, over http://localhost and over HTTPS, always
+ * NotAllowedError, and confirmed on 2026-09-18 with raw WebAuthn outside this
+ * app. A second Windows laptop running the same build does not, so this is a
+ * property of that machine and not of Windows Hello. An organizer on it could
+ * sign in and then not open their own tally vault, so creating an election
+ * failed on the device that had just created the passkey.
  *
  * So the value creation already handed us is kept instead of discarded. IN
  * MEMORY ONLY: a reload clears it, which keeps the secret off disk and is the
@@ -196,6 +199,26 @@ export class PasskeyCancelledError extends Error {
   constructor(cause?: unknown) {
     super("Passkey creation was cancelled", { cause });
     this.name = "PasskeyCancelledError";
+  }
+}
+
+/**
+ * The credential exists and its PRF has not been proven YET.
+ *
+ * Not a verdict, which is the whole point. An assertion made in the same breath
+ * as the creation has been observed to answer without a PRF result on a
+ * credential that returns one perfectly a moment later, asked as a separate
+ * gesture: measured 2026-09-18, by cancelling that first prompt and pressing
+ * again, where the very same credential and salt produced the secret and sealed.
+ *
+ * So the first read-back is advisory and this says so. The verdict is left to
+ * the re-ask, which is a fresh interaction and the one that has been seen to
+ * tell the truth.
+ */
+export class PasskeyUnprovenError extends Error {
+  constructor() {
+    super("The passkey was created but could not be confirmed yet");
+    this.name = "PasskeyUnprovenError";
   }
 }
 
@@ -621,16 +644,36 @@ export async function assertPrfOutcome(
  * Older Windows Hello reported `enabled: false` and then answered the very next
  * `get()` with a valid 32-byte secret (w3c/webauthn#1857); gating on the flag
  * rejected every one of those passkeys as incapable and dropped the voter into
- * the single-device fallback. Windows Hello with hmac-secret does the exact
- * opposite: `enabled: true` AND a real secret at creation, and then
- * NotAllowedError on every assertion that asks for one.
+ * the single-device fallback.
  *
- * Measured on 2026-09-15, isolated from this app: the same credential asserts
- * fine with no `prf` in the request and fails with it, so the extension is what
- * is refused rather than the assertion. That is not a bug this code can fix; it
- * is why the creation secret is kept in memory (see `sessionSecrets`) and why a
- * device is only believed once an assertion has actually returned one
- * (`prfReadbackProven`).
+ * ONE DESKTOP does the exact opposite, and the wording here used to blame the
+ * platform for it: `enabled: true` AND a real secret at creation, and then
+ * NotAllowedError on every assertion that asks for one. Measured 2026-09-18
+ * with raw WebAuthn outside this app, where the SAME credential asserts fine
+ * with no `prf` in the request and fails with it, so the extension is what is
+ * refused rather than the assertion. Nothing in that machine's configuration
+ * explains it: TPM 2.0 present and healthy, Windows 11 25H2 fully patched, no
+ * Passport or Chrome policy, and Chrome reporting a platform authenticator.
+ *
+ * It is NOT what Windows Hello does. A second Windows laptop, same app, same
+ * flow, evaluates PRF on the assertion and links first time. Four measured
+ * behaviours, all of which this file has to survive:
+ *
+ *   that desktop's Hello   secret at creation, NotAllowedError on every
+ *                          PRF assertion. Genuinely unable to read back.
+ *   the laptop's Hello     works, first time.
+ *   Android's own browser  the assertion that FOLLOWS the creation comes back
+ *                          with no `prf` key at all (the extension never ran);
+ *                          asked again as a separate gesture it returns the
+ *                          secret. See the re-ask at the top of this function.
+ *   the same Android phone works first time.
+ *   reached by QR
+ *
+ * Which is why nothing here is decided from a platform name. A device is
+ * believed only once an assertion has actually returned a secret
+ * (`prfReadbackProven`), a single empty or refused answer concludes nothing,
+ * and the creation secret is kept in memory (see `sessionSecrets`) so the
+ * session that enrols still works where the read-back never will.
  */
 export async function enrollPrfPasskey(
   role: PasskeyRole,
@@ -755,30 +798,33 @@ export async function enrollPrfPasskey(
     // them there with an offer to try again instead of moving on, and the seal
     // offer in the phrase modal says "not linked" rather than "this device
     // cannot", which would be a claim nobody has measured.
+    // NEITHER ANSWER IS A VERDICT HERE, and that is what changed.
+    //
+    // This assertion runs in the same breath as the creation, and a credential
+    // that answers it with no PRF result answers a LATER one with the secret:
+    // measured 2026-09-18 by cancelling this prompt and pressing again, where
+    // the same credential and the same salt produced it and sealed. Condemning
+    // on the strength of this one branded working passkeys as rubbish, told the
+    // voter to delete them, and (because nothing was remembered) minted a fresh
+    // credential on every retry.
+    //
+    // So both outcomes are kept, and the credential is kept with them. The
+    // verdict belongs to the re-ask at the top of this function, which is a
+    // separate interaction and the one that has been seen to tell the truth.
+    unprovenCredential = { credentialId, role, salt: saltKey(salt) };
     if (readBack.status === "cancelled") {
-      // Kept so the retry re-uses it instead of creating another. See the note
-      // at the top of this function.
-      unprovenCredential = { credentialId, role, salt: saltKey(salt) };
       console.info(
         "The read-back prompt was dismissed, so this passkey is unproven rather " +
           "than unusable: nothing sealed under it, and nothing concluded about it.",
       );
       throw new PasskeyCancelledError();
     }
-
-    // NOT `notePrfReadbackFailed()`, and the difference matters. That flag says
-    // THIS DEVICE cannot read a sealed copy back, and it stops the app from
-    // prompting on every page load for something guaranteed to fail. What just
-    // failed is narrower: ONE authenticator, the one they happened to pick.
-    // A phone offered over a QR code is a different authenticator entirely and
-    // may evaluate PRF perfectly, so blacklisting the machine would take away
-    // the option that still works.
-    unusableCredential = credentialId;
     console.info(
-      "This authenticator returned a PRF secret while creating the passkey and " +
-        "refused to evaluate it on an assertion, so nothing is sealed under it.",
+      "The assertion that follows the creation answered without a PRF secret. " +
+        "That has been seen to happen on credentials that produce one when asked " +
+        "again, so nothing is concluded and nothing is sealed: press again.",
     );
-    return null;
+    throw new PasskeyUnprovenError();
   }
   if (!prfEnabled) {
     console.info("Authenticator reported prf.enabled=false at creation, trying the assertion anyway");

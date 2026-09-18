@@ -581,7 +581,8 @@
     "wallet_answer_lost": "Die Antwort deiner Wallet konnte nicht bestätigt werden. Prüfe den Status, bevor du es erneut versuchst.",
     "wallet_request_rejected": "Du hast die Anfrage in deiner Wallet abgebrochen. Es wurde nichts ausgeführt.",
     "passkey_cancelled": "Du hast den Passkey-Dialog abgebrochen. Es wurde nichts erstellt: du kannst es erneut versuchen.",
-    "list_unreadable": "Diese Liste konnte nicht von der Chain gelesen werden, was nicht dasselbe ist wie leer zu sein. Prüfen Sie die Verbindung und versuchen Sie es erneut."
+    "list_unreadable": "Diese Liste konnte nicht von der Chain gelesen werden, was nicht dasselbe ist wie leer zu sein. Prüfen Sie die Verbindung und versuchen Sie es erneut.",
+    "passkey_unproven": "Der Passkey wurde erstellt, aber wir konnten noch nicht bestätigen, dass er entschlüsseln kann. Drück noch einmal: es wird derselbe gefragt, ohne einen neuen zu erstellen."
   },
   "demo": {
     "banner": "Demo-Daten: keine Verträge bereitgestellt. Nichts hiervon ist on-chain."

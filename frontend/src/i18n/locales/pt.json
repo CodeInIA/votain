@@ -586,7 +586,8 @@
     "wallet_answer_lost": "Não foi possível confirmar a resposta da sua carteira. Verifique o estado antes de tentar de novo.",
     "wallet_request_rejected": "Cancelou o pedido na sua carteira. Não foi feito nada.",
     "passkey_cancelled": "Fechou o pedido da passkey. Não foi criado nada: pode tentar de novo.",
-    "list_unreadable": "Não foi possível ler esta lista a partir da cadeia, o que não é o mesmo que estar vazia. Verifica a ligação e tenta de novo."
+    "list_unreadable": "Não foi possível ler esta lista a partir da cadeia, o que não é o mesmo que estar vazia. Verifica a ligação e tenta de novo.",
+    "passkey_unproven": "A passkey foi criada, mas ainda não conseguimos confirmar que consegue decifrar. Prima outra vez: é a mesma que será consultada, sem criar nenhuma nova."
   },
   "demo": {
     "banner": "Dados de demonstração: sem contratos implantados. Nada aqui está on-chain."

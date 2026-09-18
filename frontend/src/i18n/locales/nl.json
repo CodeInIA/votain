@@ -581,7 +581,8 @@
     "wallet_answer_lost": "We konden het antwoord van je wallet niet bevestigen. Controleer de status voordat je het opnieuw probeert.",
     "wallet_request_rejected": "Je hebt het verzoek in je wallet geannuleerd. Er is niets gebeurd.",
     "passkey_cancelled": "Je hebt het passkey-verzoek gesloten. Er is niets aangemaakt: je kunt het opnieuw proberen.",
-    "list_unreadable": "Deze lijst kon niet van de chain gelezen worden, wat niet hetzelfde is als leeg zijn. Controleer de verbinding en probeer het opnieuw."
+    "list_unreadable": "Deze lijst kon niet van de chain gelezen worden, wat niet hetzelfde is als leeg zijn. Controleer de verbinding en probeer het opnieuw.",
+    "passkey_unproven": "De passkey is aangemaakt, maar we konden nog niet bevestigen dat hij kan ontsleutelen. Druk nogmaals: dezelfde wordt gevraagd, er wordt geen nieuwe aangemaakt."
   },
   "demo": {
     "banner": "Demogegevens: geen contracten uitgerold. Niets hiervan staat on-chain."

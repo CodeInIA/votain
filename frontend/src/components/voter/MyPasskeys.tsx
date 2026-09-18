@@ -28,6 +28,7 @@ import {
   getCachedCredentialId,
   PasskeyAlreadyRegisteredError,
   PasskeyCancelledError,
+  PasskeyUnprovenError,
 } from '../../lib/passkeyPrf';
 
 export function MyPasskeys() {
@@ -95,6 +96,11 @@ export function MyPasskeys() {
       if (error instanceof PasskeyAlreadyRegisteredError) {
         toast({ title: t('devices.already_registered'), variant: 'info' });
         reload();
+        return;
+      }
+      // Created and not yet confirmed: the retry asks the same credential.
+      if (error instanceof PasskeyUnprovenError) {
+        toast({ title: t('errors.passkey_unproven'), variant: 'info' });
         return;
       }
       // NOTALLOWEDERROR MEANS TWO THINGS AND WEBAUTHN WILL NOT SAY WHICH.

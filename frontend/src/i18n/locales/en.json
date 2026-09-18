@@ -581,7 +581,8 @@
     "wallet_answer_lost": "We could not confirm your wallet’s answer. Check the state before trying again.",
     "wallet_request_rejected": "You cancelled the request in your wallet. Nothing was done.",
     "passkey_cancelled": "You dismissed the passkey prompt. Nothing was created: you can try again.",
-    "list_unreadable": "This list could not be read from the chain, which is not the same as it being empty. Check your connection and try again."
+    "list_unreadable": "This list could not be read from the chain, which is not the same as it being empty. Check your connection and try again.",
+    "passkey_unproven": "The passkey was created, but we could not confirm yet that it can decrypt. Press again: the same one is asked, and no new passkey is created."
   },
   "demo": {
     "banner": "Demo data: no contracts deployed. Nothing here is on-chain."

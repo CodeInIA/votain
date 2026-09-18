@@ -80,16 +80,38 @@ describe('the read-back proof after creating a passkey', () => {
     expect(localStorage.getItem('votain_prf_readback')).toBeNull();
   });
 
-  it('brands it unusable when the assertion answers with no secret', async () => {
-    const { enrollPrfPasskey, passkeyLeftUnusable } = await import('./passkeyPrf');
+  it('does NOT brand it unusable when the first assertion answers with no secret', async () => {
+    const { enrollPrfPasskey, passkeyLeftUnusable, pendingUnprovenPasskey, PasskeyUnprovenError } =
+      await import('./passkeyPrf');
 
     create.mockResolvedValue(created(true));
-    // It answered. That is a verdict about the authenticator, not about the
-    // person, and it is the one case where the warning is the truth.
+    // It answered, and with nothing. That USED to be read as a verdict about
+    // the authenticator. It is not: this assertion runs in the same breath as
+    // the creation, and a credential that answers it empty answers a later one
+    // with the secret (measured 2026-09-18 by cancelling and pressing again).
+    // Condemning here branded working passkeys as rubbish.
     get.mockResolvedValue(asserted(false));
 
+    await expect(enrollPrfPasskey('voter')).rejects.toBeInstanceOf(PasskeyUnprovenError);
+    expect(passkeyLeftUnusable()).toBeNull();
+    // And kept, so pressing again asks THIS credential rather than minting
+    // another. Not remembering it is why every retry left more litter.
+    expect(pendingUnprovenPasskey()).not.toBeNull();
+  });
+
+  it('brands it unusable only when the RE-ASK answers with no secret', async () => {
+    const { enrollPrfPasskey, passkeyLeftUnusable, PasskeyUnprovenError } =
+      await import('./passkeyPrf');
+
+    create.mockResolvedValue(created(true));
+    get.mockResolvedValue(asserted(false));
+    await expect(enrollPrfPasskey('voter')).rejects.toBeInstanceOf(PasskeyUnprovenError);
+
+    // The re-ask is a separate interaction, which is the one that has been seen
+    // to tell the truth. Empty there is the verdict this proof exists to get.
     await expect(enrollPrfPasskey('voter')).resolves.toBeNull();
     expect(passkeyLeftUnusable()).not.toBeNull();
+    expect(create).toHaveBeenCalledTimes(1);
   });
 
   it('clears an earlier suspicion once an assertion does return a secret', async () => {
@@ -97,6 +119,8 @@ describe('the read-back proof after creating a passkey', () => {
 
     create.mockResolvedValue(created(true));
     get.mockResolvedValue(asserted(false));
+    // Twice: the first is advisory, the second is the verdict that sets it.
+    await expect(enrollPrfPasskey('voter')).rejects.toThrow();
     await expect(enrollPrfPasskey('voter')).resolves.toBeNull();
     expect(passkeyLeftUnusable()).not.toBeNull();
 

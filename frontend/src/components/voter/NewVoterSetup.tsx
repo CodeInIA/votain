@@ -33,7 +33,7 @@ import { Card } from '../ui/Card';
 import { Modal } from '../ui/Modal';
 import { Spinner } from '../ui/Spinner';
 import { useToast } from '../ui/useToast';
-import { PasskeyCancelledError } from '../../lib/passkeyPrf';
+import { PasskeyCancelledError, PasskeyUnprovenError } from '../../lib/passkeyPrf';
 import {
   beginNewIdentity,
   completeWithPasskey,
@@ -123,6 +123,12 @@ export function NewVoterSetup({
       // they stay here, because the retry is the whole point of saying so.
       if (error instanceof PasskeyCancelledError) {
         toast({ title: t('errors.passkey_cancelled'), variant: 'info' });
+        return;
+      }
+      // Created, not yet confirmed. Pressing again asks that same credential
+      // rather than minting another, so the message says exactly that.
+      if (error instanceof PasskeyUnprovenError) {
+        toast({ title: t('errors.passkey_unproven'), variant: 'info' });
         return;
       }
       console.error('Could not link a passkey:', error);

@@ -586,7 +586,8 @@
     "wallet_answer_lost": "Non siamo riusciti a confermare la risposta del tuo wallet. Controlla lo stato prima di riprovare.",
     "wallet_request_rejected": "Hai annullato la richiesta nel tuo wallet. Non è stato fatto nulla.",
     "passkey_cancelled": "Hai chiuso la richiesta della passkey. Non è stato creato nulla: puoi riprovare.",
-    "list_unreadable": "Non è stato possibile leggere questa lista dalla catena, che non è lo stesso che sia vuota. Controlla la connessione e riprova."
+    "list_unreadable": "Non è stato possibile leggere questa lista dalla catena, che non è lo stesso che sia vuota. Controlla la connessione e riprova.",
+    "passkey_unproven": "La passkey è stata creata, ma non abbiamo ancora potuto confermare che sappia decifrare. Premi di nuovo: viene interrogata la stessa, senza crearne una nuova."
   },
   "demo": {
     "banner": "Dati dimostrativi: nessun contratto distribuito. Niente qui è on-chain."
