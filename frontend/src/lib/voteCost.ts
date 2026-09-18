@@ -24,7 +24,7 @@
  * than "measured". A chain where nobody has voted yet cannot be asked.
  */
 import { getPaymaster, getReadProvider } from "./contracts";
-import { queryLogsFrom } from "./logs";
+import { eventArgs, queryLogsFrom } from "./logs";
 
 /** Used only when the chain has no ballot to learn from. */
 export const VOTE_COST_FALLBACK = 0.03;
@@ -83,7 +83,7 @@ export async function fetchVoteCost(): Promise<VoteCost> {
         if (!tx || !tx.data.startsWith(voteSelector)) return;
         const price = tx.gasPrice ?? 0n;
         if (price === 0n) return;
-        const cost = (log as unknown as { args?: { cost?: bigint } }).args?.cost ?? 0n;
+        const cost = eventArgs<{ cost?: bigint }>(log).cost ?? 0n;
         if (cost > 0n) units.push(cost / price);
       } catch {
         // One unreadable transaction is a smaller sample, not a failure.

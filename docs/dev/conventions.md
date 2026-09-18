@@ -4,9 +4,11 @@
 
 1. **NEVER `git commit` / `git push` / destructive operations** without explicit user confirmation. After each milestone, list the changes for the user to review and commit.
 
-2. **Phase A (H1 to H4), hardcoded data**. Screens use data from `src/data/seed.ts` or inline. **NO** technical mocks (fake interfaces, fake `Promise.resolve`, simulated services). Buttons that require blockchain or backend show a toast "Integration pending".
+2. **Real data, and a loud fallback.** Screens read the chain and the backend. `src/data/seed.ts` is NOT what they show: it is the demo fallback for when no contract addresses are configured, `isChainConfigured()` decides between them, and a banner says so on every screen while it is in use. **NO** technical mocks anywhere (fake interfaces, fake `Promise.resolve`, simulated services): a sample election that cannot be told from a real one is worse than no election at all.
 
-3. **Phase B (H5 to H9), real integration**. Connect directly to backend and Amoy contracts. No mocks. If a screen needs a new endpoint or function, add it in the same milestone.
+   *(Phases A and B are complete. Rule 2 used to read "Phase A, hardcoded data" and rule 3 "Phase B, real integration"; both are now history, and the rule that survives them is this one.)*
+
+3. **If a screen needs a new endpoint or contract function, add it in the same pass.** No screen waits on a TODO in another module.
 
 4. **Always latest versions**. Before each milestone, run `NODE_OPTIONS="--use-system-ca" npx npm-check-updates` on all 3 modules. Update one by one, verifying tests and build pass. If a new version breaks something and cannot be fixed in reasonable time, pin to the last stable and document in `state.md`.
 
@@ -85,9 +87,9 @@ pragma solidity ^0.8.37;
 ```typescript
 // Use React 19 hooks (use, useTransition, etc.)
 // No class components
-// Presentation-only components in Phase A: receive data as props, no fetching
+// Presentation components receive data as props and do not fetch
 // Local state with useState/useReducer
-// Effects only when necessary, not for data fetching in Phase A
+// Data loading belongs in hooks (src/hooks/), not in a component's effect
 ```
 
 ### Tailwind CSS 4

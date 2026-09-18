@@ -38,7 +38,10 @@ vi.mock('./contracts', () => ({
   getReadProvider: () => ({}),
 }));
 
-vi.mock('./logs', () => ({
+vi.mock('./logs', async () => ({
+  // The real one: these tests are about reading events, and stubbing the
+  // decode would leave the project's only cast unexercised.
+  ...(await vi.importActual<typeof import('./logs')>('./logs')),
   queryLogsFrom: async (election: { address: string }) =>
     votedIn.has(election.address)
       ? [

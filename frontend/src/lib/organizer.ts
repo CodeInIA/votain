@@ -7,9 +7,9 @@
  * run the tally later. In production the private key would be sealed to a
  * passkey: see docs/dev/architecture.md.
  */
-import { type Signer } from "ethers";
+import { type EventLog, type Log, type Signer } from "ethers";
 import { getFactory, getElection, getPaymaster, getReadProvider } from "./contracts";
-import { queryLogsFrom } from "./logs";
+import { eventArgs, queryLogsFrom } from "./logs";
 import { fetchOrganizerElectionAddresses } from "./chainElections";
 import { COUNTER_BASE, generateElectionKeys, type SerializedKeyPair } from "./paillier";
 import { deriveElectionKeys, newKeyNonce } from "./tallyKey";
@@ -491,12 +491,6 @@ export interface GasMovement {
  * Reads the organizer's real gas-tank movements from paymaster events
  * (Deposited / Withdrawn / VoteSponsored), newest first.
  */
-interface RawLog {
-  args?: Record<string, bigint>;
-  transactionHash: string;
-  blockNumber: number;
-}
-
 export async function fetchGasHistory(organizer: string): Promise<GasMovement[]> {
   const { formatEther } = await import("ethers");
   const paymaster = getPaymaster();
@@ -517,17 +511,11 @@ export async function fetchGasHistory(organizer: string): Promise<GasMovement[]>
   ]);
 
   const ours = new Set(mine.map(a => a.toLowerCase()));
-  const funding = (funded as unknown as Array<RawLog & { args?: { election?: string } }>).filter(
-    log => ours.has(String(log.args?.election ?? '').toLowerCase()),
+  const funding = funded.filter(
+    log => ours.has(String(eventArgs<{ election?: string }>(log).election ?? '').toLowerCase()),
   );
 
-  const logs = [
-    ...deposits,
-    ...withdrawals,
-    ...sponsored,
-    ...funding,
-    ...released,
-  ] as unknown as RawLog[];
+  const logs = [...deposits, ...withdrawals, ...sponsored, ...funding, ...released];
 
   /**
    * ONE BLOCK READ PER BLOCK, not per movement.
@@ -550,21 +538,26 @@ export async function fetchGasHistory(organizer: string): Promise<GasMovement[]>
     }),
   );
 
-  const read = (source: RawLog[], type: GasMovement["type"], sign: 1 | -1, field: "amount" | "cost") =>
+  const read = (
+    source: readonly (Log | EventLog)[],
+    type: GasMovement["type"],
+    sign: 1 | -1,
+    field: "amount" | "cost",
+  ) =>
     source.map(e => ({
       type,
-      amount: sign * Number(formatEther(e.args?.[field] ?? 0n)),
+      amount: sign * Number(formatEther(eventArgs<Record<string, bigint>>(e)[field] ?? 0n)),
       date: times.get(e.blockNumber),
       txHash: e.transactionHash,
       blockNumber: e.blockNumber,
     }));
 
   const movements = [
-    ...read(deposits as unknown as RawLog[], "deposit", 1, "amount"),
-    ...read(withdrawals as unknown as RawLog[], "withdraw", -1, "amount"),
-    ...read(sponsored as unknown as RawLog[], "spent", -1, "cost"),
-    ...read(funding as unknown as RawLog[], "reserved", 1, "amount"),
-    ...read(released as unknown as RawLog[], "released", 1, "amount"),
+    ...read(deposits, "deposit", 1, "amount"),
+    ...read(withdrawals, "withdraw", -1, "amount"),
+    ...read(sponsored, "spent", -1, "cost"),
+    ...read(funding, "reserved", 1, "amount"),
+    ...read(released, "released", 1, "amount"),
   ];
 
   // Sorted by the chain's own order rather than by the timestamp, which is the

@@ -281,14 +281,20 @@ Each milestone produces a concrete artifact that the user validates before advan
 
 ## PHASE B. Real integration (H5 to H9)
 
-### Milestone 5. Production contracts + frontend client ✅ CODE COMPLETE 2026-07 (Amoy deploy pending user key)
+### Milestone 5. Production contracts + frontend client 🟡 CODE COMPLETE 2026-07, two items open
 
-Part A. Contracts: official Semaphore verifier, new functions (`cancelElection`, `closeEnrollmentEarly`, `closeVotingEarly`, `publishResults`, `markVoided`), `VotingType` enum (`SIMPLE_PLURALITY`, `ABSOLUTE_MAJORITY`, `SUPERMAJORITY_TWO_THIRDS`, `WITNESS_THRESHOLD`) + `thresholdValue` field on `ElectionV4` + per-type winner-determination logic in `publishResults`, coverage ≥80%, Amoy deploy + PolygonScan verify.
-Part B. Frontend: `src/lib/contracts.ts`, `src/lib/zerodev.ts`, `src/hooks/usePasskeys.ts`, `src/lib/semaphore.ts`, `src/lib/paillier.ts`.
+Part A. Contracts: official Semaphore verifier ✅, new functions (`cancelElection`, `closeEnrollmentEarly`, `closeVotingEarly`, `publishResults`, `markVoided`) ✅, `VotingType` enum (`SIMPLE_PLURALITY`, `ABSOLUTE_MAJORITY`, `SUPERMAJORITY_TWO_THIRDS`, `WITNESS_THRESHOLD`) + `thresholdValue` field on `ElectionV4` + per-type winner-determination logic in `publishResults` ✅. **Open**: coverage ≥80% (no coverage tool is configured, and the 94% once claimed is not reproducible from this tree), and the Amoy deploy + PolygonScan verify.
+Part B. Frontend: `src/lib/contracts.ts` ✅, `src/lib/semaphore.ts` ✅, `src/lib/paillier.ts` ✅. `src/lib/zerodev.ts` and `src/hooks/usePasskeys.ts` were never delivered under these names and are not owed: ERC-4337 was dropped for the project's own relay, and passkeys live in `src/lib/passkeyPrf.ts`.
 
-### Milestone 6. Complete backend issuer ✅ COMPLETE 2026-07
+### Milestone 6. Complete backend issuer 🟡 COMPLETE 2026-07 except the presentation endpoint
 
-Status List 2021, SD-JWT presentation endpoint, tests, rate limiting. **Selective disclosure is delegated to World ID Credentials** (no need to implement passport NFC reading or PKI verification ourselves). Backend integrates IDKit's credential flow and keeps the demo issuer for users without a supported passport. SD-JWT VC schema (`country`, `ageOver18`, `region`) is normalised across both sources so the rest of the stack is identity-source agnostic.
+Status List 2021 ✅ (`/credentials/status/:listId`), tests ✅ (126 in 23 suites), rate limiting ✅.
+**Open**: the SD-JWT presentation endpoint. `@sd-jwt/present` is not a dependency of this module.
+
+**Selective disclosure went to Self, not to World ID Credentials.** The original plan delegated
+it to IDKit's credential flow; that was reversed because World ID Credentials does not cover
+Spanish documents, and `@selfxyz/core` is verified self-hosted with no third party in the
+enrolment path. World ID still proves personhood. See the eligibility table earlier in this file.
 
 ### Milestone 7. Voter flow real integration ✅ COMPLETE 2026-07
 
@@ -298,9 +304,17 @@ World ID + Enrollment + real ZK Proof + Vote + History.
 
 Real WebAuthn Passkey + Create Election tx + phase-gated controls.
 
-### Milestone 9. Tally script + IPFS results ✅ COMPLETE 2026-07
+### Milestone 9. Tally script + IPFS results 🟡 TALLY DONE, AUDIT TRAIL ONLY FROM THE CLI
 
-`tally-votes.ts`, Pinata, `publishResults`, Privacy Quorum. After the Paillier homomorphic sum is decrypted, branch on `VotingType` to compute the winner or Approved/Rejected verdict (most-votes / >50% / ≥2/3 / ≥N) and embed it in the published JSON.
+`tally-votes.ts` ✅, Pinata pin ✅ **in the CLI only**, `publishResults` ✅, Privacy Quorum ✅.
+After the Paillier homomorphic sum is decrypted, the verdict branches on `VotingType`
+(most-votes / >50% / ≥2/3 / ≥N) and is embedded in the published JSON.
+
+**What is open, and it is the headline claim of the project.** The in-app tally does not pin.
+`organizer.publishResults(signer, address, counts, ipfsCid = "")` publishes an EMPTY CID when
+the organizer closes the count from the interface, which is the normal path; the JSON reaches
+IPFS only if somebody runs the auditor CLI by hand. Until that is closed, "the tally is
+published with an IPFS audit trail" is true of the CLI and false of the app.
 
 ---
 

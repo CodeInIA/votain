@@ -6,7 +6,7 @@
  */
 import { id } from "ethers";
 import { getElection, getFactory, getReadProvider } from "./contracts";
-import { queryLogsFrom, queryTopicLogs } from "./logs";
+import { eventArgs, queryLogsFrom, queryTopicLogs } from "./logs";
 import { withDistinctNames } from "./ballotNames";
 // The i18n singleton rather than the hook: this is a data layer, not a
 // component. The labels below were hardcoded English and rendered that way in
@@ -418,7 +418,7 @@ export async function fetchOrganizerElectionAddresses(organizer: string): Promis
   try {
     const logs = await queryLogsFrom(factory, factory.filters.ElectionCreated(null, organizer));
     const addresses = logs.map(
-      log => (log as unknown as { args: { electionAddress: string } }).args.electionAddress,
+      log => eventArgs<{ electionAddress: string }>(log).electionAddress,
     );
     return addresses.reverse();
   } catch (error) {
@@ -539,7 +539,7 @@ export async function fetchElectionMembers(
   );
 
   return events.map(e => {
-    const args = (e as unknown as { args: { identityCommitment: bigint; index: bigint } }).args;
+    const args = eventArgs<{ identityCommitment: bigint; index: bigint }>(e);
     return {
       commitment: "0x" + args.identityCommitment.toString(16),
       index: Number(args.index),

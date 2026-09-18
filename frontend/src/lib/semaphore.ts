@@ -31,7 +31,7 @@ import { generateProof, type SemaphoreProof } from "@semaphore-protocol/proof";
 import { poseidon2 } from "poseidon-lite/poseidon2";
 import { solidityPackedKeccak256, keccak256, zeroPadValue, toBeHex } from "ethers";
 import { getElection } from "./contracts";
-import { queryLogsFrom } from "./logs";
+import { eventArgs, queryLogsFrom } from "./logs";
 import {
   assertPrf,
   enrollPrfPasskey,
@@ -1021,7 +1021,7 @@ export async function fetchElectionGroup(electionAddress: string): Promise<Group
   const events = await queryLogsFrom(election, election.filters.MemberEnrolled());
   // Events arrive ordered by (blockNumber, logIndex) == insertion order.
   const members = events.map(e =>
-    BigInt((e as unknown as { args: { identityCommitment: bigint } }).args.identityCommitment),
+    BigInt(eventArgs<{ identityCommitment: bigint }>(e).identityCommitment),
   );
   return new Group(members);
 }

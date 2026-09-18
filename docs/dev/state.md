@@ -1,6 +1,6 @@
 # Votain. Current Project State
 
-**Last updated**: 2026-09-17 (saved elections on chain, session hardening, a pass of reported defects)
+**Last updated**: 2026-09-18 (profile patterns, a documentation audit against the code)
 **Completed milestone**: Phase B (H5–H9), real integration code complete. Contracts, backend
 issuer, voter + organizer flows and tally all wired and green.
 **Since Phase B**: 8-phase lifecycle (`UPCOMING`/`PENDING_VOTE` added to the contract
@@ -13,7 +13,7 @@ organizer and a chip in the filter panel; **session hardening** (revocation read
 instead of per registered human, `__Host-` cookie with Secure in development too, CORS off
 unless asked for); and seven defects reported from the running app, including a passkey link
 that never dropped the local phrase and a render loop on the gas page. See the milestone log.
-Tests: registry 34/34 (nine new), backend 126/126, frontend 491/491.
+Tests: contracts 185/185, backend 126/126, frontend 501/501.
 **Next milestone**: Live Amoy deployment (pending funding the deployer key). It must carry
 `PLATFORM_ATTESTER_ADDRESS`, the key the backend signs enrolments with: without it the
 factory deploys elections that enrol the old, publicly linkable way, which looks entirely
@@ -42,16 +42,22 @@ then Phase C (H10 IPFS/Fleek, H11 Phala TEE).
 | Solidity | 0.8.37 | Latest stable |
 | TypeScript target | ESNext | |
 
-**Tests**: 155/155 passing, including an E2E suite that checks real Groth16 proofs against the official Semaphore verifier.
+**Tests**: 185/185 passing, including an E2E suite that checks real Groth16 proofs against the official Semaphore verifier.
 
-**Technical debt pending (H5)**:
+**Technical debt pending**:
 
-- Replace `MockVerifier` with official Semaphore V4 verifier.
-- Add missing functions: `cancelElection`, `closeEnrollmentEarly`, `closeVotingEarly`, `publishResults`, `markVoided`.
-- Add `VotingType` enum (`SIMPLE_PLURALITY`, `ABSOLUTE_MAJORITY`, `SUPERMAJORITY_TWO_THIRDS`, `WITNESS_THRESHOLD`) + `thresholdValue` field on `ElectionV4`, with per-type winner determination in `publishResults`.
-- Coverage >= 80% with `solidity-coverage`.
-- Deploy and verify on PolygonScan Amoy.
-- Lock down `ElectionPaymaster.sponsorVote`.
+- Coverage with `solidity-coverage`. NOT installed: the 94% figure once claimed for
+  Phase B is not reproducible from this tree, and no coverage tool is configured.
+- Deploy and verify on PolygonScan Amoy. Blocked on funding the deployer key, and the
+  single largest gap in the project: nothing here has run against a live chain.
+
+**Done since this list was written**, verified against the tree on 2026-09-18: the official
+`SemaphoreVerifierV4` is what `deploy.ts` uses off the local chain (`MockVerifier` survives
+only for local runs, unless `USE_REAL_VERIFIER=true`); `cancelElection`, `closeEnrollmentEarly`,
+`closeVotingEarly`, `publishResults` and `markVoided` all exist on `ElectionV4`; and so do the
+`VotingType` enum and `thresholdValue`. "Lock down `ElectionPaymaster.sponsorVote`" is obsolete
+rather than done: that function no longer exists, the paymaster relays through `relayEnroll`
+and moves money through `deposit`/`reserve`/`release`/`withdraw`.
 
 **Note on Hardhat 3**: Migration completed in H0. Config is now `hardhat.config.ts` using `defineConfig` + `hardhat-toolbox-mocha-ethers`. The old `hardhat.config.cts` was deleted.
 
@@ -70,14 +76,25 @@ then Phase C (H10 IPFS/Fleek, H11 Phala TEE).
 
 **Status**: starts OK (requires `.env` with `ISSUER_PRIVATE_KEY`) ✅.
 
-**Technical debt pending (H6)**:
+**Tests**: 126/126 in 23 suites (`node --import tsx --test`, not Vitest). World ID v4
+verification, replay rejection, SD-JWT round-trip, Status List 2021, the eligibility policy,
+the attester, the identity vault and the organizer domains.
 
-- Integrate World ID Credentials via IDKit as the primary selective-disclosure source (passport NFC). Backend issuer keeps the demo fallback for users without a supported document.
-- Normalise SD-JWT VC schema (`country`, `ageOver18`, `region`) across World ID Credentials and the demo issuer so the eligibility check is source-agnostic.
-- Status List 2021 (`/credentials/status/:listId`).
-- SD-JWT presentation endpoint (`@sd-jwt/present`).
-- Tests: 107/107 in 19 suites. World ID v4 verification, replay rejection, SD-JWT round-trip, Status List 2021.
-- Rate limiting with `express-rate-limit`.
+**Technical debt pending**:
+
+- SD-JWT presentation endpoint (`@sd-jwt/present`). NOT done: the package is not a dependency
+  of this module. Phase B's log claims a `/present` endpoint that is not in the tree.
+- No central configuration boundary. `env.ts` is two lines (`dotenv.config()`) and
+  `process.env` is read in 68 places across ~20 variables, of which 4 throw when missing.
+  `ELIGIBILITY_ATTESTER_PRIVATE_KEY`, a private key, is read in 8 of them. A missing variable
+  surfaces mid-request rather than at boot, which will matter most inside the TEE.
+
+**Done, or overtaken**: Status List 2021 is live at `/credentials/status/:listId`, and rate
+limiting is applied in `index.ts` (120/min on `/api`, 10/min on the tighter route). "Integrate
+World ID Credentials via IDKit as the primary selective-disclosure source" was not done and is
+not owed: `@selfxyz/core` was chosen instead, because World ID Credentials does not cover
+Spanish documents. See the eligibility table in `PLAN.md`. World ID is still what proves
+personhood; Self is what discloses attributes.
 
 ---
 
@@ -108,7 +125,7 @@ then Phase C (H10 IPFS/Fleek, H11 Phala TEE).
 | `@types/node` | 26.5.1 | Same: the `latest` tag lags at 22.x |
 
 **Build**: ✅ clean, no sourcemaps.
-**Tests**: 452/452 unit tests in 57 files passing (Vitest, jsdom), covering the voter identity lifecycle (minting, sealing, the PRF read-back proof, rotation, adding further passkeys), the per-election identities that keep enrolments unlinkable, noticing an expired session, WalletConnect return handling, the Paillier ballot encoding, the i18n plural tables, how the lists are paged and ordered, the schedule timeline both roles read, and turnout counted in people rather than ballots. Playwright E2E scaffold in `e2e/` (excluded from Vitest).
+**Tests**: 501/501 unit tests in 61 files passing (Vitest, jsdom), covering the voter identity lifecycle (minting, sealing, the PRF read-back proof, rotation, adding further passkeys), the per-election identities that keep enrolments unlinkable, noticing an expired session, WalletConnect return handling, the Paillier ballot encoding, the i18n plural tables, how the lists are paged and ordered, the schedule timeline both roles read, and turnout counted in people rather than ballots. Playwright E2E scaffold in `e2e/` (excluded from Vitest).
 
 **Enrolling stopped naming the enrolled** (2026-09-16): what goes into an election's
 merkle tree is a commitment derived from the voter's secret and that election's address,
@@ -135,14 +152,26 @@ to close.
 
 **Technical debt pending**:
 
-- H5. Done: `src/lib/{contracts,paillier,semaphore,relay,identityVault,logs}.ts`.
-- H5+. Code-splitting lazy-load for Semaphore WASM and Paillier.
-- H4 leftover. IP-based language auto-detect (ipapi.co) not wired yet.
+- Code-splitting lazy-load for Semaphore WASM and Paillier.
+- IP-based language auto-detect (ipapi.co) not wired yet.
+- `lib/semaphore.ts` is 1090 lines, 33 exports and imported by 18 files. It holds at least
+  five separable jobs: the identity lifecycle, this device's storage policy, registry reads,
+  the vote proof, and per-election vote bookkeeping. A split into `identityLifecycle`,
+  `deviceStorage` and `voteProof` behind the current module as a facade would leave the 18
+  importers untouched.
+- No linter. `typescript-eslint` does not support TS 7, so `tsc` is the only static check.
+  See `frontend/DEVELOPMENT.md`.
 
-**Implemented screens**: all 24 from `stich.md` with hardcoded data from `src/data/seed.ts`
-(6 elections covering all 6 phases and all 4 voting types). Persistent voter/organizer auth via
-`src/contexts/AuthContext.tsx` (localStorage, Phase A only, replaced by real sessions in Phase B).
-Auth-aware navigation (TopNav/BottomTabNav), theme-consistent scrollbars, full i18n (13 locales).
+**Implemented screens**: all 24, reading the chain. `src/data/seed.ts` is no longer what the
+screens show: it is the DEMO FALLBACK, used only when no contract addresses are configured, and
+`isChainConfigured()` decides. When it is in use a banner says so on every screen, because sample
+elections that look like real ones are worse than none.
+
+The seed set is 6 elections covering the phases and all 4 voting types. `AuthContext` is no
+longer the Phase A localStorage stand-in: it reconciles its flags against the backend's httpOnly
+cookie through `lib/backend.ts`, and exposes `sessionChecked` so a guard does not bounce a valid
+session before the answer arrives. Auth-aware navigation (TopNav/BottomTabNav), theme-consistent
+scrollbars, full i18n (13 locales, Arabic right-to-left).
 
 ---
 
@@ -167,7 +196,7 @@ The project is released under **AGPL-3.0** (was MIT until H0 cleanup). All `pack
 ## Open questions for the user
 
 - [ ] **LaTeX template**. Is there an official ETSII/URJC template to use? Or Overleaf with a generic template? (Blocks H12.1.)
-- [ ] **Free tier access**. Accounts already created for Fleek, Pinata, Phala, World ID Developer Portal? (ZeroDev no longer needed.)
+- [ ] **Free tier access**. Accounts already created for Fleek, Pinata, Phala, World ID Developer Portal? Pinata is the one that blocks closing H9 from inside the app rather than from the CLI.
 
 ---
 
@@ -185,4 +214,4 @@ The project is released under **AGPL-3.0** (was MIT until H0 cleanup). All `pack
 | Relay + vault | 2026-08 | ERC-4337 dropped for an own relay contract (a per-voter smart account publicly linked enrollment to ballot, and hosted paymasters cannot fund gas per organizer). Encrypted identity vault so one Semaphore identity unlocks from several passkeys, plus `rotateMember` recovery after losing them all. Session cookies now signature-checked. Contracts 66/66 (including a real-Groth16 E2E suite), backend 21/21, frontend 17/17 |
 | Saved elections + session hardening | 2026-09-17 | **Saved elections**: `PlatformRegistry.setPreferences`, one sealed blob per human holding a list per ROLE, AES-GCM under a key derived from the voter's own secret, so the chain stores what nobody but them can read; measured at 149 bytes for two elections and 59,368 gas a change (`scripts/e2e-preferences.ts`). Bookmark on the cards and the election page, "saved" chip in the participation band, `/organizer/saved` in both navigation bars. **Session**: `isRevoked` stopped reading the whole revocation set on every authenticated request, the cookie became `__Host-` prefixed and Secure in development, CORS is opt in, and holder binding is written up as future work in `architecture.md`. **Defects**: linking a passkey now drops the local phrase, a session with no identity is routed instead of silently failing, the gas page no longer loops, the top bar measures itself instead of guessing a breakpoint, one clear-filters control in one corner, and the candidate count no longer disappears on signing in |
 | Voter identity flow | 2026-09-15 | Two passes. **WalletConnect**: every organizer action works from a phone (idempotent provider, `rpcMap`, relay recovery on return, cancellation handled everywhere). **Voter identity**: registration on chain no longer rides on having a passkey, so an authenticator that cannot evaluate PRF no longer leaves a voter off the registry; the phrase modal became a two-step screen at `/voter/identity` that will not move on until the words are copied, and nothing mints a phrase outside it; recovery reuses those two steps and stopped demanding a passkey (`clearVault`); `MyDevices` became `MyPasskeys` and can link more than one; the PRF read-back proof is no longer skipped across authenticators. Contracts untouched. Backend 107/107, frontend 253/253 |
-| H5–H9 (Phase B) | 2026-07 | Real integration. Contracts rewritten (on-chain Semaphore group, VotingType, lifecycle, locked paymaster, 94% cov); frontend chain client (`lib/{contracts,paillier,semaphore,zerodev,voting,organizer}.ts`, ZeroDev passkeys, chain-aware hooks); backend on-chain registrar + SD + Status List 2021 + `/present` + rate limiting; `scripts-tally/` homomorphic tally + IPFS. New `viem` (frontend) + `ethers`/`express-rate-limit` (backend) deps. Contracts 28/28, backend 5/5, frontend 9/9. Live Amoy deploy pending user key. Branch `phase-b/real-integration` |
+| H5–H9 (Phase B) | 2026-07 | Real integration. Contracts rewritten (on-chain Semaphore group, VotingType, lifecycle); frontend chain client (`lib/{contracts,paillier,semaphore,voting,organizer}.ts`, chain-aware hooks); backend on-chain registrar + SD + Status List 2021 + rate limiting; `scripts-tally/` homomorphic tally and IPFS pin. Live Amoy deploy pending user key. Branch `phase-b/real-integration`. **Four claims in the original entry did not survive an audit on 2026-09-18 and have been struck from it**: "94% cov" (no coverage tool is configured), "`/present`" (`@sd-jwt/present` is not a backend dependency), "locked paymaster" (it refers to `sponsorVote`, a function that no longer exists), and `zerodev.ts` + `viem`, both removed when ERC-4337 was dropped for the own relay. H9 is therefore NOT complete: the tally is real on both paths, but only the auditor CLI pins to IPFS, and the in-app path publishes an empty CID |

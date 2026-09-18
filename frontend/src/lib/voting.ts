@@ -10,7 +10,7 @@
  *      from the same address and the sender reveals nothing (see relay.ts).
  */
 import { getElection, getReadProvider } from "./contracts";
-import { queryLogsFrom } from "./logs";
+import { eventArgs, queryLogsFrom } from "./logs";
 import {
   ensureLocalRegistration,
   relayEnroll,
@@ -202,9 +202,12 @@ export async function fetchVoteReceipts(electionAddress: string, nullifier: bigi
   const election = getElection(electionAddress);
   const events = await queryLogsFrom(election, election.filters.VoteCast(nullifier));
   return events.map(e => {
-    const { args } = e as unknown as {
-      args: { nullifier: bigint; voteCiphertext: string; nonce: bigint; timestamp: bigint };
-    };
+    const args = eventArgs<{
+      nullifier: bigint;
+      voteCiphertext: string;
+      nonce: bigint;
+      timestamp: bigint;
+    }>(e);
     return {
       nullifier: args.nullifier,
       nonce: args.nonce,

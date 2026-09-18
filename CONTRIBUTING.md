@@ -21,7 +21,7 @@ votain/
 ├── docs/
 │   ├── PLAN.md       # iterative plan (source of truth for progress)
 │   ├── dev/          # developer documentation
-│   └── progress/     # Playwright screenshots per milestone (H<n>/screens/<name>/)
+│   └── screenshots/  # Playwright captures used by the root README
 └── memoria/          # LaTeX thesis (parallel track from H0)
 ```
 
@@ -44,11 +44,11 @@ cd frontend && npm test
 ## Development conventions
 
 1. **NEVER `git commit` / `git push` / destructive operations** without explicit review. After each milestone, list changes before committing.
-2. **Phase A (H1 to H4)**: hardcoded data in `src/data/seed.ts`. NO technical mocks.
-3. **Phase B (H5 to H9)**: real integration against backend and Amoy contracts. No mocks.
+2. **Real data, loud fallback**: screens read the chain and the backend. `src/data/seed.ts` is the demo fallback used only when no contract addresses are configured, and a banner says so on screen while it is. NO technical mocks.
+3. **A screen that needs a new endpoint or contract function gets it in the same pass**, not a TODO in another module.
 4. **Always latest versions**. Run `npm-check-updates` on all 3 modules before each milestone.
 5. **Always free tier**. No paid services, no "free with card required".
-6. **Responsive required**. Every new screen validated at mobile (375×667), tablet (768×1024), desktop (1440×900).
+6. **Responsive required**. Every new screen validated at mobile, tablet and desktop. Beware of testing only at 390px: it is a narrow iPhone, and a 6.8" Android is 412 to 448 CSS pixels wide, which is where several layouts differ.
 7. **After each milestone**: update `docs/dev/state.md`.
 8. **All code comments and `.md` files must be in English**.
 9. **No em dashes or hyphen-as-clause-separator in documentation**. Use periods, commas or colons. Hyphens stay only in compound words (e.g. "end-to-end"), technical identifiers (e.g. "ERC-4337"), version numbers, file paths and command flags.

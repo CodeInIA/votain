@@ -104,3 +104,34 @@ export async function queryTopicLogs(
     return out;
   }
 }
+
+/**
+ * The decoded arguments of an event that was asked for by its own filter.
+ *
+ * WHY A CAST IS NEEDED AT ALL. `queryFilter` is typed `(Log | EventLog)[]`,
+ * because a filter CAN match a log this contract's ABI cannot decode, and only
+ * the decoded half carries `args`. Everything read through this module is
+ * queried through a `contract.filters.X()` built from that same ABI, so the
+ * decode has already happened and the union is wider than reality.
+ *
+ * WHY IT LIVES HERE. Six modules were each writing their own
+ * `(e as unknown as { args: ... }).args`, in five different shapes and with the
+ * reasoning written down in none of them. The cast is a fact about ethers, not
+ * about elections or tallies, so it belongs next to the queries that produce
+ * the logs and nowhere else.
+ *
+ * It THROWS on an undecoded log rather than returning empty arguments, because
+ * every caller here is reading a value it is about to treat as a vote, a
+ * member or an amount, and silently reading zero out of a log that could not be
+ * parsed is how a tally goes quietly wrong. Callers that can tolerate one bad
+ * entry already say so with a `try`.
+ */
+export function eventArgs<T>(log: Log | EventLog): T {
+  const args = (log as EventLog).args;
+  if (!args) {
+    throw new Error(
+      `Event log at ${log.blockNumber}#${log.index} carries no decoded arguments.`,
+    );
+  }
+  return args as unknown as T;
+}

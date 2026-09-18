@@ -14,7 +14,7 @@
 import type { Signer } from "ethers";
 
 import { getElection } from "./contracts";
-import { queryLogsFrom } from "./logs";
+import { eventArgs, queryLogsFrom } from "./logs";
 import { loadElectionPrivateKey, storeElectionPrivateKey } from "./organizer";
 import {
   addCiphertexts,
@@ -136,9 +136,7 @@ export async function computeTally(address: string, signer?: Signer): Promise<Ta
   // Coercion resistance: only the highest nonce per nullifier survives.
   const latest = new Map<string, { ciphertext: string; nonce: bigint }>();
   for (const e of events) {
-    const args = (e as unknown as {
-      args: { nullifier: bigint; voteCiphertext: string; nonce: bigint };
-    }).args;
+    const args = eventArgs<{ nullifier: bigint; voteCiphertext: string; nonce: bigint }>(e);
     const key = args.nullifier.toString();
     const existing = latest.get(key);
     if (!existing || args.nonce > existing.nonce) {
