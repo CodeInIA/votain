@@ -1,5 +1,5 @@
 /**
- * Setting up a voter who is not in the registry yet, in two steps.
+ * Setting up a voter who is not in the registry yet, in three steps.
  *
  * WHY A SCREEN AND NOT A MODAL. The phrase used to be minted deep inside
  * `getOrCreateIdentity` and published to a modal mounted near the router, which
@@ -16,17 +16,23 @@
  * idea what it was holding, and printed their only way back afterwards, as a
  * receipt for something already done to them.
  *
+ * WHY THE WORDS ARE ASKED BACK. Between the two there is a third step that
+ * asks for three of the twelve, in their places. It replaced a modal that asked
+ * "have you saved them?" with a button saying yes: anybody hurrying pressed yes,
+ * and pressing yes is exactly what somebody does who copied the words and never
+ * pasted them anywhere. See `PhraseCheck`.
+ *
  * WHY THE PASSKEY IS STILL THE PRIMARY ACTION. Optional security gets skipped.
  * A voter with no passkey keeps their phrase on this device in the clear, which
- * is strictly worse, so step two leads with linking one and keeps "continue
+ * is strictly worse, so the last step leads with linking one and keeps "continue
  * without" quiet and deliberate. It has to exist all the same: Windows Hello
  * genuinely cannot do this, and somebody there must still be able to vote.
  */
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ShieldAlert } from 'lucide-react';
 
 import { PhraseCard } from './PhraseCard';
+import { PhraseCheck } from './PhraseCheck';
 import { PasskeyStep } from './PasskeyStep';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
@@ -41,7 +47,10 @@ import {
 } from '../../lib/semaphore';
 import type { Identity } from '@semaphore-protocol/identity';
 
-type Step = 'phrase' | 'passkey';
+type Step = 'phrase' | 'check' | 'passkey';
+
+/** Which of the three a step is, for the counter at the top. */
+const ORDINAL: Record<Step, number> = { phrase: 1, check: 2, passkey: 3 };
 
 export function NewVoterSetup({
   onDone,
@@ -66,7 +75,6 @@ export function NewVoterSetup({
 
   const [own, setOwn] = useState<{ phrase: string; identity: Identity } | null>(minted ?? null);
   const [step, setStep] = useState<Step>('phrase');
-  const [asking, setAsking] = useState(false);
   /**
    * Asked before the phrase is left as the only copy.
    *
@@ -163,16 +171,26 @@ export function NewVoterSetup({
     <>
       <Card className="p-6 w-full max-w-md">
         <p className="text-xs text-on-surface-meta mb-3">
-          {t('new_identity.step_of', { current: step === 'phrase' ? 1 : 2, total: 2 })}
+          {t('new_identity.step_of', { current: ORDINAL[step], total: 3 })}
         </p>
 
-        {step === 'phrase' ? (
+        {step === 'phrase' && (
           <PhraseCard
             phrase={own.phrase}
             confirmLabel="new_identity.continue"
-            onConfirm={() => setAsking(true)}
+            onConfirm={() => setStep('check')}
           />
-        ) : (
+        )}
+
+        {step === 'check' && (
+          <PhraseCheck
+            phrase={own.phrase}
+            onPass={() => setStep('passkey')}
+            onBack={() => setStep('phrase')}
+          />
+        )}
+
+        {step === 'passkey' && (
           <PasskeyStep
             busy={busy}
             noPrf={noPrf}
@@ -205,41 +223,6 @@ export function NewVoterSetup({
           >
             {t('new_identity.passkey_action')}
           </Button>
-        </div>
-      </Modal>
-
-      {/* The gate between the two steps. Copying is a gesture people make
-          without reading; being asked in words is the moment somebody realises
-          they pressed copy and never pasted it anywhere. */}
-      <Modal open={asking} showClose={false} onClose={() => setAsking(false)}>
-        <div className="flex flex-col gap-4">
-          <div className="flex items-start gap-3">
-            <ShieldAlert className="w-5 h-5 text-warning shrink-0 mt-0.5" />
-            <div>
-              <h2 className="text-base font-semibold text-on-surface">
-                {t('new_identity.confirm_title')}
-              </h2>
-              <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">
-                {t('new_identity.confirm_desc')}
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            <Button
-              variant="gradient"
-              className="w-full rounded-full h-11"
-              onClick={() => { setAsking(false); setStep('passkey'); }}
-            >
-              {t('new_identity.confirm_yes')}
-            </Button>
-            <Button
-              variant="ghost"
-              className="w-full rounded-full h-11"
-              onClick={() => setAsking(false)}
-            >
-              {t('new_identity.confirm_no')}
-            </Button>
-          </div>
         </div>
       </Modal>
     </>

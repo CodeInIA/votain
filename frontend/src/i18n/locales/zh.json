@@ -801,10 +801,6 @@
   "new_identity": {
     "step_of": "第 {{current}} 步，共 {{total}} 步",
     "continue": "继续",
-    "confirm_title": "你把助记词保存到安全的地方了吗？",
-    "confirm_desc": "没有人能替你找回。如果丢了这十二个词，又没有绑定通行密钥，你就失去了投票权。",
-    "confirm_yes": "是的，已保存",
-    "confirm_no": "我再确认一下",
     "passkey_title": "绑定通行密钥",
     "passkey_desc": "它会用你的指纹、面容或设备 PIN 加密这十二个词，并把加密副本存放在本机之外。你再也不用手动输入，它们也不会以明文留在这里。",
     "passkey_action": "绑定通行密钥",
@@ -815,7 +811,14 @@
     "skip_desc": "在你绑定通行密钥之前，这十二个词会以未加密的形式留在本设备上。",
     "sealed": "通行密钥已绑定",
     "skip_confirm_title": "不绑定通行密钥，继续？",
-    "skip_confirm_desc": "你的十二个词会以未加密的形式保存在本设备上，并且是你唯一的回归方式。你可以之后随时在个人资料里绑定通行密钥。"
+    "skip_confirm_desc": "你的十二个词会以未加密的形式保存在本设备上，并且是你唯一的回归方式。你可以之后随时在个人资料里绑定通行密钥。",
+    "check_title": "把其中三个放回原位",
+    "check_desc": "把这 {{n}} 个词放回它们的位置。这是区分你真的记下了它们，还是只按了复制的唯一办法。",
+    "check_confirm": "确认",
+    "check_wrong": "不在那里。再看一眼你的词，然后重试。",
+    "check_back": "再看一次这十二个词",
+    "check_blank": "第 {{position}} 个词，空",
+    "check_remove": "把 {{word}} 从第 {{position}} 位移除"
   },
   "schedule": {
     "fixed": "日期固定",

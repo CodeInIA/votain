@@ -813,10 +813,6 @@
   "new_identity": {
     "step_of": "Paso {{current}} de {{total}}",
     "continue": "Continuar",
-    "confirm_title": "¿Has guardado la frase en un lugar seguro?",
-    "confirm_desc": "Nadie puede recuperarla por ti. Si pierdes estas doce palabras y no tienes ninguna passkey vinculada, pierdes tu voto.",
-    "confirm_yes": "Sí, la he guardado",
-    "confirm_no": "Déjame comprobarlo",
     "passkey_title": "Vincula una passkey",
     "passkey_desc": "Cifra tus doce palabras con la huella, la cara o el PIN de un dispositivo tuyo, y guarda esa copia cifrada fuera de aquí. Así no tendrás que escribirlas nunca, y dejan de estar en este equipo en claro.",
     "passkey_action": "Vincular una passkey",
@@ -827,7 +823,14 @@
     "skip_desc": "Tus doce palabras se quedan en este dispositivo sin cifrar hasta que vincules una.",
     "sealed": "Passkey vinculada",
     "skip_confirm_title": "¿Continuar sin passkey?",
-    "skip_confirm_desc": "Tus doce palabras se quedarán guardadas en este dispositivo sin cifrar, y serán tu única forma de volver. Puedes vincular una passkey más adelante desde tu perfil, cuando quieras."
+    "skip_confirm_desc": "Tus doce palabras se quedarán guardadas en este dispositivo sin cifrar, y serán tu única forma de volver. Puedes vincular una passkey más adelante desde tu perfil, cuando quieras.",
+    "check_title": "Comprueba que las tienes",
+    "check_desc": "Coloca estas {{n}} palabras en el hueco que les toca. Es lo único que distingue haberlas guardado de haberlas copiado.",
+    "check_confirm": "Confirmar",
+    "check_wrong": "Ahí no van. Vuelve a mirar tus palabras y prueba otra vez.",
+    "check_back": "Volver a ver las doce palabras",
+    "check_blank": "Palabra {{position}}, vacía",
+    "check_remove": "Quitar {{word}} de la posición {{position}}"
   },
   "schedule": {
     "fixed": "Fechas fijas",

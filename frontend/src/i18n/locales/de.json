@@ -807,10 +807,6 @@
   "new_identity": {
     "step_of": "Schritt {{current}} von {{total}}",
     "continue": "Weiter",
-    "confirm_title": "Hast du deine Phrase sicher aufbewahrt?",
-    "confirm_desc": "Niemand kann sie für dich wiederherstellen. Verlierst du diese zwölf Wörter und hast keinen Passkey verknüpft, verlierst du deine Stimme.",
-    "confirm_yes": "Ja, ich habe sie gespeichert",
-    "confirm_no": "Lass mich nachsehen",
     "passkey_title": "Passkey verknüpfen",
     "passkey_desc": "Er verschlüsselt deine zwölf Wörter mit Fingerabdruck, Gesicht oder Geräte-PIN und bewahrt diese Kopie außerhalb dieses Rechners auf. Du musst sie nie eintippen, und sie liegen hier nicht mehr im Klartext.",
     "passkey_action": "Passkey verknüpfen",
@@ -821,7 +817,14 @@
     "skip_desc": "Deine zwölf Wörter bleiben unverschlüsselt auf diesem Gerät, bis du einen verknüpfst.",
     "sealed": "Passkey verknüpft",
     "skip_confirm_title": "Ohne Passkey fortfahren?",
-    "skip_confirm_desc": "Deine zwölf Wörter bleiben unverschlüsselt auf diesem Gerät gespeichert und sind dein einziger Weg zurück. Einen Passkey kannst du später jederzeit in deinem Profil verknüpfen."
+    "skip_confirm_desc": "Deine zwölf Wörter bleiben unverschlüsselt auf diesem Gerät gespeichert und sind dein einziger Weg zurück. Einen Passkey kannst du später jederzeit in deinem Profil verknüpfen.",
+    "check_title": "Setze drei davon zurück",
+    "check_desc": "Setze diese {{n}} Wörter an ihre Stelle. Nur das unterscheidet Aufschreiben von Kopieren.",
+    "check_confirm": "Bestätigen",
+    "check_wrong": "Da gehören sie nicht hin. Sieh dir deine Wörter noch einmal an und versuch es erneut.",
+    "check_back": "Die zwölf Wörter noch einmal ansehen",
+    "check_blank": "Wort {{position}}, leer",
+    "check_remove": "{{word}} von Position {{position}} entfernen"
   },
   "schedule": {
     "fixed": "Feste Termine",

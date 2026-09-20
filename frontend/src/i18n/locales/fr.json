@@ -813,10 +813,6 @@
   "new_identity": {
     "step_of": "Étape {{current}} sur {{total}}",
     "continue": "Continuer",
-    "confirm_title": "Avez-vous mis votre phrase en lieu sûr ?",
-    "confirm_desc": "Personne ne peut la récupérer à votre place. Si vous perdez ces douze mots sans passkey associée, vous perdez votre vote.",
-    "confirm_yes": "Oui, je l’ai enregistrée",
-    "confirm_no": "Laissez-moi vérifier",
     "passkey_title": "Associer une passkey",
     "passkey_desc": "Elle chiffre vos douze mots avec votre empreinte, votre visage ou le code d’un appareil, et garde cette copie chiffrée hors de cette machine. Vous n’aurez jamais à les saisir, et ils cessent d’être ici en clair.",
     "passkey_action": "Associer une passkey",
@@ -827,7 +823,14 @@
     "skip_desc": "Vos douze mots restent en clair sur cet appareil tant que vous n’en associez pas une.",
     "sealed": "Passkey associée",
     "skip_confirm_title": "Continuer sans passkey ?",
-    "skip_confirm_desc": "Vos douze mots resteront stockés en clair sur cet appareil et seront votre seul moyen de revenir. Vous pourrez associer une passkey plus tard depuis votre profil, quand vous voudrez."
+    "skip_confirm_desc": "Vos douze mots resteront stockés en clair sur cet appareil et seront votre seul moyen de revenir. Vous pourrez associer une passkey plus tard depuis votre profil, quand vous voudrez.",
+    "check_title": "Remettez-en trois à leur place",
+    "check_desc": "Placez ces {{n}} mots là où ils vont. C’est la seule chose qui distingue les avoir notés de les avoir copiés.",
+    "check_confirm": "Confirmer",
+    "check_wrong": "Ce n’est pas là qu’ils vont. Regardez de nouveau vos mots et réessayez.",
+    "check_back": "Revoir les douze mots",
+    "check_blank": "Mot {{position}}, vide",
+    "check_remove": "Retirer {{word}} de la position {{position}}"
   },
   "schedule": {
     "fixed": "Dates fixes",

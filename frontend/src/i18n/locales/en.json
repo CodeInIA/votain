@@ -807,10 +807,6 @@
   "new_identity": {
     "step_of": "Step {{current}} of {{total}}",
     "continue": "Continue",
-    "confirm_title": "Have you saved your phrase somewhere safe?",
-    "confirm_desc": "Nobody can recover it for you. If you lose these twelve words and have no passkey linked, you lose your vote.",
-    "confirm_yes": "Yes, I have saved it",
-    "confirm_no": "Let me check again",
     "passkey_title": "Link a passkey",
     "passkey_desc": "It encrypts your twelve words with your fingerprint, face or a device PIN, and keeps that encrypted copy off this machine. You never have to type them, and they stop sitting here in the clear.",
     "passkey_action": "Link a passkey",
@@ -821,7 +817,14 @@
     "skip_desc": "Your twelve words stay on this device unencrypted until you link one.",
     "sealed": "Passkey linked",
     "skip_confirm_title": "Continue without a passkey?",
-    "skip_confirm_desc": "Your twelve words will stay stored on this device unencrypted, and they will be your only way back. You can link a passkey later from your profile, whenever you like."
+    "skip_confirm_desc": "Your twelve words will stay stored on this device unencrypted, and they will be your only way back. You can link a passkey later from your profile, whenever you like.",
+    "check_title": "Put three of them back",
+    "check_desc": "Drop these {{n}} words into the places they belong. It is the only thing that tells saving them apart from copying them.",
+    "check_confirm": "Confirm",
+    "check_wrong": "Not where those go. Look at your words again and try once more.",
+    "check_back": "See the twelve words again",
+    "check_blank": "Word {{position}}, empty",
+    "check_remove": "Remove {{word}} from position {{position}}"
   },
   "schedule": {
     "fixed": "Fixed dates",

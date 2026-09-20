@@ -813,10 +813,6 @@
   "new_identity": {
     "step_of": "Passo {{current}} de {{total}}",
     "continue": "Continuar",
-    "confirm_title": "Guardou a sua frase num local seguro?",
-    "confirm_desc": "Ninguém a pode recuperar por si. Se perder estas doze palavras e não tiver uma passkey associada, perde o seu voto.",
-    "confirm_yes": "Sim, já a guardei",
-    "confirm_no": "Deixe-me verificar",
     "passkey_title": "Associar uma passkey",
     "passkey_desc": "Cifra as suas doze palavras com a impressão digital, o rosto ou o PIN de um dispositivo seu, e guarda essa cópia cifrada fora deste computador. Nunca terá de as escrever e deixam de estar aqui em claro.",
     "passkey_action": "Associar uma passkey",
@@ -827,7 +823,14 @@
     "skip_desc": "As suas doze palavras ficam neste dispositivo sem cifra até associar uma.",
     "sealed": "Passkey associada",
     "skip_confirm_title": "Continuar sem passkey?",
-    "skip_confirm_desc": "As suas doze palavras ficarão guardadas neste dispositivo sem cifra e serão a sua única forma de voltar. Pode associar uma passkey mais tarde a partir do seu perfil, quando quiser."
+    "skip_confirm_desc": "As suas doze palavras ficarão guardadas neste dispositivo sem cifra e serão a sua única forma de voltar. Pode associar uma passkey mais tarde a partir do seu perfil, quando quiser.",
+    "check_title": "Reponha três delas",
+    "check_desc": "Coloque estas {{n}} palavras no lugar a que pertencem. É a única coisa que distingue tê-las guardado de as ter copiado.",
+    "check_confirm": "Confirmar",
+    "check_wrong": "Não é aí que vão. Veja as suas palavras outra vez e tente de novo.",
+    "check_back": "Ver as doze palavras outra vez",
+    "check_blank": "Palavra {{position}}, vazia",
+    "check_remove": "Retirar {{word}} da posição {{position}}"
   },
   "schedule": {
     "fixed": "Datas fixas",

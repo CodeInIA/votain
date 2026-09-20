@@ -807,10 +807,6 @@
   "new_identity": {
     "step_of": "Stap {{current}} van {{total}}",
     "continue": "Doorgaan",
-    "confirm_title": "Heb je je zin veilig bewaard?",
-    "confirm_desc": "Niemand kan hem voor je herstellen. Verlies je deze twaalf woorden zonder gekoppelde passkey, dan verlies je je stem.",
-    "confirm_yes": "Ja, ik heb hem bewaard",
-    "confirm_no": "Laat me even kijken",
     "passkey_title": "Passkey koppelen",
     "passkey_desc": "Hij versleutelt je twaalf woorden met je vingerafdruk, gezicht of de pincode van een apparaat, en bewaart die versleutelde kopie buiten dit apparaat. Je hoeft ze nooit te typen en ze staan hier niet langer onversleuteld.",
     "passkey_action": "Passkey koppelen",
@@ -821,7 +817,14 @@
     "skip_desc": "Je twaalf woorden blijven onversleuteld op dit apparaat tot je er een koppelt.",
     "sealed": "Passkey gekoppeld",
     "skip_confirm_title": "Doorgaan zonder passkey?",
-    "skip_confirm_desc": "Je twaalf woorden blijven onversleuteld op dit apparaat staan en zijn je enige weg terug. Je kunt later vanuit je profiel een passkey koppelen, wanneer je maar wilt."
+    "skip_confirm_desc": "Je twaalf woorden blijven onversleuteld op dit apparaat staan en zijn je enige weg terug. Je kunt later vanuit je profiel een passkey koppelen, wanneer je maar wilt.",
+    "check_title": "Zet er drie terug",
+    "check_desc": "Zet deze {{n}} woorden op hun plek. Dat is het enige verschil tussen ze opgeschreven en ze gekopieerd hebben.",
+    "check_confirm": "Bevestigen",
+    "check_wrong": "Daar horen ze niet. Kijk nog eens naar je woorden en probeer opnieuw.",
+    "check_back": "De twaalf woorden opnieuw bekijken",
+    "check_blank": "Woord {{position}}, leeg",
+    "check_remove": "{{word}} van positie {{position}} halen"
   },
   "schedule": {
     "fixed": "Vaste data",

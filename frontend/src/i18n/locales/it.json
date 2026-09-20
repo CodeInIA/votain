@@ -813,10 +813,6 @@
   "new_identity": {
     "step_of": "Passo {{current}} di {{total}}",
     "continue": "Continua",
-    "confirm_title": "Hai messo la frase al sicuro?",
-    "confirm_desc": "Nessuno può recuperarla al posto tuo. Se perdi queste dodici parole e non hai una passkey collegata, perdi il tuo voto.",
-    "confirm_yes": "Sì, l’ho salvata",
-    "confirm_no": "Fammi controllare",
     "passkey_title": "Collega una passkey",
     "passkey_desc": "Cifra le tue dodici parole con impronta, volto o PIN di un tuo dispositivo, e tiene quella copia cifrata fuori da questo computer. Non dovrai mai digitarle e smettono di stare qui in chiaro.",
     "passkey_action": "Collega una passkey",
@@ -827,7 +823,14 @@
     "skip_desc": "Le tue dodici parole restano in chiaro su questo dispositivo finché non ne colleghi una.",
     "sealed": "Passkey collegata",
     "skip_confirm_title": "Continuare senza passkey?",
-    "skip_confirm_desc": "Le tue dodici parole resteranno salvate su questo dispositivo in chiaro e saranno il tuo unico modo per rientrare. Potrai collegare una passkey più avanti dal tuo profilo, quando vuoi."
+    "skip_confirm_desc": "Le tue dodici parole resteranno salvate su questo dispositivo in chiaro e saranno il tuo unico modo per rientrare. Potrai collegare una passkey più avanti dal tuo profilo, quando vuoi.",
+    "check_title": "Rimettine tre al loro posto",
+    "check_desc": "Metti queste {{n}} parole dove vanno. È l’unica cosa che distingue averle salvate dall’averle copiate.",
+    "check_confirm": "Conferma",
+    "check_wrong": "Non vanno lì. Guarda di nuovo le tue parole e riprova.",
+    "check_back": "Rivedi le dodici parole",
+    "check_blank": "Parola {{position}}, vuota",
+    "check_remove": "Togli {{word}} dalla posizione {{position}}"
   },
   "schedule": {
     "fixed": "Date fisse",
