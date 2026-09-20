@@ -15,15 +15,19 @@ request is opened by the backend now and named in an httpOnly cookie, because th
 rebuild a request from its id and the bridge key lives inside its WASM: a reload collects the
 proof instead of losing it. The organizer's session was never lost at all — WalletConnect
 persists it — but the mount effect read a module variable the reload had emptied and never
-asked for it back. `return_to` stays off, now for one reason rather than two: it misroutes to
-an installed PWA. See "Signing in on a phone" in `architecture.md`.
+asked for it back. `return_to` is ON from a phone, which the move is what made safe: without it a
+voter finishes in World App and is left there, and a green tick reads as "done",
+so they never come back — a lost sign-in, not a lost tap. The destination is
+validated against `FRONTEND_URL` server-side, sharing one sanitiser with Self's
+callback, or the endpoint is an open redirect wearing Votain's name. See
+"Signing in on a phone" in `architecture.md`.
 **Found by measuring, not by reading**: the resume effect aborted its own in-flight fetch in a
 StrictMode cleanup and left its once-only guard set, so "at most once" had become "never" — and
 every unit test passed while that was true. A `StrictMode` wrapper does not reproduce it here
 (counted: 1 mount, 0 cleanups), so the test file says so rather than pretending to cover it.
 **Also corrected**: `tallyKey.ts` had described its key as coming from a passkey's PRF secret
 long after that was changed to a wallet signature.
-Tests: contracts 185/185, backend 142/142, frontend 560/560.
+Tests: contracts 185/185 (not re-run; untouched), backend 144/144, frontend 562/562.
 **Next milestone**: Live Amoy deployment (pending funding the deployer key). It must carry
 `PLATFORM_ATTESTER_ADDRESS`, the key the backend signs enrolments with: without it the
 factory deploys elections that enrol the old, publicly linkable way, which looks entirely

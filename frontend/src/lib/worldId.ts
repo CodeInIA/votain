@@ -15,25 +15,33 @@
  * the connector URI, and waits; `resumeWorldIdProof` is how a page that does
  * not remember starting anything finds out that it did.
  *
- * STILL NO `return_to`, and now for one reason rather than two.
+ * AND `return_to` IS ON NOW, on a phone, which the move is what made safe.
  *
- * The field exists and does what it says: World App offers a way back instead
- * of leaving somebody staring at it wondering whether anything happened. The
- * first objection to it was that coming back that way is a cold start, and a
- * cold start lost the verification. That objection is now answered — this is
- * precisely what the move fixes.
+ * It was left out for a long time. The objection was that coming back that way
+ * is a cold start and a cold start LOST the verification, which made the way
+ * back worse than the inconvenience it removed. That is exactly what moving
+ * the request fixed, so the objection went with it.
  *
- * What remains is MISROUTING, which was measured and is not about state at all.
- * `return_to` is an https address, Android resolves one as an app link, and the
- * destination is whatever claims it: with this app installed as a PWA, a voter
- * verifying in a browser tab was handed the INSTALLED copy, which has its own
- * storage jar on iOS and therefore not the cookie either. Restricting it to the
- * installed app fixes the misrouting and leaves browser voters, who are most of
- * them, with nothing. Turn it on when there is a way to say "back to the
- * surface this came from" rather than "back to this origin".
+ * It matters more than it sounds. Without it a voter finishes in World App and
+ * is simply left there, and plenty of them read a green tick as "done" and
+ * never come back to the browser at all — not a lost tap, a lost sign-in.
  *
- * The inconvenience of switching apps by hand is a tap, and a tap is now all it
- * costs: the proof is waiting on the server whenever they get there.
+ * ONLY FROM A PHONE, and this file is the only place that can decide it. A
+ * desktop shows a QR code that a PHONE scans, so `return_to` would tell that
+ * phone to open this page: a second copy of the app on the wrong screen, while
+ * the real one waits on the desk. The same reasoning `openWalletApp` uses.
+ *
+ * WHERE IT LANDS. `return_to` is an https address and Android resolves one as
+ * an app link, so a voter with this installed as a PWA gets the installed copy.
+ * That only differs from where they started for somebody who has the PWA AND
+ * is verifying in a browser tab anyway, which is not the normal case: a voter
+ * has one or the other open. And it is no longer harmful either way, because a
+ * WebAPK shares Chrome's cookie jar, so the cookie is there and the proof is
+ * collected wherever they land.
+ *
+ * The server refuses a destination that is not this frontend. World App
+ * navigates to it on Votain's behalf, so accepting any URL would make this an
+ * open redirect wearing Votain's name.
  */
 import { type IDKitResult } from "@worldcoin/idkit-core";
 import { backendBase } from "./backend";
@@ -61,6 +69,13 @@ export type ResumedVerification =
   | { kind: "proof"; result: IDKitResult }
   /** Still out there. Put the QR back and wait, rather than the button. */
   | { kind: "waiting"; connectorURI: string };
+
+/**
+ * Whether the dApp and World App are on the SAME device, which is the only
+ * case where sending somebody "back" means anything.
+ */
+const ON_A_PHONE =
+  typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
 function endpoint(query = ""): string {
   return `${backendBase()}/api/worldid/request${query}`;
@@ -119,7 +134,12 @@ export async function requestWorldIdProof(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify(opts.action ? { action: opts.action } : {}),
+    body: JSON.stringify({
+      ...(opts.action ? { action: opts.action } : {}),
+      // This exact page, so the voter comes back to where they were rather
+      // than to the front door. See the note at the top for why only here.
+      ...(ON_A_PHONE ? { returnTo: window.location.href } : {}),
+    }),
   });
   if (!res.ok) throw new Error("Failed to open World ID request");
 

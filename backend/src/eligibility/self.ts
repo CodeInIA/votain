@@ -51,6 +51,11 @@ import {
 // and this is the same entry point `@selfxyz/core` itself imports
 // `getUniversalLink` from.
 import { SelfAppBuilder, getUniversalLink } from '@selfxyz/common/utils/appType';
+
+// Lives in `utils/` because World ID's `return_to` needs exactly the same
+// check, and two copies of an open-redirect guard is one copy too many.
+// Re-exported here so the callers that already ask this module keep working.
+export { sanitiseCallbackUrl } from '../utils/callbackUrl.js';
 import {
   checkAttributes,
   requiresNationalityReveal,
@@ -179,41 +184,6 @@ export function buildUniversalLink(params: {
   }).build();
 
   return getUniversalLink(app);
-}
-
-/**
- * Accepts a return URL for the mobile deep link, or nothing.
- *
- * The value arrives from the browser and is written into a payload the Self app
- * will navigate to, and shows it to the voter while it counts down, so it is not
- * a string to pass through untouched. Anything but http or https is refused
- * outright. In production it must also belong to the configured frontend, which
- * keeps this from being talked into minting a link that sends voters elsewhere;
- * development stays open because the dev server is reached over a LAN address
- * that no configuration knows in advance.
- */
-export function sanitiseCallbackUrl(raw: unknown): string | undefined {
-  if (typeof raw !== 'string' || raw.length === 0 || raw.length > 500) return undefined;
-
-  let url: URL;
-  try {
-    url = new URL(raw);
-  } catch {
-    return undefined;
-  }
-  if (url.protocol !== 'https:' && url.protocol !== 'http:') return undefined;
-
-  const frontend = process.env.FRONTEND_URL;
-  if (process.env.NODE_ENV === 'production') {
-    if (!frontend) return undefined;
-    try {
-      if (new URL(frontend).origin !== url.origin) return undefined;
-    } catch {
-      return undefined;
-    }
-  }
-
-  return url.toString();
 }
 
 /**

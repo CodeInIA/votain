@@ -11,6 +11,7 @@ import {
   setPendingCookie,
   clearPendingCookie,
 } from '../auth/cookie.js';
+import { sanitiseCallbackUrl } from '../utils/callbackUrl.js';
 import {
   startPendingVerification,
   readPendingVerification,
@@ -70,7 +71,7 @@ router.post('/logout', (_req: Request, res: Response) => {
 // ────────────────────────────────────────────────
 router.post('/rp-signature', async (req: Request, res: Response) => {
   try {
-    const { action } = req.body as { action?: string };
+    const { action, returnTo } = req.body as { action?: string; returnTo?: unknown };
 
     if (!process.env.DEVELOPER_KEY) {
       throw new Error('DEVELOPER_KEY not configured');
@@ -106,7 +107,7 @@ router.post('/rp-signature', async (req: Request, res: Response) => {
 /** POST /worldid/request — opens one, and names it in an httpOnly cookie. */
 router.post('/worldid/request', async (req: Request, res: Response) => {
   try {
-    const { action } = req.body as { action?: string };
+    const { action, returnTo } = req.body as { action?: string; returnTo?: unknown };
 
     // One verification per browser at a time. Without this, pressing the
     // button twice leaves the first one orphaned in the store with nothing
@@ -115,6 +116,11 @@ router.post('/worldid/request', async (req: Request, res: Response) => {
 
     const { pendingId, connectorURI } = await startPendingVerification(
       action ?? process.env.WORLD_ID_ACTION ?? 'vote-registration',
+      // Only a phone sends one, because only the browser knows whether the
+      // wallet and the dApp are on the same device. Sanitised rather than
+      // trusted: World App navigates to this on Votain's behalf, so an
+      // unchecked value is an open redirect wearing Votain's name.
+      sanitiseCallbackUrl(returnTo),
     );
 
     setPendingCookie(res, pendingId);

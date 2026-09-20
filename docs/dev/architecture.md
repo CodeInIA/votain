@@ -1067,6 +1067,8 @@ mid-verification gets told to start one.
 
 `WORLD_ID_APP_ID`, `WORLD_ID_RP_ID` and `WORLD_ID_ACTION` are read by the
 backend now. The `VITE_WORLD_ID_*` copies are gone: setting them does nothing.
+`FRONTEND_URL` gained a second job — it is what the return links are validated
+against — and must be set in production, or no way back is offered at all.
 
 ### The organizer: the session was already there, nobody asked
 
@@ -1092,26 +1094,40 @@ Two guards on that, both found by measuring rather than by reasoning:
   recognise the still-authorised account and go straight back in, leaving no way
   to reach it at all.
 
-### Why there is still no `return_to`
+### `return_to`, and what finally made it safe
 
-The field exists and does what it says: World App offers a way back instead of
-leaving somebody staring at it. There were two objections to it and now there is
-one.
+World App can offer the voter a way back, and now does, from a phone. The field
+had been left out for a long time on one argument: coming back that way is a
+cold start, and a cold start LOST the verification, so the way back was worse
+than the inconvenience it removed. Moving the request to the server is exactly
+what retires that argument.
 
-The first was that coming back that way is a cold start, and a cold start lost
-the verification. That is answered above — it is precisely what the move fixes.
+It is worth more than a saved tap. Without it a voter finishes in World App and
+is simply left there, and a green tick reads as "done" — so they never return to
+the browser at all. That is not a lost tap, it is a lost sign-in, and it is the
+thing that was actually making people give up.
 
-What remains is MISROUTING, which was measured and is not about state.
-`return_to` is an https address, Android resolves one as an app link, and the
-destination is whatever claims it: with this app installed as a PWA, a voter
-verifying in a browser tab was handed the INSTALLED copy, which on iOS has its
-own storage jar and therefore not the cookie either. Restricting it to the
-installed app fixes the misrouting and leaves browser voters, who are most of
-them, with nothing. It becomes worth switching on when there is a way to say
-"back to the surface this came from" rather than "back to this origin".
+| Decision | Why |
+|---|---|
+| Phone only, decided in the browser | A desktop shows a QR that a PHONE scans, so `return_to` would send that phone to this page: a second copy of the app on the wrong screen while the real one waits on the desk. Same reasoning as `openWalletApp` |
+| The current URL, not the origin | They come back to the screen they left rather than to the front door |
+| Validated against `FRONTEND_URL` server-side | World App navigates to this on Votain's behalf. Accepting any URL makes the endpoint an open redirect wearing Votain's name, and the voter has no way to tell |
+| Shared with Self's callback | Both are "another app navigates here for us", one rule, one `sanitiseCallbackUrl` in `utils/callbackUrl.ts` |
 
-The remaining inconvenience is one tap, and a tap is now all it costs: the proof
-is waiting on the server whenever they get there.
+**Where it lands, stated honestly.** `return_to` is an https address and Android
+resolves one as an app link, so a voter with this installed as a PWA is handed
+the installed copy. That only differs from where they started for somebody who
+has the PWA installed AND is verifying in a browser tab anyway — not the normal
+case, since a voter has one or the other open, and whichever they started in is
+where the link goes. Even then nothing is lost now: a WebAPK shares Chrome's
+cookie jar, so the cookie is present and the proof is collected wherever they
+land. On iOS a home-screen PWA does not claim https URLs without a native app,
+so the link opens Safari, which is where they were.
+
+**Not verified on a real device.** The reasoning above about WebAPK cookie
+sharing and iOS app-link behaviour is from documented platform behaviour, not
+from a measurement on hardware. The parts that were measured are the resumption
+itself and the origin check.
 
 ## The organizer's badge is a domain, not a checkmark
 

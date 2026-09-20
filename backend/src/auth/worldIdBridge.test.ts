@@ -47,7 +47,8 @@ function fakeBridge(): BridgeRequest & { confirm: () => void; fail: () => void }
   };
 }
 
-const start = () => startPendingVerification('vote-registration', () => Promise.resolve(bridge));
+const start = (returnTo?: string) =>
+  startPendingVerification('vote-registration', returnTo, () => Promise.resolve(bridge));
 let bridge: ReturnType<typeof fakeBridge>;
 
 beforeEach(() => {
@@ -86,6 +87,30 @@ describe('what the voter is asked to prove', () => {
     const { config } = verificationRequest('recover-identity', RP);
     assert.equal(config.action, 'recover-identity');
     assert.deepEqual(config.rp_context, RP);
+  });
+
+  /**
+   * The way back. Without it a voter finishes in World App and is left there,
+   * and plenty read a green tick as "done" and never return to the browser.
+   */
+  test('asks World App to send a phone back where it came from', () => {
+    const { config } = verificationRequest('vote-registration', RP, 'https://votain.app/voter/onboarding');
+    assert.equal(
+      (config as { return_to?: string }).return_to,
+      'https://votain.app/voter/onboarding',
+    );
+  });
+
+  /**
+   * A desktop sends none, because the QR is scanned by a PHONE: telling that
+   * phone to open this page opens a second copy of the app on the wrong
+   * screen while the real one waits on the desk. The browser decides, so the
+   * absence has to survive all the way down rather than become an empty
+   * string World App might still act on.
+   */
+  test('leaves the field out entirely when there is nowhere to send anyone', () => {
+    const { config } = verificationRequest('vote-registration', RP);
+    assert.ok(!('return_to' in config));
   });
 });
 

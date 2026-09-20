@@ -158,6 +158,45 @@ describe('opening one', () => {
     expect(llamadas.every(l => l.init?.credentials === 'include')).toBe(true);
   });
 
+  /**
+   * The way back, and only from a phone. A desktop QR is scanned by a PHONE,
+   * so a `returnTo` would tell that phone to open this page: a second copy of
+   * the app on the wrong screen while the real one waits on the desk.
+   *
+   * `navigator.userAgent` is what decides, and it is read when the module
+   * loads, so the import has to happen after the stub.
+   */
+  it('asks to be sent back, but only from a phone', async () => {
+    vi.resetModules();
+    vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0)' });
+    vi.stubGlobal('window', { location: { href: 'https://votain.app/voter/onboarding' } });
+    vi.stubGlobal('fetch', (url: string, init?: RequestInit) => {
+      llamadas.push({ url, init });
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ connectorURI: 'x' }) });
+    });
+
+    const movil = await import('./worldId');
+    await movil.requestWorldIdProof();
+
+    expect(JSON.parse(llamadas[0].init?.body as string).returnTo).toBe(
+      'https://votain.app/voter/onboarding',
+    );
+  });
+
+  it('sends nobody anywhere from a desktop', async () => {
+    vi.resetModules();
+    vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' });
+    vi.stubGlobal('fetch', (url: string, init?: RequestInit) => {
+      llamadas.push({ url, init });
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ connectorURI: 'x' }) });
+    });
+
+    const escritorio = await import('./worldId');
+    await escritorio.requestWorldIdProof();
+
+    expect(JSON.parse(llamadas[0].init?.body as string)).not.toHaveProperty('returnTo');
+  });
+
   it('carries an action override, since each one yields its own nullifier', async () => {
     respuestas = [{ connectorURI: 'x' }, { status: 'none' }];
     await requestWorldIdProof({ action: 'recover-identity' });

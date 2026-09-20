@@ -21,9 +21,9 @@
  * pending verification; this process holds the live object and polls the bridge
  * itself. A reload asks "is mine done?" and is handed the proof.
  *
- * This is also what makes the cold start survivable in general, which is the
- * precondition for ever offering World App a `return_to`. See the note in
- * `frontend/src/lib/worldId.ts` for why that is still not switched on.
+ * This is also what made `return_to` safe to switch on at last: World App can
+ * offer the voter a way back, because a fresh page arriving here collects the
+ * proof instead of losing it. See `verificationRequest` below.
  *
  * ONE PROCESS. The store is a Map, so a restart forgets every verification in
  * flight and a second replica would not see the first one's. Both are correct
@@ -148,6 +148,7 @@ export function verificationRequest(
     expires_at: number;
     signature: string;
   },
+  returnTo?: string,
 ) {
   return {
     config: {
@@ -156,6 +157,38 @@ export function verificationRequest(
       rp_context: rpContext,
       allow_legacy_proofs: true,
       environment: 'production',
+      /**
+       * WHERE WORLD APP OFFERS TO SEND THEM BACK, on a phone only.
+       *
+       * This was left out for a long time and the reason has changed. The old
+       * objection was that returning this way is a COLD START, and a cold
+       * start destroyed a verification that had already succeeded — worse
+       * than the inconvenience it removed. That is answered: the request
+       * lives here now, named by a cookie, so a fresh page collects the proof.
+       *
+       * What is left is where the link lands, and it is smaller than it looks.
+       * `return_to` is an https address and Android resolves one as an app
+       * link, so a voter who has this installed as a PWA is handed the
+       * INSTALLED copy. That only diverges for somebody who has the PWA
+       * installed AND is verifying in a browser tab anyway; a voter normally
+       * has one or the other open, and whichever they started in is where the
+       * link goes. Even in that case nothing is lost now: a WebAPK shares
+       * Chrome's cookie jar, so the cookie is there and the proof is
+       * collected. A voter landing in their other window is worth far less
+       * than being stranded in World App wondering whether anything happened,
+       * which is the thing that actually made people give up.
+       *
+       * NOT SENT FROM A DESKTOP, and the caller decides that, because only the
+       * browser knows. A desktop shows a QR code that a PHONE scans, so the
+       * phone would be told to open this page: a second copy of the app on the
+       * wrong screen, while the real one waits on the desk.
+       *
+       * Validated by `sanitiseCallbackUrl` before it reaches here. It is
+       * written into a payload another app navigates to on this platform's
+       * behalf, so an unchecked value is an open redirect wearing Votain's
+       * name.
+       */
+      ...(returnTo ? { return_to: returnTo } : {}),
     } as const,
     preset: 'deviceLegacy' as const,
   };
@@ -193,10 +226,10 @@ export interface BridgeRequest {
   >;
 }
 
-export type OpenBridgeRequest = (action: string) => Promise<BridgeRequest>;
+export type OpenBridgeRequest = (action: string, returnTo?: string) => Promise<BridgeRequest>;
 
 /** The real one: mints the RP signature and asks the SDK. */
-const openOverIDKit: OpenBridgeRequest = async action => {
+const openOverIDKit: OpenBridgeRequest = async (action, returnTo) => {
   if (!process.env.DEVELOPER_KEY) throw new Error('DEVELOPER_KEY not configured');
 
   const { sig, nonce, createdAt, expiresAt } = signRequest({
@@ -204,13 +237,17 @@ const openOverIDKit: OpenBridgeRequest = async action => {
     action,
   });
 
-  const { config, preset } = verificationRequest(action, {
-    rp_id: process.env.WORLD_ID_RP_ID as string,
-    nonce,
-    created_at: createdAt,
-    expires_at: expiresAt,
-    signature: sig,
-  });
+  const { config, preset } = verificationRequest(
+    action,
+    {
+      rp_id: process.env.WORLD_ID_RP_ID as string,
+      nonce,
+      created_at: createdAt,
+      expires_at: expiresAt,
+      signature: sig,
+    },
+    returnTo,
+  );
 
   const sdkMod = await idkit();
   return sdkMod.IDKit.request(config).preset(sdkMod[preset]({}));
@@ -218,12 +255,13 @@ const openOverIDKit: OpenBridgeRequest = async action => {
 
 export async function startPendingVerification(
   action: string,
+  returnTo?: string,
   open: OpenBridgeRequest = openOverIDKit,
 ): Promise<{ pendingId: string; connectorURI: string }> {
   sweep();
   if (pending.size >= MAX_PENDING) throw new Error('Too many verifications in flight');
 
-  const request = await open(action);
+  const request = await open(action, returnTo);
   const pendingId = randomBytes(32).toString('hex');
 
   let announce!: () => void;
