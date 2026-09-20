@@ -509,7 +509,6 @@
   "members": {
     "title": "Geregistreerde leden",
     "count": "leden",
-    "search_placeholder": "Zoeken op identiteitsverplichting…",
     "all_elections": "Alle verkiezingen",
     "empty": "Geen leden gevonden.",
     "enrolled": "Ingeschreven",

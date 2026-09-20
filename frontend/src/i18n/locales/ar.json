@@ -529,7 +529,6 @@
   "members": {
     "title": "الأعضاء المسجلون",
     "count": "أعضاء",
-    "search_placeholder": "البحث بالتزام الهوية…",
     "all_elections": "جميع الانتخابات",
     "empty": "لم يتم العثور على أعضاء.",
     "enrolled": "مسجل",

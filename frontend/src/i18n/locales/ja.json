@@ -504,7 +504,6 @@
   "members": {
     "title": "登録メンバー",
     "count": "人のメンバー",
-    "search_placeholder": "アイデンティティコミットメントで検索…",
     "all_elections": "すべての選挙",
     "empty": "メンバーが見つかりません。",
     "enrolled": "登録済み",

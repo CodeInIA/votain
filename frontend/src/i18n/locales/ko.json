@@ -504,7 +504,6 @@
   "members": {
     "title": "등록된 회원",
     "count": "명의 회원",
-    "search_placeholder": "신원 커밋먼트로 검색…",
     "all_elections": "모든 선거",
     "empty": "회원을 찾을 수 없습니다.",
     "enrolled": "등록됨",

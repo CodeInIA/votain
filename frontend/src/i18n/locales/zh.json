@@ -504,7 +504,6 @@
   "members": {
     "title": "已注册成员",
     "count": "位成员",
-    "search_placeholder": "按身份承诺搜索…",
     "all_elections": "所有选举",
     "empty": "未找到成员。",
     "enrolled": "已报名",

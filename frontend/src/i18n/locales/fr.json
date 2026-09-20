@@ -514,7 +514,6 @@
   "members": {
     "title": "Membres enregistrés",
     "count": "membres",
-    "search_placeholder": "Rechercher par engagement d'identité…",
     "all_elections": "Toutes les élections",
     "empty": "Aucun membre trouvé.",
     "enrolled": "Inscrit",

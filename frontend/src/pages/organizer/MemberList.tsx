@@ -1,11 +1,10 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Download, Users, Filter, Search, X } from 'lucide-react';
+import { Download, Users, Filter } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
 import { SelectMenu } from '../../components/ui/SelectMenu';
 import { Spinner } from '../../components/ui/Spinner';
 import { Badge } from '../../components/ui/Badge';
@@ -50,7 +49,6 @@ export default function MemberList() {
   const { t } = useTranslation();
   const live = isChainConfigured();
   const wallet = useOrganizerWallet();
-  const [query, setQuery] = useState('');
   // "View members" from an election arrives as ?election=<id>. Seeding the
   // filter from the URL is what makes that link mean anything; defaulting to
   // 'all' silently dropped the caller's intent and showed every election.
@@ -125,14 +123,9 @@ export default function MemberList() {
   }, [live, elections]);
 
   const filtered = useMemo(() => {
-    let list = members;
-    if (electionFilter !== 'all') list = list.filter(m => m.electionId === electionFilter);
-    if (query.trim()) {
-      const q = query.trim().toLowerCase();
-      list = list.filter(m => m.commitment.toLowerCase().includes(q));
-    }
-    return list;
-  }, [members, query, electionFilter]);
+    if (electionFilter === 'all') return members;
+    return members.filter(m => m.electionId === electionFilter);
+  }, [members, electionFilter]);
 
   /**
    * Every member is read, and a page of them is drawn.
@@ -144,7 +137,7 @@ export default function MemberList() {
   const { visible, hasMore, loadMore } = usePageLimit(
     filtered,
     MEMBER_PAGE_SIZE,
-    `${electionFilter}|${query}`,
+    electionFilter,
   );
 
   const exportCSV = () => {
@@ -179,31 +172,25 @@ export default function MemberList() {
           </Button>
         </div>
 
-        {/* Filters */}
+        {/* NO SEARCH BY COMMITMENT, and its absence is the point.
+
+            A commitment is derived from the voter's secret AND the election's
+            address, so it belongs to exactly one election and matches at most
+            one row anywhere. The only interesting question a box like that
+            could answer — what else has this person joined — is precisely the
+            one this project spent a milestone making unanswerable. Offering the
+            search implied it could be answered, which is the belief the
+            per-election derivation exists to prevent.
+
+            Nobody had one to type in either. A commitment appears on no screen:
+            a voter sees their nullifier, and a receipt is checked by nullifier
+            because nobody memorises either. The only source was the CSV this
+            same page exports, so searching it meant already holding the row.
+
+            The election filter is the one that narrows this list, and the
+            export is how it gets audited. */}
         <Card className="p-4 mb-4 flex flex-col sm:flex-row gap-3">
-          <div className="flex-1">
-            <Input
-              placeholder={t('members.search_placeholder')}
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              leftIcon={<Search className="w-4 h-4" />}
-              /* A search with no way out: a commitment is 77 digits, so the
-                 usual way to leave a filtered list was to select a field full
-                 of them and delete it by hand. Same control the election
-                 filters carry, on the one search that lacked it. */
-              rightIcon={query ? (
-                <button
-                  type="button"
-                  onClick={() => setQuery('')}
-                  aria-label={t('common.clear')}
-                  className="cursor-pointer p-2 -m-2 hover:text-on-surface transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              ) : undefined}
-            />
-          </div>
-          <div className="flex items-center gap-2 sm:w-64 min-w-0">
+          <div className="flex flex-1 items-center gap-2 min-w-0">
             <Filter className="w-4 h-4 text-on-surface-meta shrink-0" />
             <SelectMenu
               value={electionFilter}

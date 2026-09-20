@@ -509,7 +509,6 @@
   "members": {
     "title": "Registered Members",
     "count": "members",
-    "search_placeholder": "Search by identity commitment…",
     "all_elections": "All elections",
     "empty": "No members found.",
     "enrolled": "Enrolled",

@@ -509,7 +509,6 @@
   "members": {
     "title": "पंजीकृत सदस्य",
     "count": "सदस्य",
-    "search_placeholder": "पहचान प्रतिबद्धता से खोजें…",
     "all_elections": "सभी चुनाव",
     "empty": "कोई सदस्य नहीं मिला।",
     "enrolled": "नामांकित",
