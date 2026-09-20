@@ -485,23 +485,25 @@ export default function CreateElection() {
 
   // In-app navigation (top/bottom nav tabs, logo, profile) is a same-document
   // history change, so beforeunload never fires for it: the click has to be
-  // caught before React Router acts on it. Nav links carry a real href;
-  // TopNav's logo/profile buttons carry a data-nav-href for the same purpose.
+  // caught before React Router acts on it. Every one of them is a real anchor,
+  // which is what makes one selector enough; the logo and the profile icon used
+  // to be buttons navigating in an onClick, and carried a `data-nav-href` so
+  // this could still see them.
   useEffect(() => {
     if (!isDirty) return;
     const handler = (e: MouseEvent) => {
-      const el = (e.target as HTMLElement).closest('a[href], [data-nav-href]');
-      if (!el) return;
-      let href: string;
-      if (el instanceof HTMLAnchorElement) {
-        const url = new URL(el.href, window.location.origin);
-        if (url.origin !== window.location.origin) return;
-        if (url.pathname + url.search === window.location.pathname + window.location.search) return;
-        href = url.pathname + url.search + url.hash;
-      } else {
-        href = el.getAttribute('data-nav-href') ?? '';
-        if (!href || href === window.location.pathname) return;
-      }
+      // A CLICK ASKING FOR A NEW TAB IS NOT LEAVING THIS PAGE, so it is not
+      // this guard's business. Swallowing it replaced the tab the browser was
+      // about to open with a dialog about unsaved work that was never at risk.
+      if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0) return;
+
+      const el = (e.target as HTMLElement).closest('a[href]');
+      if (!(el instanceof HTMLAnchorElement)) return;
+      if (el.target === '_blank') return;
+      const url = new URL(el.href, window.location.origin);
+      if (url.origin !== window.location.origin) return;
+      if (url.pathname + url.search === window.location.pathname + window.location.search) return;
+      const href = url.pathname + url.search + url.hash;
       e.preventDefault();
       e.stopPropagation();
       guardedNavigate(() => navigate(href));

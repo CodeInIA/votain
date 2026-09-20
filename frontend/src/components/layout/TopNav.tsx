@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from 'react';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Compass, Vote, Clock, LayoutDashboard, Users, Zap, ShieldCheck, Bookmark } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -55,7 +55,7 @@ export function TopNav() {
   const { compact, report } = useNavFit();
 
   const navRef = useRef<HTMLElement>(null);
-  const logoRef = useRef<HTMLButtonElement>(null);
+  const logoRef = useRef<HTMLAnchorElement>(null);
   const linksRef = useRef<HTMLDivElement>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
 
@@ -124,16 +124,14 @@ export function TopNav() {
       aria-label="Top navigation"
     >
       {/* Logo */}
-      <button
+      <Link
         ref={logoRef}
-        type="button"
-        data-nav-href={homeRoute}
-        onClick={() => navigate(homeRoute)}
+        to={homeRoute}
         className="flex items-center gap-3 shrink-0 hover:opacity-80 transition-opacity cursor-pointer"
       >
         <img src="/votain-logo.webp" alt="Votain" className="w-8 h-8 object-contain" />
         <img src="/votain-wordmark.svg" alt="" className="h-4 object-contain translate-y-0.5" />
-      </button>
+      </Link>
 
       {/* The links, drawn here when they fit and measured here when they do
           not. See the effect above for why they stay in the document either
