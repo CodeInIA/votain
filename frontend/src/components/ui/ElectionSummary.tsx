@@ -305,12 +305,23 @@ export function ElectionSchedule({
   // PROGRESS, not a target. As a bare number it said what the rule was and
   // nothing about whether it had been met, and the only screen that answered
   // that was the tally dialog, at the moment of publishing: an organizer with
-  // a quorum of three and two voters found out by trying.
+  // a quorum of three and two voters found out by trying. What fixed that is
+  // the VALUE, which counts up to the rule instead of stating it.
+  //
+  // A FIXED TINT, though it used to turn green once the quorum was met. It was
+  // the only colour in this app that carried state, and it carried it in the
+  // one row where every other colour is decoration: `Reserved` two figures to
+  // the left is permanently the same green, so an election that met its quorum
+  // showed two green icons of which only one meant anything by being green, and
+  // one that had not showed the meaningless green alone. Nobody can learn a
+  // signal that a neighbour is already wearing for no reason, which is why this
+  // read as elections having differently coloured icons rather than as an
+  // answer. Met or not is said twice over anyway, by the value and by the hint.
   if (election.privacyQuorum > 0) {
     figures.push({
       id: 'quorum',
       icon: EyeOff,
-      tint: quorumMet ? 'text-success' : 'text-secondary',
+      tint: 'text-secondary',
       label: t('election.quorum_short'),
       value: `${voters.toLocaleString()}/${election.privacyQuorum.toLocaleString()}`,
       hint: `${t('create.quorum_hint')} ${t(quorumMet ? 'election.quorum_met' : 'election.quorum_pending')}`,
