@@ -162,6 +162,24 @@ A card that carries the identity drawing takes no small glyph in its heading:
 the drawing is that card's icon, and a second mark beside it reads as a second
 identity.
 
+### Colour does not carry state next to colour that carries none
+
+A tint that changes with the data can only be read as information if nothing
+beside it is wearing the same colour for decoration.
+
+The quorum figure in `ElectionSummary` learned this the hard way. It turned
+green once the quorum was met and sat purple until then, which was true and
+worked, and it was the only state-derived tint in the app, in a row where the
+other five are fixed. `Reserved`, two figures to its left, is permanently the
+same green. So an election that had met its quorum showed two green icons of
+which only one meant anything by being green, and one that had not showed the
+meaningless green by itself. It was reported as elections having differently
+coloured icons, which is exactly how it reads.
+
+If a figure has a state worth reporting, say it in the value or in the hint
+first: `3/3` against `1/3` answers it, and so does a sentence. Reach for colour
+only once the row has no decorative colour left to be confused with.
+
 ### Touch target minimums
 
 - Buttons on mobile: minimum **44×44px** (WCAG 2.5.5).

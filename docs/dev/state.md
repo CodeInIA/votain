@@ -1,19 +1,21 @@
 # Votain. Current Project State
 
-**Last updated**: 2026-09-18 (profile patterns, a documentation audit against the code)
-**Completed milestone**: Phase B (H5–H9), real integration code complete. Contracts, backend
-issuer, voter + organizer flows and tally all wired and green.
+**Last updated**: 2026-09-20 (a pass of ten reported defects)
+**Completed milestone**: Phase B (H5–H9) except H9's last mile. Contracts, backend issuer and
+both user flows are wired and green; the tally runs on both paths, but only the auditor CLI
+pins to IPFS and the in-app path publishes an empty CID. See H5, H6 and H9 in `PLAN.md`.
 **Since Phase B**: 8-phase lifecycle (`UPCOMING`/`PENDING_VOTE` added to the contract
 `phase()`), **in-app tally** with a Paillier key **derived from the organizer's wallet signature**
 (nothing stored at rest; CLI kept as the auditor path), organizer display-name persistence,
 custom dark `DatePicker`, phase-aware voter/organizer/public screens, and shared phase helpers.
-**This pass**: **saved elections**, encrypted per voter and per role in
-`PlatformRegistry.setPreferences`, with the bookmark on every card, a page of its own for the
-organizer and a chip in the filter panel; **session hardening** (revocation read per slot
-instead of per registered human, `__Host-` cookie with Secure in development too, CORS off
-unless asked for); and seven defects reported from the running app, including a passkey link
-that never dropped the local phrase and a render loop on the gas page. See the milestone log.
-Tests: contracts 185/185, backend 126/126, frontend 501/501.
+**This pass**: ten defects, each reported from the running app and none found by reading. The
+role switch lost an argument with itself on an election panel, moving the address and leaving
+the hat; the gate before the passkey asked "have you saved the phrase?" over a button saying
+yes, and now asks for three of the twelve back in their places; an election's card held 61
+pixels open for a hint nobody had asked for, and then opened to the height of the longest
+sentence rather than the one being read; unsaving from the saved list deleted the row on the
+one screen where that mistake costs something. See the log for the three worth keeping.
+Tests: contracts 185/185, backend 126/126, frontend 534/534.
 **Next milestone**: Live Amoy deployment (pending funding the deployer key). It must carry
 `PLATFORM_ATTESTER_ADDRESS`, the key the backend signs enrolments with: without it the
 factory deploys elections that enrol the old, publicly linkable way, which looks entirely
@@ -125,7 +127,7 @@ personhood; Self is what discloses attributes.
 | `@types/node` | 26.5.1 | Same: the `latest` tag lags at 22.x |
 
 **Build**: ✅ clean, no sourcemaps.
-**Tests**: 501/501 unit tests in 61 files passing (Vitest, jsdom), covering the voter identity lifecycle (minting, sealing, the PRF read-back proof, rotation, adding further passkeys), the per-election identities that keep enrolments unlinkable, noticing an expired session, WalletConnect return handling, the Paillier ballot encoding, the i18n plural tables, how the lists are paged and ordered, the schedule timeline both roles read, and turnout counted in people rather than ballots. Playwright E2E scaffold in `e2e/` (excluded from Vitest).
+**Tests**: 534/534 unit tests in 65 files passing (Vitest, jsdom), covering the voter identity lifecycle (minting, sealing, the PRF read-back proof, rotation, adding further passkeys), the per-election identities that keep enrolments unlinkable, noticing an expired session, WalletConnect return handling, the Paillier ballot encoding, the i18n plural tables, how the lists are paged and ordered, the schedule timeline both roles read, turnout counted in people rather than ballots, the three words a new voter has to put back before their phrase is accepted, the twelve boxes they type it into on the way back, the hat following the page without fighting the header for it, and the saved list holding on to a row somebody has just unsaved. Playwright E2E scaffold in `e2e/` (excluded from Vitest).
 
 **Enrolling stopped naming the enrolled** (2026-09-16): what goes into an election's
 merkle tree is a commitment derived from the voter's secret and that election's address,

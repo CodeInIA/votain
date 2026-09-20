@@ -2589,3 +2589,75 @@ mode was worse — it delayed that write by a microtask, long enough for a
 `keepPhraseOnDevice` still in flight to land its "local" on top of the "prf". A
 decorative badge had inserted itself into a race over which store holds a
 voter's phrase.
+
+
+## A pass of defects, each reported from the running app (2026-09-20)
+
+Ten of them, none found by reading. Three are worth keeping for the shape of the
+mistake rather than for the fix.
+
+THE SWITCH THAT LOST THE ARGUMENT WITH ITSELF. Standing on an organizer's
+election panel and pressing the voter side of the header switch moved the
+address to `/election/:id` and left the switch saying organizer. `RoleFromRoute`
+did it, and it is the component whose own comment promises it leaves a page
+belonging to nobody alone so as not to "undo a choice the person just made in
+the header". It could not keep that promise, because it re-ran on `activeRole`
+as well as on the path. Traced by watching every write of the preference next to
+the URL at that instant:
+
+    voter      written while the URL still read /organizer/election/0x9af0
+    organizer  written once the URL read /election/0x9af0
+
+The switch sets the role and navigates in one tick. `history` moves at once;
+React Router's `pathname` arrives a render later. So the effect ran against the
+page being LEFT, found an organizer route under a freshly chosen voter hat, and
+put the hat back; afterwards the new path belongs to nobody, so nothing ever
+corrected it again. It now remembers the last path it acted on, which pins it to
+arrival, which is all it was ever for. The election pair is the only route this
+could happen on: every other crossing lands on a page the new role owns, where
+the correction agrees with the switch and the race is invisible.
+
+A QUESTION NOBODY FAILS. The gate between the twelve words and the passkey was a
+modal reading "have you saved the phrase somewhere safe?" over a button reading
+"yes, I have saved it". Anybody hurrying pressed yes, and pressing yes is exactly
+what somebody does who pressed copy and never pasted it anywhere: it tested
+intent, and intent is not what fails there. Setup is three steps now, and the
+middle one asks for three of the twelve back, in their places. Position is
+checked and not membership, so three right words in the wrong places do not pass.
+The words are offered without decoys, because adding wrong ones would test
+recognition of a list this app publishes anyway, while placing them tests the
+only thing that matters, which is having the order.
+
+SPACE HELD OPEN FOR SOMETHING NOBODY ASKED FOR. The empty band under the figures
+on an election was not padding: it was the hint panel, drawn at full height on
+every election whether or not a hint was open, 61 measured pixels, so the card
+stood at 297 where its content needed 236. It was deliberate and the reason was
+sound, since letting the slot come and go shifted the page under the reader's
+finger. A row animating from `0fr` to `1fr` gives both. Then the same panel was
+found opening to the height of the TALLEST sentence rather than the one being
+read, so the quorum's line opened a box built for the gas one; drawing only the
+open sentence fixed that, at the price of having to keep the last one alive for
+exactly one animation, since `1fr` resolves to the content and an emptied cell
+collapses from zero to zero.
+
+TWO THINGS THE TESTS CAUGHT ABOUT THEMSELVES. The saved list's first three tests
+passed with the fix reverted: they take their list ready-made from a mocked hook
+and never reach the filter that decides whether a row survives, so they tested
+the look of the undo strip and not the fix. A fourth asks that filter directly.
+And folding a row rather than deleting it left both halves in the document, so
+`overflow-hidden` stopped them being seen while leaving the card's links and the
+undo button in the tab order: `inert` swaps with the fold, and a test fails for
+either half left reachable.
+
+THE REST, IN A LINE EACH. The saved list spun a spinner over a list it already
+knew was empty, three flashes of about ten milliseconds, because the hook
+derives loading from "nothing yet and not finished" and the saved scope is known
+one effect before it is finished. The logo and the profile icon were buttons
+navigating in an onClick, so a browser had no URL to offer a new tab for, and
+the create wizard's unsaved-changes guard swallowed the ctrl-clicks that asked
+for one. The quorum icon was the only colour in the app carrying state, in a row
+where every other colour is decoration. Recovery asked for the twelve words in a
+textarea and now asks for them in the twelve numbered boxes they were handed
+over in, pasting included. Unsaving from the saved list deleted the row, which
+made the one screen where that mistake costs something the one screen that hid
+the evidence.
