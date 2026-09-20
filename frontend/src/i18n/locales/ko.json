@@ -768,7 +768,6 @@
   "recover": {
     "title": "신원 복구",
     "intro": "본인 확인 때 받은 열두 단어를 입력하세요. 이미 참여한 선거와 함께 같은 신원이 돌아옵니다.",
-    "placeholder": "amber anchor apple ...",
     "word_count": "12개 중 {{typed}}개",
     "unknown_words": "목록에 없는 단어입니다: {{words}}. 오타를 확인하세요.",
     "restore": "복구",
@@ -781,7 +780,9 @@
     "lost_phrase": "단어까지 잃었나요?",
     "kept_on_device": "신원이 복원되었고 구문은 이 기기에 저장되었습니다",
     "kept_on_device_desc": "패스키가 없으면 열두 단어가 이 브라우저에 암호화되지 않은 채 남습니다. 나중에 프로필에서 연결할 수 있습니다.",
-    "have_passkey": "역시 패스키를 쓸 수 있습니다"
+    "have_passkey": "역시 패스키를 쓸 수 있습니다",
+    "word_label": "{{position}}번째 단어",
+    "clear": "모두 지우기"
   },
   "identity_step": {
     "has_passkey_title": "투표 신원 열기",

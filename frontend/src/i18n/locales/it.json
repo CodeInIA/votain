@@ -780,7 +780,6 @@
   "recover": {
     "title": "Recupera la tua identità",
     "intro": "Digita le dodici parole ricevute alla verifica. Ricostruiscono la stessa identità, con le elezioni a cui eri già iscritto.",
-    "placeholder": "amber anchor apple ...",
     "word_count": "{{typed}} di 12 parole",
     "unknown_words": "Non sono parole dell'elenco: {{words}}. Controlla se c'è un errore di battitura.",
     "restore": "Recupera",
@@ -793,7 +792,9 @@
     "lost_phrase": "Hai perso anche le parole?",
     "kept_on_device": "Identita ripristinata, frase salvata su questo dispositivo",
     "kept_on_device_desc": "Senza passkey le tue dodici parole restano su questo browser non cifrate. Puoi collegarne una piu tardi dal tuo profilo.",
-    "have_passkey": "La mia passkey ce l’ho, in realtà"
+    "have_passkey": "La mia passkey ce l’ho, in realtà",
+    "word_label": "Parola {{position}}",
+    "clear": "Cancella tutto"
   },
   "identity_step": {
     "has_passkey_title": "Apri la tua identità di voto",

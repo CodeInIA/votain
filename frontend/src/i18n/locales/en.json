@@ -774,7 +774,6 @@
   "recover": {
     "title": "Restore your identity",
     "intro": "Type the twelve words you were given when you first verified. They rebuild the same identity, with the elections you already joined.",
-    "placeholder": "amber anchor apple ...",
     "word_count": "{{typed}} of 12 words",
     "unknown_words": "Not words from the list: {{words}}. Check for a typo.",
     "restore": "Restore",
@@ -787,7 +786,9 @@
     "lost_phrase": "Lost the words as well?",
     "kept_on_device": "Identity restored, phrase kept on this device",
     "kept_on_device_desc": "Without a passkey your twelve words stay on this browser unencrypted. You can link one later from your profile.",
-    "have_passkey": "I do have my passkey after all"
+    "have_passkey": "I do have my passkey after all",
+    "word_label": "Word {{position}}",
+    "clear": "Clear all"
   },
   "identity_step": {
     "has_passkey_title": "Open your voting identity",

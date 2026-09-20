@@ -768,7 +768,6 @@
   "recover": {
     "title": "身元を復元する",
     "intro": "本人確認のときに渡された 12 語を入力してください。同じ身元が、すでに参加した選挙ごと戻ります。",
-    "placeholder": "amber anchor apple ...",
     "word_count": "12 語中 {{typed}} 語",
     "unknown_words": "一覧にない語です: {{words}}。入力間違いをご確認ください。",
     "restore": "復元する",
@@ -781,7 +780,9 @@
     "lost_phrase": "12語も失いましたか。",
     "kept_on_device": "IDを復元しました。語句はこの端末に保存されています",
     "kept_on_device_desc": "パスキーがない場合、12個の単語は暗号化されずにこのブラウザに残ります。あとからプロフィールで連携できます。",
-    "have_passkey": "やはりパスキーが使えます"
+    "have_passkey": "やはりパスキーが使えます",
+    "word_label": "{{position}}番目の単語",
+    "clear": "すべて消す"
   },
   "identity_step": {
     "has_passkey_title": "投票用の本人確認を開く",

@@ -774,7 +774,6 @@
   "recover": {
     "title": "Herstel je identiteit",
     "intro": "Typ de twaalf woorden die je kreeg bij je verificatie. Ze herstellen dezelfde identiteit, met de verkiezingen waaraan je al deelnam.",
-    "placeholder": "amber anchor apple ...",
     "word_count": "{{typed}} van 12 woorden",
     "unknown_words": "Geen woorden uit de lijst: {{words}}. Controleer op een typfout.",
     "restore": "Herstellen",
@@ -787,7 +786,9 @@
     "lost_phrase": "Ook de woorden kwijt?",
     "kept_on_device": "Identiteit hersteld, zin bewaard op dit apparaat",
     "kept_on_device_desc": "Zonder passkey blijven je twaalf woorden onversleuteld in deze browser staan. Je kunt er later een koppelen via je profiel.",
-    "have_passkey": "Ik heb mijn passkey toch bij de hand"
+    "have_passkey": "Ik heb mijn passkey toch bij de hand",
+    "word_label": "Woord {{position}}",
+    "clear": "Alles wissen"
   },
   "identity_step": {
     "has_passkey_title": "Open je stemidentiteit",

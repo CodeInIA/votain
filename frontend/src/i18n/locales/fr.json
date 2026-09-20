@@ -780,7 +780,6 @@
   "recover": {
     "title": "Restaurez votre identité",
     "intro": "Saisissez les douze mots reçus lors de votre vérification. Ils reconstruisent la même identité, avec les élections que vous aviez rejointes.",
-    "placeholder": "amber anchor apple ...",
     "word_count": "{{typed}} mots sur 12",
     "unknown_words": "Mots absents de la liste : {{words}}. Vérifiez la saisie.",
     "restore": "Restaurer",
@@ -793,7 +792,9 @@
     "lost_phrase": "Vous avez perdu les mots aussi ?",
     "kept_on_device": "Identite restauree, phrase conservee sur cet appareil",
     "kept_on_device_desc": "Sans passkey, vos douze mots restent sur ce navigateur en clair. Vous pourrez en lier une plus tard depuis votre profil.",
-    "have_passkey": "J’ai bien ma passkey sous la main"
+    "have_passkey": "J’ai bien ma passkey sous la main",
+    "word_label": "Mot {{position}}",
+    "clear": "Tout effacer"
   },
   "identity_step": {
     "has_passkey_title": "Ouvrez votre identité de vote",

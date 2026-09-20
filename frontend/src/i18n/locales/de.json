@@ -774,7 +774,6 @@
   "recover": {
     "title": "Identität wiederherstellen",
     "intro": "Geben Sie die zwölf Wörter ein, die Sie bei der Verifizierung erhalten haben. Sie stellen dieselbe Identität wieder her, samt Ihrer Wahlen.",
-    "placeholder": "amber anchor apple ...",
     "word_count": "{{typed}} von 12 Wörtern",
     "unknown_words": "Nicht aus der Liste: {{words}}. Prüfen Sie auf Tippfehler.",
     "restore": "Wiederherstellen",
@@ -787,7 +786,9 @@
     "lost_phrase": "Auch die Wörter verloren?",
     "kept_on_device": "Identitat wiederhergestellt, Phrase auf diesem Gerat gespeichert",
     "kept_on_device_desc": "Ohne Passkey bleiben Ihre zwolf Worter unverschlusselt in diesem Browser. Sie konnen spater im Profil einen verknupfen.",
-    "have_passkey": "Ich habe meinen Passkey doch zur Hand"
+    "have_passkey": "Ich habe meinen Passkey doch zur Hand",
+    "word_label": "Wort {{position}}",
+    "clear": "Alle löschen"
   },
   "identity_step": {
     "has_passkey_title": "Öffne deine Wahlidentität",

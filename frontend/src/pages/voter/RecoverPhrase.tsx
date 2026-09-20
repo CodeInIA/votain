@@ -22,7 +22,7 @@ import { KeyRound, AlertTriangle } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
-import { Textarea } from '../../components/ui/Input';
+import { PhraseInput } from '../../components/voter/PhraseInput';
 import { SignOutActions } from '../../components/ui/SignOutActions';
 import { useToast } from '../../components/ui/useToast';
 import { isValidPhrase, normalizePhrase, unknownWords } from '../../lib/recoveryPhrase';
@@ -222,15 +222,10 @@ export default function RecoverPhrase() {
             </Card>
           ) : (
           <Card className="p-5">
-            <Textarea
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              placeholder={t('recover.placeholder')}
-              rows={4}
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-            />
+            {/* Twelve numbered boxes, the shape the words were handed over
+                in. See `PhraseInput`: pasting the whole phrase into any of them
+                still fills the grid, which is how most people will arrive. */}
+            <PhraseInput value={input} onChange={setInput} invalid={unknown} />
 
             <p className="text-xs text-on-surface-meta mt-2">
               {t('recover.word_count', { typed: wordCount })}
