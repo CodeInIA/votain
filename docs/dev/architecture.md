@@ -1248,6 +1248,52 @@ check bought was never protection from the platform, only from everyone else,
 and the signature buys exactly the same thing. What changed is that the link is
 no longer PUBLISHED.
 
+### The tag key, and how it is allowed to be forgotten
+
+The tag is `keccak256(tagKey, worldIdNullifier, electionAddress)`, and the whole
+privacy of the scheme rests on that key. Two properties of it were wrong until
+2026-09-21.
+
+IT WAS THE SIGNING KEY. `tagKey` was an HMAC of
+`ELIGIBILITY_ATTESTER_PRIVATE_KEY`, on the argument that one platform secret is
+easier to deploy than two and cannot be half-configured. It welded two risks
+that are nothing alike. A leaked SIGNING key is bad and bounded: forged
+enrolments from that moment, noticed, rotated, and elections created afterwards
+name the new attester. A leaked TAG key is retroactive and silent: World ID
+nullifiers are public and the tags sit on chain, so it reconstructs who joined
+what across every election ever held, and rotating repairs nothing already
+published. Welded, the two could not be rotated apart — and rotating to recover
+from a forged signature would have changed every tag, so anybody mid-enrolment
+would have been handed a second one and the contract would have taken a second
+leaf. Recovering from one incident would have caused another.
+
+IT COULD NOT BE FORGOTTEN. Forward secrecy cannot be derived, only thrown away,
+and there was one permanent key derived from another. There is now one key per EPOCH,
+the UTC month the election was deployed in, and they are independent random
+values so that deleting one is final.
+
+The epoch comes from `ElectionV4.createdAt`, which is `immutable`. `enrollEnd`
+reads better, since it says when the tag stops being needed, but
+`closeEnrollmentEarly` pulls it backwards: the key would change under a live
+enrolment, which is the double-leaf bug again.
+
+An election created in epoch E enrols only while its own window is open, and
+afterwards nothing recomputes its tags — the contract already holds the ones it
+accepted. So once every election created in E has closed enrolment, E's key can
+be deleted, and those enrolments pass beyond the reach of everyone, this
+platform included. That is the difference between a secret nobody may leak and
+a secret that does not exist. `backend/scripts/mint-tag-key.ts` mints one; the
+retirement is an operator deleting a line.
+
+A missing epoch makes the server REFUSE, loudly, rather than fall back to
+another key. Substituting would issue a second, different tag for an election
+that already has one on chain, which is precisely what the tag exists to stop.
+
+What this does not fix: while an epoch's key is alive, the platform can link
+the enrolments of that epoch, and a leak during it exposes them. The TEE (H11)
+is where that key should live. The reduction is in blast radius and in time,
+not in trust, and the trust was already argued for above.
+
 ### Why not the version with no trusted party
 
 The obvious improvement is to remove the signature: keep the platform's members

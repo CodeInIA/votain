@@ -105,7 +105,9 @@ export async function authorisePrivateEnrolment(
   }
 
   const [chainId, now] = await Promise.all([getChainId(), attestationBaseTime()]);
-  const humanTag = humanTagFor(request.voter.nullifier, request.election);
+  // `mode.createdAt` and not the clock: the tag key is chosen by the epoch the
+  // election was DEPLOYED in, which is the one date about it that cannot move.
+  const humanTag = humanTagFor(request.voter.nullifier, request.election, mode.createdAt);
   const signed = await signPrivateEnrollment(
     request.election,
     chainId,

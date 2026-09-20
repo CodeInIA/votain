@@ -63,7 +63,22 @@ export function attesterAddress(): string {
 }
 
 /**
- * The key that turns a human into a per-election tag, and nothing else.
+ * The epoch an election belongs to: the UTC month it was created in.
+ *
+ * A key is retired by epoch, so the epoch has to be a property of the election
+ * that NOTHING can move. `enrollEnd` would read better, since it says when the
+ * tag stops being needed, but `closeEnrollmentEarly` pulls it backwards and the
+ * key would change under a live enrolment: the same human would be handed a
+ * second tag and the contract would accept a second leaf. `createdAt` is
+ * `immutable` in `ElectionV4`, assigned from `block.timestamp` once.
+ */
+export function epochOf(createdAtSeconds: number): string {
+  const d = new Date(createdAtSeconds * 1000);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+/**
+ * The keys that turn a human into a per-election tag, one per epoch.
  *
  * WHY IT IS SECRET. The tag has to be the same number every time this person
  * enrols in this election, so the contract can refuse them twice, and a
@@ -72,14 +87,56 @@ export function attesterAddress(): string {
  * fails the second half: those nullifiers are on chain, so anyone could
  * recompute every tag and recognise the same person everywhere.
  *
- * Derived from the attester key rather than configured separately, so there is
- * one platform secret to deploy and no way to have one of them and not the
- * other. Different info string, so the two uses never produce related values.
+ * WHY IT IS NOT THE SIGNING KEY, which it used to be derived from. One secret
+ * to deploy was the argument, and it welded together two risks that are nothing
+ * alike. A leaked SIGNING key is bad and bounded: forged enrolments from that
+ * moment, noticed, and you rotate. A leaked TAG key is retroactive and silent:
+ * the World ID nullifiers are public and the tags are on chain, so it
+ * reconstructs who joined what across every election ever held, and rotating
+ * repairs nothing. Welded, you could not rotate one without the other — and
+ * rotating to recover from a signing compromise would have changed every tag,
+ * handing a second leaf to anybody mid-enrolment. Recovering from one incident
+ * would have caused another.
+ *
+ * WHY THERE IS MORE THAN ONE, AND WHY THEY CAN BE DELETED. Forward secrecy
+ * cannot be derived; it has to be thrown away. An election created in epoch E
+ * can only enrol while its own window is open, and after that nothing ever
+ * recomputes its tags: the contract has already stored the ones it accepted.
+ * So once every election created in E has closed enrolment, deleting E's key
+ * puts those enrolments beyond reach of everyone, the platform included. That
+ * is the difference between a secret nobody may leak and a secret that no
+ * longer exists.
+ *
+ * FAILING CLOSED ON A MISSING EPOCH is the whole safety of the scheme. Falling
+ * back to another key would quietly issue a different tag for an election that
+ * already has one on chain, which is the double-leaf bug this is built to
+ * avoid. A retired epoch must refuse, loudly, not improvise.
  */
-function tagKey(): Buffer {
-  const key = process.env.ELIGIBILITY_ATTESTER_PRIVATE_KEY;
-  if (!key) throw new Error('ELIGIBILITY_ATTESTER_PRIVATE_KEY not configured');
-  return createHmac('sha256', 'votain/enrolment-tag/v1').update(key).digest();
+function tagKeys(): Record<string, string> {
+  const raw = process.env.ENROLMENT_TAG_KEYS;
+  if (!raw) throw new Error('ENROLMENT_TAG_KEYS not configured');
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error('ENROLMENT_TAG_KEYS must be JSON: {"YYYY-MM":"<hex>"}');
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('ENROLMENT_TAG_KEYS must be JSON: {"YYYY-MM":"<hex>"}');
+  }
+  return parsed as Record<string, string>;
+}
+
+function tagKey(epoch: string): Buffer {
+  const key = tagKeys()[epoch];
+  if (!key) {
+    throw new Error(
+      `No enrolment tag key for epoch ${epoch}. A key is retired once every ` +
+        'election created in its epoch has closed enrolment; an election still ' +
+        'enrolling needs its own key present. Never substitute another.',
+    );
+  }
+  return createHmac('sha256', 'votain/enrolment-tag/v2').update(key).digest();
 }
 
 /**
@@ -89,11 +146,15 @@ function tagKey(): Buffer {
  * the second leaf. Unrecognisable outside this election, so the roll of one
  * election says nothing about the roll of another.
  */
-export function humanTagFor(worldIdNullifier: string, electionAddress: string): string {
+export function humanTagFor(
+  worldIdNullifier: string,
+  electionAddress: string,
+  createdAtSeconds: number,
+): string {
   const scoped = solidityPackedKeccak256(
     ['bytes32', 'uint256', 'address'],
     [
-      '0x' + tagKey().toString('hex'),
+      '0x' + tagKey(epochOf(createdAtSeconds)).toString('hex'),
       BigInt(worldIdNullifier),
       getAddress(electionAddress),
     ],

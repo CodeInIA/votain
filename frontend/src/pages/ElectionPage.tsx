@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useRefreshOnReturn } from '../hooks/useRefreshOnReturn';
+import { useScheduleWatch } from '../hooks/useScheduleWatch';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, ExternalLink, Copy, Check, Lock, Bookmark } from 'lucide-react';
 import { PageLayout } from '../components/layout/PageLayout';
@@ -68,6 +70,14 @@ export default function ElectionPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { election, loading, live, refresh } = useElection(id);
+  /**
+   * The schedule can move under a reader who is already here: an organizer who
+   * kept the power can close enrolment or open voting early, and the contract
+   * writes the new boundary. Without this the countdown keeps running towards
+   * a deadline that no longer exists, in a phase the election has left.
+   */
+  useRefreshOnReturn(() => void refresh());
+  useScheduleWatch(election, refresh);
   const { voterLoggedIn, organizerLoggedIn, activeRole } = useAuth();
   const { isSaved, toggle } = useSavedElections();
   // Public and crawlable, so the tab and the crawler snapshot need the real

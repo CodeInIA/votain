@@ -20,6 +20,7 @@ const ELECTION_ABI = [
   'function metadataJson() view returns (string)',
   'function enrollStart() view returns (uint256)',
   'function enrollEnd() view returns (uint256)',
+  'function createdAt() view returns (uint256)',
 ];
 
 export function isChainConfigured(): boolean {
@@ -91,6 +92,12 @@ export interface EnrolmentMode {
   platformAttester: string;
   /** The organizer's own gatekeeper, or zero when the election is ungated. */
   eligibilityAttester: string;
+  /**
+   * Unix seconds, from the contract's `immutable createdAt`. Zero for an
+   * election deployed before it existed, which also has no platform attester
+   * and so never reaches the tag.
+   */
+  createdAt: number;
 }
 
 /**
@@ -111,14 +118,24 @@ export async function readEnrolmentMode(electionAddress: string): Promise<Enrolm
   if (!isChainConfigured()) throw new Error('CHAIN_RPC_URL not configured');
 
   const election = new Contract(electionAddress, ELECTION_ABI, getProvider());
-  const [platformAttester, eligibilityAttester] = await Promise.all([
+  const [platformAttester, eligibilityAttester, createdAt] = await Promise.all([
     // An election deployed before this existed has no such function, and the
     // call reverts rather than returning zero.
     election.platformAttester().catch(() => ZeroAddress) as Promise<string>,
     election.eligibilityAttester() as Promise<string>,
+    /**
+     * WHEN IT WAS DEPLOYED, which is the one date about an election that
+     * cannot move. `enrollEnd` would read better as the anchor for retiring a
+     * tag key, since it says when the tag stops being needed, but an organizer
+     * can call `closeEnrollmentEarly` and pull it backwards: the key would
+     * change under a live enrolment and the same human would be handed a
+     * second tag. `createdAt` is `immutable` in the contract, assigned from
+     * `block.timestamp` in the constructor. See `humanTagFor`.
+     */
+    election.createdAt().catch(() => 0n) as Promise<bigint>,
   ]);
 
-  return { platformAttester, eligibilityAttester };
+  return { platformAttester, eligibilityAttester, createdAt: Number(createdAt) };
 }
 
 /**

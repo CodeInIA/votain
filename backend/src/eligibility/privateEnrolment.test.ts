@@ -30,40 +30,75 @@ const OTHER_ELECTION = '0x2e234DAe75C793f67A35089C9d99245E1C58470b';
 const CHAIN_ID = 31337n;
 const COMMITMENT = '12345678901234567890';
 const WORLD_ID = '98765432109876543210';
+/** Unix seconds inside 2026-09, which is the epoch the keys below cover. */
+const CREATED = Math.floor(Date.UTC(2026, 8, 20) / 1000);
+const CREATED_OTRO_MES = Math.floor(Date.UTC(2026, 9, 2) / 1000);
 
 beforeEach(() => {
   process.env.ELIGIBILITY_ATTESTER_PRIVATE_KEY = KEY;
+  process.env.ENROLMENT_TAG_KEYS = JSON.stringify({ '2026-09': 'a'.repeat(64) });
 });
 
 afterEach(() => {
   delete process.env.ELIGIBILITY_ATTESTER_PRIVATE_KEY;
+  delete process.env.ENROLMENT_TAG_KEYS;
 });
 
 describe('the human tag', () => {
   test('is the same every time for one person in one election', () => {
-    assert.equal(humanTagFor(WORLD_ID, ELECTION), humanTagFor(WORLD_ID, ELECTION));
+    assert.equal(humanTagFor(WORLD_ID, ELECTION, CREATED), humanTagFor(WORLD_ID, ELECTION, CREATED));
   });
 
   test('is different for the same person in another election', () => {
-    assert.notEqual(humanTagFor(WORLD_ID, ELECTION), humanTagFor(WORLD_ID, OTHER_ELECTION));
+    assert.notEqual(humanTagFor(WORLD_ID, ELECTION, CREATED), humanTagFor(WORLD_ID, OTHER_ELECTION, CREATED));
   });
 
   test('is different for another person in the same election', () => {
-    assert.notEqual(humanTagFor(WORLD_ID, ELECTION), humanTagFor('11111', ELECTION));
+    assert.notEqual(humanTagFor(WORLD_ID, ELECTION, CREATED), humanTagFor('11111', ELECTION, CREATED));
   });
 
   test('does not care how the address was capitalised', () => {
-    assert.equal(humanTagFor(WORLD_ID, ELECTION), humanTagFor(WORLD_ID, ELECTION.toLowerCase()));
+    assert.equal(humanTagFor(WORLD_ID, ELECTION, CREATED), humanTagFor(WORLD_ID, ELECTION.toLowerCase(), CREATED));
   });
 
-  test('cannot be recomputed without the platform key', () => {
-    const withOurs = humanTagFor(WORLD_ID, ELECTION);
+  test('cannot be recomputed without the tag key', () => {
+    const conLaNuestra = humanTagFor(WORLD_ID, ELECTION, CREATED);
+    process.env.ENROLMENT_TAG_KEYS = JSON.stringify({ '2026-09': 'b'.repeat(64) });
+    assert.notEqual(conLaNuestra, humanTagFor(WORLD_ID, ELECTION, CREATED));
+  });
+
+  test('survives rotating the SIGNING key, which is the point of separating them', () => {
+    // This test used to assert the opposite, back when the tag was derived
+    // from the signing key. Rotating that key to recover from a forged
+    // signature would have changed every tag, and anybody mid-enrolment would
+    // have been handed a second one: recovering from one incident causing
+    // another. The two secrets are independent now.
+    const antes = humanTagFor(WORLD_ID, ELECTION, CREATED);
     process.env.ELIGIBILITY_ATTESTER_PRIVATE_KEY = OTHER_KEY;
-    assert.notEqual(withOurs, humanTagFor(WORLD_ID, ELECTION));
+    assert.equal(antes, humanTagFor(WORLD_ID, ELECTION, CREATED));
+  });
+
+  test('is different under the key of another epoch', () => {
+    process.env.ENROLMENT_TAG_KEYS = JSON.stringify({
+      '2026-09': 'a'.repeat(64),
+      '2026-10': 'c'.repeat(64),
+    });
+    assert.notEqual(
+      humanTagFor(WORLD_ID, ELECTION, CREATED),
+      humanTagFor(WORLD_ID, ELECTION, CREATED_OTRO_MES),
+    );
+  });
+
+  test('refuses a retired epoch instead of substituting another key', () => {
+    // The whole safety of retiring keys. Falling back would issue a second,
+    // different tag for an election that already has one on chain, which is
+    // the double-leaf bug this scheme exists to prevent.
+    process.env.ENROLMENT_TAG_KEYS = JSON.stringify({ '2026-10': 'c'.repeat(64) });
+    assert.throws(() => humanTagFor(WORLD_ID, ELECTION, CREATED), /2026-09/);
   });
 
   test('is a decimal string the contract can take as a uint256', () => {
-    const tag = humanTagFor(WORLD_ID, ELECTION);
+    const tag = humanTagFor(WORLD_ID, ELECTION, CREATED);
     assert.match(tag, /^\d+$/);
     assert.ok(BigInt(tag) > 0n);
     assert.ok(BigInt(tag) < 2n ** 256n);
@@ -72,7 +107,7 @@ describe('the human tag', () => {
 
 describe('signing a private enrolment', () => {
   test('recovers to the attester, over the values the contract will hash', async () => {
-    const tag = humanTagFor(WORLD_ID, ELECTION);
+    const tag = humanTagFor(WORLD_ID, ELECTION, CREATED);
     const now = 1_800_000_000;
     const { signature, deadline, humanTag } = await signPrivateEnrollment(
       ELECTION,
@@ -102,7 +137,7 @@ describe('signing a private enrolment', () => {
   });
 
   test('is bound to one election, so it cannot be moved to another', async () => {
-    const tag = humanTagFor(WORLD_ID, ELECTION);
+    const tag = humanTagFor(WORLD_ID, ELECTION, CREATED);
     const now = 1_800_000_000;
     const { signature, deadline } = await signPrivateEnrollment(
       ELECTION,

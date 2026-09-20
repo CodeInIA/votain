@@ -13,6 +13,7 @@ import { PERSONHOOD_LABEL_KEY } from '../../lib/chainElections';
 import { DomainBadge } from '../../components/ui/DomainBadge';
 import { Card } from '../../components/ui/Card';
 import { useRefreshOnReturn } from '../../hooks/useRefreshOnReturn';
+import { useScheduleWatch } from '../../hooks/useScheduleWatch';
 import { WalletAnswerLostError } from '../../lib/walletRequest';
 import { fetchElection } from '../../lib/chainElections';
 import { Modal } from '../../components/ui/Modal';
@@ -71,6 +72,10 @@ export default function ElectionManagement() {
   // not evidence that the signing is over, and releasing the button early
   // invites a second transaction for one intended action.
   useRefreshOnReturn(() => void refresh());
+  // The organizer's own actions refresh this page already. This is for the
+  // boundaries nobody presses: a window that runs out while the panel is open,
+  // and a co-organizer moving a deadline from somewhere else.
+  useScheduleWatch(election, refresh);
   const [tallyPreview, setTallyPreview] = useState<TallyResult | null>(null);
   const [tallyError, setTallyError]     = useState<string | null>(null);
   const keyFileInput = useRef<HTMLInputElement>(null);
