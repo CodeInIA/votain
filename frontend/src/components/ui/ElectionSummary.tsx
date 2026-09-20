@@ -358,35 +358,50 @@ export function ElectionSchedule({
             onToggle={() => setOpenHint(openHint === figure.id ? null : figure.id)}
           />
         ))}
-        {/* THE SLOT IS ALWAYS THERE on a wide screen, empty or not.
-            Letting it appear and vanish grew the card by 33px and with it the
-            rule down the panel's left, so pressing an info glyph shifted the
-            whole page under the reader's finger.
+        {/* IT OPENS, RATHER THAN APPEARING. Letting the slot exist only while a
+            hint was open grew the card by 33px and with it the rule down the
+            panel's left, so pressing an info glyph shifted the page under the
+            reader's finger. The answer used to be to hold the room open
+            permanently, every sentence drawn and stacked in one grid cell with
+            all but the open one invisible. That did stop the jump, and it cost
+            61 measured pixels of empty card under the figures on every election
+            nobody had pressed anything on, which is all of them.
 
-            It reserves the room by DRAWING every sentence, stacked in one grid
-            cell with all but the open one invisible, so the height is the
-            tallest of them measured in the reader's own language and at the
-            reader's own text size. A hard-coded height was the same idea with
-            a number in place of the measurement, and a number that fits in
-            Spanish is a number that overflows in German.
+            A row that animates from `0fr` to `1fr` gives both: nothing is held
+            at rest, and the growth is something the eye follows instead of a
+            jump it has to recover from. The sentences stay stacked in one cell,
+            so the open height is still the tallest of them measured in the
+            reader's own language and at their own text size, never a hard-coded
+            number that fits in Spanish and overflows in German.
 
-            On a phone nothing is reserved: the unopened ones are `hidden`
-            rather than invisible, the panel is the last thing in the card,
-            and it grows downwards into nothing. */}
-        <div className="col-span-3 sm:grid">
-          {figures
-            .filter(figure => figure.hint)
-            .map(figure => (
-              <p
-                key={figure.id}
-                className={cn(
-                  'text-[11px] text-on-surface-meta leading-snug sm:col-start-1 sm:row-start-1',
-                  openHint !== figure.id && 'hidden sm:block sm:invisible',
-                )}
-              >
-                {figure.hint}
-              </p>
-            ))}
+            `min-h-0` and `overflow-hidden` on the inner box are what make `0fr`
+            actually collapse: without them a grid child keeps its content's
+            height and the row never closes.
+
+            On a phone none of this runs. The unopened ones are `hidden`, the
+            panel is the last thing in the card, and it grows downwards into
+            nothing. */}
+        <div
+          className={cn(
+            'col-span-3 sm:grid sm:transition-[grid-template-rows] sm:duration-200 sm:ease-out',
+            openHint ? 'sm:grid-rows-[1fr]' : 'sm:grid-rows-[0fr]',
+          )}
+        >
+          <div className="sm:min-h-0 sm:overflow-hidden sm:grid">
+            {figures
+              .filter(figure => figure.hint)
+              .map(figure => (
+                <p
+                  key={figure.id}
+                  className={cn(
+                    'text-[11px] text-on-surface-meta leading-snug sm:col-start-1 sm:row-start-1',
+                    openHint !== figure.id && 'hidden sm:block sm:invisible',
+                  )}
+                >
+                  {figure.hint}
+                </p>
+              ))}
+          </div>
         </div>
       </div>
     </Card>
