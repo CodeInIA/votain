@@ -103,7 +103,19 @@ export default function SavedElections({ role }: { role: SavedRole }) {
           </div>
         )}
 
-        {loading ? (
+        {/* NOTHING SAVED IS NOT SOMETHING TO WAIT FOR. `ids` is read straight
+            out of this device's own storage, synchronously, so an empty list is
+            an answer and not an unknown: there is no address to hydrate and
+            nothing is in flight. The hook cannot see that, because it derives
+            `loading` from "no elections yet and not finished", and the saved
+            scope reaches "finished" one effect later than it reaches "known".
+
+            Measured on an empty list, that gap put a spinner exactly where the
+            bookmark was about to be, three times, for about ten milliseconds
+            each: not one wait but a flicker. A device that syncs new addresses
+            down from the chain still shows them the moment they arrive; what it
+            no longer does is stall on the way to saying "nothing here". */}
+        {loading && ids.length > 0 ? (
           <div className="flex justify-center py-20"><Spinner /></div>
         ) : error ? (
           <ListError onRetry={() => void refresh()} />
