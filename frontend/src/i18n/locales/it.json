@@ -256,7 +256,9 @@
     "title": "Elezioni salvate",
     "add": "Salva elezione",
     "remove": "Rimuovi dai salvati",
-    "filter": "Salvate"
+    "filter": "Salvate",
+    "removed": "Rimossa dal tuo elenco",
+    "undo": "Annulla"
   },
   "voter_elections": {
     "title": "Le mie Elezioni",

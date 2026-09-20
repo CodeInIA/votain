@@ -254,7 +254,9 @@
     "title": "Gespeicherte Wahlen",
     "add": "Wahl speichern",
     "remove": "Aus Gespeicherten entfernen",
-    "filter": "Gespeichert"
+    "filter": "Gespeichert",
+    "removed": "Aus deiner Liste entfernt",
+    "undo": "Rückgängig"
   },
   "voter_elections": {
     "title": "Meine Wahlen",

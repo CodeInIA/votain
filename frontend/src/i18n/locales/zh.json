@@ -252,7 +252,9 @@
     "title": "已保存的选举",
     "add": "保存选举",
     "remove": "从已保存中移除",
-    "filter": "已保存"
+    "filter": "已保存",
+    "removed": "已从你的列表移除",
+    "undo": "撤销"
   },
   "voter_elections": {
     "title": "我的选举",

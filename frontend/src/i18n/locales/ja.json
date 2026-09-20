@@ -252,7 +252,9 @@
     "title": "保存した選挙",
     "add": "選挙を保存",
     "remove": "保存から削除",
-    "filter": "保存済み"
+    "filter": "保存済み",
+    "removed": "リストから外しました",
+    "undo": "元に戻す"
   },
   "voter_elections": {
     "title": "マイ選挙",

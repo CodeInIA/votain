@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { Bookmark, Compass } from 'lucide-react';
+import { Bookmark, Compass, Undo2 } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
 import { ElectionCard } from '../../components/ui/ElectionCard';
 import { ElectionFilters } from '../../components/ui/ElectionFilters';
@@ -17,6 +17,7 @@ import { matchesQuery } from '../../lib/electionFilter';
 import { sortElections } from '../../lib/electionSort';
 import { syncSavedElections, type SavedRole } from '../../lib/savedElections';
 import { roleAccent } from '../../lib/activeRole';
+import { cn } from '../../lib/utils';
 
 /**
  * The elections this reader kept, whichever role they are wearing.
@@ -43,7 +44,29 @@ import { roleAccent } from '../../lib/activeRole';
  */
 export default function SavedElections({ role }: { role: SavedRole }) {
   const { t } = useTranslation();
-  const { isSaved, ids } = useSavedElections(role);
+  const { isSaved, ids, toggle } = useSavedElections(role);
+
+  /**
+   * Everything this visit has ever held, so unsaving cannot take a row away.
+   *
+   * THE PROBLEM IT SOLVES. The list keeps what `isSaved` still says yes to, so
+   * pressing the bookmark on a card here deleted the card: the one screen where
+   * the mistake costs something is the one screen that hides the evidence, and
+   * somebody who missed is left with nothing to aim at. Removing stays instant,
+   * which it should be — a star that waits is a star nobody presses twice — and
+   * the row stays put, struck through, with the way back on it.
+   *
+   * IT COSTS NOTHING TO CHANGE YOUR MIND. `toggleSaved` writes locally and
+   * schedules the push four seconds out, coalesced, so undoing inside this
+   * screen collapses into a write that says what the chain already said.
+   *
+   * A ref, accumulated during render: a set that grows is not a re-render, and
+   * asking for one would only repaint the list to say what it already shows.
+   * It is per visit on purpose. Leaving and coming back is the moment a removal
+   * is meant to be final, and the list should be the truth again by then.
+   */
+  const held = useRef<Set<string>>(new Set());
+  for (const id of ids) held.current.add(id.toLowerCase());
   const [filters, setFilters] = useElectionFilterParams();
   const [filtersOpen, setFiltersOpen] = useState(false);
 
@@ -51,7 +74,7 @@ export default function SavedElections({ role }: { role: SavedRole }) {
     scope: 'saved',
     savedRole: role,
     hydrateAll: true,
-    keep: e => isSaved(e.id),
+    keep: e => isSaved(e.id) || held.current.has(e.id.toLowerCase()),
   });
 
   /**
@@ -149,9 +172,36 @@ export default function SavedElections({ role }: { role: SavedRole }) {
                   the voter's buttons would offer something they cannot do,
                   while a voter may well be enrolled in what they saved and
                   should see the same badges as anywhere else. */}
-              {visible.map(e => (
-                <ElectionCard key={e.id} election={e} view={role === 'voter' ? 'voter' : 'public'} />
-              ))}
+              {visible.map(e => {
+                const quitada = !isSaved(e.id);
+                return (
+                  <div key={e.id} className="relative">
+                    {/* Dimmed and inert rather than gone. `pointer-events-none`
+                        is what stops the card underneath answering a press that
+                        was aimed at the way back. */}
+                    <div className={cn(quitada && 'opacity-40 pointer-events-none')}>
+                      <ElectionCard election={e} view={role === 'voter' ? 'voter' : 'public'} />
+                    </div>
+                    {quitada && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="flex items-center gap-3 rounded-2xl bg-surface-lowest/90 border border-outline-variant/20 px-4 py-2 backdrop-blur-sm">
+                          <span className="text-xs text-on-surface-variant">
+                            {t('saved.removed')}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            className="h-8 gap-1.5 rounded-full px-3 text-xs"
+                            onClick={() => toggle(e.id)}
+                          >
+                            <Undo2 className="w-3.5 h-3.5" />
+                            {t('saved.undo')}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
             <LoadMore hasMore={hasMore} loading={false} onClick={loadMore} />
           </>

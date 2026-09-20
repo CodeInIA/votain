@@ -256,7 +256,9 @@
     "title": "Elecciones guardadas",
     "add": "Guardar elección",
     "remove": "Quitar de guardadas",
-    "filter": "Guardadas"
+    "filter": "Guardadas",
+    "removed": "Quitada de tu lista",
+    "undo": "Deshacer"
   },
   "voter_elections": {
     "title": "Mis Elecciones",

@@ -252,7 +252,9 @@
     "title": "저장한 선거",
     "add": "선거 저장",
     "remove": "저장에서 제거",
-    "filter": "저장됨"
+    "filter": "저장됨",
+    "removed": "목록에서 제거했습니다",
+    "undo": "실행 취소"
   },
   "voter_elections": {
     "title": "내 선거",

@@ -254,7 +254,9 @@
     "title": "Saved elections",
     "add": "Save election",
     "remove": "Remove from saved",
-    "filter": "Saved"
+    "filter": "Saved",
+    "removed": "Removed from your list",
+    "undo": "Undo"
   },
   "voter_elections": {
     "title": "My Elections",

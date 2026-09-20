@@ -16,7 +16,7 @@
  * ways to fail for reasons that are not this.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 
 const paginas = vi.fn();
 const guardadas = vi.fn();
@@ -36,7 +36,9 @@ vi.mock('../../components/ui/Spinner', () => ({
 vi.mock('react-router-dom', () => ({
   Link: ({ children }: { children: React.ReactNode }) => <a>{children}</a>,
 }));
-vi.mock('../../hooks/useElectionPages', () => ({ useElectionPages: () => paginas() }));
+vi.mock('../../hooks/useElectionPages', () => ({
+  useElectionPages: (options: unknown) => paginas(options),
+}));
 vi.mock('../../hooks/useSavedElections', () => ({ useSavedElections: () => guardadas() }));
 vi.mock('../../hooks/useElectionFilterParams', () => ({
   useElectionFilterParams: () => [{ phase: undefined, query: '', sort: 'newest' }, vi.fn()],
@@ -51,7 +53,7 @@ const cargando = { all: [], loading: true, error: null, refresh: vi.fn() };
 beforeEach(() => {
   paginas.mockReset();
   guardadas.mockReset();
-  guardadas.mockReturnValue({ ids: [], isSaved: () => false });
+  guardadas.mockReturnValue({ ids: [], isSaved: () => false, toggle: vi.fn() });
 });
 
 describe('the saved list', () => {
@@ -88,6 +90,70 @@ describe('the saved list', () => {
 
     expect(screen.queryByTestId('spinner')).toBeNull();
     expect(screen.getByText('0xabc')).toBeInTheDocument();
+  });
+
+
+  /**
+   * Unsaving from this list used to delete the row, so the one screen where the
+   * mistake costs something was the one that hid the evidence.
+   */
+  describe('taking one off the list', () => {
+    const UNA = { id: '0xabc', phase: 'ACTIVE', title: 'x', createdAt: 1 };
+
+    it('keeps the row and offers the way back', () => {
+      // Held from earlier in the visit, and no longer saved: the shape of a
+      // bookmark that was just pressed.
+      guardadas.mockReturnValue({ ids: [], isSaved: () => false, toggle: vi.fn() });
+      paginas.mockReturnValue({ all: [UNA], loading: false, error: null, refresh: vi.fn() });
+
+      render(<SavedElections role="voter" />);
+
+      expect(screen.getByText('0xabc')).toBeInTheDocument();
+      expect(screen.getByText('saved.removed')).toBeInTheDocument();
+      expect(screen.getByText('saved.undo')).toBeInTheDocument();
+    });
+
+    it('puts it back when the way back is pressed', () => {
+      const toggle = vi.fn();
+      guardadas.mockReturnValue({ ids: [], isSaved: () => false, toggle });
+      paginas.mockReturnValue({ all: [UNA], loading: false, error: null, refresh: vi.fn() });
+
+      render(<SavedElections role="voter" />);
+      fireEvent.click(screen.getByText('saved.undo'));
+
+      expect(toggle).toHaveBeenCalledWith('0xabc');
+    });
+
+    it('holds on to what the visit started with, which is what keeps the row', () => {
+      // The rendering tests above take their list ready-made, so they cannot
+      // see the filter that decides whether the row survives at all. This asks
+      // the filter itself, which is the half that actually fixes the bug.
+      const pedirFiltro = () =>
+        (paginas.mock.calls.at(-1)?.[0] as { keep: (e: { id: string }) => boolean }).keep;
+
+      guardadas.mockReturnValue({ ids: ['0xabc'], isSaved: () => true, toggle: vi.fn() });
+      paginas.mockReturnValue({ all: [UNA], loading: false, error: null, refresh: vi.fn() });
+      const { rerender } = render(<SavedElections role="voter" />);
+      expect(pedirFiltro()({ id: '0xabc' })).toBe(true);
+
+      // Pressed: no longer saved, and nothing remembers it but this screen.
+      guardadas.mockReturnValue({ ids: [], isSaved: () => false, toggle: vi.fn() });
+      rerender(<SavedElections role="voter" />);
+
+      expect(pedirFiltro()({ id: '0xabc' })).toBe(true);
+      // And one it never held is still none of its business.
+      expect(pedirFiltro()({ id: '0xotra' })).toBe(false);
+    });
+
+    it('says nothing over a row that is still saved', () => {
+      guardadas.mockReturnValue({ ids: ['0xabc'], isSaved: () => true, toggle: vi.fn() });
+      paginas.mockReturnValue({ all: [UNA], loading: false, error: null, refresh: vi.fn() });
+
+      render(<SavedElections role="voter" />);
+
+      expect(screen.queryByText('saved.removed')).toBeNull();
+      expect(screen.queryByText('saved.undo')).toBeNull();
+    });
   });
 
   it('reports a failure rather than an empty list', () => {

@@ -256,7 +256,9 @@
     "title": "Élections enregistrées",
     "add": "Enregistrer l'élection",
     "remove": "Retirer des enregistrées",
-    "filter": "Enregistrées"
+    "filter": "Enregistrées",
+    "removed": "Retirée de votre liste",
+    "undo": "Annuler"
   },
   "voter_elections": {
     "title": "Mes Élections",

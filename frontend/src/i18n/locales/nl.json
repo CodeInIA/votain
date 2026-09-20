@@ -254,7 +254,9 @@
     "title": "Opgeslagen stemmingen",
     "add": "Stemming opslaan",
     "remove": "Uit opgeslagen verwijderen",
-    "filter": "Opgeslagen"
+    "filter": "Opgeslagen",
+    "removed": "Uit je lijst gehaald",
+    "undo": "Ongedaan maken"
   },
   "voter_elections": {
     "title": "Mijn Verkiezingen",
