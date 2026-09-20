@@ -119,8 +119,7 @@
 | Route | Purpose |
 |-------|---------|
 | `POST /api/verify-human` | Verify World ID proof, issue SD-JWT, register voter on-chain |
-| `POST /api/rp-signature` | Sign World ID request (DEVELOPER_KEY) |
-| `POST /api/worldid/request` | Open a World ID verification and name it in an httpOnly cookie |
+| `POST /api/worldid/request` | Open a World ID verification (signs the RP request itself) and name it in an httpOnly cookie |
 | `GET /api/worldid/request` | What became of it; `?wait=1` holds for up to 25s |
 | `DELETE /api/worldid/request` | Abandon the one in flight |
 | `GET /api/me` | Return active session from cookie |

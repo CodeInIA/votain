@@ -1,5 +1,4 @@
 import { Router, Request, Response } from 'express';
-import { signRequest } from '@worldcoin/idkit-core/signing';
 import { sdJwt, SELECTIVE_DISCLOSURE_FRAME, type VotainCredentialPayload } from '../sd/issuer.js';
 import { statusIndexFor, DEFAULT_LIST_ID } from '../status/statusList.js';
 import { verifySession } from '../auth/session.js';
@@ -64,35 +63,6 @@ router.get('/me', async (req: Request, res: Response) => {
 router.post('/logout', (_req: Request, res: Response) => {
   clearSessionCookie(res);
   return res.status(200).json({ success: true });
-});
-
-// ────────────────────────────────────────────────
-// POST /rp-signature
-// ────────────────────────────────────────────────
-router.post('/rp-signature', async (req: Request, res: Response) => {
-  try {
-    const { action, returnTo } = req.body as { action?: string; returnTo?: unknown };
-
-    if (!process.env.DEVELOPER_KEY) {
-      throw new Error('DEVELOPER_KEY not configured');
-    }
-
-    const { sig, nonce, createdAt, expiresAt } = signRequest({
-      signingKeyHex: process.env.DEVELOPER_KEY,
-      action: action ?? process.env.WORLD_ID_ACTION ?? 'vote-registration',
-    });
-
-    return res.status(200).json({
-      sig,
-      nonce,
-      created_at: createdAt,
-      expires_at: expiresAt,
-    });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Error generating RP signature:', error);
-    return res.status(500).json({ error: 'Internal server error', message });
-  }
 });
 
 // ────────────────────────────────────────────────

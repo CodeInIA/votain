@@ -126,13 +126,13 @@ npx hardhat compile
 # Backend (requires .env with ISSUER_PRIVATE_KEY, see backend/.env.example)
 cd backend
 npm install
-npm test                             # 126 tests, node:test
+npm test                             # 144 tests, node:test
 npm run dev                          # http://localhost:3000
 
 # Frontend
 cd frontend
 npm install
-npm test                             # 537 tests, vitest
+npm test                             # 562 tests, vitest
 npm run dev                          # http://localhost:5173
 npm run build
 ```
@@ -160,7 +160,7 @@ auditor CLI. See [`docs/PLAN.md`](docs/PLAN.md) for the plan and
 | H11 | Backend on Phala TEE | ⏳ |
 | H12, H13 | Thesis and defense | ⏳ |
 
-**848 tests pass**: 185 on the contracts, 126 on the backend, 537 on the frontend.
+**891 tests pass**: 185 on the contracts, 144 on the backend, 562 on the frontend.
 
 ## Documentation
 

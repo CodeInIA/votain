@@ -14,7 +14,8 @@
 - **ethers** 6.17.0 (chain reads, organizer EOA, local relay)
 - **`@semaphore-protocol/{identity,group,proof}`** 4.14.3 + **poseidon-lite** (nullifier)
 - **paillier-bigint** 3.4.3
-- **`@worldcoin/idkit`** 4.2.0 + **`@worldcoin/idkit-core`** 4.2.1
+- **`@worldcoin/idkit`** 4.2.3 + **`@worldcoin/idkit-core`** 4.2.4 (types only
+  here now: the request itself is built by the backend)
 - **`@sd-jwt/core`** 0.20.0 + **`@sd-jwt/present`** 0.19.0 (no stable 0.20 of present yet)
 - **lucide-react** 1.24.0
 
@@ -442,9 +443,10 @@ plain.
 
 ```bash
 VITE_BACKEND_URL=http://localhost:3000
-VITE_WORLD_ID_APP_ID=        # App ID from World ID Developer Portal
-VITE_WORLD_ID_RP_ID=         # RP ID (same as App ID in staging)
-VITE_WORLD_ID_ACTION=        # Action name (e.g. vote-registration)
+# No World ID configuration here. The proof request is opened by the BACKEND,
+# so that a verification survives the phone discarding this tab while its owner
+# is away in World App, and the app id, RP id and action live in the backend's
+# own .env. Setting VITE_WORLD_ID_* has no effect.
 VITE_CHAIN_NETWORK=amoy
 VITE_CHAIN_ID=80002
 # rpc-amoy.polygon.technology is dead. Tenderly is the only free Amoy endpoint
@@ -475,7 +477,7 @@ src/lib/
 ├── identityVault.ts   # seal/unseal the Semaphore secret per passkey
 ├── relay.ts           # voter calls submitted through ElectionPaymaster
 ├── logs.ts            # queryFilter from the deployment block, windowed on strict RPCs
-├── worldId.ts         # shared IDKit request (login and recovery)
+├── worldId.ts         # World ID verification held by the backend: open, resume, wait
 ├── tally.ts           # in-app homomorphic tally
 ├── countries.ts       # ISO 3166-1 alpha-3 table, localised names, flags, search
 ├── eligibility.ts     # attribute policy, its hash, and the voter-side challenge
@@ -1059,6 +1061,12 @@ returns the voter here rather than leaving them to find the browser again. On a
 desktop the app is on a different device, so the QR is the only bridge and the
 callback is deliberately absent: it would redirect the phone, not the screen the
 voter is watching.
+
+World ID works the same way now — it sends a `returnTo` from a phone only, which
+becomes IDKit's `return_to` — and the two share one validator,
+`utils/callbackUrl.ts` in the backend. Both are destinations another app
+navigates to on Votain's behalf, so an endpoint that accepts any URL is an open
+redirect wearing Votain's name.
 
 The QR is drawn with `qrcode.react`, already a dependency, from a link the
 BACKEND built with Self's own `SelfAppBuilder`. `@selfxyz/qrcode` is not used: it

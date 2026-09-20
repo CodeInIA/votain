@@ -25,8 +25,14 @@ callback, or the endpoint is an open redirect wearing Votain's name. See
 StrictMode cleanup and left its once-only guard set, so "at most once" had become "never" — and
 every unit test passed while that was true. A `StrictMode` wrapper does not reproduce it here
 (counted: 1 mount, 0 cleanups), so the test file says so rather than pretending to cover it.
-**Also corrected**: `tallyKey.ts` had described its key as coming from a passkey's PRF secret
-long after that was changed to a wallet signature.
+**Also corrected, from a documentation sweep**: `tallyKey.ts` described its key as coming
+from a passkey's PRF secret long after that became a wallet signature;
+`backend/DEVELOPMENT.md` claimed sign-in "rejects anything below Proof of Human" and that
+the frontend asks for `orbLegacy`, when the minimum is an argument defaulting to `any` and
+the ask is `deviceLegacy`; three `VITE_WORLD_ID_*` variables were still documented as
+required in two files after nothing read them. And `POST /api/rp-signature` was left with
+no callers once the bridge signed its own requests — an unauthenticated endpoint minting
+signed RP requests for any action, so it is gone.
 Tests: contracts 185/185 (not re-run; untouched), backend 144/144, frontend 562/562.
 **Next milestone**: Live Amoy deployment (pending funding the deployer key). It must carry
 `PLATFORM_ATTESTER_ADDRESS`, the key the backend signs enrolments with: without it the

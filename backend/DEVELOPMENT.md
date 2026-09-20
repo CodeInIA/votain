@@ -8,7 +8,9 @@
 - **`@sd-jwt/core`** v0.20. Selective Disclosure JWT (EdDSA signer). Project moved to
   OpenWallet Foundation: `SDJWTConfig`/`JwtPayload` types import from `@sd-jwt/core`
   directly (the old `@sd-jwt/types` package is dead, do not re-add it).
-- **`@worldcoin/idkit-core`** v4.2.1. World ID v4 proof verification.
+- **`@worldcoin/idkit-core`** v4.2.4. World ID v4 proof verification, and the
+  bridge request itself (see `auth/worldIdBridge.ts`; its WASM needs a `file:`
+  fetch shim under Node).
 - **`ethers`** v6.17. On-chain registrar (PlatformRegistry).
 - **`express-rate-limit`** v8. API throttling.
 - **TypeScript** 7.0.2 (native compiler)
@@ -20,7 +22,9 @@
 | GET | `/health` | Server health check |
 | GET | `/api/me` | Active session from `voter_vc` cookie |
 | POST | `/api/logout` | Clear `voter_vc` cookie |
-| POST | `/api/rp-signature` | Sign World ID request with `DEVELOPER_KEY` |
+| POST | `/api/worldid/request` | Open a World ID verification and name it in an httpOnly cookie. Signs the RP request with `DEVELOPER_KEY` itself |
+| GET | `/api/worldid/request` | What became of it: `confirmed` with the proof, `waiting` with the connector URI, or `none`. `?wait=1` holds the connection up to 25s |
+| DELETE | `/api/worldid/request` | Abandon the verification in flight |
 | POST | `/api/verify-human` | Verify World ID proof, issue SD-JWT (selective disclosure + revocation status) and set the session cookie |
 | GET | `/api/identity/vault` | This voter's wrapped identity secrets, one per passkey |
 | POST | `/api/identity/vault` | Register a passkey for the voter's identity; the first entry triggers on-chain registration. 409 if a different commitment already exists |
@@ -275,14 +279,23 @@ argues for. Recorded so the deviation is visible rather than accidental.
 
 ### The World ID credential level is checked, and it has to be
 
-`auth/worldId.ts` rejects anything below Proof of Human before it spends the API
-call, and `verify-human` goes through it rather than keeping its own copy of the
-fetch.
-
 The API confirms that a proof is VALID, not that it is the KIND of proof the app
-asked for. The frontend requests `orbLegacy`, but the request is the client's to
-build, so until this checked, a device-level or selfie proof verified and was
-accepted exactly like an Orb.
+asked for. Until `auth/worldId.ts` checked, a device-level or selfie proof
+verified and was accepted exactly like an Orb. `verify-human` goes through it
+rather than keeping its own copy of the fetch.
+
+**The minimum is an ARGUMENT, not a constant**, and this section used to say
+otherwise. Sign-in passes `'any'`: Orbs were withdrawn from Spain and World ID's
+document credential is not issued there, so demanding personhood at the door
+would lock out the voters this platform is for. What sign-in establishes is
+therefore an ACCOUNT, not a person. An election that wants personhood demands it
+at ENROLMENT, against `usedPersonhoodNullifiers`, where a refusal costs one
+election rather than the whole account.
+
+The request is built by `auth/worldIdBridge.ts` now, not by the browser, and it
+asks for `deviceLegacy` — the floor, deliberately. That does not make the check
+here redundant: it is what stops a handcrafted payload claiming more than it
+proved.
 
 That is not cosmetic. `ElectionV4.enroll` deduplicates on this nullifier and
 treats it as one human; only Proof of Human carries that guarantee. A weaker
@@ -318,8 +331,11 @@ returning voter would be handed a brand new identity on every device.
 ## Issuer architecture
 
 ```
-User → POST /api/rp-signature (sign request)
+User → POST /api/worldid/request { returnTo? }   → Set-Cookie: voter_pending
+        └── signs the RP request and opens the bridge request HERE, so it
+              survives the phone discarding the tab
      → World ID QR / deep link (verify in WLD app)
+     → GET  /api/worldid/request?wait=1   (held open; a reload may ask again)
      → POST /api/verify-human { ...worldIdProof }
         ├── verify World ID proof
         └── issue SD-JWT VC (sub=nullifier; _sd: country/ageOver18/region;
@@ -332,7 +348,10 @@ User → POST /api/rp-signature (sign request)
 Source layout: `sd/issuer.ts` (shared SD-JWT instance + disclosure frame),
 `status/statusList.ts` (gzip bitstring revocation), `chain/registrar.ts` (on-chain registrar),
 `chain/relayer.ts` (voter transaction relaying), `auth/session.ts` (cookie signature checks),
-`identity/vault.ts` (encrypted per-passkey identity store), `routes/{verify,credentials,identity,relay}.ts`.
+`identity/vault.ts` (encrypted per-passkey identity store),
+`auth/worldIdBridge.ts` (World ID requests held across a tab being discarded),
+`utils/callbackUrl.ts` (the one check both mobile return links go through),
+`routes/{verify,credentials,identity,relay}.ts`.
 
 ## Commands
 

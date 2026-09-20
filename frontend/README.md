@@ -4,8 +4,8 @@ React 19 + Vite + Tailwind 4. Voter and organizer dApp for Votain. Semaphore V4 
 
 ```bash
 npm install
-npm test                # 537 tests
-cp .env.example .env   # fill in VITE_WORLD_ID_APP_ID, VITE_BACKEND_URL, the contract addresses, ...
+npm test                # 562 tests
+cp .env.example .env   # fill in VITE_BACKEND_URL, the contract addresses, ... (World ID lives in backend/.env)
 npm run dev            # http://localhost:5173
 npm run build
 ```

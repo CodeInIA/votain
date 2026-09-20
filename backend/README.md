@@ -1,8 +1,15 @@
 # backend/
 
-Node.js + Express SD-JWT issuer. Verifies World ID v4 proofs of personhood and
+Node.js + Express SD-JWT issuer. Opens and verifies World ID proofs and
 [Self](https://self.xyz) document proofs, and issues short-lived Verifiable Credentials as
 `httpOnly` cookies. Target deployment: Phala Network TEE (Intel TDX).
+
+Sign-in establishes an ACCOUNT, not a person: Orbs were withdrawn from Spain and
+World ID's document credential is not issued there, so demanding personhood at
+the door would lock out the voters this is for. An election that wants it asks
+at enrolment. The World ID request is opened here rather than in the browser, so
+a verification survives the phone discarding the tab its owner left to approve
+it; see `auth/worldIdBridge.ts`.
 
 Eligibility is provider agnostic: `eligibility/` speaks in policies and attestations, and
 `eligibility/self.ts` is the only file that knows Self exists. Age is always asked as a
