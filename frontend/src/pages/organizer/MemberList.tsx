@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { Fragment, useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Download, Users, Filter } from 'lucide-react';
@@ -214,12 +214,44 @@ export default function MemberList() {
             </div>
           ) : (
             <div className="divide-y divide-white/5">
-              {visible.map(m => (
-                <div key={m.id} className="flex items-center gap-3 px-4 py-3 hover:bg-white/3 transition-colors">
+              {/* GROUPED BY ELECTION, with the name said once. A commitment
+                  belongs to exactly one election, so every row carried the same
+                  title as the row above it: eleven words of repetition per
+                  member, under a 77-digit number that is the thing being read.
+                  Factored into a heading, the rows keep only what differs.
+
+                  Grouped by walking the visible rows and opening a heading
+                  wherever the election changes, rather than by regrouping the
+                  list. `fetchElectionMembers` is awaited per election and the
+                  results flattened in that order, so rows of one election are
+                  already contiguous; doing it this way means a list that ever
+                  stopped being contiguous would say so, instead of quietly
+                  reordering rows out from under the page limit.
+
+                  Only when the list can hold more than one. Filtered to a single
+                  election, the heading would repeat the dropdown directly above
+                  it. */}
+              {visible.map((m, i) => {
+                const abreGrupo =
+                  electionFilter === 'all' && (i === 0 || visible[i - 1].electionId !== m.electionId);
+                return (
+                <Fragment key={m.id}>
+                {abreGrupo && (
+                  <div className="flex items-baseline justify-between gap-3 bg-white/3 px-4 py-2">
+                    <p className="min-w-0 truncate text-xs font-semibold text-on-surface">
+                      {m.electionTitle}
+                    </p>
+                    {/* The whole election's count, not this page's slice: the
+                        rows below grow as more are loaded and this stays true. */}
+                    <p className="shrink-0 text-xs text-on-surface-meta">
+                      {filtered.filter(o => o.electionId === m.electionId).length} {t('members.count')}
+                    </p>
+                  </div>
+                )}
+                <div className="flex items-center gap-3 px-4 py-3 hover:bg-white/3 transition-colors">
                   <CommitmentFingerprint value={m.commitment} />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-mono text-on-surface truncate">{m.commitment}</p>
-                    <p className="text-xs text-on-surface-meta truncate">{m.electionTitle}</p>
                   </div>
                   <div className="text-right shrink-0">
                     {m.hasVoted !== undefined ? (
@@ -234,7 +266,9 @@ export default function MemberList() {
                     )}
                   </div>
                 </div>
-              ))}
+                </Fragment>
+                );
+              })}
               <LoadMore hasMore={hasMore} loading={false} onClick={loadMore} className="pb-4" />
             </div>
           )}

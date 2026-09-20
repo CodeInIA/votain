@@ -68,7 +68,7 @@ export function ElectionHeader({ election, extraBadges }: HeaderProps) {
             contract than a passer by. */}
         <BlockchainBadge href={explorerAddressUrl(election.contractAddress) ?? undefined} />
       </div>
-      <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white mb-2 leading-tight break-words">
+      <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white mb-2 leading-tight wrap-break-word">
         {election.title}
       </h1>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -129,11 +129,11 @@ function Figure({
       <p className="text-lg font-bold text-on-surface tabular-nums leading-tight">{value}</p>
       <p className="flex items-center gap-1.5 text-xs text-on-surface-meta min-w-0">
         <Icon className={cn('w-3.5 h-3.5 shrink-0', tint)} strokeWidth={2.5} />
-        {/* `break-words`: a label is one word in most languages and a very
+        {/* `wrap-break-word`: a label is one word in most languages and a very
             long one in a few, and Russian's "Zaregistrirovano" is wider than
             a third of a phone. Without this it does not wrap, it simply
             draws over the figure beside it. */}
-        <span className="min-w-0 break-words">{label}</span>
+        <span className="min-w-0 wrap-break-word">{label}</span>
         {hint && <Info className="w-3 h-3 shrink-0 opacity-50" />}
       </p>
     </>
@@ -341,7 +341,7 @@ export function ElectionSchedule({
 
   return (
     <Card className="p-4 mb-4 flex flex-col sm:flex-row items-start gap-4">
-      <PhaseTimeline election={election} className="flex-1 min-w-0 sm:min-w-[15rem]" />
+      <PhaseTimeline election={election} className="flex-1 min-w-0 sm:min-w-60" />
       {/* A GRID ON A PHONE, a column on a wide screen. Wrapping a flex row
           put two figures on one line and the third on the next, ragged and
           for no reason; three columns give every figure the same width and
@@ -352,7 +352,7 @@ export function ElectionSchedule({
           card rather than the height of whatever is in the panel, and a fixed
           width so the sentence below wraps the same way every time. */}
       <div
-        className="w-full sm:w-[15rem] sm:shrink-0 sm:self-stretch grid grid-cols-3 sm:flex sm:flex-col
+        className="w-full sm:w-60 sm:shrink-0 sm:self-stretch grid grid-cols-3 sm:flex sm:flex-col
                    gap-x-3 gap-y-3 pt-3 sm:pt-0 border-t sm:border-t-0 sm:border-l
                    border-white/5 sm:pl-4"
       >

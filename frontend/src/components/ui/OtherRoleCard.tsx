@@ -50,7 +50,7 @@ export function OtherRoleCard({ role }: { role: 'voter' | 'organizer' }) {
           <Icon className="w-4 h-4 text-secondary" />
         </span>
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-on-surface break-words">
+          <h2 className="text-sm font-semibold text-on-surface wrap-break-word">
             {t(`profile.also_${role}_title`)}
           </h2>
           <p className="text-xs text-on-surface-meta leading-relaxed mt-1">

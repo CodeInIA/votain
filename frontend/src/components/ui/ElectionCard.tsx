@@ -222,7 +222,7 @@ export function ElectionCard({ election, view = 'public', className }: ElectionC
               `leading-tight` the box is shorter than the type: the tails of
               g, p and @ fell outside it and were cut off. Roomier leading
               plus a hair of padding keeps two lines and the descenders. */}
-          <h3 className="text-sm sm:text-base font-semibold text-on-surface leading-snug pb-0.5 line-clamp-2 break-words">
+          <h3 className="text-sm sm:text-base font-semibold text-on-surface leading-snug pb-0.5 line-clamp-2 wrap-break-word">
             {election.title}
           </h3>
         </div>
@@ -261,7 +261,7 @@ export function ElectionCard({ election, view = 'public', className }: ElectionC
       <EligibilityChips policy={election.eligibilityPolicy} />
 
       {/* Description */}
-      <p className="text-xs text-on-surface-variant leading-relaxed line-clamp-2 break-words">
+      <p className="text-xs text-on-surface-variant leading-relaxed line-clamp-2 wrap-break-word">
         {election.description}
       </p>
 

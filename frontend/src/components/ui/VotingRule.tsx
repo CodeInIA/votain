@@ -45,8 +45,8 @@ export function VotingRule({ type, thresholdValue, className }: Props) {
         <Icon className="w-4 h-4 text-secondary" />
       </span>
       <div className="min-w-0">
-        <p className="text-sm font-medium text-on-surface break-words">{t(votingTypeLabelKey(type))}</p>
-        <p className="text-xs text-on-surface-meta mt-0.5 break-words">{detail}</p>
+        <p className="text-sm font-medium text-on-surface wrap-break-word">{t(votingTypeLabelKey(type))}</p>
+        <p className="text-xs text-on-surface-meta mt-0.5 wrap-break-word">{detail}</p>
       </div>
     </div>
   );

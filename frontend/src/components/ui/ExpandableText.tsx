@@ -57,7 +57,7 @@ export function ExpandableText({ text, lines = 4, className }: Props) {
     <div className={className}>
       <p
         ref={ref}
-        className="text-sm text-on-surface-variant leading-relaxed break-words whitespace-pre-line"
+        className="text-sm text-on-surface-variant leading-relaxed wrap-break-word whitespace-pre-line"
         style={
           expanded
             ? undefined

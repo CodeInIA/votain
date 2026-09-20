@@ -98,7 +98,7 @@ export default function ZkProofGeneration() {
             <>
               <span className="text-4xl mb-4">⚠️</span>
               <h1 className="text-xl font-bold text-white mb-2">{t('errors.generic_title')}</h1>
-              <p className="text-xs text-error mb-6 break-words">{error}</p>
+              <p className="text-xs text-error mb-6 wrap-break-word">{error}</p>
               <Button variant="ghost" onClick={() => navigate(`/election/${id}`)}>
                 {t('common.back')}
               </Button>

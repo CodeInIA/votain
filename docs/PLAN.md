@@ -253,7 +253,7 @@ Each milestone produces a concrete artifact that the user validates before advan
 - [x] Screen 16. Create Election (5-step wizard: basics, **voting type + threshold**, timeline, dynamic candidates or Yes/No, settings/eligibility). The voting-type step lets the organizer pick `SIMPLE_PLURALITY` (default) / `ABSOLUTE_MAJORITY` / `SUPERMAJORITY_TWO_THIRDS` / `WITNESS_THRESHOLD`. When `WITNESS_THRESHOLD` is selected, show an N input (default 2, min 1).
 - [x] Screen 17. Election Detail Organizer (phase-gated controls, passkey confirm modals).
 - [x] Screen 18. Gas Management (color-coded balance, deposit form).
-- [x] Screen 19. Registered Members (truncated identity commitments, search).
+- [x] Screen 19. Registered Members (identity commitments drawn as patterns, grouped by election). The search by commitment delivered here was removed on 2026-09-20: once enrolment became per-election, a commitment matched at most one row, so the only question it could answer was the one that change exists to refuse.
 - [x] Screen 20. Organizer Profile (edit display name, passkeys list).
 
 **Validation**: full organizer flow. Actions trigger correct modals but respond with toast "integration pending". Mobile and desktop responsive.

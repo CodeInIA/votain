@@ -81,7 +81,7 @@ export function RecoveryPhraseCard() {
 
       {phrase ? (
         <>
-          <p className="font-mono text-sm text-on-surface leading-relaxed break-words rounded-2xl bg-surface-high/40 p-4 select-all">
+          <p className="font-mono text-sm text-on-surface leading-relaxed wrap-break-word rounded-2xl bg-surface-high/40 p-4 select-all">
             {phrase}
           </p>
           <div className="flex flex-col sm:flex-row gap-2 mt-3">

@@ -31,7 +31,7 @@ export function ResultBarChart({ candidates, totalVotes, className }: ResultBarC
         <div key={c.name} className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3 last:mb-0">
           <div className="w-full sm:w-36 sm:shrink-0 text-left sm:text-right">
             <span className={cn(
-              'text-sm font-medium block break-words',
+              'text-sm font-medium block wrap-break-word',
               c.isWinner || c.isTie ? 'text-on-surface' : 'text-on-surface-variant'
             )}>
               {c.name}

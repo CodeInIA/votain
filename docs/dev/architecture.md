@@ -716,35 +716,44 @@ disagree with them.
 
 ### What enrolment reveals, and what it does not
 
-A voter has ONE identity commitment for the whole platform. The registry stores
-it against their World ID nullifier (`commitmentOf` in `PlatformRegistry`), and
-that same value is inserted into every election's tree, so `MemberEnrolled`
-publishes it again in each one. The consequence is worth stating plainly:
-**which elections a voter joined is public, and linkable across all of them**,
-by anyone reading the chain, permanently.
+> This section described the platform before 2026-09-16 and said so in the
+> present tense for four days after it stopped being true, while the section
+> that fixed it sat four hundred lines below. It was rewritten on 2026-09-20.
+> What it used to say, kept because a privacy claim that was once made should
+> not simply disappear: a voter had ONE commitment for the whole platform, the
+> same value went into every election's tree, and **which elections a voter
+> joined was public and linkable across all of them, permanently**.
 
-What is not linkable is the ballot. The nullifier in `VoteCast` is
+A voter still has one identity commitment in the registry, bound to their World
+ID nullifier (`commitmentOf` in `PlatformRegistry`), and that is what enforces
+one identity per human. It is no longer what enrols them. What goes into an
+election's tree is derived from the voter's secret AND that election's address
+(`lib/electionIdentity`), so it appears in exactly one tree and matches nothing
+anywhere else. See `Who joined what, and why the chain no longer says it` for
+the mechanism, the authorisation that replaced the registry lookup, and the
+measurement: eight commitments across thirty-eight elections became sixty-nine,
+each in one.
+
+The ballot was never linkable and still is not. The nullifier in `VoteCast` is
 `poseidon2(scope, secret)`, and every election is created with its own random
 scope (31 random bytes, `lib/organizer.ts`), so two ballots cast by the same
 voter in two elections share nothing, and no ballot can be tied back to the
-commitment that enrolled. That is where the anonymity lives, and it is intact.
+commitment that enrolled.
 
-The honest summary: the chain shows that someone took part, never what they
-said, and never that two things they said came from the same person.
-
-The commitment is anonymous in the sense that matters most, since it is bound to
-no name, no document and no wallet. It is still a stable handle. Removing it
-would mean a per-election commitment plus a proof that it derives from a
-registered identity, which is a nested proof this project does not build, and it
-is the reason the platform can enforce one identity per World ID at all.
+The honest summary, which is now shorter than it was: the chain shows that
+someone took part in a given election, never what they said, never that two
+things they said came from the same person, and no longer that the person who
+took part in this one also took part in that one.
 
 The member list draws each commitment as a colour and a pattern rather than as
-two hex characters, so a voter enrolled in several of an organizer's elections
-is recognisable at a glance. That reveals nothing the row did not already print
-in full underneath; it makes an existing property easy to see rather than
-tedious to check. Deliberate: a screen that obscured something the chain
-publishes would be the wrong kind of quiet for a system whose case rests on
-being checkable.
+two hex characters. That was first justified by making an existing property —
+the same commitment recurring across an organizer's elections — easy to see
+rather than tedious to check. THAT PROPERTY IS GONE, and the drawing is now
+simply a legible handle for a 77-digit number: two rows of the same election are
+still told apart at a glance, and two rows of different elections no longer have
+anything to say to each other. The list is grouped by election for the same
+reason, and its search by commitment was removed, since the only question such a
+search could answer is the one the derivation exists to refuse.
 
 ### Why Self Pass and not Self Enterprise
 

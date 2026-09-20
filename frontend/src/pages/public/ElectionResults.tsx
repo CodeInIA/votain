@@ -80,7 +80,7 @@ export default function ElectionResults() {
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white mb-1">
             {t('results.title')}
           </h1>
-          <p className="text-sm text-on-surface-variant break-words">{election.title}</p>
+          <p className="text-sm text-on-surface-variant wrap-break-word">{election.title}</p>
         </div>
 
         {/* Summary card */}

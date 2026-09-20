@@ -15,7 +15,7 @@ yes, and now asks for three of the twelve back in their places; an election's ca
 pixels open for a hint nobody had asked for, and then opened to the height of the longest
 sentence rather than the one being read; unsaving from the saved list deleted the row on the
 one screen where that mistake costs something. See the log for the three worth keeping.
-Tests: contracts 185/185, backend 126/126, frontend 534/534.
+Tests: contracts 185/185, backend 126/126, frontend 537/537.
 **Next milestone**: Live Amoy deployment (pending funding the deployer key). It must carry
 `PLATFORM_ATTESTER_ADDRESS`, the key the backend signs enrolments with: without it the
 factory deploys elections that enrol the old, publicly linkable way, which looks entirely
@@ -127,7 +127,7 @@ personhood; Self is what discloses attributes.
 | `@types/node` | 26.5.1 | Same: the `latest` tag lags at 22.x |
 
 **Build**: ✅ clean, no sourcemaps.
-**Tests**: 534/534 unit tests in 65 files passing (Vitest, jsdom), covering the voter identity lifecycle (minting, sealing, the PRF read-back proof, rotation, adding further passkeys), the per-election identities that keep enrolments unlinkable, noticing an expired session, WalletConnect return handling, the Paillier ballot encoding, the i18n plural tables, how the lists are paged and ordered, the schedule timeline both roles read, turnout counted in people rather than ballots, the three words a new voter has to put back before their phrase is accepted, the twelve boxes they type it into on the way back, the hat following the page without fighting the header for it, and the saved list holding on to a row somebody has just unsaved. Playwright E2E scaffold in `e2e/` (excluded from Vitest).
+**Tests**: 537/537 unit tests in 66 files passing (Vitest, jsdom), covering the voter identity lifecycle (minting, sealing, the PRF read-back proof, rotation, adding further passkeys), the per-election identities that keep enrolments unlinkable, noticing an expired session, WalletConnect return handling, the Paillier ballot encoding, the i18n plural tables, how the lists are paged and ordered, the schedule timeline both roles read, turnout counted in people rather than ballots, the three words a new voter has to put back before their phrase is accepted, the twelve boxes they type it into on the way back, the hat following the page without fighting the header for it, the saved list holding on to a row somebody has just unsaved, and the member list naming each election once instead of once per member. Playwright E2E scaffold in `e2e/` (excluded from Vitest).
 
 **Enrolling stopped naming the enrolled** (2026-09-16): what goes into an election's
 merkle tree is a commitment derived from the voter's secret and that election's address,

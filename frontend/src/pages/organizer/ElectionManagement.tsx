@@ -359,11 +359,11 @@ export default function ElectionManagement() {
             <EligibilityChips policy={election?.eligibilityPolicy} />
             <BlockchainBadge href={explorerAddressUrl(election.contractAddress) ?? undefined} />
           </div>
-          {/* `break-words`: a title is up to 100 characters and nothing forces
+          {/* `wrap-break-word`: a title is up to 100 characters and nothing forces
               them to contain a space. One long token cannot wrap by default, so
               it pushed the page wider than the viewport and left a horizontal
               scrollbar under everything. */}
-          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white leading-tight break-words">{election.title}</h1>
+          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white leading-tight wrap-break-word">{election.title}</h1>
           {/* The organizer sees exactly what a voter sees, lapsed state included.
               They are the only one who can republish the TXT record if it has
               stopped verifying, so hiding it here would hide it from the one
@@ -477,9 +477,9 @@ export default function ElectionManagement() {
                     {index + 1}
                   </span>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-on-surface break-words">{candidate.name}</p>
+                    <p className="text-sm font-medium text-on-surface wrap-break-word">{candidate.name}</p>
                     {candidate.description && (
-                      <p className="text-xs text-on-surface-meta mt-0.5 break-words">
+                      <p className="text-xs text-on-surface-meta mt-0.5 wrap-break-word">
                         {candidate.description}
                       </p>
                     )}

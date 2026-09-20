@@ -97,6 +97,11 @@ pragma solidity ^0.8.37;
 ```typescript
 // Tailwind 4 uses native CSS variables, not arbitrary palette in config
 // Arbitrary classes still work: bg-[#0a0a0f]
+// But prefer the scale where the value is on it: w-60, not w-[15rem]
+// (--spacing is 0.25rem, so 60 * 0.25rem = 15rem exactly), and prefer the
+// canonical name over the kept legacy alias: wrap-break-word, not break-words.
+// The editor's Tailwind extension flags both, and both are hints rather than
+// errors: the aliases compile to identical CSS.
 // Plugin: @tailwindcss/vite (not the classic Tailwind 3 postcss plugin)
 ```
 

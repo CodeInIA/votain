@@ -225,12 +225,12 @@ export default function VerifyReceipt() {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between gap-3">
                 <span className="text-on-surface-meta shrink-0">{t('verify_receipt.election')}</span>
-                {/* `min-w-0` as well as `break-words`: inside a flex row an item
+                {/* `min-w-0` as well as `wrap-break-word`: inside a flex row an item
                     will not shrink below its content, so a title of a hundred
                     characters with no space in it pushed itself straight out of
                     the card. Wrapping alone does not help until the item is
                     allowed to be narrower than the word. */}
-                <span className="text-on-surface font-medium text-right min-w-0 break-words">
+                <span className="text-on-surface font-medium text-right min-w-0 wrap-break-word">
                   {match.electionTitle}
                 </span>
               </div>
