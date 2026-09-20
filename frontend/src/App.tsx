@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { useRouteMeta } from './seo/usePageMeta';
@@ -111,12 +111,28 @@ function RouteMeta() {
  * `switchDestination` follows in the other direction: Discover, an election and
  * the verifier are the same page from both sides, and being re-dressed for
  * opening one would undo a choice the person just made in the header.
+ *
+ * ON ARRIVAL, and only on arrival. It used to re-run whenever `activeRole`
+ * changed as well, and that let it undo the very choice the paragraph above
+ * promises it will not touch. Switching to voter from `/organizer/election/:id`
+ * sets the role and navigates in the same tick; `history` had already moved to
+ * `/election/:id` while React Router's `pathname` still read the organizer's
+ * panel, so the effect fired against the page being LEFT, found an organizer
+ * route under a voter hat, and put the organizer hat back. The address bar
+ * changed and the switch did not, which is exactly what it was reported as.
+ *
+ * Remembering the last path it acted on is what pins it to navigation: a role
+ * changing by itself is somebody's decision, not an arrival, and there is
+ * nothing here to correct.
  */
-function RoleFromRoute() {
+export function RoleFromRoute() {
   const { pathname } = useLocation();
   const { voterLoggedIn, organizerLoggedIn, activeRole, setActiveRole } = useAuth();
+  const acted = useRef<string | null>(null);
 
   useEffect(() => {
+    if (acted.current === pathname) return;
+    acted.current = pathname;
     const owner = roleOwningRoute(pathname);
     if (!owner || owner === activeRole) return;
     if (owner === 'voter' && !voterLoggedIn) return;
