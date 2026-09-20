@@ -108,9 +108,9 @@ describe('the saved list', () => {
 
       render(<SavedElections role="voter" />);
 
-      expect(screen.getByText('0xabc')).toBeInTheDocument();
-      expect(screen.getByText('saved.removed')).toBeInTheDocument();
-      expect(screen.getByText('saved.undo')).toBeInTheDocument();
+      // The strip is unfolded and reachable; the card is the folded half.
+      expect(screen.getByText('saved.undo').closest('[inert]')).toBeNull();
+      expect(screen.getAllByText(UNA.title).length).toBeGreaterThan(0);
     });
 
     it('puts it back when the way back is pressed', () => {
@@ -145,14 +145,23 @@ describe('the saved list', () => {
       expect(pedirFiltro()({ id: '0xotra' })).toBe(false);
     });
 
-    it('says nothing over a row that is still saved', () => {
+    it('keeps the folded half out of reach of the keyboard', () => {
+      // Both halves stay in the document so the fold has something to measure,
+      // so "not shown" has to mean more than "not seen": an undo nobody can
+      // see must not be somewhere a tab key can land.
       guardadas.mockReturnValue({ ids: ['0xabc'], isSaved: () => true, toggle: vi.fn() });
       paginas.mockReturnValue({ all: [UNA], loading: false, error: null, refresh: vi.fn() });
 
-      render(<SavedElections role="voter" />);
+      const { rerender } = render(<SavedElections role="voter" />);
+      expect(screen.getByText('saved.undo').closest('[inert]')).not.toBeNull();
+      expect(screen.getByText('0xabc').closest('[inert]')).toBeNull();
 
-      expect(screen.queryByText('saved.removed')).toBeNull();
-      expect(screen.queryByText('saved.undo')).toBeNull();
+      // Removed: the two swap places.
+      guardadas.mockReturnValue({ ids: [], isSaved: () => false, toggle: vi.fn() });
+      rerender(<SavedElections role="voter" />);
+
+      expect(screen.getByText('saved.undo').closest('[inert]')).toBeNull();
+      expect(screen.getByText('0xabc').closest('[inert]')).not.toBeNull();
     });
   });
 

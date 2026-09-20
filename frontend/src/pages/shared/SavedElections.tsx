@@ -172,25 +172,65 @@ export default function SavedElections({ role }: { role: SavedRole }) {
                   the voter's buttons would offer something they cannot do,
                   while a voter may well be enrolled in what they saved and
                   should see the same badges as anywhere else. */}
+              {/* A REMOVED ROW SHRINKS TO A LINE, it does not sit there at full
+                  height. Holding the whole card open kept the list from moving
+                  at all, which was more than the problem asked for: what was
+                  reported is losing sight of the election, and a named line
+                  keeps it in sight. The card underneath it answers nothing a
+                  reader deciding whether they missed the bookmark: the phase,
+                  the counters and the countdown are not what tells them WHICH
+                  one they just removed. Its name is.
+
+                  It matters most in the case this list is really for. Tidying
+                  up is removing four or five in a row, and four or five dead
+                  full-height cards push everything that still matters off the
+                  screen. Four or five lines do not.
+
+                  Two rows animating in opposition, the same `0fr`/`1fr` the
+                  hint panel uses: the card folds away while the line unfolds,
+                  so the height between them is continuous and what is below
+                  follows it up instead of jumping.
+
+                  `inert` ON THE FOLDED HALF, and it is not decoration. Both
+                  halves stay in the document so the fold has something to
+                  measure, and `overflow-hidden` only stops them being SEEN: the
+                  card's links and the undo button would both keep their place
+                  in the tab order and their voice in the accessibility tree,
+                  which is how a keyboard lands on a control nobody can see. */}
               {visible.map(e => {
                 const quitada = !isSaved(e.id);
                 return (
-                  <div key={e.id} className="relative">
-                    {/* Dimmed and inert rather than gone. `pointer-events-none`
-                        is what stops the card underneath answering a press that
-                        was aimed at the way back. */}
-                    <div className={cn(quitada && 'opacity-40 pointer-events-none')}>
-                      <ElectionCard election={e} view={role === 'voter' ? 'voter' : 'public'} />
+                  <div key={e.id}>
+                    <div
+                      className={cn(
+                        'grid transition-[grid-template-rows] duration-200 ease-out',
+                        quitada ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]',
+                      )}
+                    >
+                      <div className="min-h-0 overflow-hidden" inert={quitada || undefined}>
+                        <ElectionCard election={e} view={role === 'voter' ? 'voter' : 'public'} />
+                      </div>
                     </div>
-                    {quitada && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="flex items-center gap-3 rounded-2xl bg-surface-lowest/90 border border-outline-variant/20 px-4 py-2 backdrop-blur-sm">
-                          <span className="text-xs text-on-surface-variant">
+
+                    <div
+                      className={cn(
+                        'grid transition-[grid-template-rows] duration-200 ease-out',
+                        quitada ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
+                      )}
+                    >
+                      <div className="min-h-0 overflow-hidden" inert={!quitada || undefined}>
+                        <div className="flex items-center gap-3 rounded-2xl border border-outline-variant/20 bg-surface-lowest/60 px-4 py-2.5">
+                          {/* The name, which is the only thing that answers
+                              "was that the one I meant?". */}
+                          <span className="min-w-0 flex-1 truncate text-sm text-on-surface-variant">
+                            {e.title}
+                          </span>
+                          <span className="hidden shrink-0 text-xs text-on-surface-meta sm:inline">
                             {t('saved.removed')}
                           </span>
                           <Button
                             variant="ghost"
-                            className="h-8 gap-1.5 rounded-full px-3 text-xs"
+                            className="h-8 shrink-0 gap-1.5 rounded-full px-3 text-xs"
                             onClick={() => toggle(e.id)}
                           >
                             <Undo2 className="w-3.5 h-3.5" />
@@ -198,7 +238,7 @@ export default function SavedElections({ role }: { role: SavedRole }) {
                           </Button>
                         </div>
                       </div>
-                    )}
+                    </div>
                   </div>
                 );
               })}
