@@ -120,6 +120,9 @@
 |-------|---------|
 | `POST /api/verify-human` | Verify World ID proof, issue SD-JWT, register voter on-chain |
 | `POST /api/rp-signature` | Sign World ID request (DEVELOPER_KEY) |
+| `POST /api/worldid/request` | Open a World ID verification and name it in an httpOnly cookie |
+| `GET /api/worldid/request` | What became of it; `?wait=1` holds for up to 25s |
+| `DELETE /api/worldid/request` | Abandon the one in flight |
 | `GET /api/me` | Return active session from cookie |
 | `POST /api/logout` | Invalidate cookie |
 | `GET /api/credentials/status/:listId` | Publish the Status List 2021 revocation credential |
@@ -1023,6 +1026,92 @@ enrolling as somebody and reading ciphertext.
 on the server, and an answer for the key being lost, which today is simply
 verifying again. That is the trade, written down so the decision not to take it
 is a decision rather than an oversight.
+
+## Signing in on a phone, where the page does not survive the trip
+
+Both roles sign in by LEAVING. A voter goes to World App to produce a proof; an
+organizer goes to their wallet to approve a session. On a phone that means
+backgrounding the browser, and a backgrounded tab is something the system is
+free to discard. What comes back is not the page that left: it is a cold start
+with an empty heap.
+
+That broke both flows in the same way and for the same reason — the thing being
+waited on lived in a JavaScript variable — but the two needed different repairs,
+because only one of them had somewhere else to put it.
+
+### The voter: the request moved to the server
+
+The proof request is a live object whose bridge decryption key sits inside the
+SDK's WASM instance. `@worldcoin/idkit-core` 4.2.4 exposes no way to rebuild
+one: an `IDKitRequest` offers `connectorURI`, `requestId`, `pollOnce`,
+`pollUntilCompletion` and `getDebugReport`, and nothing that takes any of those
+back. Persisting the id across the reload buys nothing, because the id alone
+cannot decrypt the answer. So a verification that had **already succeeded** was
+thrown away by the reload, and the voter was shown the sign-in screen again.
+
+It is opened by the backend now (`auth/worldIdBridge.ts`). The browser gets a
+connector URI to render and an httpOnly cookie naming the pending verification;
+this process holds the live object and polls the bridge itself. A reloaded page
+asks `GET /api/worldid/request` and is handed the proof, or the connector URI to
+put the QR back, or nothing at all — three answers, because a page acts
+differently on each and collapsing them into a boolean is how somebody
+mid-verification gets told to start one.
+
+| Decision | Why |
+|---|---|
+| httpOnly cookie, not a value the page keeps | The whole problem is that the page does not survive. A cookie does, and the browser resends it without being asked |
+| `SameSite=lax`, unlike the session cookie | This one has to survive a cross-site top-level navigation back to this origin, which `strict` withholds on exactly the load that needs it |
+| Handed over once, then deleted | The proof is a bearer credential: whoever presents it to `/verify-human` is signed in as that human, so a cookie that leaks afterwards is worth nothing |
+| Long polling, 25s holds | A one-second poll for five minutes is 300 requests against a 120/min budget. Holding the connection answers the instant the bridge does, so it is both cheaper and *quicker* than polling |
+| Five-minute TTL, in-memory | Matches what the browser used to poll for. A restart forgets everything in flight and a second replica would not see the first one's — both mean "start again", which is where this was before, and both are why the store would have to move if the backend is ever run as more than one instance |
+
+`WORLD_ID_APP_ID`, `WORLD_ID_RP_ID` and `WORLD_ID_ACTION` are read by the
+backend now. The `VITE_WORLD_ID_*` copies are gone: setting them does nothing.
+
+### The organizer: the session was already there, nobody asked
+
+Nothing was lost on this side. WalletConnect persists its session, and
+`restoreWalletConnect` hands it straight back. The bug was that the one place
+that never asked for it was the page the organizer landed on: the mount effect
+in `useOrganizerWallet` read `activeProvider()`, which on a phone is a module
+variable a reload had just emptied, found nothing and returned. It resumes
+instead, restore-only, so no QR can appear in front of somebody who did not ask
+for one — and the sign-in screen finishes a login the wallet had already
+approved rather than asking for it twice.
+
+Two guards on that, both found by measuring rather than by reasoning:
+
+- **A remembered address is not a session.** `address` starts from local storage
+  so read-only pages can draw themselves before any prompt. Treating that as
+  proof of a connection would make the sign-in screen let everybody through.
+  `live` is set only where a provider actually answered for an account.
+- **Only over WalletConnect.** An extension injects itself into every document,
+  so a reload there costs one prompt-free press and nothing was ever lost.
+  Auto-finishing for an injected wallet breaks something else: signing out
+  clears this app's flags but cannot un-authorise MetaMask, so the screen would
+  recognise the still-authorised account and go straight back in, leaving no way
+  to reach it at all.
+
+### Why there is still no `return_to`
+
+The field exists and does what it says: World App offers a way back instead of
+leaving somebody staring at it. There were two objections to it and now there is
+one.
+
+The first was that coming back that way is a cold start, and a cold start lost
+the verification. That is answered above — it is precisely what the move fixes.
+
+What remains is MISROUTING, which was measured and is not about state.
+`return_to` is an https address, Android resolves one as an app link, and the
+destination is whatever claims it: with this app installed as a PWA, a voter
+verifying in a browser tab was handed the INSTALLED copy, which on iOS has its
+own storage jar and therefore not the cookie either. Restricting it to the
+installed app fixes the misrouting and leaves browser voters, who are most of
+them, with nothing. It becomes worth switching on when there is a way to say
+"back to the surface this came from" rather than "back to this origin".
+
+The remaining inconvenience is one tap, and a tap is now all it costs: the proof
+is waiting on the server whenever they get there.
 
 ## The organizer's badge is a domain, not a checkmark
 

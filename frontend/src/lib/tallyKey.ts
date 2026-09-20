@@ -2,11 +2,20 @@
  * Deterministic Paillier key derivation for the election tally.
  *
  * The organizer's tally key is NOT stored anywhere: it is re-derived on demand
- * from the passkey's PRF secret, so it is available on any device where the
- * passkey syncs and never sits at rest (localStorage / backend). The only
- * per-election input is a public `keyNonce` kept in the on-chain metadata — it
- * makes each election's key distinct and lets the key be re-derived before the
- * election address even exists (the public key is a constructor argument).
+ * from a deterministic signature by the organizer's WALLET, so it is available
+ * on any device they can work from at all and never sits at rest (localStorage
+ * / backend). The only per-election input is a public `keyNonce` kept in the
+ * on-chain metadata — it makes each election's key distinct and lets the key be
+ * re-derived before the election address even exists (the public key is a
+ * constructor argument).
+ *
+ * THE SOURCE USED TO BE A PASSKEY'S PRF SECRET, and this comment used to say
+ * so long after it stopped being true. It was changed because the passkey
+ * failed at the one thing it had to do: Chrome and Firefox on Windows return a
+ * PRF secret when a credential is created and refuse to evaluate it on an
+ * assertion, so an organizer could sign in on a second machine and then not
+ * open their own elections. `organizerKey.ts` has the full account, including
+ * what moving to the wallet costs.
  *
  * Only the *seeded randomness* is bespoke here: prime testing stays in
  * `bigint-crypto-utils` (audited Miller-Rabin) and the key math mirrors
@@ -19,9 +28,9 @@ import type { Signer } from "ethers";
 import { organizerMasterSecret } from "./organizerKey";
 import { PAILLIER_KEY_BITS, type SerializedKeyPair } from "./paillier";
 
-// HKDF info for the per-election key stretch. NOT the PRF eval salt, which
-// lives in `organizerVault` beside the sealing that uses it: this one
-// labels the derivation, that one decides which secret the passkey yields.
+// HKDF info for the per-election key stretch: it labels THIS derivation, and
+// is not the salt used anywhere else. Distinct labels are what stop one
+// secret's stretch from colliding with another's.
 const TALLY_KEY_SALT = "votain:tally-key:v1";
 
 // Miller-Rabin rounds. 40 gives a false-prime probability < 2^-80, the usual
@@ -188,9 +197,9 @@ export async function deriveKeysFromSecret(
 }
 
 /**
- * Re-derives the election's tally keypair from the passkey PRF secret. Returns
- * null when the device has no PRF passkey (the caller must fall back to a random
- * keypair that is exported/stored, since nothing could be re-derived here).
+ * Re-derives the election's tally keypair from the organizer's wallet. Returns
+ * null when there is no signer to ask, in which case the caller must fall back
+ * to a random keypair it exports and stores, since nothing can be re-derived.
  */
 export async function deriveElectionKeys(
   keyNonce: string,

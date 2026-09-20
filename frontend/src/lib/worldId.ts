@@ -1,68 +1,111 @@
 /**
- * World ID proof requests.
+ * World ID proof requests, asked for on this voter's behalf rather than here.
  *
- * Extracted so the login flow and the identity-recovery flow can share one
- * implementation of the RP-signature + QR dance. They need the same proof for
- * different reasons: login turns it into a session, recovery turns it into
- * authority to rebind the voter's on-chain identity.
+ * WHAT MOVED, AND WHY. This file used to build the bridge request itself, hold
+ * it in a module variable and poll it. That works right up until the tab stops
+ * existing, which on a phone is the ordinary case: verifying means leaving for
+ * World App, and the system is free to discard a backgrounded tab. Coming back
+ * is then a COLD START, and the live request — whose decryption key lives
+ * inside the SDK's WASM instance, with no way to rebuild it from its id — is
+ * gone. A verification that had ALREADY SUCCEEDED was being thrown away by the
+ * reload, and what the voter saw was the sign-in screen again.
  *
- * The proof itself is what matters in both cases. World ID returns only public
- * values (merkle root, nullifier hash, the proof, verification level), so this
- * never yields anything that could serve as the voter's Semaphore secret; see
- * `identityVault.ts` for where that actually comes from.
+ * So the request lives in the backend now (`auth/worldIdBridge`), named by an
+ * httpOnly cookie the browser resends on its own. This file opens one, shows
+ * the connector URI, and waits; `resumeWorldIdProof` is how a page that does
+ * not remember starting anything finds out that it did.
  *
- * WHAT SIGNING IN NO LONGER CLAIMS. It establishes an account, not a person.
- * Personhood comes from the document proof an election asks for, recorded on
- * chain as `usedPersonhoodNullifiers`; see `lib/eligibility.ts`.
+ * STILL NO `return_to`, and now for one reason rather than two.
+ *
+ * The field exists and does what it says: World App offers a way back instead
+ * of leaving somebody staring at it wondering whether anything happened. The
+ * first objection to it was that coming back that way is a cold start, and a
+ * cold start lost the verification. That objection is now answered — this is
+ * precisely what the move fixes.
+ *
+ * What remains is MISROUTING, which was measured and is not about state at all.
+ * `return_to` is an https address, Android resolves one as an app link, and the
+ * destination is whatever claims it: with this app installed as a PWA, a voter
+ * verifying in a browser tab was handed the INSTALLED copy, which has its own
+ * storage jar on iOS and therefore not the cookie either. Restricting it to the
+ * installed app fixes the misrouting and leaves browser voters, who are most of
+ * them, with nothing. Turn it on when there is a way to say "back to the
+ * surface this came from" rather than "back to this origin".
+ *
+ * The inconvenience of switching apps by hand is a tap, and a tap is now all it
+ * costs: the proof is waiting on the server whenever they get there.
  */
-import { IDKit, deviceLegacy, type IDKitResult } from "@worldcoin/idkit-core";
+import { type IDKitResult } from "@worldcoin/idkit-core";
 import { backendBase } from "./backend";
-
-
-
-/**
- * STILL ON A 3.0 PRESET, AND EXACTLY WHY.
- *
- * World ID 4.0 knows four credentials: `proof_of_human` (an Orb), `passport`
- * and `mnc` (an NFC document), and `selfie` (a liveness check). There is no
- * device level and no successor that means the same thing.
- *
- * In Spain that leaves nothing a voter can actually hold. Orbs were withdrawn,
- * and NEITHER of the two checks that would replace them has launched here:
- * not the document one (which is why documents are proved through Self instead,
- * see `eligibility.ts`), and not the face one that `selfie` is issued from.
- * Cutting over today would lock out every voter who did not already own an Orb,
- * which is very nearly all of them. World says the same in its own migration
- * guide: confirm the users you support can produce the required v4 credentials
- * before cutting over.
- *
- * WHAT THIS PRESET IS ACTUALLY BUYING, because it is not personhood. At this
- * level World ID does not promise one account per human, and that promise is
- * not what the platform leans on: an election that needs it asks for an Orb at
- * ENROLLMENT. What it does provide is a STABLE, REPRODUCIBLE identifier for an
- * account, which is the only thing that makes recovery possible. A passkey
- * cannot do that job: it proves possession of a device, and recovery is exactly
- * the case where the device is gone.
- *
- * THE MIGRATION, and what to watch for. It becomes possible the day either
- * check ships in Spain. The face one is the one-for-one replacement for what
- * this preset asks: same population, same absence of a uniqueness guarantee,
- * but native to 4.0, and access has to be requested from World
- * (developers@toolsforhumanity.com). The document one would be better still,
- * since it is unique per document. Then this whole flow becomes:
- *
- *   allow_legacy_proofs: false,
- *   .constraints(any(CredentialRequest("selfie"), CredentialRequest("proof_of_human")))
- *
- * and the backend needs no change: it already grades 4.0 responses by
- * `identifier` and `issuer_schema_id`.
- */
 
 export interface WorldIdRequestOptions {
   /** Called once the QR / deep-link URI is ready, so the UI can render it. */
   onConnectorUri?: (uri: string) => void;
   /** Overrides the configured action (each action yields its own nullifier). */
   action?: string;
+  /** Lets a screen that is unmounting stop waiting without cancelling anything. */
+  signal?: AbortSignal;
+}
+
+/** What the server says about the verification this browser has in flight. */
+type PendingResponse =
+  | { status: "none" }
+  | { status: "waiting"; connectorURI: string }
+  | { status: "confirmed"; result: IDKitResult }
+  | { status: "failed"; error: string };
+
+/** What a page coming up finds waiting for it, if anything. */
+export type ResumedVerification =
+  | { kind: "none" }
+  /** Already proved. Hand it to `/api/verify-human` and the voter is in. */
+  | { kind: "proof"; result: IDKitResult }
+  /** Still out there. Put the QR back and wait, rather than the button. */
+  | { kind: "waiting"; connectorURI: string };
+
+function endpoint(query = ""): string {
+  return `${backendBase()}/api/worldid/request${query}`;
+}
+
+async function readPending(query: string, signal?: AbortSignal): Promise<PendingResponse> {
+  const res = await fetch(endpoint(query), { credentials: "include", signal });
+  if (!res.ok) throw new Error(`World ID bridge returned ${res.status}`);
+  return (await res.json()) as PendingResponse;
+}
+
+/**
+ * What this browser left in flight, for a page that does not remember starting
+ * anything: the finished proof, a verification still running, or neither.
+ *
+ * THE THREE ARE DIFFERENT and a page acts differently on each, which is why
+ * this is not a boolean. A finished proof means sign them in and say nothing
+ * about the reload. One still running means put the QR back and keep waiting.
+ * Neither means show the button, as if nothing had happened, because for this
+ * browser nothing has.
+ *
+ * Asks once and does not wait, because this runs on mount: a page must not sit
+ * on a held connection before it has drawn anything. Never throws — a page
+ * coming up is the worst possible moment to turn a network hiccup into an
+ * error, and "nothing pending" is the right thing to believe when unsure.
+ */
+export async function resumeWorldIdProof(): Promise<ResumedVerification> {
+  try {
+    const state = await readPending("");
+    if (state.status === "confirmed") return { kind: "proof", result: state.result };
+    if (state.status === "waiting") return { kind: "waiting", connectorURI: state.connectorURI };
+    return { kind: "none" };
+  } catch {
+    return { kind: "none" };
+  }
+}
+
+/** Abandons the verification in flight, so pressing the button starts fresh. */
+export async function cancelWorldIdProof(): Promise<void> {
+  try {
+    await fetch(endpoint(), { method: "DELETE", credentials: "include" });
+  } catch {
+    // It expires on its own within five minutes, so there is nothing to
+    // recover from and nobody to tell.
+  }
 }
 
 /**
@@ -72,86 +115,42 @@ export interface WorldIdRequestOptions {
 export async function requestWorldIdProof(
   opts: WorldIdRequestOptions = {},
 ): Promise<IDKitResult | null> {
-
-  const action = opts.action ?? (import.meta.env.VITE_WORLD_ID_ACTION as string) ?? "vote-registration";
-  // IDKit types the app id as a literal `app_${string}`; the env value is a
-  // plain string, so the shape is asserted here rather than at every call site.
-  const appId = import.meta.env.VITE_WORLD_ID_APP_ID as `app_${string}`;
-  const rpId = import.meta.env.VITE_WORLD_ID_RP_ID as string;
-
-  // The issuer signs the request so World ID can attribute it to this app.
-  const sigRes = await fetch(`${backendBase()}/api/rp-signature`, {
+  const res = await fetch(endpoint(), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ action }),
+    body: JSON.stringify(opts.action ? { action: opts.action } : {}),
   });
-  if (!sigRes.ok) throw new Error("Failed to fetch rp-signature");
+  if (!res.ok) throw new Error("Failed to open World ID request");
 
-  const rpSig = (await sigRes.json()) as {
-    sig: string;
-    nonce: string;
-    created_at: number;
-    expires_at: number;
-  };
+  const { connectorURI } = (await res.json()) as { connectorURI: string };
+  opts.onConnectorUri?.(connectorURI);
 
-  const request = await IDKit.request({
-    app_id: appId,
-    action,
-    rp_context: {
-      rp_id: rpId,
-      nonce: rpSig.nonce,
-      created_at: rpSig.created_at,
-      expires_at: rpSig.expires_at,
-      signature: rpSig.sig,
-    },
-    allow_legacy_proofs: true,
-    // NO `return_to`, AND IT WAS TRIED. The field exists and does what it says:
-    // World App offers a way back instead of leaving somebody staring at it
-    // wondering whether anything happened.
-    //
-    // It cannot be used from a web app. `return_to` is an https address, Android
-    // resolves one as an app link, and the destination is then whatever claims
-    // it: with the app installed, a voter verifying in a browser tab was handed
-    // the INSTALLED copy, which had no verification pending, while the tab they
-    // left kept polling out of sight. Restricting it to the installed app fixed
-    // the misrouting and exposed the real problem: coming back that way is a
-    // COLD START. The request is a live object, the bridge payload is encrypted
-    // with a key that lived inside it, and the SDK exposes no way to rebuild one
-    // from its `requestId`. The reload therefore discards a verification that
-    // had already succeeded, which is worse than the inconvenience it set out
-    // to remove.
-    //
-    // The inconvenience is small, because this is polled over HTTP rather than
-    // carried on a relay socket: a poll frozen by backgrounding resumes when the
-    // page comes back, and the proof is still waiting. Switching apps by hand
-    // costs a tap; a cold start costs the whole verification.
-    environment: "production",
-    // WHATEVER THE VOTER HAS, rather than demanding an Orb. Orbs were withdrawn
-    // from Spain, so asking for personhood at the door would lock out the very
-    // voters this exists for. An election that wants Orb asks for it at
-    // ENROLLMENT instead, against its own personhood nullifier, where a refusal
-    // costs one election rather than the whole account.
-    //
-    // See ACCEPTED_CREDENTIALS for which ones those are and why.
-  }).preset(deviceLegacy({}));
+  return waitForWorldIdProof(opts.signal);
+}
 
-  opts.onConnectorUri?.(request.connectorURI);
-
-  /**
-   * Five minutes, not the SDK's fifteen.
-   *
-   * The bridge is polled over HTTP, once a second, and the default gives up
-   * after 900 seconds: a QR somebody opened and walked away from went on asking
-   * `bridge.worldcoin.org` nine hundred times. Measured on a real verification,
-   * scanning and approving took about twelve requests, so five minutes is
-   * generous for the person and cuts the abandoned tail by two thirds.
-   *
-   * The INTERVAL is deliberately left at the SDK default. It is what World's own
-   * widget does, and stretching it is felt directly: the seconds between
-   * approving on the phone and the page moving on are seconds of wondering
-   * whether anything happened.
-   */
-  const completion = await request.pollUntilCompletion({ timeout: 5 * 60 * 1000 });
-  return completion.success ? completion.result : null;
+/**
+ * Waits for whatever is in flight, held open by the server.
+ *
+ * LONG POLLING RATHER THAN A ONE-SECOND LOOP, and the arithmetic is the whole
+ * argument: polling for five minutes is three hundred requests, more than twice
+ * this backend's per-minute budget for a single voter signing in. The server
+ * holds each request for up to 25 seconds and answers the instant the bridge
+ * does, so this is roughly a dozen requests AND quicker to notice than polling
+ * would be. A `waiting` reply means that hold ran out, not that anything is
+ * wrong, so it simply asks again.
+ *
+ * Exported because a resumed page joins a verification it never started, and
+ * has to be able to wait for it like any other.
+ */
+export async function waitForWorldIdProof(signal?: AbortSignal): Promise<IDKitResult | null> {
+  for (;;) {
+    if (signal?.aborted) return null;
+    const state = await readPending("?wait=1", signal);
+    if (state.status === "confirmed") return state.result;
+    // `failed` is a refusal or a timeout; `none` means it expired or somebody
+    // else collected it. Neither is an error to raise at the voter: both mean
+    // there is nothing to wait for any more.
+    if (state.status !== "waiting") return null;
+  }
 }

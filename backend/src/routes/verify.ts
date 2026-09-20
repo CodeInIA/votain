@@ -3,7 +3,19 @@ import { signRequest } from '@worldcoin/idkit-core/signing';
 import { sdJwt, SELECTIVE_DISCLOSURE_FRAME, type VotainCredentialPayload } from '../sd/issuer.js';
 import { statusIndexFor, DEFAULT_LIST_ID } from '../status/statusList.js';
 import { verifySession } from '../auth/session.js';
-import { readSessionCookie, setSessionCookie, clearSessionCookie } from '../auth/cookie.js';
+import {
+  readSessionCookie,
+  setSessionCookie,
+  clearSessionCookie,
+  readPendingCookie,
+  setPendingCookie,
+  clearPendingCookie,
+} from '../auth/cookie.js';
+import {
+  startPendingVerification,
+  readPendingVerification,
+  endPendingVerification,
+} from '../auth/worldIdBridge.js';
 import { verifyWorldIdProof, type WorldIdPayload } from '../auth/worldId.js';
 
 const router = Router();
@@ -80,6 +92,84 @@ router.post('/rp-signature', async (req: Request, res: Response) => {
     console.error('Error generating RP signature:', error);
     return res.status(500).json({ error: 'Internal server error', message });
   }
+});
+
+// ────────────────────────────────────────────────
+// World ID verifications that outlive the tab that started one
+//
+// See `auth/worldIdBridge` for why they are held here at all. In short: a
+// phone discards the backgrounded tab while its owner is in World App, and the
+// SDK cannot rebuild a request from its id, so a verification that had already
+// SUCCEEDED was being thrown away by the reload.
+// ────────────────────────────────────────────────
+
+/** POST /worldid/request — opens one, and names it in an httpOnly cookie. */
+router.post('/worldid/request', async (req: Request, res: Response) => {
+  try {
+    const { action } = req.body as { action?: string };
+
+    // One verification per browser at a time. Without this, pressing the
+    // button twice leaves the first one orphaned in the store with nothing
+    // able to collect it, for the whole five minutes.
+    endPendingVerification(readPendingCookie(req));
+
+    const { pendingId, connectorURI } = await startPendingVerification(
+      action ?? process.env.WORLD_ID_ACTION ?? 'vote-registration',
+    );
+
+    setPendingCookie(res, pendingId);
+    return res.status(200).json({ connectorURI });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error opening World ID request:', error);
+    return res.status(500).json({ error: 'Internal server error', message });
+  }
+});
+
+/**
+ * GET /worldid/request — what became of it.
+ *
+ * `?wait=1` holds the connection for up to 25 seconds and answers the moment
+ * the bridge does, which is both cheaper and quicker than polling. Without it
+ * the answer is whatever is true right now, which is what a page asks on mount
+ * to find out whether it is resuming something it does not remember starting.
+ */
+router.get('/worldid/request', async (req: Request, res: Response) => {
+  const pendingId = readPendingCookie(req);
+  const state = await readPendingVerification(pendingId, req.query.wait ? 25_000 : 0);
+
+  if (!state) {
+    // Expired, collected, or never existed. All three mean the same thing to
+    // the page: there is nothing of yours here, start one if you want one.
+    clearPendingCookie(res);
+    return res.status(200).json({ status: 'none' });
+  }
+
+  if (state.status === 'confirmed') {
+    // Handed over once. The proof is a bearer credential, so a cookie that
+    // leaks after this moment is worth nothing.
+    endPendingVerification(pendingId);
+    clearPendingCookie(res);
+    return res.status(200).json({ status: 'confirmed', result: state.result });
+  }
+
+  if (state.status === 'failed') {
+    endPendingVerification(pendingId);
+    clearPendingCookie(res);
+    return res.status(200).json({ status: 'failed', error: state.error });
+  }
+
+  // The connector URI comes back with it, so a page that was reloaded mid-flow
+  // can put the QR code back up instead of only knowing that something is out
+  // there. It is not a secret: it is what gets rendered as a QR code.
+  return res.status(200).json({ status: 'waiting', connectorURI: state.connectorURI });
+});
+
+/** DELETE /worldid/request — the person pressed cancel. */
+router.delete('/worldid/request', (req: Request, res: Response) => {
+  endPendingVerification(readPendingCookie(req));
+  clearPendingCookie(res);
+  return res.status(200).json({ success: true });
 });
 
 // ────────────────────────────────────────────────

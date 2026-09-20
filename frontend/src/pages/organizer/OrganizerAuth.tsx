@@ -14,7 +14,7 @@
  * the tally key, offered from the profile, where it buys something a login gate
  * never could: a stolen wallet that still cannot read the ballots.
  */
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
@@ -67,10 +67,55 @@ export default function OrganizerAuth() {
     toast({ title: t('errors.generic_title'), description: detail, variant: 'error' });
   };
 
-  const finishLogin = () => {
+  const finishLogin = useCallback(() => {
     setOrganizerLoggedIn(true);
     navigate('/organizer/dashboard');
-  };
+  }, [navigate, setOrganizerLoggedIn]);
+
+  /**
+   * FINISHES A SIGN-IN THE WALLET ALREADY APPROVED.
+   *
+   * On a phone, connecting means leaving: the wallet app takes the screen, and
+   * the system is free to discard the backgrounded tab. The organizer approves,
+   * comes back, and lands on a fresh copy of this page with `handleWallet`'s
+   * promise long gone — so they are asked to connect a wallet that is, at that
+   * moment, connected. Several of them concluded the approval had not worked
+   * and did it again.
+   *
+   * Nothing was actually lost. WalletConnect persists the session, and
+   * `useOrganizerWallet` now restores it on mount, so an address appearing here
+   * without anybody pressing anything means exactly one thing: this browser has
+   * a live session it did not know about a moment ago. There is no second
+   * factor to ask for — the wallet IS the organizer's identity, which is the
+   * premise of this whole screen — so there is nothing left to do but go in.
+   *
+   * ONLY OVER WALLETCONNECT, WHICH IS THE CASE THAT BREAKS. An extension
+   * injects itself into every document, so a reload costs the organizer one
+   * prompt-free press and nothing was ever lost there. Letting this fire for
+   * an injected wallet would break something else instead: signing out clears
+   * this app's own flags but cannot un-authorise MetaMask, so the sign-in
+   * screen would recognise the still-authorised account and go straight back
+   * in — leaving no way to reach the screen at all. Measured in a browser with
+   * an authorised provider, which is how that was caught.
+   *
+   * WHILE `busy` IS FALSE, so this cannot fire underneath `handleWallet` and
+   * navigate out from beneath its own error handling. And the wrong network is
+   * still the wrong network: it is shown, not skipped past.
+   */
+  useEffect(() => {
+    if (busy || !wallet.usesWalletConnect || !wallet.live || !wallet.address || wrongNetwork) return;
+    let cancelled = false;
+    void (async () => {
+      if (await wallet.isWrongNetwork()) {
+        if (!cancelled) setWrongNetwork(true);
+        return;
+      }
+      if (!cancelled) finishLogin();
+    })();
+    return () => { cancelled = true; };
+    // `wallet` is rebuilt every render; the address is the thing that changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wallet.address, wallet.live, wallet.usesWalletConnect, busy, wrongNetwork, finishLogin]);
 
   /**
    * Connect, check the chain, done. Independent of whether contracts are

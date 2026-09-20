@@ -1,6 +1,6 @@
 # Votain. Current Project State
 
-**Last updated**: 2026-09-20 (a pass of ten reported defects)
+**Last updated**: 2026-09-21 (signing in on a phone survives the trip to World App or the wallet)
 **Completed milestone**: Phase B (H5–H9) except H9's last mile. Contracts, backend issuer and
 both user flows are wired and green; the tally runs on both paths, but only the auditor CLI
 pins to IPFS and the in-app path publishes an empty CID. See H5, H6 and H9 in `PLAN.md`.
@@ -8,14 +8,22 @@ pins to IPFS and the in-app path publishes an empty CID. See H5, H6 and H9 in `P
 `phase()`), **in-app tally** with a Paillier key **derived from the organizer's wallet signature**
 (nothing stored at rest; CLI kept as the auditor path), organizer display-name persistence,
 custom dark `DatePicker`, phase-aware voter/organizer/public screens, and shared phase helpers.
-**This pass**: ten defects, each reported from the running app and none found by reading. The
-role switch lost an argument with itself on an election panel, moving the address and leaving
-the hat; the gate before the passkey asked "have you saved the phrase?" over a button saying
-yes, and now asks for three of the twelve back in their places; an election's card held 61
-pixels open for a hint nobody had asked for, and then opened to the height of the longest
-sentence rather than the one being read; unsaving from the saved list deleted the row on the
-one screen where that mistake costs something. See the log for the three worth keeping.
-Tests: contracts 185/185, backend 126/126, frontend 537/537.
+**This pass**: signing in on a phone. Both roles sign in by LEAVING — the voter to World App,
+the organizer to their wallet — and a backgrounded tab is something the system may discard, so
+what came back was a cold start that had thrown away work already done. The voter's proof
+request is opened by the backend now and named in an httpOnly cookie, because the SDK cannot
+rebuild a request from its id and the bridge key lives inside its WASM: a reload collects the
+proof instead of losing it. The organizer's session was never lost at all — WalletConnect
+persists it — but the mount effect read a module variable the reload had emptied and never
+asked for it back. `return_to` stays off, now for one reason rather than two: it misroutes to
+an installed PWA. See "Signing in on a phone" in `architecture.md`.
+**Found by measuring, not by reading**: the resume effect aborted its own in-flight fetch in a
+StrictMode cleanup and left its once-only guard set, so "at most once" had become "never" — and
+every unit test passed while that was true. A `StrictMode` wrapper does not reproduce it here
+(counted: 1 mount, 0 cleanups), so the test file says so rather than pretending to cover it.
+**Also corrected**: `tallyKey.ts` had described its key as coming from a passkey's PRF secret
+long after that was changed to a wallet signature.
+Tests: contracts 185/185, backend 142/142, frontend 560/560.
 **Next milestone**: Live Amoy deployment (pending funding the deployer key). It must carry
 `PLATFORM_ATTESTER_ADDRESS`, the key the backend signs enrolments with: without it the
 factory deploys elections that enrol the old, publicly linkable way, which looks entirely

@@ -32,6 +32,13 @@ const PLAIN = 'voter_vc';
 /** Seven days, which is also the credential's own `exp`. */
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
+/** The verification in flight, under the same two names. See below. */
+const PENDING_HOST_PREFIXED = '__Host-voter_pending';
+const PENDING_PLAIN = 'voter_pending';
+
+/** Matches `PENDING_TTL_MS` in `worldIdBridge`: the cookie dies with its entry. */
+const PENDING_MAX_AGE_MS = 5 * 60 * 1000;
+
 /**
  * Whether this deployment is serving over plain HTTP.
  *
@@ -86,4 +93,54 @@ export function clearSessionCookie(res: Response): void {
 export function readSessionCookie(req: Request): string | undefined {
   const jar = req.cookies as Record<string, string | undefined> | undefined;
   return jar?.[HOST_PREFIXED] ?? jar?.[PLAIN];
+}
+
+/**
+ * The verification this browser has in flight, named in a cookie it cannot read.
+ *
+ * WHY A COOKIE AND NOT A RESPONSE FIELD THE PAGE KEEPS. The whole problem being
+ * solved is that the page does not survive: a phone discards the backgrounded
+ * tab while its owner is in World App, and whatever the page was holding goes
+ * with it. A cookie is the one thing that outlives that, and the browser sends
+ * it back on its own, so the reloaded page does not have to remember anything.
+ *
+ * `httpOnly`, because the id stands for a World ID proof: whoever presents it
+ * is signed in as that human. Script on this page never needs to see it, so it
+ * never does, and an injection that would otherwise read it out of storage
+ * gets nothing.
+ *
+ * `lax` RATHER THAN `strict`, and it is the one place the two differ here. The
+ * session cookie is only ever sent by this app's own fetches, where `strict`
+ * costs nothing. This one has to survive World App handing the person back to
+ * this origin, which is a cross-site top-level navigation: `strict` withholds
+ * the cookie on exactly that load, which is the load that needs it. `lax`
+ * sends it on a top-level GET and withholds it from cross-site subrequests,
+ * which is the distinction that matters.
+ */
+export function pendingCookieName(): string {
+  return insecure() ? PENDING_PLAIN : PENDING_HOST_PREFIXED;
+}
+
+export function setPendingCookie(res: Response, pendingId: string): void {
+  res.cookie(pendingCookieName(), pendingId, {
+    httpOnly: true,
+    secure: !insecure(),
+    sameSite: 'lax',
+    path: '/',
+    maxAge: PENDING_MAX_AGE_MS,
+  });
+}
+
+export function clearPendingCookie(res: Response): void {
+  res.clearCookie(pendingCookieName(), {
+    httpOnly: true,
+    secure: !insecure(),
+    sameSite: 'lax',
+    path: '/',
+  });
+}
+
+export function readPendingCookie(req: Request): string | undefined {
+  const jar = req.cookies as Record<string, string | undefined> | undefined;
+  return jar?.[PENDING_HOST_PREFIXED] ?? jar?.[PENDING_PLAIN];
 }

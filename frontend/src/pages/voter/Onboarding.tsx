@@ -1,4 +1,4 @@
-import { useState, useMemo, type ReactNode } from 'react';
+import { useState, useMemo, useEffect, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -58,6 +58,24 @@ export default function Onboarding() {
       icon: <CheckCircle className="w-16 h-16 text-tertiary" strokeWidth={1.5} />,
     },
   ], [t]);
+
+  /**
+   * A VERIFICATION IN FLIGHT PUTS THE SLIDES WHERE IT BELONGS.
+   *
+   * `step` starts at zero on every fresh document, and a phone that discarded
+   * this tab while its owner was away in World App gives it a fresh document.
+   * The hook picks the verification back up, so the QR is available again —
+   * but the page was drawing slide one, which hides the QR at the top of the
+   * render AND hides the dots that would let anybody navigate back to it. What
+   * a voter mid-verification actually saw was a welcome slide with no way
+   * forward, which is worse than the bug this was meant to fix.
+   *
+   * Moving the counter rather than deriving around it keeps the dots, the
+   * heading and the panel all saying the same thing.
+   */
+  useEffect(() => {
+    if (isVerifying || isLoadingQr) setStep(VERIFY_STEP);
+  }, [isVerifying, isLoadingQr]);
 
   const isVerifyStepActive = step === VERIFY_STEP;
   const infoStepData = !isVerifyStepActive ? infoSteps[step] : null;

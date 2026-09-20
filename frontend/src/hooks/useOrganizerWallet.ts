@@ -132,6 +132,8 @@ async function resumeProvider(): Promise<Eip1193Provider | undefined> {
 }
 interface OrganizerWalletState {
   address: string | undefined;
+  /** True only when a provider answered for `address`; see the state itself. */
+  live: boolean;
   wrongNetwork: boolean;
   connecting: boolean;
   hasWallet: boolean;
@@ -175,6 +177,20 @@ export function useOrganizerWallet(): OrganizerWalletState {
   // Start from the remembered address so read-only screens work right after a
   // passkey-only login, before any wallet prompt.
   const [address, setAddress] = useState<string | undefined>(getRememberedOrganizerAddress);
+  /**
+   * Whether `address` came from a WALLET rather than from memory.
+   *
+   * The two are not the same thing and one screen turns on the difference.
+   * `address` starts from local storage so read-only pages can draw themselves
+   * before any prompt, which is right: the address is a public identifier and
+   * the numbers behind it are public too. But a remembered address is not a
+   * session — nothing has been approved, nothing can be signed — and the
+   * sign-in screen must not treat it as one, or signing out and back in would
+   * be a screen that lets everybody straight through.
+   *
+   * Set only where a provider actually answered for an account.
+   */
+  const [live, setLive] = useState(false);
   const [wrongNetwork, setWrongNetwork] = useState(false);
   const [connecting, setConnecting] = useState(false);
   /**
@@ -203,19 +219,41 @@ export function useOrganizerWallet(): OrganizerWalletState {
   // even though MetaMask still has it authorized. `eth_accounts` (unlike
   // `eth_requestAccounts`) returns already-permitted accounts without prompting,
   // so this silently restores the connection on every page.
+  //
+  // `resumeProvider` RATHER THAN `activeProvider`, WHICH IS THE WHOLE MOBILE
+  // BUG. On a desktop the extension injects itself into every document, so
+  // there is always something here to ask. On a phone there is not: the
+  // provider is a module variable, and a reload empties it. This effect then
+  // found nothing, returned, and left the organizer looking at a sign-in
+  // screen — while the wallet on the other side still held the session and
+  // `restoreWalletConnect` would have handed it straight back.
+  //
+  // That is what made approving in the wallet feel like it had been thrown
+  // away: the trip to the wallet backgrounds the browser, the system discards
+  // the tab, and the page that came back was the one page that never asked.
+  // Restore-only, so nothing here can put a QR code in front of anybody.
   useEffect(() => {
-    const eth = activeProvider();
-    if (!eth) return;
-    const provider = new BrowserProvider(eth);
-    void provider
-      .send('eth_accounts', [])
-      .then((accounts: string[]) => {
-        if (accounts[0]) {
-          setAddress(accounts[0]);
-          void refreshNetwork();
-        }
-      })
-      .catch(() => { /* ignored: treated as not connected */ });
+    let cancelled = false;
+    // Asked BEFORE the await: afterwards there is a provider either way, and
+    // the question is whether this call is the one that produced it.
+    const hadOne = Boolean(activeProvider());
+    void (async () => {
+      const eth = await resumeProvider();
+      if (!eth || cancelled) return;
+      try {
+        const accounts = await new BrowserProvider(eth).send('eth_accounts', []) as string[];
+        if (cancelled || !accounts[0]) return;
+        setAddress(accounts[0]);
+        setLive(true);
+        // Only when this restored the session. The listeners below ran while
+        // there was nothing to attach to, and a bump is what sends them back.
+        if (!hadOne) setProviderEpoch(e => e + 1);
+        void refreshNetwork();
+      } catch {
+        /* ignored: treated as not connected */
+      }
+    })();
+    return () => { cancelled = true; };
   }, [refreshNetwork]);
 
   useEffect(() => {
@@ -233,6 +271,7 @@ export function useOrganizerWallet(): OrganizerWalletState {
     const endSession = () => {
       session = undefined;
       setAddress(undefined);
+      setLive(false);
       forgetOrganizerAddress();
       // The session flag lives in AuthProvider, and the route guard watches
       // only that: without this the dashboard stays on screen with nothing
@@ -280,6 +319,7 @@ export function useOrganizerWallet(): OrganizerWalletState {
       }
 
       setAddress(next);
+      setLive(true);
 
       // Remembered only while there is a session to remember it for. A wallet
       // keeps emitting this afterwards, and writing it back then resurrects an
@@ -324,6 +364,7 @@ export function useOrganizerWallet(): OrganizerWalletState {
       const accounts = (await provider.send("eth_requestAccounts", [])) as string[];
       const account = accounts[0];
       setAddress(account);
+      setLive(Boolean(account));
       if (account) localStorage.setItem(REMEMBERED_ADDRESS_KEY, account);
       await refreshNetwork();
       return account;
@@ -485,6 +526,7 @@ export function useOrganizerWallet(): OrganizerWalletState {
       const requested = (await provider.send("eth_requestAccounts", [])) as string[];
       if (requested.length === 0) throw new Error(i18n.t("errors.wallet_rejected"));
       setAddress(requested[0]);
+      setLive(true);
       localStorage.setItem(REMEMBERED_ADDRESS_KEY, requested[0]);
     }
 
@@ -496,6 +538,7 @@ export function useOrganizerWallet(): OrganizerWalletState {
     usesWalletConnect: session !== undefined,
     withWalletApp,
     address,
+    live,
     wrongNetwork,
     connecting,
     // True when there is any way to reach a wallet at all, injected or not,
