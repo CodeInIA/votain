@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EyeOff, Fuel, Info, Percent, Repeat2, Users, Vote } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { cn } from '../../lib/utils';
 import { Badge } from './Badge';
 import { BlockchainBadge } from './BlockchainBadge';
@@ -224,6 +224,14 @@ export function ElectionSchedule({
    * figures beside it. Below, it is full width and nothing else shifts.
    */
   const [openHint, setOpenHint] = useState<string | null>(null);
+  /**
+   * The sentence still being shown, which outlives the press that closed it.
+   *
+   * A ref and not state: nothing should re-render because a hint finished
+   * closing, and the value is only ever read in the same pass that writes it.
+   */
+  const lastHint = useRef<string | null>(null);
+  if (openHint) lastHint.current = openHint;
   const funding = useElectionFunding(election.contractAddress);
   const voteCost = useVoteCost();
   const reservedBallots = Math.floor(funding.reserved / voteCost.matic);
@@ -329,6 +337,8 @@ export function ElectionSchedule({
   }
 
 
+  const shownHint = figures.find(f => f.id === (openHint ?? lastHint.current))?.hint;
+
   return (
     <Card className="p-4 mb-4 flex flex-col sm:flex-row items-start gap-4">
       <PhaseTimeline election={election} className="flex-1 min-w-0 sm:min-w-[15rem]" />
@@ -369,38 +379,48 @@ export function ElectionSchedule({
 
             A row that animates from `0fr` to `1fr` gives both: nothing is held
             at rest, and the growth is something the eye follows instead of a
-            jump it has to recover from. The sentences stay stacked in one cell,
-            so the open height is still the tallest of them measured in the
-            reader's own language and at their own text size, never a hard-coded
-            number that fits in Spanish and overflows in German.
+            jump it has to recover from.
+
+            ONE SENTENCE, NOT ALL OF THEM. They used to be drawn stacked in a
+            single cell, every one of them, so the open height was the TALLEST:
+            the quorum's short line opened a box built for the gas one and left
+            the difference empty. `1fr` measures whatever is actually in the
+            cell, so drawing only the open sentence makes the box its size,
+            still read from the reader's own language and text size rather than
+            a hard-coded number that fits in Spanish and overflows in German.
+
+            IT KEEPS DRAWING THE LAST ONE while it closes. `1fr` resolves to the
+            height of the content, so emptying the cell at the moment of closing
+            would collapse the row from zero to zero and there would be nothing
+            to watch: the sentence has to outlive the press that dismissed it,
+            by exactly one animation.
 
             `min-h-0` and `overflow-hidden` on the inner box are what make `0fr`
             actually collapse: without them a grid child keeps its content's
             height and the row never closes.
 
-            On a phone none of this runs. The unopened ones are `hidden`, the
-            panel is the last thing in the card, and it grows downwards into
-            nothing. */}
+            On a phone none of this runs. The panel is the last thing in the
+            card and grows downwards into nothing. */}
         <div
           className={cn(
             'col-span-3 sm:grid sm:transition-[grid-template-rows] sm:duration-200 sm:ease-out',
             openHint ? 'sm:grid-rows-[1fr]' : 'sm:grid-rows-[0fr]',
           )}
         >
-          <div className="sm:min-h-0 sm:overflow-hidden sm:grid">
-            {figures
-              .filter(figure => figure.hint)
-              .map(figure => (
-                <p
-                  key={figure.id}
-                  className={cn(
-                    'text-[11px] text-on-surface-meta leading-snug sm:col-start-1 sm:row-start-1',
-                    openHint !== figure.id && 'hidden sm:block sm:invisible',
-                  )}
-                >
-                  {figure.hint}
-                </p>
-              ))}
+          <div className="min-h-0 overflow-hidden">
+            {/* `hidden` on a phone and `invisible` above it, and the difference
+                matters: the phone has no animating row, so a closed sentence
+                that merely could not be seen would still hold its own height
+                open. Above `sm` it has to keep occupying, or the row would have
+                nothing left to shrink. */}
+            <p
+              className={cn(
+                'text-[11px] text-on-surface-meta leading-snug',
+                !openHint && 'hidden sm:block sm:invisible',
+              )}
+            >
+              {shownHint}
+            </p>
           </div>
         </div>
       </div>
