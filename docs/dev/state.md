@@ -54,6 +54,31 @@ records are proxied through Cloudflare now — verified that the API reports
 still resolves deep links through the extra hop. A `checks` workflow runs the three test
 suites, both builds and a Docker build on every push to `main`.
 
+**Since then, 2026-09-21 (later).** The pipeline stopped being a single workflow that
+did everything. `checks.yml` gates every publication behind the three test suites, and
+change detection means a commit that touches neither `frontend/` nor what enters the image
+publishes nothing at all -- the first three automatic versions were 0.1.1, 0.1.2 and 0.1.3
+for commits that changed a workflow and a markdown file. Image versions now grow by
+themselves and are recorded as `backend-v*` tags; the old flow republished `0.1.0` on every
+run, silently moving the tag a pinned digest was supposed to make immutable. `AUTO_DEPLOY`,
+a repository variable, chooses what follows a new image: nothing, Heroku, or the enclave.
+It is on `heroku`.
+
+Three false passes were found and fixed, all the same shape -- a green tick over something
+that did not happen. The 4EVERLAND step had been POSTing to a hook that only answers GET,
+and 4EVERLAND returns 500 rather than 405, so it read as a dead hook. `heroku
+container:release` exits 0 when it creates no release, so an unchanged backend looked like
+a deployment. And `deploy-phala.yml` ended by curling `api.votain.app/health`, which with
+the CVM off is answered by Heroku; it now compares Phala's `docker_compose_hash` against
+the repository's compose, which is the sha256 of the file without its trailing newline.
+That comparison is the second verifiable link, beside the image attestation.
+
+The contracts suite also stopped hanging: 185 tests passed in seven seconds and the process
+never exited, because `@semaphore-protocol/proof` leaves snarkjs's bn128 worker pool open.
+In CI that was a 30 minute timeout reported as a failure over a log saying 185 passing.
+
+Full write-up in [`deployment.md`](deployment.md).
+
 **Next milestone**: Live Amoy deployment (pending funding the deployer key). It must carry
 `PLATFORM_ATTESTER_ADDRESS`, the key the backend signs enrolments with: without it the
 factory deploys elections that enrol the old, publicly linkable way, which looks entirely
