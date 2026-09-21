@@ -1233,9 +1233,9 @@ Deployed on 2026-09-21. What is actually running, rather than what was planned:
 | Component | Where | Notes |
 |-----------|-------|-------|
 | Frontend | **4EVERLAND**, IPFS, at `votain.app` | **Fleek shut its hosting down on 2026-01-31** and the plan named it until this deploy. 6 GB and 10 GB of transfer a month, free |
-| Backend | **Phala Cloud**, Intel TDX CVM, at `api.votain.app` | NOT a free tier: $42.34/month for the smallest instance plus $2 for 20 GB of disk. $20 of sign-up credit |
+| Backend | **Heroku** container dyno at `api.votain.app` for now; **Phala Cloud** Intel TDX CVM for the verifiable deployment | Two homes on one hostname, see below. Phala is NOT a free tier: $42.34/month plus $2 for 20 GB of disk, against $20 of credit, so it is stopped between sessions. Heroku's Basic dyno is $7/month, covered by the student pack |
 | Contracts | Local Hardhat, reached over a named Cloudflare tunnel at `rpc.votain.app` | Amoy deliberately deferred: the whole stack is exercised against a throwaway chain first |
-| DNS | Cloudflare | Required by `dstack-ingress` for DNS-01, and it is what makes the subdomain layout below work |
+| DNS | Cloudflare, **proxied** | Required by `dstack-ingress` for DNS-01, and what makes the subdomain layout below work. Behind the proxy the API answers `cf-cache-status: DYNAMIC`, so nothing dynamic is cached, and `_redirects` still resolves deep links through the extra hop |
 | Image build | GitHub Actions to GHCR, with signed SLSA provenance | See "Why the image is built in CI" |
 | IPFS tally | Pinata free (1 GB) | Still the plan; unbuilt, see H9 |
 
@@ -1286,6 +1286,42 @@ compose is part of what is measured.
 
 The image must also be PUBLIC. A private one would mean nobody could pull the
 digest to check it against the attestation, and the last link would break.
+
+### Two homes on one hostname
+
+`api.votain.app` points at whichever backend is meant to be answering, and the
+frontend never knows. That is the whole reason the backend got a subdomain of
+its own rather than a hostname belonging to a provider: switching hosts is a
+DNS edit, and `VITE_BACKEND_URL` is baked at build time, so anything else would
+mean rebuilding the frontend to change where the API lives.
+
+| | Phala | Heroku |
+|---|---|---|
+| Verifiable | **Yes** — attestation ties the running digest to a public commit | No |
+| Cost | $42.34/month running, $2 stopped | $7/month, covered by the student pack |
+| TLS | Let's Encrypt, key held inside the enclave | Heroku ACM, key held by Heroku |
+| Purpose | The claim the thesis makes | Staying up for free in between |
+
+**The images are not the same artifact**, and the docs should not pretend
+otherwise. Heroku's registry rejects OCI manifests — which is exactly what the
+GHCR push produces alongside its signed provenance — so the Heroku image is a
+second build of the same commit with Docker media types, and its digest
+differs. Only the GHCR one carries the attestation.
+
+**Switching back costs two DNS edits, and they are not automatic.** Restoring
+`api.votain.app` to Phala means recreating the CNAME and the CAA, whose exact
+values live beside the `.env` backup. The CAA is the one that bites in the
+other direction too: it restricts issuance to DNS-01 and to the enclave's ACME
+account, and **Heroku validates by HTTP-01**, so it has to be removed before
+Heroku can get a certificate at all — otherwise ACM sits at "DNS Verified"
+forever without saying why.
+
+**And with the Cloudflare proxy on, Heroku's certificate RENEWAL is at risk.**
+HTTP-01 needs to reach the origin on port 80, and the proxy intercepts it. The
+certificate already issued is good for 90 days, which covers the window this
+deployment is meant to cover, but a long stay on Heroku behind the proxy would
+eventually fail quietly. The symptom would be `heroku certs:auto` leaving the
+`Cert issued` state.
 
 ### `dstack-ingress`, and why not the default gateway
 

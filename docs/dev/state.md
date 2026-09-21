@@ -46,6 +46,14 @@ runs from a public commit to the enclave with no link that asks for trust.
 Measured rather than assumed: `dstack-ingress` writes its DNS records only on FIRST
 provisioning, so anything that repoints `api.votain.app` must be undone by hand.
 
+**Since then**: the backend moved to a Heroku container dyno on the same hostname, because
+Phala is $42.34/month and the student pack covers Heroku. `api.votain.app` is the switch:
+the frontend bakes that URL at build time and never learns which host answers. Both DNS
+records are proxied through Cloudflare now — verified that the API reports
+`cf-cache-status: DYNAMIC`, that the session cookie still crosses, and that `_redirects`
+still resolves deep links through the extra hop. A `checks` workflow runs the three test
+suites, both builds and a Docker build on every push to `main`.
+
 **Next milestone**: Live Amoy deployment (pending funding the deployer key). It must carry
 `PLATFORM_ATTESTER_ADDRESS`, the key the backend signs enrolments with: without it the
 factory deploys elections that enrol the old, publicly linkable way, which looks entirely

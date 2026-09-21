@@ -406,6 +406,19 @@ Build and publish through `.github/workflows/backend-image.yml`; the compose
 pins the digest, so publishing a new image does not update a running CVM. See
 "Why the image is built in CI" in `docs/dev/architecture.md`.
 
+**Currently served from Heroku instead**, on the same hostname, because Phala
+costs $42.34/month and the student pack covers a $7 Basic dyno. The same
+workflow deploys there when `deploy_heroku` is set. Two things that are not
+obvious and cost an evening each:
+
+- The app must be on the **`container`** stack. On `heroku-24` the registry
+  rejects the push with a bare `unsupported`, naming nothing.
+- Docker Desktop's **containerd image store writes OCI manifests** whatever
+  you ask for, and Heroku's registry only takes Docker media types. Pushing
+  from a laptop fails the same opaque way; buildx can be told the format, and
+  in CI the problem does not exist. That is why the workflow is the supported
+  path and the CLI is not.
+
 ## This server stores nothing
 
 `backend/data/` is gone. Three JSON files lived there, and none of them held

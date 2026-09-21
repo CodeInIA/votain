@@ -1,0 +1,112 @@
+# Does the repository still work.
+#
+# Runs on every push to `main` and on pull requests into it. `main` is the
+# branch the frontend deploys from, so this is the thing that should have an
+# opinion before anything reaches `votain.app`.
+#
+# THREE JOBS RATHER THAN ONE, and not for speed alone. A red tick that says
+# "checks failed" tells you nothing; three say WHICH half of the project broke,
+# and the contracts suite is slow enough that it should not hold up the answer
+# about the frontend.
+#
+# Each module is tested the same way it is tested locally, on purpose. A CI
+# that runs different commands is a CI that goes green while the repository is
+# broken for whoever clones it.
+
+name: checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # A second push supersedes the first: nothing is learned from finishing a run
+  # against a commit nobody will deploy.
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      # `npm run build` is `tsc -b && vite build`, so this covers types as well
+      # as the bundle. It is also what 4EVERLAND runs, which is the point: if
+      # this passes and that fails, the difference is configuration, not code.
+      - run: npm run build
+        working-directory: frontend
+      - run: npm test
+        working-directory: frontend
+      # The file that keeps deep links working on IPFS. Cheap to lose in a
+      # refactor of `public/`, and its absence only shows up as a 404 on a
+      # reloaded route in production.
+      - name: The SPA rewrite survived the build
+        working-directory: frontend
+        run: |
+          test -f dist/_redirects || { echo "dist/_redirects is missing"; exit 1; }
+          grep -q '/index.html' dist/_redirects || { echo "_redirects has no rewrite"; exit 1; }
+          echo "ok: $(cat dist/_redirects | grep -v '^#' | grep -v '^$')"
+
+  backend:
+    name: backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+        working-directory: backend
+      - run: npm run build
+        working-directory: backend
+      - run: npm test
+        working-directory: backend
+      # The image is what actually gets deployed, so a Dockerfile that no
+      # longer builds is a broken deployment waiting for somebody to notice.
+      # Not pushed: this only asks whether it still builds.
+      - uses: docker/setup-buildx-action@v3
+      - name: The image still builds
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/Dockerfile
+          push: false
+          platforms: linux/amd64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  contracts:
+    name: contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: contracts/package-lock.json
+      - run: npm ci
+        working-directory: contracts
+      - run: npm run build
+        working-directory: contracts
+      # The slowest of the three by a wide margin: it proves Groth16 end to
+      # end rather than mocking it.
+      - run: npm test
+        working-directory: contracts
+        timeout-minutes: 30
