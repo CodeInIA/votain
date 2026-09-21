@@ -112,20 +112,56 @@ jobs:
       # Resolving it means a registry token dance and a manifest fetch, which
       # is exactly what `container:release` already does. Installing the CLI is
       # cheaper than owning a second implementation of somebody else's API.
-      - name: Release it
+      - name: Note the current release
+        id: antes
         env:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
         run: |
           set -euo pipefail
           npm install -g heroku --silent
-          heroku container:release web -a "$HEROKU_APP"
+          echo "value=$(heroku releases -a "$HEROKU_APP" -n 1 --json | jq -r '.[0].version')" >> "$GITHUB_OUTPUT"
+
+      - name: Release it
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: |
+          set -euo pipefail
+
+          # SAYING WHICH OF THE TWO THINGS HAPPENED, because they look identical
+          # from outside and only one of them is a deployment.
+          #
+          # `container:release` exits 0 either way. When the pushed image is
+          # byte-identical to the running one it creates NO release, and says so
+          # only in a warning: "the process type web was not updated, because it
+          # is already running the specified docker image". A bare green tick
+          # over that reads as "deployed" to everyone who did not open the log,
+          # which is the same trap the 4EVERLAND step fell into.
+          #
+          # It is not a failure. An unchanged backend SHOULD produce an identical
+          # image, and that it does is worth knowing -- it means the build is
+          # reproducible. It is simply not the same event, so this does not
+          # report it as one.
+          salida=$(heroku container:release web -a "$HEROKU_APP" 2>&1 | tee /dev/stderr)
+          ahora=$(heroku releases -a "$HEROKU_APP" -n 1 --json | jq -r '.[0].version')
+
           {
-            echo "### Released on Heroku"
+            if printf '%s' "$salida" | grep -qi 'was not updated'; then
+              echo "### Nothing to release"
+              echo ''
+              echo "The image built from backend-v${{ steps.version.outputs.value }} is identical to"
+              echo "the one already running, so Heroku created no release."
+              echo ''
+              echo 'Nothing was deployed, and nothing needed to be.'
+            else
+              echo "### Released on Heroku"
+              echo ''
+              echo "backend-v${{ steps.version.outputs.value }} is now live."
+              echo ''
+              echo 'NOT the attested digest: Heroku needs Docker media types, so this is a'
+              echo 'second build of the same source. The attestation covers the GHCR image.'
+            fi
             echo ''
-            echo "\`$HEROKU_APP\` now runs backend-v${{ steps.version.outputs.value }}."
-            echo ''
-            echo 'NOT the attested digest: Heroku needs Docker media types, so this is a'
-            echo 'second build of the same source. The attestation covers the GHCR image.'
+            echo "Release v${{ steps.antes.outputs.value }} -> v$ahora"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Check it answers
