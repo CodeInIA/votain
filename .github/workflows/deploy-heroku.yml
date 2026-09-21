@@ -31,6 +31,16 @@ on:
         required: false
         type: string
 
+  # Called by `checks.yml` when the AUTO_DEPLOY repository variable says so,
+  # which is what makes "every green commit lands on Heroku" possible without
+  # this file having an opinion about when that is a good idea.
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version to deploy. Empty uses the newest backend-v* tag.'
+        required: false
+        type: string
+
 env:
   # Named once. Changing deployment target should be a one-line edit.
   HEROKU_APP: votain-backend

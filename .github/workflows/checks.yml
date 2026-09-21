@@ -157,6 +157,53 @@ jobs:
       attestations: write
     uses: ./.github/workflows/backend-image.yml
 
+  # ── WHERE THE NEW IMAGE GOES, IF ANYWHERE ───────────────────────────────────
+  #
+  # Set by the AUTO_DEPLOY repository variable (Settings -> Secrets and
+  # variables -> Actions -> Variables), so changing what happens after a green
+  # commit is a dropdown, not a commit:
+  #
+  #   unset / none  publish the image and stop. The deployments move only when
+  #                 somebody runs `deploy heroku` or `deploy phala` by hand.
+  #   heroku        every green commit on main lands on api.votain.app. This is
+  #                 the comfortable setting during development.
+  #   phala         every green commit re-provisions the enclave.
+  #
+  # A VARIABLE AND NOT A SECRET, deliberately. Which deployment is automatic is
+  # not confidential, and anyone reading a run should be able to see it.
+  #
+  # ON `phala`, AND WHY IT IS NOT THE DEFAULT. Each deployment restarts the CVM
+  # and produces a new measurement. That is fine when a person decided it and
+  # can point at the version; it is corrosive when it happens on its own,
+  # because the property being demonstrated is that nothing about the running
+  # backend changes without a decision somebody can be held to. It is offered
+  # because it is your call, not because it is the obvious one.
+  heroku:
+    name: deploy to heroku
+    needs: [image]
+    if: vars.AUTO_DEPLOY == 'heroku'
+    # The version just published, rather than "the newest tag": by the time
+    # this runs another commit could have published a newer one, and deploying
+    # something other than what this run built would make the log a liar.
+    with:
+      version: ${{ needs.image.outputs.version }}
+    permissions:
+      contents: read
+    secrets: inherit
+    uses: ./.github/workflows/deploy-heroku.yml
+
+  phala:
+    name: deploy to phala
+    needs: [image]
+    if: vars.AUTO_DEPLOY == 'phala'
+    with:
+      version: ${{ needs.image.outputs.version }}
+    permissions:
+      contents: write
+      packages: read
+    secrets: inherit
+    uses: ./.github/workflows/deploy-phala.yml
+
   deploy:
     name: publish the frontend
     needs: [frontend, backend, contracts]

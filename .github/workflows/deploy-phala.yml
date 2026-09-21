@@ -41,6 +41,17 @@ on:
         required: false
         type: string
 
+  # Callable from `checks.yml` when AUTO_DEPLOY says `phala`. Available, but
+  # see the note there before switching it on: an enclave that redeploys itself
+  # changes its own measurement, which is the one thing the attestation is
+  # supposed to make impossible without somebody deciding it.
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version to deploy. Empty uses the newest backend-v* tag.'
+        required: false
+        type: string
+
 env:
   # The CVM this repository deploys to, by app id.
   CVM: 8a4883de0784b3d5a4c8cd66738e9f559400b32a
