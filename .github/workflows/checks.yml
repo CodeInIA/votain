@@ -153,10 +153,29 @@ jobs:
             echo "and add its URL as a repository secret."
             exit 1
           fi
-          codigo=$(curl -sS -o /tmp/respuesta -w '%{http_code}' -X POST "$HOOK")
+          # GET, AND NOT POST, WHICH COST AN EVENING. Every deploy hook in the
+          # world is a POST -- Vercel's, Netlify's, Render's -- so this was
+          # written as one, and 4EVERLAND answered `503 {"code":500,"message":
+          # "SERVICE ERROR"}`. That reads as "their service is down" or "your
+          # hook is dead", and it is neither: the URL simply only answers GET,
+          # and a 500 is what it returns instead of a 405. The same URL that
+          # fails as a POST succeeds as a GET and queues the build.
+          codigo=$(curl -sS -o /tmp/respuesta -w '%{http_code}' "$HOOK")
           echo "HTTP $codigo"
           cat /tmp/respuesta || true
+          echo ''
+
+          # TWO CHECKS, because a 200 is not enough on its own: this API puts
+          # its real status in the body, so a transport-level success can still
+          # carry `"code":500`. Accepting the HTTP status alone would give a
+          # green tick over a deployment that never started.
+          interno=$(jq -r '.code // empty' /tmp/respuesta 2>/dev/null || echo '')
           case "$codigo" in
-            2*) echo "deployment triggered" ;;
-            *)  echo "4EVERLAND refused the hook"; exit 1 ;;
+            2*) : ;;
+            *)  echo "4EVERLAND refused the hook (HTTP $codigo)"; exit 1 ;;
           esac
+          if [ -n "$interno" ] && [ "$interno" != "200" ]; then
+            echo "4EVERLAND answered 200 but reported code $interno"
+            exit 1
+          fi
+          echo "deployment triggered"
