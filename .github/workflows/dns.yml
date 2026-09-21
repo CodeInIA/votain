@@ -21,17 +21,20 @@
 #           Let's Encrypt account that belongs to the enclave. So the CAA and
 #           the TXT are REMOVED, not left lying around.
 #
-#   phala   three records, unproxied, exactly as `dstack-ingress` wrote them on
-#           first provisioning. The CAA authorises the enclave's own ACME
-#           account over DNS-01; the TXT tells the dstack gateway which app and
-#           port to route to. Without them the ingress cannot get a
+#   phala   three records: the same CNAME, plus the two `dstack-ingress` wrote
+#           when it provisioned the zone. The CAA authorises the enclave's own
+#           ACME account over DNS-01; the TXT tells the dstack gateway which
+#           app and port to route to. Without them the ingress cannot get a
 #           certificate, and the CNAME alone resolves to a gateway that will
 #           not answer for this name.
 #
-# Unproxied for Phala because that is the configuration that was verified
-# working with it. The proxy was switched on later, while Heroku was serving,
-# and was never tested against the enclave. Each host gets the shape that was
-# actually observed to work rather than the one that seems tidier.
+# BOTH CNAMEs ARE PROXIED. The ingress wrote its own record unproxied and that
+# is how the enclave was first verified, so this is a deliberate departure
+# rather than the default. Nothing about the proxy should trouble it: DNS-01
+# validation runs on a TXT record, which is never proxied, and the origin
+# already serves a certificate valid for this name, so Cloudflare reaches it
+# over TLS like any other origin. If the ingress ever fails to renew, this is
+# the first thing to suspect and one boolean to change back.
 #
 # MEASURED, NOT ASSUMED: `dstack-ingress` writes these records only on FIRST
 # provisioning. Deleting them and restarting the CVM does not bring them back
@@ -47,6 +50,11 @@ on:
         description: 'Which backend api.votain.app should point at: heroku or phala'
         required: true
         type: string
+      force:
+        description: 'Rewrite the records even if they already point at the target'
+        required: false
+        default: false
+        type: boolean
 
   workflow_dispatch:
     inputs:
@@ -55,6 +63,16 @@ on:
         required: true
         type: choice
         options: [heroku, phala]
+      # FOR CHANGING THE SHAPE OF A SET, not for retrying. The guard below
+      # compares hosts, so it cannot see that the CNAME should now be proxied
+      # when it already names the right one. Without this, altering the Phala
+      # records meant switching away to Heroku and back -- downtime, and a
+      # certificate reissue, to change one boolean.
+      force:
+        description: 'Rewrite the records even if they already point at the target'
+        required: false
+        default: false
+        type: boolean
 
 env:
   ZONA: votain.app
@@ -137,7 +155,7 @@ jobs:
           echo "api.votain.app currently points at: $actual (${cname_val:-nothing})"
           echo "this deployment wants:              $DESTINO"
 
-          if [ "$actual" = "$DESTINO" ]; then
+          if [ "$actual" = "$DESTINO" ] && [ "${{ inputs.force }}" != "true" ]; then
             echo 'Already there, so nothing was changed.'
             {
               echo "### DNS unchanged"
@@ -177,8 +195,19 @@ jobs:
             borrar "${caa_id:-}" CAA
             borrar "${txt_id:-}" TXT
           else
-            escribir_cname "$PHALA_CNAME" false 60
-            echo "CNAME -> $PHALA_CNAME"
+            # PROXIED, like Heroku's. `dstack-ingress` wrote this record
+            # unproxied when it provisioned the zone, and that is the shape the
+            # enclave was first verified in -- but the proxy is wanted here for
+            # the same reasons it is wanted on the frontend, and nothing about
+            # it should trouble the ingress: DNS-01 validation happens on a TXT
+            # record, which is never proxied, and the origin already serves a
+            # certificate valid for this name, so Cloudflare can reach it over
+            # TLS like any other origin.
+            #
+            # TTL 1, meaning automatic: Cloudflare rejects an explicit TTL on a
+            # proxied record, so 60 here would fail the write.
+            escribir_cname "$PHALA_CNAME" true 1
+            echo "CNAME -> $PHALA_CNAME (proxied)"
             caa=$(jq -nc --arg n "$NOMBRE" --arg v "$PHALA_CAA" \
               '{type:"CAA",name:$n,ttl:60,data:{flags:0,tag:"issue",value:$v}}')
             if [ -n "${caa_id:-}" ]; then

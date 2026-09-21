@@ -216,7 +216,7 @@ issuance rides on two of these records.
 | | Records | Proxied |
 |---|---|---|
 | `heroku` | one CNAME to the app's `herokudns.com` target | yes |
-| `phala` | CNAME to the dstack gateway, CAA, and `_dstack-app-address` TXT | no |
+| `phala` | CNAME to the dstack gateway, CAA, and `_dstack-app-address` TXT | yes |
 
 Switching to Heroku **removes** the CAA and the TXT. Left in place, the CAA
 authorises only the enclave's Let's Encrypt account over DNS-01, and Heroku's
@@ -225,9 +225,19 @@ writes all three: the CAA authorises the ingress's ACME account, and the TXT
 tells the dstack gateway which app and port to route to. The CNAME alone
 resolves to a gateway that will not answer for this name.
 
-Unproxied for Phala because that is the configuration observed to work with it.
-The proxy was enabled later, while Heroku was serving, and has never been
-tested against the enclave.
+Both CNAMEs are proxied. `dstack-ingress` wrote its own record unproxied, and
+that is how the enclave was first verified, so this is a deliberate departure.
+Nothing about the proxy should trouble it: DNS-01 validation runs on a TXT
+record, which is never proxied, and the origin already serves a certificate
+valid for this name, so Cloudflare reaches it over TLS like any other origin.
+If the ingress ever fails to renew a certificate, this is the first thing to
+suspect, and it is one boolean in `dns.yml`.
+
+`force: true` rewrites the records even when they already name the right host.
+The guard compares hosts, so it cannot see that a record's *shape* should
+change -- proxied or not, a different TTL -- while the host stays the same.
+Without it, changing one boolean would mean switching away and back, which
+costs downtime and a certificate reissue.
 
 **The ingress does not restore these.** Measured, by deleting the records and
 restarting the CVM and waiting five minutes for nothing: `dstack-ingress`
