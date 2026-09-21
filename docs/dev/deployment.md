@@ -158,6 +158,48 @@ The job fails unless the CVM reports one of the two. It answers the only
 question worth asking — does the enclave run what a reader of this repository
 can see? — and says nothing about who happens to answer a hostname.
 
+## Switching hosts by hand
+
+Two ways, and the difference is whether the code is also being updated.
+
+```bash
+# Move the hostname only. Both hosts are handled: the destination is brought
+# up, the records change, and the one being left is stopped.
+gh workflow run dns --ref main -f target=phala
+gh workflow run dns --ref main -f target=heroku
+
+# The same switch, plus rebuilding and releasing the backend first.
+gh workflow run "deploy phala"  --ref main
+gh workflow run "deploy heroku" --ref main
+```
+
+Both directions were run standalone and traced end to end. Switching to Phala
+started a stopped CVM, waited for it, wrote the three records, saw Heroku answer
+twice more from cache before Phala took over, and only then scaled the dyno to
+0. Switching back scaled the dyno up from 0, removed the CAA and the TXT, saw
+Phala answer once more, and stopped the CVM.
+
+`dns` is the quicker one and is enough when nothing about the backend changed.
+Add `-f force=true` to rewrite the records when they already name the target,
+which is how a record's *shape* is changed -- proxied or not, a different TTL.
+
+The deploy workflows take a `version`, and default to the newest `backend-v*`
+tag. They do **not** check whether anything changed: that filter belongs to the
+automatic path. A manual run deploys what you asked for, and if the image turns
+out identical Heroku says `Nothing to release` -- but the host switch and the
+shutdown of the other still happen.
+
+**Before the defence, turn the automatic path off.**
+
+```bash
+gh variable set AUTO_DEPLOY --body none --repo CodeInIA/votain
+```
+
+With `AUTO_DEPLOY=heroku` and the enclave serving, any commit to `main` that
+touches the backend will drag the hostname back to Heroku and stop the CVM,
+silently, with every test green, doing exactly what it was told. That is the
+right behaviour during development and the wrong behaviour in November.
+
 ## Secrets and variables
 
 Repository secrets:
@@ -280,6 +322,38 @@ The Heroku workflow checks `/health` in a separate job **after** the switch. Run
 before it, that check would be interrogating whichever host DNS happened to
 name, and a 200 from the enclave would say nothing about the release that just
 went out.
+
+## What a restart costs
+
+Switching hosts restarts the backend, so it is worth being precise about what
+lives in memory. The backend has no database.
+
+**Sessions survive.** The cookie carries the issued SD-JWT credential, and
+`verifySession` checks an Ed25519 signature, the expiry and revocation. There is
+no session table, so a voter who is signed in stays signed in across a restart
+and across a move between hosts.
+
+That holds **only while both hosts sign with the same `ISSUER_PRIVATE_KEY`.**
+One host issues the credential and the other verifies it. Rotate that key in one
+place and not the other and every voter appears signed out the moment the
+hostname moves, with nothing in the logs to explain it. It is the real reason
+`PHALA_ENV` and the Heroku config have to be changed together.
+
+Four things are held in memory, and they are not all the same:
+
+| | What | Losing it |
+|---|---|---|
+| `organizerDomains.ts` | domain verification outcomes | a cache; nothing |
+| `statusList.ts` | revocation slots, backed by the chain | a cache; nothing |
+| `worldIdBridge.ts` | a sign-in **in progress**, 5 minute TTL | that voter signs in again |
+| `eligibility/sessions.ts` | an attribute check **in progress**, 15 minute TTL | that voter scans again |
+
+The last two are not caches, they are in-flight state, and they are in memory
+deliberately rather than for want of a database. Persisting an eligibility
+session would mean writing a record that links a World ID nullifier to an
+in-flight passport check -- exactly the durable trace this project exists not to
+leave. Nothing durable is at stake either way: votes and enrolments are on the
+chain, and identity is in the signed credential.
 
 ## Verifying it from outside
 
