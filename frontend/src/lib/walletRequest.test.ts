@@ -44,13 +44,25 @@ describe('withReturnDeadline', () => {
     await expect(pending).resolves.toBe('landed');
   });
 
+  /**
+   * THE ASSERTION IS ATTACHED BEFORE THE CLOCK MOVES, and it has to be.
+   *
+   * These promises reject while the timers are being advanced. Asserting
+   * afterwards still passes -- the rejection is there to be found -- but for
+   * the instant between the rejection and the assertion nobody is listening,
+   * and Node reports an unhandled rejection. Vitest counts those and exits
+   * non-zero WITH EVERY TEST GREEN, which is a suite that looks perfect in a
+   * terminal and fails in CI. Holding the assertion first gives the promise a
+   * handler before it can reject.
+   */
   it('reports the answer lost when the chain says it did not happen', async () => {
     const pending = withReturnDeadline(nuncaResponde(), async () => undefined);
+    const perdida = expect(pending).rejects.toBeInstanceOf(WalletAnswerLostError);
 
     irseYVolver();
     await vi.advanceTimersByTimeAsync(6_000);
 
-    await expect(pending).rejects.toBeInstanceOf(WalletAnswerLostError);
+    await perdida;
   });
 
   /**
@@ -75,12 +87,13 @@ describe('withReturnDeadline', () => {
     const pending = withReturnDeadline(nuncaResponde(), async () => {
       throw new Error('RPC caido');
     });
+    // Knowing nothing is what the error means, so a failed read lands here too.
+    const perdida = expect(pending).rejects.toBeInstanceOf(WalletAnswerLostError);
 
     irseYVolver();
     await vi.advanceTimersByTimeAsync(6_000);
 
-    // Knowing nothing is what the error means, so a failed read lands here too.
-    await expect(pending).rejects.toBeInstanceOf(WalletAnswerLostError);
+    await perdida;
   });
 
   it('leaves an answer that does arrive completely alone', async () => {
@@ -97,13 +110,14 @@ describe('withReturnDeadline', () => {
   it('keeps a rejection from the wallet as the rejection it is', async () => {
     const declinado = new Error('user rejected');
     const pending = withReturnDeadline(Promise.reject(declinado), async () => 'landed');
+    // Declining is an answer. Overriding it with a chain read would turn "no"
+    // into "yes" for anything that happened to be true a moment earlier.
+    const rechazo = expect(pending).rejects.toBe(declinado);
 
     irseYVolver();
     await vi.advanceTimersByTimeAsync(6_000);
 
-    // Declining is an answer. Overriding it with a chain read would turn "no"
-    // into "yes" for anything that happened to be true a moment earlier.
-    await expect(pending).rejects.toBe(declinado);
+    await rechazo;
   });
 
   it('waits as long as the page never left', async () => {
