@@ -56,7 +56,11 @@ permissions:
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    # PINNED, not `ubuntu-latest`: that label becomes Ubuntu 26 on 19 October
+    # 2026. This job publishes the image the TEE attests, so the one thing it
+    # must not do is change build environment on a date nobody chose. See the
+    # longer note in `checks.yml`.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
