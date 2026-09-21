@@ -47,8 +47,17 @@ jobs:
       # `npm run build` is `tsc -b && vite build`, so this covers types as well
       # as the bundle. It is also what 4EVERLAND runs, which is the point: if
       # this passes and that fails, the difference is configuration, not code.
+      #
+      # VITE_PUBLIC_URL IS REQUIRED and the build says so rather than guessing:
+      # it fills the canonical link, the Open Graph URLs, robots.txt and the
+      # sitemap, and a wrong value there is invisible until a crawler records
+      # it. Nothing else is set on purpose. This build is never served, so the
+      # backend URL and the contract addresses would only be decoration; the
+      # question being asked is whether the thing still compiles and bundles.
       - run: npm run build
         working-directory: frontend
+        env:
+          VITE_PUBLIC_URL: https://votain.app
       - run: npm test
         working-directory: frontend
       # The file that keeps deep links working on IPFS. Cheap to lose in a
@@ -110,3 +119,44 @@ jobs:
       - run: npm test
         working-directory: contracts
         timeout-minutes: 30
+
+  # ── the gate ────────────────────────────────────────────────────────────────
+  #
+  # 4EVERLAND deploys from a webhook and knows nothing about GitHub's checks,
+  # so left to itself it publishes whatever lands on `main`, working or not.
+  # This is the missing half: its Deploy Hook is OFF, and the only thing that
+  # triggers a production deployment is this job, which cannot start until all
+  # three above have passed.
+  #
+  # WHY NOT A RELEASE BRANCH, which was the other way to do it. That works, but
+  # it makes `main` no longer mean "what is deployed" and adds a branch whose
+  # only job is to lag behind another one. A webhook keeps one branch and one
+  # meaning, and the gate lives where the checks already are.
+  #
+  # PUSHES ONLY. A pull request into `main` should be checked, not published.
+  deploy:
+    name: publish the frontend
+    needs: [frontend, backend, contracts]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      # The URL IS the credential: anyone holding it can trigger a deployment,
+      # which is why it lives in the repository secrets and not in this file.
+      - name: Ask 4EVERLAND to publish
+        env:
+          HOOK: ${{ secrets.FOUREVERLAND_DEPLOY_HOOK }}
+        run: |
+          set -euo pipefail
+          if [ -z "${HOOK:-}" ]; then
+            echo "FOUREVERLAND_DEPLOY_HOOK is not set, so nothing was published."
+            echo "Create the hook in 4EVERLAND (Settings -> Git -> Git Web Hooks)"
+            echo "and add its URL as a repository secret."
+            exit 1
+          fi
+          codigo=$(curl -sS -o /tmp/respuesta -w '%{http_code}' -X POST "$HOOK")
+          echo "HTTP $codigo"
+          cat /tmp/respuesta || true
+          case "$codigo" in
+            2*) echo "deployment triggered" ;;
+            *)  echo "4EVERLAND refused the hook"; exit 1 ;;
+          esac
