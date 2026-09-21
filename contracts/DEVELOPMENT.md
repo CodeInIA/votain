@@ -160,7 +160,21 @@ npm run deploy:local                # in-process network
 npm run deploy:amoy                 # Polygon Amoy (needs .env PRIVATE_KEY)
 npm run node:local                  # standalone node on 127.0.0.1:8545
 npm run seed:local                  # demo data against that node
+npm run tunnel:local                # expose that node at rpc.votain.app
 ```
+
+**The tunnel is what lets a deployed frontend talk to this chain.** `votain.app`
+is served from IPFS and `api.votain.app` from a host that is not this laptop, so
+neither can reach `127.0.0.1`. The named Cloudflare tunnel `votain-local`
+publishes the Hardhat node at `rpc.votain.app`, which is the RPC URL the
+frontend is built with. Nothing is deployed to Amoy yet, on purpose: the whole
+stack is exercised against a throwaway chain that costs no POL.
+
+Named, not a quick tunnel, because the hostname has to stay put. A quick tunnel
+mints a new `*.trycloudflare.com` name every run, and the frontend bakes its RPC
+URL at build time, so every restart would mean rebuilding and republishing the
+site. Run `npm run node:local` first: the tunnel does not start the chain, and
+pointing it at a closed port gives a 502 rather than an error that says so.
 
 **Seeding moves the chain clock, permanently.** Finished elections have to be created
 live, voted on, and only then advanced past their voteEnd so a tally can be published,

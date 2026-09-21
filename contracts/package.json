@@ -13,6 +13,7 @@
     "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
     "estimate:amoy": "hardhat run scripts/estimate-deploy-cost.ts --build-profile production",
     "node:local": "hardhat node",
+    "tunnel:local": "cloudflared tunnel run --url http://127.0.0.1:8545 votain-local",
     "seed:local": "hardhat run scripts/seed-demo.ts --network localhost"
   },
   "keywords": [
