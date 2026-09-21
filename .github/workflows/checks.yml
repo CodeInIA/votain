@@ -170,6 +170,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       backend: ${{ steps.mirar.outputs.backend }}
+      frontend: ${{ steps.mirar_frontend.outputs.frontend }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -197,6 +198,46 @@ jobs:
             echo "Changed since $ultimo:"
             git diff --name-only "$ultimo" HEAD -- backend/ .github/workflows/backend-image.yml
             echo 'backend=yes' >> "$GITHUB_OUTPUT"
+          fi
+
+      # THE FRONTEND HAS NO TAG TO COMPARE AGAINST, because publishing it leaves
+      # no mark in the repository: 4EVERLAND builds from the branch and answers
+      # with a task id, not a version. So the baseline is the previous tip of
+      # main, which `github.event.before` gives for a push and which covers
+      # every commit in that push, not just the last one.
+      #
+      # WHEN IT CANNOT TELL, IT PUBLISHES. A force push leaves a `before` that
+      # is no longer reachable, and a freshly created branch reports all zeros.
+      # Guessing wrong in that direction costs a rebuild of a static site;
+      # guessing wrong in the other leaves votain.app stale after a real change,
+      # which is the failure nobody notices until somebody reports a bug that
+      # was fixed a week ago.
+      - id: mirar_frontend
+        env:
+          ANTES: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          # Three ways the baseline can be useless, checked one per line
+          # rather than as one unreadable condition.
+          sirve=yes
+          [ -n "${ANTES:-}" ] || sirve=no
+          [ "${ANTES:-}" != "0000000000000000000000000000000000000000" ] || sirve=no
+          git cat-file -e "${ANTES:-}^{commit}" 2>/dev/null || sirve=no
+          if [ "$sirve" = no ]; then
+            echo 'No usable baseline, so publish rather than risk a stale site.'
+            echo 'frontend=yes' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # The whole directory, unlike the backend's explicit list: 4EVERLAND
+          # runs its own build from these sources and what it picks up is its
+          # decision, not something this file should try to predict.
+          if git diff --quiet "$ANTES" HEAD -- frontend/; then
+            echo 'Nothing under frontend/ changed.'
+            echo 'frontend=no' >> "$GITHUB_OUTPUT"
+          else
+            echo 'Changed under frontend/:'
+            git diff --name-only "$ANTES" HEAD -- frontend/
+            echo 'frontend=yes' >> "$GITHUB_OUTPUT"
           fi
 
   image:
@@ -263,8 +304,10 @@ jobs:
 
   deploy:
     name: publish the frontend
-    needs: [frontend, backend, contracts]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [frontend, backend, contracts, cambios]
+    if: |
+      github.event_name == 'push' && github.ref == 'refs/heads/main'
+        && needs.cambios.outputs.frontend == 'yes'
     runs-on: ubuntu-latest
     steps:
       # The URL IS the credential: anyone holding it can trigger a deployment,
