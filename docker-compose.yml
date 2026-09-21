@@ -65,7 +65,12 @@ services:
 
   # ── the issuer ──────────────────────────────────────────────────────────────
   issuer:
-    image: ghcr.io/codeinia/votain-backend:0.1.0
+    # PINNED BY DIGEST, not by tag, and the digest is the point. A tag can be
+    # moved to other content; this cannot. It is what `gh attestation verify`
+    # binds to commit a8306863, so pinning it is what makes the TEE's
+    # measurement traceable all the way back to source somebody can read:
+    #   gh attestation verify oci://ghcr.io/codeinia/votain-backend:0.1.0     #     --repo CodeInIA/votain
+    image: ghcr.io/codeinia/votain-backend:0.1.0@sha256:4621da1affa9b11fc9012ad92fda4a65b01be872d3325ccfce5e485ac9ef8420
     restart: unless-stopped
     # NO `ports`. Reachable only from `ingress`, over the compose network.
     # Publishing it too would put an unencrypted 3000 beside the TLS the
