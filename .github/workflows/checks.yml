@@ -144,10 +144,67 @@ jobs:
   # repository; it does not move Heroku and it does not touch the enclave.
   # Those stay manual, in `deploy-heroku.yml` and `deploy-phala.yml`, because
   # deciding what the world talks to should be somebody's decision.
-  image:
-    name: publish the backend image
+  # ── IS THERE A NEW IMAGE TO BUILD AT ALL ────────────────────────────────────
+  #
+  # Without this, every green commit on main published a version, and the first
+  # three were 0.1.1, 0.1.2 and 0.1.3 for commits that changed a workflow and a
+  # markdown file. It worked, and it made the version list meaningless: the
+  # number no longer said anything about the backend, and picking out the one
+  # that was defended meant reading three commit messages.
+  #
+  # COMPARED AGAINST THE LAST PUBLISHED TAG, not against the previous commit.
+  # `backend-v*` marks the commit each image was built from, so this asks the
+  # question that actually matters -- has the backend changed since the last
+  # image? -- and gets it right for a push of several commits, a re-run, or a
+  # force push, all of which defeat a HEAD~1 comparison.
+  #
+  # ONLY WHAT ENTERS THE IMAGE. The Dockerfile copies the manifests, the
+  # tsconfig and `src`; nothing else can change the result. Listing them
+  # explicitly is why `backend/DEVELOPMENT.md` no longer triggers a build that
+  # Heroku then declines as identical. The workflow itself is included because
+  # a change to HOW the image is built is a change to the image.
+  cambios:
+    name: has the backend changed
     needs: [frontend, backend, contracts]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.mirar.outputs.backend }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: mirar
+        run: |
+          set -euo pipefail
+          ultimo=$(git tag -l 'backend-v*' | sort -V | tail -1)
+          if [ -z "$ultimo" ]; then
+            echo 'No published image to compare against, so build one.'
+            echo 'backend=yes' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Exactly what the Dockerfile copies, plus the workflow that runs it.
+          # Unquoted on purpose below: this is a list of paths and word
+          # splitting is how it becomes several arguments.
+          rutas='backend/package.json backend/package-lock.json'
+          rutas="$rutas backend/tsconfig.json backend/src backend/Dockerfile"
+          rutas="$rutas .github/workflows/backend-image.yml"
+          # shellcheck disable=SC2086
+          if git diff --quiet "$ultimo" HEAD -- $rutas; then
+            echo "Nothing that enters the image has changed since $ultimo."
+            echo 'backend=no' >> "$GITHUB_OUTPUT"
+          else
+            echo "Changed since $ultimo:"
+            git diff --name-only "$ultimo" HEAD -- backend/ .github/workflows/backend-image.yml
+            echo 'backend=yes' >> "$GITHUB_OUTPUT"
+          fi
+
+  image:
+    name: publish the backend image
+    needs: [frontend, backend, contracts, cambios]
+    if: |
+      github.event_name == 'push' && github.ref == 'refs/heads/main'
+        && needs.cambios.outputs.backend == 'yes'
     # The called workflow declares what it needs; `permissions` cannot be
     # narrowed here without taking away the attestation's ability to sign.
     permissions:
