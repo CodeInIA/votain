@@ -130,6 +130,16 @@ jobs:
         run: |
           set -euo pipefail
           if [ "${{ inputs.target }}" = heroku ]; then
+            # UNGUARDED, unlike the Phala branch below, because scaling to a
+            # value already in force is a no-op. Measured rather than assumed,
+            # in the run that switched back from the enclave with the dyno
+            # already at one:
+            #
+            #   before: web=1:Basic
+            #   Scaling dynos... done, now running web at 1:Basic
+            #
+            # Exit 0, no restart. Reading the formation first would be more
+            # code for a case the API already handles.
             npm install -g heroku --silent
             heroku ps:scale web=1 -a "$HEROKU_APP"
             echo 'Heroku dyno at 1.'
