@@ -170,6 +170,7 @@ auditor CLI. See [`docs/PLAN.md`](docs/PLAN.md) for the plan and
 - [`docs/dev/architecture.md`](docs/dev/architecture.md). Full system architecture.
 - [`docs/dev/conventions.md`](docs/dev/conventions.md). Coding conventions, color tokens, i18n keys.
 - [`docs/dev/deployment.md`](docs/dev/deployment.md). CI pipeline, the two backend hosts, and how to verify either from outside.
+- [`docs/dev/world-id-listing.md`](docs/dev/world-id-listing.md). App store text for the World ID Developer Portal, in all thirteen languages.
 - [`docs/dev/glossary.md`](docs/dev/glossary.md). Semaphore, nullifier, SD-JWT, relaying, Paillier, TEE.
 - [`docs/dev/state.md`](docs/dev/state.md). Current state, pinned versions, technical debt.
 - Per-module guides: [`contracts/DEVELOPMENT.md`](contracts/DEVELOPMENT.md), [`backend/DEVELOPMENT.md`](backend/DEVELOPMENT.md), [`frontend/DEVELOPMENT.md`](frontend/DEVELOPMENT.md).
