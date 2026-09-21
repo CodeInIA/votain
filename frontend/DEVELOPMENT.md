@@ -1465,8 +1465,14 @@ VITE_CHAIN_ID=80002
 
 ## Target deployment
 
-**4EVERLAND (IPFS)** with CD from GitHub `main`, live at `votain.app` since
-2026-09-21. Fleek was the plan and shut its hosting down on 2026-01-31.
+**4EVERLAND (IPFS)**, live at `votain.app` since 2026-09-21. Fleek was the plan
+and shut its hosting down on 2026-01-31.
+
+Publication is NOT 4EVERLAND watching the branch. The `checks` workflow calls
+its deploy hook, and only after the three test suites pass and only when
+something under `frontend/` actually changed, so a red test cannot reach
+`votain.app` and a backend-only commit does not rebuild the site. See
+`docs/dev/deployment.md`.
 
 Root directory `frontend`, build `npm run build`, output `dist`, Node 24. The
 build-time variables matter: `VITE_PUBLIC_URL` is baked into the canonical

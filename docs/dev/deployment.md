@@ -33,16 +33,16 @@ push to main
 
 Manual entry points, at any time, for any published version:
 
-- **deploy heroku** — `.github/workflows/deploy-heroku.yml`
-- **deploy phala** — `.github/workflows/deploy-phala.yml`
+- **deploy heroku**: `.github/workflows/deploy-heroku.yml`
+- **deploy phala**: `.github/workflows/deploy-phala.yml`
 
 ## Where things run
 
 | | Host | Hostname | Carries the attestation |
 |---|---|---|---|
-| Frontend | 4EVERLAND / IPFS | `votain.app` | — |
+| Frontend | 4EVERLAND / IPFS | `votain.app` | no |
 | Backend | Heroku container dyno *or* Phala Intel TDX enclave | `api.votain.app` | Phala only |
-| Chain | local Hardhat through a named Cloudflare tunnel | `rpc.votain.app` | — |
+| Chain | local Hardhat through a named Cloudflare tunnel | `rpc.votain.app` | no |
 
 `api.votain.app` is the switch. The frontend bakes that URL at build time and
 never learns which host answers it, so moving between Heroku and Phala is a DNS
@@ -53,8 +53,8 @@ is stopped between sessions and Heroku carries the service meanwhile.
 
 ### `checks.yml`
 
-Runs on every push to `main` and every pull request into it. Three test jobs —
-`frontend`, `backend`, `contracts` — each running the module exactly as it is
+Runs on every push to `main` and every pull request into it. Three test jobs,
+`frontend`, `backend` and `contracts`, each running the module exactly as it is
 run locally. A CI that runs different commands is a CI that goes green while
 the repository is broken for whoever clones it.
 
@@ -72,14 +72,14 @@ oversight:
 | Frontend | the previous tip of `main` (`github.event.before`) | all of `frontend/` |
 
 The backend leaves a mark: every published image creates a tag, so the question
-can be asked precisely — *has the backend changed since the last image?* — and
-it survives a push of several commits, a re-run and a force push, all of which
+can be asked precisely. *Has the backend changed since the last image?* It
+survives a push of several commits, a re-run and a force push, all of which
 defeat a `HEAD~1` comparison.
 
 The frontend leaves no mark. 4EVERLAND builds from the branch and answers with
 a task id, not a version, so there is no `frontend-v*` to compare against. When
-the baseline is unusable — a force push, a newly created branch — it publishes
-anyway. Rebuilding a static site needlessly costs nothing; skipping a real
+the baseline is unusable, after a force push or on a newly created branch, it
+publishes anyway. Rebuilding a static site needlessly costs nothing; skipping a real
 change leaves `votain.app` stale, which is the failure nobody notices until
 somebody reports a bug that was fixed a week earlier.
 
@@ -123,8 +123,8 @@ happened, and prints the release number before and after.
 Takes a version, or defaults to the newest tag, and then:
 
 1. resolves the digest from the registry rather than trusting one typed by hand;
-2. **verifies the provenance before the enclave sees it** — asking afterwards is
-   asking too late;
+2. **verifies the provenance before the enclave sees it**, because asking
+   afterwards is asking too late;
 3. pins that digest in `docker-compose.yml` and commits it back, because the
    file an outsider verifies has to match what is running;
 4. hands the compose to Phala with the production environment;
@@ -155,8 +155,8 @@ printf '%s' "$(cat docker-compose.yml)" | sha256sum   # via the dashboard
 ```
 
 The job fails unless the CVM reports one of the two. It answers the only
-question worth asking — does the enclave run what a reader of this repository
-can see? — and says nothing about who happens to answer a hostname.
+question worth asking. Does the enclave run what a reader of this repository can
+see? It says nothing about who happens to answer a hostname.
 
 ## Switching hosts by hand
 
@@ -181,12 +181,12 @@ Phala answer once more, and stopped the CVM.
 
 `dns` is the quicker one and is enough when nothing about the backend changed.
 Add `-f force=true` to rewrite the records when they already name the target,
-which is how a record's *shape* is changed -- proxied or not, a different TTL.
+which is how a record's *shape* is changed: proxied or not, a different TTL.
 
 The deploy workflows take a `version`, and default to the newest `backend-v*`
 tag. They do **not** check whether anything changed: that filter belongs to the
 automatic path. A manual run deploys what you asked for, and if the image turns
-out identical Heroku says `Nothing to release` -- but the host switch and the
+out identical Heroku says `Nothing to release`, but the host switch and the
 shutdown of the other still happen.
 
 **Before the defence, turn the automatic path off.**
@@ -214,7 +214,7 @@ Repository secrets:
 
 `PHALA_ENV` is not optional and the workflow refuses to start without it. The
 enclave's environment is sealed to the deployment; an update that supplies none
-can leave the backend without the keys it signs credentials with —
+can leave the backend without the keys it signs credentials with:
 `ISSUER_PRIVATE_KEY`, `ELIGIBILITY_ATTESTER_PRIVATE_KEY`, `ENROLMENT_TAG_KEYS`.
 
 **It is a copy.** Rotating a key means updating the secret *and* the file in
@@ -232,7 +232,7 @@ permission to read secrets.
 
 ## The 4EVERLAND deploy hook answers GET
 
-Every other deploy hook — Vercel, Netlify, Render — is a POST. 4EVERLAND's
+Every other deploy hook, Vercel's, Netlify's and Render's, is a POST. 4EVERLAND's
 answers `503 {"code":500,"message":"SERVICE ERROR"}` to a POST, which reads as
 "their service is down" or "your hook is dead" and is neither. The same URL
 succeeds as a GET and returns a queued task id.
@@ -277,7 +277,7 @@ suspect, and it is one boolean in `dns.yml`.
 
 `force: true` rewrites the records even when they already name the right host.
 The guard compares hosts, so it cannot see that a record's *shape* should
-change -- proxied or not, a different TTL -- while the host stays the same.
+change, proxied or not or a different TTL, while the host stays the same.
 Without it, changing one boolean would mean switching away and back, which
 costs downtime and a certificate reissue.
 
@@ -289,7 +289,7 @@ this workflow rather than trusted to reappear, with a copy in
 
 **The one we left is turned off, last.** Paying for two backends to answer the
 same hostname is waste, and the one nobody is watching is the one that quietly
-runs up a bill. So a real switch ends by stopping the previous host -- the
+runs up a bill. So a real switch ends by stopping the previous host: the
 Heroku dyno scaled to 0, or the CVM stopped.
 
 Neither is deleted, and for Phala that distinction is the deployment. Deleting a
@@ -315,8 +315,8 @@ rather than only as the tail of a deployment.
 
 Run standalone without it, a switch made after the other host had been turned
 off would move the name onto a dead service. The wait would then refuse to turn
-anything off -- a safe failure, but one that leaves the hostname resolving to
-nothing.
+anything off. That is a safe failure, but one that leaves the hostname
+resolving to nothing.
 
 The Heroku workflow checks `/health` in a separate job **after** the switch. Run
 before it, that check would be interrogating whichever host DNS happened to
@@ -351,8 +351,8 @@ Four things are held in memory, and they are not all the same:
 The last two are not caches, they are in-flight state, and they are in memory
 deliberately rather than for want of a database. Persisting an eligibility
 session would mean writing a record that links a World ID nullifier to an
-in-flight passport check -- exactly the durable trace this project exists not to
-leave. Nothing durable is at stake either way: votes and enrolments are on the
+in-flight passport check, which is exactly the durable trace this project
+exists not to leave. Nothing durable is at stake either way: votes and enrolments are on the
 chain, and identity is in the signed credential.
 
 ## Verifying it from outside

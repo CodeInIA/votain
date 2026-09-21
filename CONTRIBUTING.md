@@ -52,7 +52,7 @@ cd frontend && npm test
 7. **After each milestone**: update `docs/dev/state.md`.
 8. **All code comments and `.md` files must be in English**.
 9. **No em dashes or hyphen-as-clause-separator in documentation**. Use periods, commas or colons. Hyphens stay only in compound words (e.g. "end-to-end"), technical identifiers (e.g. "ERC-4337"), version numbers, file paths and command flags.
-10. **Each milestone gets its own git branch**. Create `hN/<slug>` before committing (e.g. `h0/bootstrap`, `h1/design-system`).
+10. **Work on `dev`. Merges into `main` are the author's to make.** `main` is the deployment branch: a push there runs `checks` and, when the backend changed, publishes an image and can move `api.votain.app` between its two hosts. Committing to `main` therefore deploys. Milestone work may still use its own `hN/<slug>` branch off `dev` (e.g. `h0/bootstrap`).
 
 ## Environment variables
 

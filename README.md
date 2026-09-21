@@ -157,7 +157,7 @@ auditor CLI. See [`docs/PLAN.md`](docs/PLAN.md) for the plan and
 | H7, H8 | Real voter and organizer integration | ✅ |
 | H9 | Tally + IPFS results | 🟡 tally done in-app and in the CLI; IPFS pinning only in the CLI |
 | H10 | Frontend on IPFS (4EVERLAND) | ✅ live at `votain.app` |
-| H11 | Backend on Phala TEE | ✅ live at `api.votain.app`, image pinned by digest with signed provenance |
+| H11 | Backend in a TEE | ✅ verified on Phala (Intel TDX): image pinned by digest, signed provenance, attestation reports that digest. Served from Heroku between sessions, since Phala is $42/month; one workflow switches either way |
 | H12, H13 | Thesis and defense | ⏳ |
 
 **891 tests pass**: 185 on the contracts, 144 on the backend, 562 on the frontend.

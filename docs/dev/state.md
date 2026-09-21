@@ -57,14 +57,14 @@ suites, both builds and a Docker build on every push to `main`.
 **Since then, 2026-09-21 (later).** The pipeline stopped being a single workflow that
 did everything. `checks.yml` gates every publication behind the three test suites, and
 change detection means a commit that touches neither `frontend/` nor what enters the image
-publishes nothing at all -- the first three automatic versions were 0.1.1, 0.1.2 and 0.1.3
+publishes nothing at all. The first three automatic versions were 0.1.1, 0.1.2 and 0.1.3,
 for commits that changed a workflow and a markdown file. Image versions now grow by
 themselves and are recorded as `backend-v*` tags; the old flow republished `0.1.0` on every
 run, silently moving the tag a pinned digest was supposed to make immutable. `AUTO_DEPLOY`,
 a repository variable, chooses what follows a new image: nothing, Heroku, or the enclave.
 It is on `heroku`.
 
-Three false passes were found and fixed, all the same shape -- a green tick over something
+Three false passes were found and fixed, all the same shape: a green tick over something
 that did not happen. The 4EVERLAND step had been POSTing to a hook that only answers GET,
 and 4EVERLAND returns 500 rather than 405, so it read as a dead hook. `heroku
 container:release` exits 0 when it creates no release, so an unchanged backend looked like
