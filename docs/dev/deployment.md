@@ -264,10 +264,17 @@ ingress stamps nothing, so "the record says Phala" and "Phala answered" stay
 different claims. If the new host never answers, nothing is turned off and the
 run fails with the old one still serving.
 
-Each deploy workflow therefore brings its own host up before it serves:
-`deploy-heroku.yml` scales the dyno back to 1, and `deploy-phala.yml` starts the
-CVM and waits for it. Without that, the first switch back would release
-successfully onto nothing.
+**The destination is brought up first**, before the records move, so the
+hostname is never pointed at something switched off. `dns.yml` scales the dyno
+to 1 or starts the CVM and waits for it, and each deploy workflow does the same
+for its own host before handing over. The repetition is deliberate: both
+operations are idempotent, and it means `dns.yml` is safe to run on its own
+rather than only as the tail of a deployment.
+
+Run standalone without it, a switch made after the other host had been turned
+off would move the name onto a dead service. The wait would then refuse to turn
+anything off -- a safe failure, but one that leaves the hostname resolving to
+nothing.
 
 The Heroku workflow checks `/health` in a separate job **after** the switch. Run
 before it, that check would be interrogating whichever host DNS happened to

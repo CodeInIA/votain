@@ -83,6 +83,7 @@ env:
   PHALA_CAA: 'letsencrypt.org;validationmethods=dns-01;accounturi=https://acme-v02.api.letsencrypt.org/acme/acct/3774891496'
   PHALA_TXT: '8a4883de0784b3d5a4c8cd66738e9f559400b32a:443'
   CVM_ID: 8a4883de0784b3d5a4c8cd66738e9f559400b32a
+  HEROKU_APP: votain-backend
 
 permissions:
   contents: read
@@ -106,6 +107,51 @@ jobs:
             heroku|phala) : ;;
             *) echo "Unknown target: ${{ inputs.target }}"; exit 1 ;;
           esac
+
+      # ── BRINGING THE DESTINATION UP ─────────────────────────────────────────
+      #
+      # BEFORE the records move, so the hostname is never pointed at something
+      # that is switched off. The reverse order would be a gap of one minute
+      # during which api.votain.app resolves to a dyno scaled to zero, or to a
+      # gateway in front of a stopped enclave.
+      #
+      # This repeats what `deploy-heroku.yml` and `deploy-phala.yml` already do
+      # before they hand over, and the repetition is deliberate rather than
+      # sloppy. Both operations are idempotent, so on the normal path this
+      # costs a few seconds and changes nothing -- and it means this workflow
+      # is safe to run ON ITS OWN. Without it, a hand-run `dns` switch after
+      # the other host had been turned off would move the name onto a dead
+      # service; the wait below would refuse to turn anything off, which is a
+      # safe failure but leaves the name pointing at nothing.
+      - name: Make sure the destination is up
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+          PHALA_CLOUD_API_KEY: ${{ secrets.PHALA_CLOUD_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ "${{ inputs.target }}" = heroku ]; then
+            npm install -g heroku --silent
+            heroku ps:scale web=1 -a "$HEROKU_APP"
+            echo 'Heroku dyno at 1.'
+          else
+            npm install -g phala --silent
+            estado=$(phala cvms get --cvm-id "$CVM_ID" --json | jq -r '.status')
+            echo "CVM is $estado"
+            if [ "$estado" != running ]; then
+              phala cvms start --cvm-id "$CVM_ID"
+              for intento in $(seq 1 20); do
+                json=$(phala cvms get --cvm-id "$CVM_ID" --json)
+                estado=$(printf '%s' "$json" | jq -r '.status')
+                curso=$(printf '%s' "$json" | jq -r '.in_progress')
+                echo "attempt $intento: status=$estado in_progress=$curso"
+                if [ "$estado" = running ] && [ "$curso" = false ]; then
+                  break
+                fi
+                sleep 20
+              done
+              [ "$estado" = running ] || { echo 'The CVM never came up.'; exit 1; }
+            fi
+          fi
 
       - name: Point it
         id: apuntar
