@@ -1,0 +1,28 @@
+# What must never reach the build context.
+#
+# The image is published to a PUBLIC registry, so this list is a security
+# boundary and not a size optimisation. Anything here that is wrong ends up
+# readable by anyone who pulls it.
+
+# THE SECRETS. `.env` holds the issuer's Ed25519 key, the attester key and
+# `ENROLMENT_TAG_KEYS`, which is irrecoverable and whose leak is retroactive:
+# it reconstructs who enrolled in what, across every election. They come from
+# Phala's encrypted store at runtime instead.
+.env
+.env.*
+
+# Built on the host, rebuilt inside the image. Copying them in would ship
+# whatever happened to be lying around rather than what the Dockerfile built,
+# which is exactly the gap an attestation is supposed to close.
+node_modules
+dist
+
+# Nothing the running server reads. `**/` matters: .dockerignore matches path
+# by path, so a bare `*.test.ts` would catch nothing below the top level and
+# every test would still compile into the published image.
+**/*.test.ts
+scripts
+DEVELOPMENT.md
+README.md
+.git
+.gitignore
