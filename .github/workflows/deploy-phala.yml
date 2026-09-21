@@ -182,23 +182,75 @@ jobs:
           handing the compose to the enclave."
           git push origin "HEAD:${{ github.ref_name }}"
 
-      - name: Check it answers
+      # ASKING THE ENCLAVE, NOT THE DOMAIN, and the difference is the whole
+      # point of this workflow.
+      #
+      # This used to curl https://api.votain.app/health and call a 200 a
+      # success. That check is worthless here and worse than nothing: the
+      # domain points wherever DNS currently says, and while the CVM is off it
+      # points at Heroku. It would have gone green on a deployment that never
+      # reached the enclave -- a false pass in the one workflow whose entire
+      # job is to establish what is really running.
+      #
+      # `docker_compose_hash` is the sha256 of the compose file the CVM was
+      # given, of its bytes WITHOUT the trailing newline. Comparing it against
+      # the file in this repository answers the only question worth asking:
+      # does the enclave run exactly what a reader of this repository can see?
+      # Nothing about DNS, nothing about who answers a hostname.
+      - name: Check the enclave runs this compose
+        id: comprobar
+        env:
+          PHALA_CLOUD_API_KEY: ${{ secrets.PHALA_CLOUD_API_KEY }}
         run: |
           set -euo pipefail
-          for intento in 1 2 3 4 5 6 7 8 9 10; do
-            codigo=$(curl -sS -o /dev/null -w '%{http_code}' https://api.votain.app/health || echo 000)
-            [ "$codigo" = "200" ] && { echo "health: 200"; break; }
-            echo "attempt $intento: $codigo"
+          esperado=$(printf '%s' "$(cat docker-compose.yml)" | sha256sum | cut -d' ' -f1)
+          echo "expected compose hash: $esperado"
+
+          estado=desconocido
+          for intento in $(seq 1 20); do
+            json=$(phala cvms get --cvm-id "$CVM" --json)
+            estado=$(printf '%s' "$json" | jq -r '.status')
+            curso=$(printf '%s' "$json" | jq -r '.in_progress')
+            visto=$(printf '%s' "$json" | jq -r '.docker_compose_hash')
+            echo "attempt $intento: status=$estado in_progress=$curso"
+            if [ "$estado" = running ] && [ "$curso" = false ]; then
+              break
+            fi
             sleep 15
           done
+
+          echo "reported compose hash: ${visto:-none}"
+          echo "hash=${visto:-}" >> "$GITHUB_OUTPUT"
+
+          if [ "$estado" != running ]; then
+            echo "The CVM is $estado, not running."
+            exit 1
+          fi
+          if [ "${visto:-}" != "$esperado" ]; then
+            echo 'The CVM reports a different compose from the one in this repository.'
+            echo 'Whatever it is running, it is not this commit.'
+            exit 1
+          fi
+          echo 'The enclave runs the compose in this repository.'
+
+      - name: Say what happened
+        run: |
           {
             echo "### The CVM now runs backend-v${{ steps.version.outputs.value }}"
             echo ''
+            echo 'Image:'
             echo '```'
             echo "${{ steps.digest.outputs.value }}"
             echo '```'
+            echo 'Compose, as the enclave reports it:'
+            echo '```'
+            echo "${{ steps.comprobar.outputs.hash }}"
+            echo '```'
             echo ''
-            echo 'DNS: the ingress writes its records only on FIRST provisioning.'
-            echo 'If api.votain.app does not resolve here, restore them by hand.'
+            echo 'DNS IS NOT HANDLED HERE, and does not fix itself. The ingress'
+            echo 'writes its records only on FIRST provisioning -- measured, by'
+            echo 'deleting them and waiting. If api.votain.app still points at'
+            echo 'Heroku, or at nothing, restore the records by hand from'
+            echo '`dns-api-votain-app.json`. Until then the enclave is running'
+            echo 'and simply unreachable by name.'
           } >> "$GITHUB_STEP_SUMMARY"
-          [ "${codigo:-}" = "200" ] || { echo "api.votain.app/health never answered 200."; exit 1; }
