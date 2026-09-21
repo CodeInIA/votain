@@ -111,6 +111,31 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # SCALED BACK UP FIRST, because the other side of this switch turns it
+      # off. `dns.yml` scales the dyno to 0 when the hostname moves to the
+      # enclave, so an app arriving here from Phala has no dyno at all: the
+      # release would succeed, the summary would say so, and nothing would
+      # answer. Scaling is idempotent, so this costs nothing when it is
+      # already running.
+      - name: Make sure a dyno is running
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: |
+          set -euo pipefail
+          npm install -g heroku --silent
+          actual=$(heroku ps:scale -a "$HEROKU_APP" | tr -d ' ')
+          echo "before: ${actual:-unknown}"
+          heroku ps:scale web=1 -a "$HEROKU_APP"
+
+      - name: Note the current release
+        id: antes
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: |
+          set -euo pipefail
+          npm install -g heroku --silent
+          echo "value=$(heroku releases -a "$HEROKU_APP" -n 1 --json | jq -r '.[0].version')" >> "$GITHUB_OUTPUT"
+
       # RELEASED THROUGH THE CLI, and the first attempt did it by hand.
       #
       # The Platform API takes `docker_image`, and the obvious value to give it
@@ -122,15 +147,6 @@ jobs:
       # Resolving it means a registry token dance and a manifest fetch, which
       # is exactly what `container:release` already does. Installing the CLI is
       # cheaper than owning a second implementation of somebody else's API.
-      - name: Note the current release
-        id: antes
-        env:
-          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-        run: |
-          set -euo pipefail
-          npm install -g heroku --silent
-          echo "value=$(heroku releases -a "$HEROKU_APP" -n 1 --json | jq -r '.[0].version')" >> "$GITHUB_OUTPUT"
-
       - name: Release it
         env:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}

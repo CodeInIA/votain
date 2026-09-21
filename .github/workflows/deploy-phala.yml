@@ -146,6 +146,39 @@ jobs:
             echo "changed=yes" >> "$GITHUB_OUTPUT"
           fi
 
+      # STARTED FIRST IF IT IS OFF, for the same reason Heroku is scaled up:
+      # the other side of this switch stops it. A CVM that is stopped between
+      # sessions -- which this one is, because it costs $42/month -- cannot be
+      # deployed to, and the failure comes from the middle of `phala deploy`
+      # rather than from anywhere that explains itself.
+      #
+      # Starting takes about a minute, so this waits rather than racing the
+      # deploy that follows.
+      - name: Make sure the CVM is running
+        env:
+          PHALA_CLOUD_API_KEY: ${{ secrets.PHALA_CLOUD_API_KEY }}
+        run: |
+          set -euo pipefail
+          npm install -g phala --silent
+          estado=$(phala cvms get --cvm-id "$CVM" --json | jq -r '.status')
+          echo "CVM is $estado"
+          if [ "$estado" = running ]; then
+            exit 0
+          fi
+          phala cvms start --cvm-id "$CVM"
+          for intento in $(seq 1 20); do
+            json=$(phala cvms get --cvm-id "$CVM" --json)
+            estado=$(printf '%s' "$json" | jq -r '.status')
+            curso=$(printf '%s' "$json" | jq -r '.in_progress')
+            echo "attempt $intento: status=$estado in_progress=$curso"
+            if [ "$estado" = running ] && [ "$curso" = false ]; then
+              exit 0
+            fi
+            sleep 20
+          done
+          echo 'The CVM never came up.'
+          exit 1
+
       - name: Deploy it
         env:
           PHALA_CLOUD_API_KEY: ${{ secrets.PHALA_CLOUD_API_KEY }}

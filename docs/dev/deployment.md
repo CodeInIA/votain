@@ -245,6 +245,30 @@ writes its DNS records only on FIRST provisioning. That is why they are kept in
 this workflow rather than trusted to reappear, with a copy in
 `OneDrive/UNI/4/TFG/.env/produccion/dns-api-votain-app.json`.
 
+**The one we left is turned off, last.** Paying for two backends to answer the
+same hostname is waste, and the one nobody is watching is the one that quietly
+runs up a bill. So a real switch ends by stopping the previous host -- the
+Heroku dyno scaled to 0, or the CVM stopped.
+
+Neither is deleted, and for Phala that distinction is the deployment. Deleting a
+CVM destroys the sealed environment with it: the keys the issuer signs
+credentials with are encrypted to that instance and do not come back. A stopped
+CVM keeps its disk, its identity and its measurement, and starts again in about
+a minute.
+
+It happens only after the replacement has been seen to **answer**, not merely to
+resolve. A CNAME can be correct in the zone while the world still reaches the
+old host from cache. The check reads the reply and knows who sent it: Heroku's
+router stamps `via: 1.1 heroku-router` on every response and the enclave's
+ingress stamps nothing, so "the record says Phala" and "Phala answered" stay
+different claims. If the new host never answers, nothing is turned off and the
+run fails with the old one still serving.
+
+Each deploy workflow therefore brings its own host up before it serves:
+`deploy-heroku.yml` scales the dyno back to 1, and `deploy-phala.yml` starts the
+CVM and waits for it. Without that, the first switch back would release
+successfully onto nothing.
+
 The Heroku workflow checks `/health` in a separate job **after** the switch. Run
 before it, that check would be interrogating whichever host DNS happened to
 name, and a 200 from the enclave would say nothing about the release that just

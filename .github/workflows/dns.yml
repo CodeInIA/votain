@@ -82,6 +82,7 @@ env:
   PHALA_CNAME: gateway.dstack-pha-prod9.phala.network
   PHALA_CAA: 'letsencrypt.org;validationmethods=dns-01;accounturi=https://acme-v02.api.letsencrypt.org/acme/acct/3774891496'
   PHALA_TXT: '8a4883de0784b3d5a4c8cd66738e9f559400b32a:443'
+  CVM_ID: 8a4883de0784b3d5a4c8cd66738e9f559400b32a
 
 permissions:
   contents: read
@@ -107,6 +108,7 @@ jobs:
           esac
 
       - name: Point it
+        id: apuntar
         env:
           TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           DESTINO: ${{ inputs.target }}
@@ -154,6 +156,16 @@ jobs:
           esac
           echo "api.votain.app currently points at: $actual (${cname_val:-nothing})"
           echo "this deployment wants:              $DESTINO"
+
+          # PUBLISHED FOR THE STEPS BELOW: which host we are leaving, and
+          # whether this was a real move. Turning something off is only safe
+          # when both are known.
+          echo "anterior=$actual" >> "$GITHUB_OUTPUT"
+          if [ "$actual" = "$DESTINO" ]; then
+            echo 'cambio=no' >> "$GITHUB_OUTPUT"
+          else
+            echo 'cambio=yes' >> "$GITHUB_OUTPUT"
+          fi
 
           if [ "$actual" = "$DESTINO" ] && [ "${{ inputs.force }}" != "true" ]; then
             echo 'Already there, so nothing was changed.'
@@ -249,4 +261,85 @@ jobs:
             else
               echo 'The CAA and the dstack TXT were removed, so ACM can issue.'
             fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # ── SHUTTING DOWN THE ONE WE LEFT ───────────────────────────────────────
+      #
+      # Paying for two backends to serve the same hostname is waste, and the
+      # one nobody is watching is the one that quietly runs up a bill. But
+      # turning a service off is irreversible in the only way that matters --
+      # for as long as it takes somebody to notice -- so it happens last, and
+      # only after the replacement has been seen to answer.
+      #
+      # ANSWER, not resolve. A CNAME can be correct in the zone while the
+      # world still reaches the old host from cache, and Cloudflare can serve
+      # a request from the previous origin for a minute after the record
+      # changes. What follows checks the reply itself, and knows which host
+      # gave it: Heroku's router stamps every response with
+      # `via: 1.1 heroku-router`, and the enclave's ingress stamps nothing.
+      # That is the difference between "the record says Phala" and "Phala
+      # answered", and this session has been a long lesson in not confusing
+      # the two.
+      - name: Wait for the new host to answer
+        if: steps.apuntar.outputs.cambio == 'yes'
+        run: |
+          set -euo pipefail
+          for intento in $(seq 1 20); do
+            cabeceras=$(curl -sS -D - -o /dev/null https://api.votain.app/health 2>/dev/null || true)
+            codigo=$(printf '%s' "$cabeceras" | head -1 | awk '{print $2}')
+            if printf '%s' "$cabeceras" | grep -qi '^via:.*heroku-router'; then
+              quien=heroku
+            elif [ "${codigo:-}" = 200 ]; then
+              quien=phala
+            else
+              quien=nobody
+            fi
+            echo "attempt $intento: HTTP ${codigo:-none}, answered by $quien"
+            if [ "$quien" = "${{ inputs.target }}" ]; then
+              echo "${{ inputs.target }} is serving api.votain.app."
+              exit 0
+            fi
+            sleep 15
+          done
+          echo 'The new host never answered, so the old one was left running.'
+          echo 'Nothing was turned off. Fix the switch first.'
+          exit 1
+
+      - name: Turn off the one we left
+        if: steps.apuntar.outputs.cambio == 'yes' && steps.apuntar.outputs.anterior != 'none' && steps.apuntar.outputs.anterior != 'unknown'
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+          PHALA_CLOUD_API_KEY: ${{ secrets.PHALA_CLOUD_API_KEY }}
+          ANTERIOR: ${{ steps.apuntar.outputs.anterior }}
+        run: |
+          set -euo pipefail
+          case "$ANTERIOR" in
+            heroku)
+              # SCALED TO ZERO, not deleted. The app, its config, its domain and
+              # its certificate all stay; only the dyno stops, and stops being
+              # billed. `deploy-heroku.yml` scales it back up before it releases.
+              npm install -g heroku --silent
+              heroku ps:scale web=0 -a votain-backend
+              echo 'Heroku dyno scaled to 0.'
+              linea='The Heroku dyno was scaled to 0. Nothing was deleted.'
+              ;;
+            phala)
+              # STOPPED, not deleted, and the difference is the whole deployment.
+              # Deleting a CVM destroys the sealed environment with it: the keys
+              # the issuer signs credentials with are encrypted to that instance
+              # and do not come back. A stopped CVM keeps its disk, its identity
+              # and its measurement, and starts again in about a minute.
+              npm install -g phala --silent
+              phala cvms stop --cvm-id "$CVM_ID"
+              echo 'CVM stopped.'
+              linea='The CVM was stopped, not deleted: its sealed environment survives.'
+              ;;
+            *)
+              echo "Nothing to turn off (came from $ANTERIOR)."
+              exit 0
+              ;;
+          esac
+          {
+            echo ''
+            echo "$linea"
           } >> "$GITHUB_STEP_SUMMARY"
