@@ -94,13 +94,25 @@ jobs:
           DESTINO: ${{ inputs.target }}
         run: |
           set -euo pipefail
+          # SAYING WHAT CLOUDFLARE SAID, because the alternative is a bare `jq`
+          # failure and a 403 nobody can act on. A token scoped too narrowly is
+          # the likeliest thing to go wrong here, and "Zone:DNS:Edit is missing"
+          # is a fix; "jq: error" is an evening.
           api() {
             local metodo="$1" ruta="$2"
             shift 2
-            curl -sS -X "$metodo" \
+            local respuesta
+            respuesta=$(curl -sS -X "$metodo" \
               -H "Authorization: Bearer $TOKEN" \
               -H 'Content-Type: application/json' \
-              "https://api.cloudflare.com/client/v4$ruta" "$@"
+              "https://api.cloudflare.com/client/v4$ruta" "$@")
+            if ! printf '%s' "$respuesta" | jq -e '.success' >/dev/null 2>&1; then
+              echo "Cloudflare refused $metodo $ruta:" >&2
+              printf '%s' "$respuesta" | jq -r '.errors[]? | "  [\(.code)] \(.message)"' >&2 \
+                || printf '  %s\n' "$respuesta" >&2
+              return 1
+            fi
+            printf '%s' "$respuesta"
           }
 
           # The zone id is looked up rather than stored: one secret instead of
@@ -141,16 +153,16 @@ jobs:
             cuerpo=$(jq -nc --arg n "$NOMBRE" --arg c "$contenido" --argjson p "$proxy" --argjson t "$ttl" \
               '{type:"CNAME",name:$n,content:$c,proxied:$p,ttl:$t}')
             if [ -n "${cname_id:-}" ]; then
-              api PUT "/zones/$zona/dns_records/$cname_id" --data "$cuerpo" | jq -e '.success' >/dev/null
+              api PUT "/zones/$zona/dns_records/$cname_id" --data "$cuerpo" >/dev/null
             else
-              api POST "/zones/$zona/dns_records" --data "$cuerpo" | jq -e '.success' >/dev/null
+              api POST "/zones/$zona/dns_records" --data "$cuerpo" >/dev/null
             fi
           }
 
           borrar() {
             local id="$1" que="$2"
             [ -n "$id" ] || return 0
-            api DELETE "/zones/$zona/dns_records/$id" | jq -e '.success' >/dev/null
+            api DELETE "/zones/$zona/dns_records/$id" >/dev/null
             echo "removed the $que record"
           }
 
@@ -170,17 +182,17 @@ jobs:
             caa=$(jq -nc --arg n "$NOMBRE" --arg v "$PHALA_CAA" \
               '{type:"CAA",name:$n,ttl:60,data:{flags:0,tag:"issue",value:$v}}')
             if [ -n "${caa_id:-}" ]; then
-              api PUT "/zones/$zona/dns_records/$caa_id" --data "$caa" | jq -e '.success' >/dev/null
+              api PUT "/zones/$zona/dns_records/$caa_id" --data "$caa" >/dev/null
             else
-              api POST "/zones/$zona/dns_records" --data "$caa" | jq -e '.success' >/dev/null
+              api POST "/zones/$zona/dns_records" --data "$caa" >/dev/null
             fi
             echo 'CAA written'
             txt=$(jq -nc --arg n "$TXT_NOMBRE" --arg c "$PHALA_TXT" \
               '{type:"TXT",name:$n,content:$c,ttl:60}')
             if [ -n "${txt_id:-}" ]; then
-              api PUT "/zones/$zona/dns_records/$txt_id" --data "$txt" | jq -e '.success' >/dev/null
+              api PUT "/zones/$zona/dns_records/$txt_id" --data "$txt" >/dev/null
             else
-              api POST "/zones/$zona/dns_records" --data "$txt" | jq -e '.success' >/dev/null
+              api POST "/zones/$zona/dns_records" --data "$txt" >/dev/null
             fi
             echo 'TXT written'
           fi
