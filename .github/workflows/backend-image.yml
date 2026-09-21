@@ -1,0 +1,118 @@
+# Builds the issuer image and publishes it, with proof of where it came from.
+#
+# WHY CI AND NOT A LAPTOP, which is the interesting part and not a convenience
+# argument. The TEE attestation proves WHICH IMAGE is running. On its own that
+# is half a guarantee: somebody still has to believe the image corresponds to
+# the source they read. Build it here and the chain closes, link by link, and
+# every link is public:
+#
+#   public commit -> public build log -> signed provenance -> image digest
+#                 -> TEE attestation of that digest
+#
+# `actions/attest-build-provenance` is what signs the middle of that. It
+# records the commit, the workflow and the runner that produced the digest, so
+# anyone can run `gh attestation verify` against the published image and see
+# whether it really came from this repository.
+#
+# It also means no long-lived token exists anywhere: `GITHUB_TOKEN` is minted
+# for this run, can only write to this repository's packages, and expires when
+# the job ends. GHCR does not accept fine-grained personal tokens, so the
+# alternative would have been a classic one sitting on a laptop.
+
+name: backend image
+
+on:
+  # DELIBERATE RELEASES ONLY. The compose pins an exact tag, because a moving
+  # tag means the measurement can change under a running deployment — which is
+  # the thing attestation exists to rule out. So this does not fire on every
+  # push: it fires when somebody decides a version exists.
+  push:
+    tags:
+      - 'backend-v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Image tag to publish, without the leading v (e.g. 0.1.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  # Publish to this repository's packages.
+  packages: write
+  # Sign the provenance. Without this the attestation step cannot mint the
+  # short-lived identity it needs, and the chain above loses its middle link.
+  id-token: write
+  attestations: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # DOCKER REFERENCES MUST BE LOWERCASE and the owner here is `CodeInIA`,
+      # so interpolating it directly produces `ghcr.io/CodeInIA/...`, which the
+      # registry rejects. GitHub offers no lowercase filter, so it is done here.
+      - name: Lowercase the owner
+        id: owner
+        run: echo "value=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Work out the version
+        id: version
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            echo "value=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            # refs/tags/backend-v0.1.0 -> 0.1.0
+            echo "value=${GITHUB_REF_NAME#backend-v}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/Dockerfile
+          push: true
+          # ONE PLATFORM, ON PURPOSE. The Phala CVM runs amd64. Building arm64
+          # as well doubles the push for an architecture nothing here uses,
+          # and an image that resolved to arm64 would simply not start there.
+          platforms: linux/amd64
+          tags: |
+            ghcr.io/${{ steps.owner.outputs.value }}/votain-backend:${{ steps.version.outputs.value }}
+          # Layers are cached in the registry, so a source-only change does not
+          # reinstall 400 MB of zero-knowledge dependencies from scratch.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Attest the provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ghcr.io/${{ steps.owner.outputs.value }}/votain-backend
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+
+      - name: Say what to pin
+        run: |
+          echo "### Image published" >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Pin this digest in `docker-compose.yml`, not the tag:' >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "ghcr.io/${{ steps.owner.outputs.value }}/votain-backend:${{ steps.version.outputs.value }}@${{ steps.push.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Verify it came from this repository:' >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "gh attestation verify oci://ghcr.io/${{ steps.owner.outputs.value }}/votain-backend:${{ steps.version.outputs.value }} --repo ${{ github.repository }}" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
