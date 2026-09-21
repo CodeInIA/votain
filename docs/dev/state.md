@@ -1,6 +1,6 @@
 # Votain. Current Project State
 
-**Last updated**: 2026-09-21 (signing in on a phone survives the trip to World App or the wallet)
+**Last updated**: 2026-09-21 (deployed: frontend on IPFS, issuer in a TEE, both on votain.app)
 **Completed milestone**: Phase B (H5–H9) except H9's last mile. Contracts, backend issuer and
 both user flows are wired and green; the tally runs on both paths, but only the auditor CLI
 pins to IPFS and the in-app path publishes an empty CID. See H5, H6 and H9 in `PLAN.md`.
@@ -34,12 +34,24 @@ required in two files after nothing read them. And `POST /api/rp-signature` was 
 no callers once the bridge signed its own requests — an unauthenticated endpoint minting
 signed RP requests for any action, so it is gone.
 Tests: contracts 185/185 (not re-run; untouched), backend 144/144, frontend 562/562.
+**DEPLOYED, 2026-09-21.** `votain.app` serves the frontend from IPFS via 4EVERLAND;
+`api.votain.app` is the issuer inside a Phala Intel TDX enclave; `rpc.votain.app` is a
+named Cloudflare tunnel to the local Hardhat node. Verified end to end in a browser:
+World ID sign-in, enrolment and a cast vote, plus a deep route reloaded cold with the
+session intact. The image is built by GitHub Actions with signed SLSA provenance and
+pinned by digest, and the CVM's attestation reports that same digest — so the chain
+runs from a public commit to the enclave with no link that asks for trust.
+**Fleek was the planned host and shut down on 2026-01-31**; Phala is not a free tier
+($42.34/month plus disk, against $20 of credit), so it is stopped between sessions.
+Measured rather than assumed: `dstack-ingress` writes its DNS records only on FIRST
+provisioning, so anything that repoints `api.votain.app` must be undone by hand.
+
 **Next milestone**: Live Amoy deployment (pending funding the deployer key). It must carry
 `PLATFORM_ATTESTER_ADDRESS`, the key the backend signs enrolments with: without it the
 factory deploys elections that enrol the old, publicly linkable way, which looks entirely
 normal from every screen. `deploy.ts` now refuses to deploy off the local chain without it
 unless `ALLOW_PUBLIC_ENROLMENT=1` says so out loud.
-then Phase C (H10 IPFS/Fleek, H11 Phala TEE).
+then Phase C (H10 IPFS, H11 Phala TEE) -- both now done, see the deploy note above.
 
 > Detailed milestone-by-milestone log lives in `docs/ai/state.md`. This file tracks module status,
 > dependency versions and environment.
@@ -216,7 +228,7 @@ The project is released under **AGPL-3.0** (was MIT until H0 cleanup). All `pack
 ## Open questions for the user
 
 - [ ] **LaTeX template**. Is there an official ETSII/URJC template to use? Or Overleaf with a generic template? (Blocks H12.1.)
-- [ ] **Free tier access**. Accounts already created for Fleek, Pinata, Phala, World ID Developer Portal? Pinata is the one that blocks closing H9 from inside the app rather than from the CLI.
+- [x] **Accounts**. 4EVERLAND, Phala and the World ID portal are live. Phala turned out NOT to be a free tier ($42.34/month plus disk; $20 of credit). **Pinata is the one still missing**, and it is what blocks closing H9 from inside the app rather than from the CLI.
 
 ---
 

@@ -393,7 +393,18 @@ PUBLIC_URL=http://localhost:3000  # base for credentialStatus URLs
 
 ## Target deployment
 
-**Phala Network free tier** (Intel TDX TEE with on-chain attestation). Private key is generated inside the enclave and never leaves. Plan B: AWS Nitro Enclaves Free Tier 12 months.
+**Phala Cloud** (Intel TDX CVM with attestation), deployed 2026-09-21 at
+`api.votain.app`. The keys live in Phala's encrypted store, sealed to the
+measured build.
+
+NOT a free tier, and the plan said otherwise until this deploy: the smallest
+instance is $42.34/month plus $2 for 20 GB of disk, against $20 of sign-up
+credit. It is therefore stopped between sessions, which ends the compute charge
+immediately and leaves only the disk.
+
+Build and publish through `.github/workflows/backend-image.yml`; the compose
+pins the digest, so publishing a new image does not update a running CVM. See
+"Why the image is built in CI" in `docs/dev/architecture.md`.
 
 ## This server stores nothing
 

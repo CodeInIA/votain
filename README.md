@@ -15,7 +15,7 @@ Votain is a Bachelor's thesis project (TFG) demonstrating how modern cryptograph
 | **Eligible without identifying** | Age and nationality come from the chip in a passport or national identity card, read over NFC by the [Self](https://self.xyz) app and proved in zero knowledge. The document never leaves the phone, and age is asked as a predicate: the answer is "over 18", never a date of birth |
 | **Gasless for voters** | Ballots are relayed through `ElectionPaymaster`, reimbursed from the organizer's own gas tank; voters never hold tokens |
 | **Unlinkable on chain** | Every voter's call arrives from the same relay contract, so the sender address cannot tie an enrollment to a ballot |
-| **Decentralized deployment** | Frontend on IPFS (Fleek), issuer in Intel TDX TEE (Phala), contracts on Polygon Amoy |
+| **Decentralized deployment** | Frontend on IPFS (4EVERLAND) at `votain.app`, issuer in an Intel TDX enclave (Phala) at `api.votain.app` with its image built in public CI and pinned by digest, contracts on Polygon Amoy |
 
 ## Screenshots
 
@@ -63,7 +63,7 @@ Votain is a Bachelor's thesis project (TFG) demonstrating how modern cryptograph
 
 ```
 User (recovery phrase + World ID)
-    ├── React 19 + Vite + Tailwind 4             ◄──── IPFS (Fleek)
+    ├── React 19 + Vite + Tailwind 4             ◄──── IPFS (4EVERLAND)
     │
     ├── SD-JWT issuance ── Backend (Node + Express)  ◄──── Phala TEE
     │                      Verifies World ID (personhood) and
@@ -89,7 +89,7 @@ Full diagram in [`docs/dev/architecture.md`](docs/dev/architecture.md).
 votain/
 ├── contracts/         # Solidity 0.8.37 + Hardhat 3 + Semaphore V4
 ├── backend/           # Node.js Express SD-JWT issuer (target: Phala TEE)
-├── frontend/          # React 19 + Vite (target: IPFS / Fleek)
+├── frontend/          # React 19 + Vite (deployed: IPFS / 4EVERLAND)
 ├── scripts-tally/     # off-chain Paillier tally + IPFS publication (auditor CLI)
 ├── docs/
 │   ├── PLAN.md        # iterative milestone plan (source of truth)
@@ -156,8 +156,8 @@ auditor CLI. See [`docs/PLAN.md`](docs/PLAN.md) for the plan and
 | H6 | Backend issuer feature complete | ✅ |
 | H7, H8 | Real voter and organizer integration | ✅ |
 | H9 | Tally + IPFS results | 🟡 tally done in-app and in the CLI; IPFS pinning only in the CLI |
-| H10 | Frontend on IPFS (Fleek) | ⏳ |
-| H11 | Backend on Phala TEE | ⏳ |
+| H10 | Frontend on IPFS (4EVERLAND) | ✅ live at `votain.app` |
+| H11 | Backend on Phala TEE | ✅ live at `api.votain.app`, image pinned by digest with signed provenance |
 | H12, H13 | Thesis and defense | ⏳ |
 
 **891 tests pass**: 185 on the contracts, 144 on the backend, 562 on the frontend.

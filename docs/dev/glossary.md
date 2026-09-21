@@ -58,11 +58,15 @@
 
 **Attestation**: hardware-signed report certifying what code is running in the TEE. In Votain: the backend's `/attestation` endpoint returns the TDX report.
 
-**IPFS (InterPlanetary File System)**: distributed, content-addressed file system (CID). In Votain: the frontend is deployed on IPFS (Fleek) and tally audit trails are pinned on Pinata.
+**IPFS (InterPlanetary File System)**: distributed, content-addressed file system (CID). In Votain: the frontend is deployed on IPFS (4EVERLAND) at `votain.app`, and tally audit trails are to be pinned on Pinata.
 
 **CID (Content Identifier)**: cryptographic hash of IPFS content. Immutable. If the content changes, the CID changes.
 
-**Fleek**: IPFS deployment platform with automatic CD from GitHub. Free tier. Assigns a `*.on.fleek.co` domain and keeps the CID updated.
+**4EVERLAND**: IPFS deployment platform with CD from GitHub, free tier (6 GB storage, 10 GB transfer a month), custom domains and SSL. Keeps the CID updated on each build. Replaced **Fleek**, which shut its hosting down on 2026-01-31.
+
+**Attestation**: a TEE signing a hash of what it is running, so a third party can check WHICH code answered. Useless on its own unless the image can be traced to source, which is why the image is built in public CI with signed provenance.
+
+**dstack-ingress**: the container that terminates TLS inside the Phala enclave, holding the certificate's private key where the operator cannot read it. Obtains the certificate by DNS-01, which is why it needs a Cloudflare token.
 
 **Pinata**: IPFS pinning service. Free tier 1 GB. Ensures content is not garbage-collected from IPFS nodes.
 

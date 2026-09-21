@@ -1,6 +1,6 @@
 # frontend/
 
-React 19 + Vite + Tailwind 4. Voter and organizer dApp for Votain. Semaphore V4 identities derived from a 12-word recovery phrase, sealed on the device under a WebAuthn passkey's PRF secret. Target deployment: IPFS via Fleek with automatic CD from `main`.
+React 19 + Vite + Tailwind 4. Voter and organizer dApp for Votain. Semaphore V4 identities derived from a 12-word recovery phrase, sealed on the device under a WebAuthn passkey's PRF secret. Deployed on IPFS via 4EVERLAND at `votain.app`, with CD from `main`.
 
 ```bash
 npm install

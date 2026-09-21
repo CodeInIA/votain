@@ -1465,4 +1465,12 @@ VITE_CHAIN_ID=80002
 
 ## Target deployment
 
-**Fleek free tier (IPFS)** with automatic CD from GitHub `main`.
+**4EVERLAND (IPFS)** with CD from GitHub `main`, live at `votain.app` since
+2026-09-21. Fleek was the plan and shut its hosting down on 2026-01-31.
+
+Root directory `frontend`, build `npm run build`, output `dist`, Node 24. The
+build-time variables matter: `VITE_PUBLIC_URL` is baked into the canonical
+link, the OpenGraph tags, the sitemap and robots.txt, so getting it wrong means
+rebuilding. Deep links work because `public/_redirects` carries
+`/* /index.html 200`, which IPFS gateways honour on subdomain and DNSLink
+origins (IPIP-0002) -- a path gateway would 404 instead.

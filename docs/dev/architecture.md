@@ -5,7 +5,7 @@
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                            USER                                 │
-│  Browser (IPFS gateway / Fleek CDN)                            │
+│  Browser (IPFS gateway / 4EVERLAND CDN)                        │
 │  React 19 + Vite + Tailwind 4 + Semaphore v4 + Paillier        │
 └─────────────────┬───────────────────────────┬───────────────────┘
                   │ World ID QR + relayed tx   │ RPC (read only)
@@ -1228,13 +1228,114 @@ a committed CID cannot be taken back.
 
 ## Deployment targets
 
-| Component | Solution | Reason |
-|-----------|----------|--------|
-| Frontend | Fleek IPFS + GitHub CD | Immutable, decentralized, IPFS badge |
-| Backend | Phala Network TEE | Signs VCs, requires trusted environment |
-| Contracts | Polygon Amoy (testnet) | Free EVM, Semaphore available |
-| IPFS tally | Pinata free (1 GB) | Immutable audit trail |
-| CI/CD | GitHub Actions (2000 min/month) | Free, automated |
+Deployed on 2026-09-21. What is actually running, rather than what was planned:
+
+| Component | Where | Notes |
+|-----------|-------|-------|
+| Frontend | **4EVERLAND**, IPFS, at `votain.app` | **Fleek shut its hosting down on 2026-01-31** and the plan named it until this deploy. 6 GB and 10 GB of transfer a month, free |
+| Backend | **Phala Cloud**, Intel TDX CVM, at `api.votain.app` | NOT a free tier: $42.34/month for the smallest instance plus $2 for 20 GB of disk. $20 of sign-up credit |
+| Contracts | Local Hardhat, reached over a named Cloudflare tunnel at `rpc.votain.app` | Amoy deliberately deferred: the whole stack is exercised against a throwaway chain first |
+| DNS | Cloudflare | Required by `dstack-ingress` for DNS-01, and it is what makes the subdomain layout below work |
+| Image build | GitHub Actions to GHCR, with signed SLSA provenance | See "Why the image is built in CI" |
+| IPFS tally | Pinata free (1 GB) | Still the plan; unbuilt, see H9 |
+
+**THE SUBDOMAIN LAYOUT IS NOT COSMETIC.** The session cookie is `__Host-`
+prefixed and `SameSite=strict`, so it is sent only on same-SITE requests.
+`votain.app` and `api.votain.app` share a registrable domain and therefore are
+same-site, and the cookie crosses. Had the backend landed on a different domain
+— `something.phala.network`, a tunnel address, anything — there would be **no
+voter session at all**, and no amount of CORS would fix it, because CORS and
+SameSite answer different questions. Every other choice here can be revisited;
+this one is load-bearing.
+
+**Costs, stated plainly.** The frontend is free. The backend is not: $20 of
+credit is about two weeks of continuous running, which is why it is stopped
+between sessions. Stopping ends the compute charge immediately and leaves the
+disk at $2/month; only deleting ends that too.
+
+## Why the image is built in CI, and what that closes
+
+A TEE attestation proves WHICH IMAGE is running. On its own that is half a
+guarantee: somebody still has to believe the image corresponds to the source
+they read, and an image built on a laptop breaks the chain right there.
+
+Built by `.github/workflows/backend-image.yml`, every link is public:
+
+```
+public commit -> public build log -> signed provenance -> image digest
+              -> TEE attestation of that digest
+```
+
+`actions/attest-build-provenance` signs the middle. Anyone can check it:
+
+```
+gh attestation verify oci://ghcr.io/codeinia/votain-backend:0.1.0   --repo CodeInIA/votain
+```
+
+which returns the commit, the workflow and the runner that produced the digest,
+signed through `token.actions.githubusercontent.com`. Measured on the first
+deploy: commit `a8306863` -> `sha256:4621da1a…`, and the CVM's own attestation
+reports that same digest.
+
+**THE COMPOSE PINS THE DIGEST, NOT THE TAG,** and that is the part people get
+wrong. A tag can be moved to other content, so "the TEE runs 0.1.0" would still
+require trusting that 0.1.0 is what it was when it was built. A digest cannot
+move. The consequence is deliberate: publishing a new image does NOT update a
+running CVM. Updating means editing the compose and redeploying, because the
+compose is part of what is measured.
+
+The image must also be PUBLIC. A private one would mean nobody could pull the
+digest to check it against the attestation, and the last link would break.
+
+### `dstack-ingress`, and why not the default gateway
+
+The default gateway serves `<id>.<phala-domain>` and terminates TLS OUTSIDE the
+VM: traffic enters the enclave already decrypted, and whoever operates that
+layer could read it. `dstack-ingress` obtains a Let's Encrypt certificate by
+DNS-01, holds the private key INSIDE the enclave, and publishes evidence of it.
+It also writes a CAA record restricting issuance for this name to Let's Encrypt
+by DNS-01 and to the enclave's own ACME account, so a second certificate from
+anywhere else would be visible in the transparency logs as a violation.
+
+That is the difference between "the issuer runs in a TEE, trust me" and "what
+answers on this domain is the TEE, here is the proof".
+
+**It configures DNS only on FIRST provisioning.** Measured, because the guess
+went the other way: with the CNAME and CAA deleted and the CVM restarted, five
+minutes of polling showed neither recreated. On restart the ingress finds its
+certificate in the `cert-data` volume, concludes the work is done, and never
+touches Cloudflare. **Anything that repoints `api.votain.app` elsewhere has to
+be undone by hand**, and the two records are recorded beside the `.env` backup.
+
+### What survives what
+
+| | Restart | Stop / start | Delete |
+|---|---|---|---|
+| Certificate (`cert-data` volume) | kept | kept | gone, reissued on recreate |
+| DNS records | kept | kept | kept — nothing removes them |
+| Sealed secrets | kept | kept | resupplied from the encrypted store |
+| In-flight World ID verifications and Self sessions | lost | lost | lost |
+
+The last row is the only state the backend holds, it lives in memory by design,
+and losing it costs somebody a retry. Nothing is written to disk: verified by
+grep, there is not a single `writeFile` in `backend/src`.
+
+### The trap: contract addresses
+
+Locally the backend reads `contracts/deployments/*.json` and `REGISTRY_ADDRESS`
+can stay blank. A container has no `contracts/` beside it, and
+`chain/deployments.ts` treats that as normal and falls back to the environment.
+So a blank address in a container is not an error — it is a backend calling
+addresses that do not exist. They are set explicitly in the compose.
+
+### The trap: binding to loopback
+
+In production the server bound to `127.0.0.1`, which is right behind a reverse
+proxy on the same machine. A container's loopback is its own: the process came
+up, logged "Server running in PRODUCTION mode", and answered nobody — not the
+published port, not `dstack-ingress` next door. `BIND_ADDRESS` exists for this
+and the compose sets `0.0.0.0`. Found by running the image locally before
+publishing it, which is the entire reason for doing that.
 
 ## "Only from our dApp" is not a thing a contract can check
 

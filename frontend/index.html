@@ -25,7 +25,15 @@
 
     <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-    <!-- iOS ignores the manifest and reads these instead. -->
+    <!-- iOS ignores the manifest and reads these instead.
+
+         BOTH SPELLINGS, and not out of superstition. Chrome deprecated the
+         `apple-` prefixed one and says so in the console on every load; the
+         standard `mobile-web-app-capable` is what replaced it. Dropping the
+         old one is not yet safe, because older iOS is exactly the platform
+         these three lines exist for and it reads no other name. So the
+         standard one leads and the prefixed one stays until iOS catches up. -->
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Votain" />
