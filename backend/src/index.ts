@@ -94,6 +94,29 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'Votain VC Issuer Backend is running' });
 });
 
-app.listen(Number(port), isDev ? '0.0.0.0' : '127.0.0.1', () => {
-  console.log(`Server running in ${isDev ? 'DEVELOPMENT' : 'PRODUCTION'} mode on port ${port}`);
+/**
+ * WHICH INTERFACE TO ANSWER ON, and why it is not simply "all of them".
+ *
+ * In production this binds to the LOOPBACK, so nothing outside the machine can
+ * reach the port directly and every request has to arrive through whatever
+ * terminates TLS in front of it. On a VPS with a reverse proxy beside it, that
+ * is right and costs nothing.
+ *
+ * IN A CONTAINER IT IS WRONG, and silently so. A container's loopback is its
+ * own: the process comes up, logs that it is running, and answers nobody —
+ * not a published port, and not a sibling container like `dstack-ingress`,
+ * which is what terminates TLS on the Phala deployment. The symptom is a
+ * healthy-looking log beside a connection reset, which is a bad afternoon.
+ *
+ * So the address is configurable and the default is unchanged. A deployment
+ * that puts this behind a proxy IN ANOTHER CONTAINER says so explicitly with
+ * `BIND_ADDRESS=0.0.0.0`; the container is still not published to the outside
+ * world, because the compose gives it no ports of its own.
+ */
+const bindAddress = process.env.BIND_ADDRESS ?? (isDev ? '0.0.0.0' : '127.0.0.1');
+
+app.listen(Number(port), bindAddress, () => {
+  console.log(
+    `Server running in ${isDev ? 'DEVELOPMENT' : 'PRODUCTION'} mode on ${bindAddress}:${port}`,
+  );
 });

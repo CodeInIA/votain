@@ -76,6 +76,13 @@ services:
       # ── how it presents itself ──
       NODE_ENV: production
       PORT: 3000
+      # ANSWER ON THE COMPOSE NETWORK, not only on this container's loopback.
+      # In production the server binds to 127.0.0.1 by default, which is right
+      # behind a proxy on the same machine and useless behind one in another
+      # container: the process comes up, says so in the log, and `ingress`
+      # cannot reach it. Still not exposed outside — this service publishes no
+      # ports.
+      BIND_ADDRESS: 0.0.0.0
       # Behind the ingress, so the client IP arrives in a header. Without this
       # the rate limiters see one address for every voter on earth.
       TRUST_PROXY: "1"
