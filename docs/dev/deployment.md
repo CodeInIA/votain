@@ -135,13 +135,25 @@ Takes a version, or defaults to the newest tag, and then:
 here: the domain points wherever DNS says, and with the CVM off it points at
 Heroku, so the check would have passed on a deployment that never reached the
 enclave. Phala reports `docker_compose_hash`, the sha256 of the compose it was
-given over the bytes **without the trailing newline**:
+given:
 
 ```bash
-printf '%s' "$(cat docker-compose.yml)" | sha256sum
+sha256sum docker-compose.yml
 ```
 
-The job fails unless that matches what the CVM reports. It answers the only
+**The same compose has two legitimate hashes**, and this cost a failed run to
+learn. `phala deploy --compose <file>` sends the file as it is, trailing newline
+included. The dashboard takes the compose in a textarea, and a textarea eats the
+final newline. So a CVM first provisioned through the web UI reports the hash of
+the file *without* its last byte, and one deployed by the CLI reports it *with*.
+One byte, nothing about what runs, so the job accepts either.
+
+```bash
+sha256sum docker-compose.yml                          # deployed by the CLI
+printf '%s' "$(cat docker-compose.yml)" | sha256sum   # via the dashboard
+```
+
+The job fails unless the CVM reports one of the two. It answers the only
 question worth asking — does the enclave run what a reader of this repository
 can see? — and says nothing about who happens to answer a hostname.
 
@@ -205,6 +217,9 @@ gh attestation verify \
   oci://ghcr.io/codeinia/votain-backend:<version> --repo CodeInIA/votain
 
 # The enclave runs the compose in this repository.
+# Either hash is valid: with the trailing newline if the CLI deployed it,
+# without it if the CVM was provisioned through the dashboard.
+sha256sum docker-compose.yml
 printf '%s' "$(cat docker-compose.yml)" | sha256sum
 phala cvms get --cvm-id <app-id> --json | jq -r '.docker_compose_hash'
 ```

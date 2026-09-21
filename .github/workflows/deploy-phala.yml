@@ -192,19 +192,31 @@ jobs:
       # reached the enclave -- a false pass in the one workflow whose entire
       # job is to establish what is really running.
       #
-      # `docker_compose_hash` is the sha256 of the compose file the CVM was
-      # given, of its bytes WITHOUT the trailing newline. Comparing it against
-      # the file in this repository answers the only question worth asking:
-      # does the enclave run exactly what a reader of this repository can see?
-      # Nothing about DNS, nothing about who answers a hostname.
+      # `docker_compose_hash` is the sha256 of the exact bytes Phala was given.
+      # Comparing it against the file in this repository answers the only
+      # question worth asking: does the enclave run exactly what a reader of
+      # this repository can see? Nothing about DNS, nothing about who answers
+      # a hostname.
+      #
+      # TWO HASHES ARE ACCEPTED, and the reason is a real difference rather
+      # than hedging. `phala deploy --compose <file>` sends the file as it is,
+      # trailing newline included. The dashboard, where this CVM was first
+      # provisioned, takes the compose in a textarea, and a textarea eats the
+      # final newline. The same compose therefore has two legitimate hashes
+      # depending on which door it came through, differing in one byte that
+      # changes nothing about what runs. Checking only one of them made this
+      # step fail over a deployment that had in fact succeeded.
       - name: Check the enclave runs this compose
         id: comprobar
         env:
           PHALA_CLOUD_API_KEY: ${{ secrets.PHALA_CLOUD_API_KEY }}
         run: |
           set -euo pipefail
-          esperado=$(printf '%s' "$(cat docker-compose.yml)" | sha256sum | cut -d' ' -f1)
-          echo "expected compose hash: $esperado"
+          # As sent by the CLI, and as the dashboard would have stored it.
+          con_salto=$(sha256sum docker-compose.yml | cut -d' ' -f1)
+          sin_salto=$(printf '%s' "$(cat docker-compose.yml)" | sha256sum | cut -d' ' -f1)
+          echo "expected compose hash: $con_salto"
+          echo "  (or $sin_salto, if it was provisioned through the dashboard)"
 
           estado=desconocido
           for intento in $(seq 1 20); do
@@ -226,7 +238,7 @@ jobs:
             echo "The CVM is $estado, not running."
             exit 1
           fi
-          if [ "${visto:-}" != "$esperado" ]; then
+          if [ "${visto:-}" != "$con_salto" ] && [ "${visto:-}" != "$sin_salto" ]; then
             echo 'The CVM reports a different compose from the one in this repository.'
             echo 'Whatever it is running, it is not this commit.'
             exit 1
