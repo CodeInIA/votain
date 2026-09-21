@@ -24,8 +24,9 @@ push to main
                 │                                        │
                 │                                        └─ AUTO_DEPLOY says:
                 │                                              none   → stop
-                │                                              heroku → deploy to heroku
-                │                                              phala  → deploy to phala
+                │                                              heroku → deploy to heroku ─┐
+                │                                              phala  → deploy to phala ──┤
+                │                                                                         └─ dns follows
                 │
                 └─ (pull requests stop here: checked, never published)
 ```
@@ -167,6 +168,7 @@ Repository secrets:
 | `HEROKU_API_KEY` | `deploy-heroku.yml` | Heroku API key; also the registry password |
 | `PHALA_CLOUD_API_KEY` | `deploy-phala.yml` | Phala Cloud API key |
 | `PHALA_ENV` | `deploy-phala.yml` | the whole production env file, 25 variables |
+| `CLOUDFLARE_API_TOKEN` | `dns.yml` | scoped to Zone:DNS:Edit on `votain.app` only |
 
 `PHALA_ENV` is not optional and the workflow refuses to start without it. The
 enclave's environment is sealed to the deployment; an update that supplies none
@@ -196,16 +198,47 @@ succeeds as a GET and returns a queued task id.
 The step checks the `code` in the body as well as the HTTP status, because this
 API reports failure inside a 200.
 
-## DNS does not heal itself
+## DNS follows the deployment
 
-Measured, not assumed, by deleting the records and waiting five minutes:
-**`dstack-ingress` writes its DNS records only on FIRST provisioning.** Starting
-a stopped CVM does not restore them.
+Both backends answer `api.votain.app`, so switching between them is a DNS
+change and nothing else. `dns.yml` makes that change part of the deployment
+instead of something to remember afterwards, and it is called by both deploy
+workflows.
 
-So moving `api.votain.app` between hosts is manual in both directions, and the
-records live in `OneDrive/UNI/4/TFG/.env/produccion/dns-api-votain-app.json`.
-`deploy-phala.yml` says so in its summary rather than pretending otherwise: the
-enclave can be running perfectly and unreachable by name.
+**It only acts on a real switch.** It reads the current CNAME, works out which
+host it names, and if that is already the target it changes nothing. Rewriting
+the same records on every redeploy would be churn with a blast radius: each
+write is a chance to break resolution for a service that was working, and TLS
+issuance rides on two of these records.
+
+**The two sets are not symmetric.**
+
+| | Records | Proxied |
+|---|---|---|
+| `heroku` | one CNAME to the app's `herokudns.com` target | yes |
+| `phala` | CNAME to the dstack gateway, CAA, and `_dstack-app-address` TXT | no |
+
+Switching to Heroku **removes** the CAA and the TXT. Left in place, the CAA
+authorises only the enclave's Let's Encrypt account over DNS-01, and Heroku's
+ACM could not issue a certificate for a name it now serves. Switching to Phala
+writes all three: the CAA authorises the ingress's ACME account, and the TXT
+tells the dstack gateway which app and port to route to. The CNAME alone
+resolves to a gateway that will not answer for this name.
+
+Unproxied for Phala because that is the configuration observed to work with it.
+The proxy was enabled later, while Heroku was serving, and has never been
+tested against the enclave.
+
+**The ingress does not restore these.** Measured, by deleting the records and
+restarting the CVM and waiting five minutes for nothing: `dstack-ingress`
+writes its DNS records only on FIRST provisioning. That is why they are kept in
+this workflow rather than trusted to reappear, with a copy in
+`OneDrive/UNI/4/TFG/.env/produccion/dns-api-votain-app.json`.
+
+The Heroku workflow checks `/health` in a separate job **after** the switch. Run
+before it, that check would be interrogating whichever host DNS happened to
+name, and a 200 from the enclave would say nothing about the release that just
+went out.
 
 ## Verifying it from outside
 

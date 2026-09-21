@@ -259,10 +259,20 @@ jobs:
             echo "${{ steps.comprobar.outputs.hash }}"
             echo '```'
             echo ''
-            echo 'DNS IS NOT HANDLED HERE, and does not fix itself. The ingress'
-            echo 'writes its records only on FIRST provisioning -- measured, by'
-            echo 'deleting them and waiting. If api.votain.app still points at'
-            echo 'Heroku, or at nothing, restore the records by hand from'
-            echo '`dns-api-votain-app.json`. Until then the enclave is running'
-            echo 'and simply unreachable by name.'
+            echo 'DNS is switched by the job that follows, not by the ingress,'
+            echo 'which writes its records only on FIRST provisioning -- measured,'
+            echo 'by deleting them and waiting five minutes for nothing.'
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # AFTER THE ENCLAVE IS KNOWN TO BE RUNNING THE RIGHT COMPOSE, and not before.
+  # Pointing the hostname at a CVM that turned out to be running something else
+  # would take the service down to complete a deployment that had already
+  # failed its only meaningful check.
+  dns:
+    needs: [deploy]
+    permissions:
+      contents: read
+    secrets: inherit
+    with:
+      target: phala
+    uses: ./.github/workflows/dns.yml

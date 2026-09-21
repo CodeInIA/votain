@@ -174,15 +174,34 @@ jobs:
             echo "Release v${{ steps.antes.outputs.value }} -> v$ahora"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Check it answers
+  # POINTED HERE BEFORE ANYTHING IS BELIEVED ABOUT THE HOSTNAME. Both backends
+  # answer `api.votain.app`, so a health check run before this one would be
+  # interrogating whichever host DNS happened to name -- possibly the enclave,
+  # and a 200 from it would say nothing at all about this release.
+  dns:
+    needs: [deploy]
+    permissions:
+      contents: read
+    secrets: inherit
+    with:
+      target: heroku
+    uses: ./.github/workflows/dns.yml
+
+  # A SEPARATE JOB, after the switch, so what it checks is unambiguous.
+  comprobar:
+    name: check it answers
+    needs: [dns]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ask api.votain.app
         run: |
           set -euo pipefail
-          # Give the dyno a moment to come up before believing a failure.
-          for intento in 1 2 3 4 5 6; do
+          # The dyno needs a moment, and a just-switched CNAME needs one too.
+          for intento in 1 2 3 4 5 6 7 8; do
             codigo=$(curl -sS -o /dev/null -w '%{http_code}' https://api.votain.app/health || echo 000)
             [ "$codigo" = "200" ] && { echo "health: 200"; exit 0; }
             echo "attempt $intento: $codigo"
-            sleep 10
+            sleep 15
           done
           echo "api.votain.app/health never answered 200."
           echo "The release went out; something about the running app is wrong."

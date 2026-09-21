@@ -1,0 +1,211 @@
+# Points api.votain.app at whichever backend was just deployed.
+#
+# WHY THIS EXISTS. The two backends answer the same hostname, and the frontend
+# bakes that hostname at build time and never learns which host is behind it.
+# So switching between them is a DNS change and nothing else -- and until now
+# it was a DNS change somebody had to remember to make, from a JSON file in
+# OneDrive, at the end of a deployment they had already stopped watching. The
+# failure that produces is the quiet one: an enclave running perfectly, and
+# unreachable by name.
+#
+# IT ONLY ACTS ON A REAL SWITCH. If the records already point where this
+# deployment wants them, it changes nothing and says so. Rewriting the same
+# records on every redeploy would be churn with a blast radius: each write is a
+# chance to break name resolution for a service that was working, and TLS
+# issuance rides on two of these records.
+#
+# THE TWO SETS ARE NOT SYMMETRIC, and the asymmetry is load-bearing:
+#
+#   heroku  one proxied CNAME. Heroku's ACM issues the certificate, and it
+#           cannot do that while a CAA record restricts issuance to a
+#           Let's Encrypt account that belongs to the enclave. So the CAA and
+#           the TXT are REMOVED, not left lying around.
+#
+#   phala   three records, unproxied, exactly as `dstack-ingress` wrote them on
+#           first provisioning. The CAA authorises the enclave's own ACME
+#           account over DNS-01; the TXT tells the dstack gateway which app and
+#           port to route to. Without them the ingress cannot get a
+#           certificate, and the CNAME alone resolves to a gateway that will
+#           not answer for this name.
+#
+# Unproxied for Phala because that is the configuration that was verified
+# working with it. The proxy was switched on later, while Heroku was serving,
+# and was never tested against the enclave. Each host gets the shape that was
+# actually observed to work rather than the one that seems tidier.
+#
+# MEASURED, NOT ASSUMED: `dstack-ingress` writes these records only on FIRST
+# provisioning. Deleting them and restarting the CVM does not bring them back
+# -- tested, by deleting them and waiting five minutes. That is why they are
+# kept here rather than trusted to reappear.
+
+name: dns
+
+on:
+  workflow_call:
+    inputs:
+      target:
+        description: 'Which backend api.votain.app should point at: heroku or phala'
+        required: true
+        type: string
+
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Which backend api.votain.app should point at'
+        required: true
+        type: choice
+        options: [heroku, phala]
+
+env:
+  ZONA: votain.app
+  NOMBRE: api.votain.app
+  TXT_NOMBRE: _dstack-app-address.api.votain.app
+  HEROKU_CNAME: primal-avocado-jx6kkx3psf223fbhwacju7kk.herokudns.com
+  PHALA_CNAME: gateway.dstack-pha-prod9.phala.network
+  PHALA_CAA: 'letsencrypt.org;validationmethods=dns-01;accounturi=https://acme-v02.api.letsencrypt.org/acme/acct/3774891496'
+  PHALA_TXT: '8a4883de0784b3d5a4c8cd66738e9f559400b32a:443'
+
+permissions:
+  contents: read
+
+jobs:
+  point:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the token exists
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TOKEN:-}" ]; then
+            echo 'CLOUDFLARE_API_TOKEN is not set, so DNS was left alone.'
+            echo 'Create a token scoped to Zone:DNS:Edit on votain.app only,'
+            echo 'and add it as a repository secret.'
+            exit 1
+          fi
+          case "${{ inputs.target }}" in
+            heroku|phala) : ;;
+            *) echo "Unknown target: ${{ inputs.target }}"; exit 1 ;;
+          esac
+
+      - name: Point it
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          DESTINO: ${{ inputs.target }}
+        run: |
+          set -euo pipefail
+          api() {
+            local metodo="$1" ruta="$2"
+            shift 2
+            curl -sS -X "$metodo" \
+              -H "Authorization: Bearer $TOKEN" \
+              -H 'Content-Type: application/json' \
+              "https://api.cloudflare.com/client/v4$ruta" "$@"
+          }
+
+          # The zone id is looked up rather than stored: one secret instead of
+          # two, and nothing to update if the zone is ever recreated.
+          zona=$(api GET "/zones?name=$ZONA" | jq -r '.result[0].id // empty')
+          [ -n "$zona" ] || { echo "No zone called $ZONA, or the token cannot see it."; exit 1; }
+
+          registros=$(api GET "/zones/$zona/dns_records?per_page=100")
+          cname_id=$(printf '%s' "$registros" | jq -r --arg n "$NOMBRE" '.result[] | select(.type=="CNAME" and .name==$n) | .id' | head -1)
+          cname_val=$(printf '%s' "$registros" | jq -r --arg n "$NOMBRE" '.result[] | select(.type=="CNAME" and .name==$n) | .content' | head -1)
+          caa_id=$(printf '%s' "$registros" | jq -r --arg n "$NOMBRE" '.result[] | select(.type=="CAA" and .name==$n) | .id' | head -1)
+          txt_id=$(printf '%s' "$registros" | jq -r --arg n "$TXT_NOMBRE" '.result[] | select(.type=="TXT" and .name==$n) | .id' | head -1)
+
+          # WHERE IT POINTS NOW, read from the record rather than from anything
+          # this repository believes about the last deployment.
+          case "${cname_val:-}" in
+            *herokudns.com*)  actual=heroku ;;
+            *phala.network*)  actual=phala ;;
+            '')               actual=none ;;
+            *)                actual=unknown ;;
+          esac
+          echo "api.votain.app currently points at: $actual (${cname_val:-nothing})"
+          echo "this deployment wants:              $DESTINO"
+
+          if [ "$actual" = "$DESTINO" ]; then
+            echo 'Already there, so nothing was changed.'
+            {
+              echo "### DNS unchanged"
+              echo ''
+              echo "\`api.votain.app\` already points at **$DESTINO**."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          escribir_cname() {
+            local contenido="$1" proxy="$2" ttl="$3"
+            local cuerpo
+            cuerpo=$(jq -nc --arg n "$NOMBRE" --arg c "$contenido" --argjson p "$proxy" --argjson t "$ttl" \
+              '{type:"CNAME",name:$n,content:$c,proxied:$p,ttl:$t}')
+            if [ -n "${cname_id:-}" ]; then
+              api PUT "/zones/$zona/dns_records/$cname_id" --data "$cuerpo" | jq -e '.success' >/dev/null
+            else
+              api POST "/zones/$zona/dns_records" --data "$cuerpo" | jq -e '.success' >/dev/null
+            fi
+          }
+
+          borrar() {
+            local id="$1" que="$2"
+            [ -n "$id" ] || return 0
+            api DELETE "/zones/$zona/dns_records/$id" | jq -e '.success' >/dev/null
+            echo "removed the $que record"
+          }
+
+          if [ "$DESTINO" = heroku ]; then
+            # Proxied, TTL automatic: Cloudflare rejects an explicit TTL on a
+            # proxied record.
+            escribir_cname "$HEROKU_CNAME" true 1
+            echo "CNAME -> $HEROKU_CNAME (proxied)"
+            # THE CAA MUST GO. Left in place it authorises only the enclave's
+            # Let's Encrypt account over DNS-01, and Heroku's ACM would be
+            # unable to issue a certificate for a name it now serves.
+            borrar "${caa_id:-}" CAA
+            borrar "${txt_id:-}" TXT
+          else
+            escribir_cname "$PHALA_CNAME" false 60
+            echo "CNAME -> $PHALA_CNAME"
+            caa=$(jq -nc --arg n "$NOMBRE" --arg v "$PHALA_CAA" \
+              '{type:"CAA",name:$n,ttl:60,data:{flags:0,tag:"issue",value:$v}}')
+            if [ -n "${caa_id:-}" ]; then
+              api PUT "/zones/$zona/dns_records/$caa_id" --data "$caa" | jq -e '.success' >/dev/null
+            else
+              api POST "/zones/$zona/dns_records" --data "$caa" | jq -e '.success' >/dev/null
+            fi
+            echo 'CAA written'
+            txt=$(jq -nc --arg n "$TXT_NOMBRE" --arg c "$PHALA_TXT" \
+              '{type:"TXT",name:$n,content:$c,ttl:60}')
+            if [ -n "${txt_id:-}" ]; then
+              api PUT "/zones/$zona/dns_records/$txt_id" --data "$txt" | jq -e '.success' >/dev/null
+            else
+              api POST "/zones/$zona/dns_records" --data "$txt" | jq -e '.success' >/dev/null
+            fi
+            echo 'TXT written'
+          fi
+
+          # READ BACK, because "the API said success" and "the zone says what we
+          # meant" are different claims, and this whole session has been a
+          # lesson in not confusing them.
+          final=$(api GET "/zones/$zona/dns_records?per_page=100" \
+            | jq -r --arg n "$NOMBRE" '.result[] | select(.type=="CNAME" and .name==$n) | .content' | head -1)
+          echo "now: $final"
+          case "$DESTINO:$final" in
+            heroku:*herokudns.com*|phala:*phala.network*) : ;;
+            *) echo "The zone does not say what it was told. Got: ${final:-nothing}"; exit 1 ;;
+          esac
+
+          {
+            echo "### DNS switched to $DESTINO"
+            echo ''
+            echo "\`api.votain.app\` pointed at **$actual**, and now points at **$final**."
+            echo ''
+            if [ "$DESTINO" = phala ]; then
+              echo 'The CAA and the dstack TXT were written too. The ingress needs'
+              echo 'both to obtain its certificate; give it a minute before'
+              echo 'expecting HTTPS to answer.'
+            else
+              echo 'The CAA and the dstack TXT were removed, so ACM can issue.'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
