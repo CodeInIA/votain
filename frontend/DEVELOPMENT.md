@@ -1062,8 +1062,8 @@ desktop the app is on a different device, so the QR is the only bridge and the
 callback is deliberately absent: it would redirect the phone, not the screen the
 voter is watching.
 
-World ID works the same way now — it sends a `returnTo` from a phone only, which
-becomes IDKit's `return_to` — and the two share one validator,
+World ID works the same way now. It sends a `returnTo` from a phone only, which
+becomes IDKit's `return_to`, and the two share one validator,
 `utils/callbackUrl.ts` in the backend. Both are destinations another app
 navigates to on Votain's behalf, so an endpoint that accepts any URL is an open
 redirect wearing Votain's name.
@@ -1479,4 +1479,4 @@ build-time variables matter: `VITE_PUBLIC_URL` is baked into the canonical
 link, the OpenGraph tags, the sitemap and robots.txt, so getting it wrong means
 rebuilding. Deep links work because `public/_redirects` carries
 `/* /index.html 200`, which IPFS gateways honour on subdomain and DNSLink
-origins (IPIP-0002) -- a path gateway would 404 instead.
+origins (IPIP-0002); a path gateway would 404 instead.

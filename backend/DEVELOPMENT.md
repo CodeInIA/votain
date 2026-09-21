@@ -293,7 +293,7 @@ at ENROLMENT, against `usedPersonhoodNullifiers`, where a refusal costs one
 election rather than the whole account.
 
 The request is built by `auth/worldIdBridge.ts` now, not by the browser, and it
-asks for `deviceLegacy` — the floor, deliberately. That does not make the check
+asks for `deviceLegacy`, the floor, deliberately. That does not make the check
 here redundant: it is what stops a handcrafted payload claiming more than it
 proved.
 

@@ -2566,7 +2566,7 @@ enrolments would not. The nullifier is no better, since
 TWENTY-FOUR BITS, and not one more, because that is all the picture says: a hue
 and fifteen mirrored cells, about 2^23.5. The first version stored the whole
 SHA-256 of the phrase, in the clear in localStorage, while `deviceSeal` was
-encrypting that same phrase three keys away — a value that pins a 2^84 phrase
+encrypting that same phrase three keys away: a value that pins a 2^84 phrase
 exactly, for a badge. Truncated, a confirmed match still leaves around 2^60
 candidates, so the stored token is no more telling than the screen already is.
 
@@ -2585,7 +2585,7 @@ TWO BUGS THE WRITING CAUSED, both caught by tests rather than by reading. The
 seed write is async, and `crypto.subtle` does not exist in an insecure context,
 which is exactly how this app is reached from a phone in development: awaiting
 it inside `noteSealed` left the identity mode unwritten. Awaiting it BEFORE the
-mode was worse — it delayed that write by a microtask, long enough for a
+mode was worse, because it delayed that write by a microtask, long enough for a
 `keepPhraseOnDevice` still in flight to land its "local" on top of the "prf". A
 decorative badge had inserted itself into a race over which store holds a
 voter's phrase.

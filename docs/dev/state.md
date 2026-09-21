@@ -8,22 +8,22 @@ pins to IPFS and the in-app path publishes an empty CID. See H5, H6 and H9 in `P
 `phase()`), **in-app tally** with a Paillier key **derived from the organizer's wallet signature**
 (nothing stored at rest; CLI kept as the auditor path), organizer display-name persistence,
 custom dark `DatePicker`, phase-aware voter/organizer/public screens, and shared phase helpers.
-**This pass**: signing in on a phone. Both roles sign in by LEAVING — the voter to World App,
-the organizer to their wallet — and a backgrounded tab is something the system may discard, so
+**This pass**: signing in on a phone. Both roles sign in by LEAVING: the voter to World App,
+the organizer to their wallet. A backgrounded tab is something the system may discard, so
 what came back was a cold start that had thrown away work already done. The voter's proof
 request is opened by the backend now and named in an httpOnly cookie, because the SDK cannot
 rebuild a request from its id and the bridge key lives inside its WASM: a reload collects the
-proof instead of losing it. The organizer's session was never lost at all — WalletConnect
-persists it — but the mount effect read a module variable the reload had emptied and never
+proof instead of losing it. The organizer's session was never lost at all, because WalletConnect
+persists it, but the mount effect read a module variable the reload had emptied and never
 asked for it back. `return_to` is ON from a phone, which the move is what made safe: without it a
 voter finishes in World App and is left there, and a green tick reads as "done",
-so they never come back — a lost sign-in, not a lost tap. The destination is
+so they never come back. That is a lost sign-in, not a lost tap. The destination is
 validated against `FRONTEND_URL` server-side, sharing one sanitiser with Self's
 callback, or the endpoint is an open redirect wearing Votain's name. See
 "Signing in on a phone" in `architecture.md`.
 **Found by measuring, not by reading**: the resume effect aborted its own in-flight fetch in a
-StrictMode cleanup and left its once-only guard set, so "at most once" had become "never" — and
-every unit test passed while that was true. A `StrictMode` wrapper does not reproduce it here
+StrictMode cleanup and left its once-only guard set, so "at most once" had become "never",
+and every unit test passed while that was true. A `StrictMode` wrapper does not reproduce it here
 (counted: 1 mount, 0 cleanups), so the test file says so rather than pretending to cover it.
 **Also corrected, from a documentation sweep**: `tallyKey.ts` described its key as coming
 from a passkey's PRF secret long after that became a wallet signature;
@@ -31,7 +31,7 @@ from a passkey's PRF secret long after that became a wallet signature;
 the frontend asks for `orbLegacy`, when the minimum is an argument defaulting to `any` and
 the ask is `deviceLegacy`; three `VITE_WORLD_ID_*` variables were still documented as
 required in two files after nothing read them. And `POST /api/rp-signature` was left with
-no callers once the bridge signed its own requests — an unauthenticated endpoint minting
+no callers once the bridge signed its own requests. It was an unauthenticated endpoint minting
 signed RP requests for any action, so it is gone.
 Tests: contracts 185/185 (not re-run; untouched), backend 144/144, frontend 562/562.
 **DEPLOYED, 2026-09-21.** `votain.app` serves the frontend from IPFS via 4EVERLAND;
@@ -39,7 +39,7 @@ Tests: contracts 185/185 (not re-run; untouched), backend 144/144, frontend 562/
 named Cloudflare tunnel to the local Hardhat node. Verified end to end in a browser:
 World ID sign-in, enrolment and a cast vote, plus a deep route reloaded cold with the
 session intact. The image is built by GitHub Actions with signed SLSA provenance and
-pinned by digest, and the CVM's attestation reports that same digest — so the chain
+pinned by digest, and the CVM's attestation reports that same digest, so the chain
 runs from a public commit to the enclave with no link that asks for trust.
 **Fleek was the planned host and shut down on 2026-01-31**; Phala is not a free tier
 ($42.34/month plus disk, against $20 of credit), so it is stopped between sessions.
@@ -49,7 +49,7 @@ provisioning, so anything that repoints `api.votain.app` must be undone by hand.
 **Since then**: the backend moved to a Heroku container dyno on the same hostname, because
 Phala is $42.34/month and the student pack covers Heroku. `api.votain.app` is the switch:
 the frontend bakes that URL at build time and never learns which host answers. Both DNS
-records are proxied through Cloudflare now — verified that the API reports
+records are proxied through Cloudflare now, and it was verified that the API reports
 `cf-cache-status: DYNAMIC`, that the session cookie still crosses, and that `_redirects`
 still resolves deep links through the extra hop. A `checks` workflow runs the three test
 suites, both builds and a Docker build on every push to `main`.
@@ -84,7 +84,7 @@ Full write-up in [`deployment.md`](deployment.md).
 factory deploys elections that enrol the old, publicly linkable way, which looks entirely
 normal from every screen. `deploy.ts` now refuses to deploy off the local chain without it
 unless `ALLOW_PUBLIC_ENROLMENT=1` says so out loud.
-then Phase C (H10 IPFS, H11 Phala TEE) -- both now done, see the deploy note above.
+then Phase C (H10 IPFS, H11 Phala TEE), both now done: see the deploy note above.
 
 > Detailed milestone-by-milestone log lives in `docs/ai/state.md`. This file tracks module status,
 > dependency versions and environment.

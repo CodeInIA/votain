@@ -748,8 +748,8 @@ things they said came from the same person, and no longer that the person who
 took part in this one also took part in that one.
 
 The member list draws each commitment as a colour and a pattern rather than as
-two hex characters. That was first justified by making an existing property —
-the same commitment recurring across an organizer's elections — easy to see
+two hex characters. That was first justified by making an existing property,
+the same commitment recurring across an organizer's elections, easy to see
 rather than tedious to check. THAT PROPERTY IS GONE, and the drawing is now
 simply a legible handle for a 77-digit number: two rows of the same election are
 still told apart at a glance, and two rows of different elections no longer have
@@ -1034,8 +1034,8 @@ backgrounding the browser, and a backgrounded tab is something the system is
 free to discard. What comes back is not the page that left: it is a cold start
 with an empty heap.
 
-That broke both flows in the same way and for the same reason — the thing being
-waited on lived in a JavaScript variable — but the two needed different repairs,
+That broke both flows in the same way and for the same reason, since the thing being
+waited on lived in a JavaScript variable, but the two needed different repairs,
 because only one of them had somewhere else to put it.
 
 ### The voter: the request moved to the server
@@ -1052,7 +1052,7 @@ It is opened by the backend now (`auth/worldIdBridge.ts`). The browser gets a
 connector URI to render and an httpOnly cookie naming the pending verification;
 this process holds the live object and polls the bridge itself. A reloaded page
 asks `GET /api/worldid/request` and is handed the proof, or the connector URI to
-put the QR back, or nothing at all — three answers, because a page acts
+put the QR back, or nothing at all. Three answers, because a page acts
 differently on each and collapsing them into a boolean is how somebody
 mid-verification gets told to start one.
 
@@ -1062,12 +1062,12 @@ mid-verification gets told to start one.
 | `SameSite=lax`, unlike the session cookie | This one has to survive a cross-site top-level navigation back to this origin, which `strict` withholds on exactly the load that needs it |
 | Handed over once, then deleted | The proof is a bearer credential: whoever presents it to `/verify-human` is signed in as that human, so a cookie that leaks afterwards is worth nothing |
 | Long polling, 25s holds | A one-second poll for five minutes is 300 requests against a 120/min budget. Holding the connection answers the instant the bridge does, so it is both cheaper and *quicker* than polling |
-| Five-minute TTL, in-memory | Matches what the browser used to poll for. A restart forgets everything in flight and a second replica would not see the first one's — both mean "start again", which is where this was before, and both are why the store would have to move if the backend is ever run as more than one instance |
+| Five-minute TTL, in-memory | Matches what the browser used to poll for. A restart forgets everything in flight and a second replica would not see the first one's. Both mean "start again", which is where this was before, and both are why the store would have to move if the backend is ever run as more than one instance |
 
 `WORLD_ID_APP_ID`, `WORLD_ID_RP_ID` and `WORLD_ID_ACTION` are read by the
 backend now. The `VITE_WORLD_ID_*` copies are gone: setting them does nothing.
-`FRONTEND_URL` gained a second job — it is what the return links are validated
-against — and must be set in production, or no way back is offered at all.
+`FRONTEND_URL` gained a second job. It is what the return links are validated
+against, and it must be set in production, or no way back is offered at all.
 
 ### The organizer: the session was already there, nobody asked
 
@@ -1077,7 +1077,7 @@ that never asked for it was the page the organizer landed on: the mount effect
 in `useOrganizerWallet` read `activeProvider()`, which on a phone is a module
 variable a reload had just emptied, found nothing and returned. It resumes
 instead, restore-only, so no QR can appear in front of somebody who did not ask
-for one — and the sign-in screen finishes a login the wallet had already
+for one, and the sign-in screen finishes a login the wallet had already
 approved rather than asking for it twice.
 
 Two guards on that, both found by measuring rather than by reasoning:
@@ -1102,7 +1102,7 @@ than the inconvenience it removed. Moving the request to the server is exactly
 what retires that argument.
 
 It is worth more than a saved tap. Without it a voter finishes in World App and
-is simply left there, and a green tick reads as "done" — so they never return to
+is simply left there, and a green tick reads as "done", so they never return to
 the browser at all. That is not a lost tap, it is a lost sign-in, and it is the
 thing that was actually making people give up.
 
@@ -1116,7 +1116,7 @@ thing that was actually making people give up.
 **Where it lands, stated honestly.** `return_to` is an https address and Android
 resolves one as an app link, so a voter with this installed as a PWA is handed
 the installed copy. That only differs from where they started for somebody who
-has the PWA installed AND is verifying in a browser tab anyway — not the normal
+has the PWA installed AND is verifying in a browser tab anyway, which is not the normal
 case, since a voter has one or the other open, and whichever they started in is
 where the link goes. Even then nothing is lost now: a WebAPK shares Chrome's
 cookie jar, so the cookie is present and the proof is collected wherever they
@@ -1242,8 +1242,8 @@ Deployed on 2026-09-21. What is actually running, rather than what was planned:
 **THE SUBDOMAIN LAYOUT IS NOT COSMETIC.** The session cookie is `__Host-`
 prefixed and `SameSite=strict`, so it is sent only on same-SITE requests.
 `votain.app` and `api.votain.app` share a registrable domain and therefore are
-same-site, and the cookie crosses. Had the backend landed on a different domain
-— `something.phala.network`, a tunnel address, anything — there would be **no
+same-site, and the cookie crosses. Had the backend landed on a different domain,
+whether `something.phala.network`, a tunnel address or anything else, there would be **no
 voter session at all**, and no amount of CORS would fix it, because CORS and
 SameSite answer different questions. Every other choice here can be revisited;
 this one is load-bearing.
@@ -1297,14 +1297,14 @@ mean rebuilding the frontend to change where the API lives.
 
 | | Phala | Heroku |
 |---|---|---|
-| Verifiable | **Yes** — attestation ties the running digest to a public commit | No |
+| Verifiable | **Yes**: attestation ties the running digest to a public commit | No |
 | Cost | $42.34/month running, $2 stopped | $7/month, covered by the student pack |
 | TLS | Let's Encrypt, key held inside the enclave | Heroku ACM, key held by Heroku |
 | Purpose | The claim the thesis makes | Staying up for free in between |
 
 **The images are not the same artifact**, and the docs should not pretend
-otherwise. Heroku's registry rejects OCI manifests — which is exactly what the
-GHCR push produces alongside its signed provenance — so the Heroku image is a
+otherwise. Heroku's registry rejects OCI manifests, which is exactly what the
+GHCR push produces alongside its signed provenance, so the Heroku image is a
 second build of the same commit with Docker media types, and its digest
 differs. Only the GHCR one carries the attestation.
 
@@ -1313,7 +1313,7 @@ differs. Only the GHCR one carries the attestation.
 values live beside the `.env` backup. The CAA is the one that bites in the
 other direction too: it restricts issuance to DNS-01 and to the enclave's ACME
 account, and **Heroku validates by HTTP-01**, so it has to be removed before
-Heroku can get a certificate at all — otherwise ACM sits at "DNS Verified"
+Heroku can get a certificate at all. Otherwise ACM sits at "DNS Verified"
 forever without saying why.
 
 **And with the Cloudflare proxy on, Heroku's certificate RENEWAL is at risk.**
@@ -1348,7 +1348,7 @@ be undone by hand**, and the two records are recorded beside the `.env` backup.
 | | Restart | Stop / start | Delete |
 |---|---|---|---|
 | Certificate (`cert-data` volume) | kept | kept | gone, reissued on recreate |
-| DNS records | kept | kept | kept — nothing removes them |
+| DNS records | kept | kept | kept, nothing removes them |
 | Sealed secrets | kept | kept | resupplied from the encrypted store |
 | In-flight World ID verifications and Self sessions | lost | lost | lost |
 
@@ -1361,14 +1361,14 @@ grep, there is not a single `writeFile` in `backend/src`.
 Locally the backend reads `contracts/deployments/*.json` and `REGISTRY_ADDRESS`
 can stay blank. A container has no `contracts/` beside it, and
 `chain/deployments.ts` treats that as normal and falls back to the environment.
-So a blank address in a container is not an error — it is a backend calling
+So a blank address in a container is not an error. It is a backend calling
 addresses that do not exist. They are set explicitly in the compose.
 
 ### The trap: binding to loopback
 
 In production the server bound to `127.0.0.1`, which is right behind a reverse
 proxy on the same machine. A container's loopback is its own: the process came
-up, logged "Server running in PRODUCTION mode", and answered nobody — not the
+up, logged "Server running in PRODUCTION mode", and answered nobody: not the
 published port, not `dstack-ingress` next door. `BIND_ADDRESS` exists for this
 and the compose sets `0.0.0.0`. Found by running the image locally before
 publishing it, which is the entire reason for doing that.
@@ -1503,7 +1503,7 @@ enrolments from that moment, noticed, rotated, and elections created afterwards
 name the new attester. A leaked TAG key is retroactive and silent: World ID
 nullifiers are public and the tags sit on chain, so it reconstructs who joined
 what across every election ever held, and rotating repairs nothing already
-published. Welded, the two could not be rotated apart — and rotating to recover
+published. Welded, the two could not be rotated apart, and rotating to recover
 from a forged signature would have changed every tag, so anybody mid-enrolment
 would have been handed a second one and the contract would have taken a second
 leaf. Recovering from one incident would have caused another.
@@ -1519,7 +1519,7 @@ reads better, since it says when the tag stops being needed, but
 enrolment, which is the double-leaf bug again.
 
 An election created in epoch E enrols only while its own window is open, and
-afterwards nothing recomputes its tags — the contract already holds the ones it
+afterwards nothing recomputes its tags, because the contract already holds the ones it
 accepted. So once every election created in E has closed enrolment, E's key can
 be deleted, and those enrolments pass beyond the reach of everyone, this
 platform included. That is the difference between a secret nobody may leak and
