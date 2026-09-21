@@ -31,23 +31,10 @@ concurrency:
   group: checks-${{ github.ref }}
   cancel-in-progress: true
 
-# THE RUNNER IS PINNED, AND THE DATE IS THE REASON.
-#
-# `ubuntu-latest` is not a version, it is a pointer, and on 19 October 2026 it
-# starts pointing at Ubuntu 26. That is a month before this is defended. A
-# runner that changes underneath a repository changes the system `git`, the
-# system `curl` and the libraries the zero-knowledge dependencies build
-# against, and it does it on a day nobody chose, to a workflow nobody edited.
-#
-# So every job here names `ubuntu-24.04` explicitly: the image these checks
-# were actually verified on. The cost is having to move it by hand one day,
-# which is the point -- moving it becomes a commit somebody made on purpose,
-# with a run to look at, rather than a Monday where everything is suddenly red.
-#
 jobs:
   frontend:
     name: frontend
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -85,7 +72,7 @@ jobs:
 
   backend:
     name: backend
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -115,7 +102,7 @@ jobs:
 
   contracts:
     name: contracts
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -151,7 +138,7 @@ jobs:
     name: publish the frontend
     needs: [frontend, backend, contracts]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       # The URL IS the credential: anyone holding it can trigger a deployment,
       # which is why it lives in the repository secrets and not in this file.
