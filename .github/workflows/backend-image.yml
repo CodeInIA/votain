@@ -171,29 +171,30 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # `heroku container:release` is a thin wrapper over this call, and doing
-      # it directly means the workflow needs no CLI and no extra install step.
-      # The `docker-releases` variant of the API is what accepts an image id.
+      # RELEASED THROUGH THE CLI, and the first attempt did it by hand.
+      #
+      # The Platform API takes `docker_image`, and the obvious value to give it
+      # -- the digest `build-push-action` reports -- is the wrong one. That is
+      # the MANIFEST digest; Heroku wants the IMAGE ID, which is the digest of
+      # the image config inside that manifest. Passing the first returns a flat
+      # `{"id":"not_found"}` that names neither field nor reason.
+      #
+      # Resolving it means a registry token dance and a manifest fetch, which
+      # is exactly what `container:release` already does. Installing the CLI is
+      # cheaper than owning a second implementation of somebody else's API.
       - name: Release it on Heroku
         if: inputs.deploy_heroku
         env:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-          DIGEST: ${{ steps.heroku.outputs.digest }}
         run: |
           set -euo pipefail
-          respuesta=$(curl -sS -X PATCH \
-            "https://api.heroku.com/apps/${HEROKU_APP}/formation" \
-            -H "Accept: application/vnd.heroku+json; version=3.docker-releases" \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer ${HEROKU_API_KEY}" \
-            -d "{\"updates\":[{\"type\":\"web\",\"docker_image\":\"${DIGEST}\"}]}")
-          echo "$respuesta" | grep -q '"type":"web"' || { echo "$respuesta"; exit 1; }
-          echo "released web on ${HEROKU_APP} at ${DIGEST}"
+          npm install -g heroku --silent
+          heroku container:release web -a "$HEROKU_APP"
           {
             echo ''
             echo "### Also released on Heroku"
             echo ''
-            echo "\`${HEROKU_APP}\` now runs \`${DIGEST}\`."
+            echo "\`$HEROKU_APP\` now runs the image built from this commit."
             echo ''
             echo 'NOT the attested digest: Heroku needs Docker media types, so this is a'
             echo 'second build of the same commit. The attestation covers the GHCR image.'
