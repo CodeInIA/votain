@@ -134,6 +134,29 @@ jobs:
   # meaning, and the gate lives where the checks already are.
   #
   # PUSHES ONLY. A pull request into `main` should be checked, not published.
+  # THE BACKEND'S OTHER HALF OF THE SAME GATE. The frontend is published by
+  # calling a hook; the backend is published by building an image, so the two
+  # look different in this file while meaning the same thing: nothing reaches
+  # the outside world over a red test.
+  #
+  # PUBLISHED, NOT DEPLOYED, and the distinction is the whole design. This
+  # produces a new numbered version in the registry and a tag in the
+  # repository; it does not move Heroku and it does not touch the enclave.
+  # Those stay manual, in `deploy-heroku.yml` and `deploy-phala.yml`, because
+  # deciding what the world talks to should be somebody's decision.
+  image:
+    name: publish the backend image
+    needs: [frontend, backend, contracts]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # The called workflow declares what it needs; `permissions` cannot be
+    # narrowed here without taking away the attestation's ability to sign.
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+      attestations: write
+    uses: ./.github/workflows/backend-image.yml
+
   deploy:
     name: publish the frontend
     needs: [frontend, backend, contracts]

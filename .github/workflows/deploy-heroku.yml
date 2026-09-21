@@ -1,0 +1,143 @@
+# Puts a published version of the backend on Heroku.
+#
+# ONE BUTTON, AND IT ONLY EVER MOVES HEROKU. Building an image and deciding
+# what the world talks to are different acts, and keeping them in different
+# files is what makes the second one answerable: every deployment is a run with
+# a name, a version and somebody's account attached to it.
+#
+# WHY IT BUILDS AGAIN INSTEAD OF COPYING THE PUBLISHED IMAGE, which looks like
+# waste until you try it. Heroku's registry rejects OCI manifests, and the GHCR
+# image is an OCI manifest because that is what carries the signed provenance.
+# So this rebuilds the same commit with Docker media types, and the result has
+# a DIFFERENT digest from the attested one.
+#
+# That is the honest shape of the two deployments and the docs say so: Phala is
+# the one verifiable from public source to running enclave, Heroku is the one
+# that stays up cheaply while nobody is defending a thesis. Only the first
+# carries the attestation.
+#
+# It also sidesteps what cost an evening locally: Docker Desktop's containerd
+# image store writes OCI manifests whatever you ask for, so a push to Heroku
+# from a laptop fails with a bare "unsupported". A CI runner has no such store
+# and buildx can simply be told the format.
+
+name: deploy heroku
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to deploy (e.g. 0.1.2). Empty uses the newest backend-v* tag.'
+        required: false
+        type: string
+
+env:
+  # Named once. Changing deployment target should be a one-line edit.
+  HEROKU_APP: votain-backend
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # EVERY TAG: "the newest version" is read from them, and the chosen one
+      # is what gets checked out. A shallow clone knows about neither.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Work out which version
+        id: version
+        env:
+          PEDIDA: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [ -n "${PEDIDA:-}" ]; then
+            valor="$PEDIDA"
+          else
+            # `sort -V`, so 0.1.10 beats 0.1.9 rather than losing alphabetically.
+            valor=$(git tag -l 'backend-v*' | sed 's/^backend-v//' | sort -V | tail -1)
+            [ -n "$valor" ] || { echo "No backend-v* tag to deploy."; exit 1; }
+          fi
+
+          # THE TAG MUST EXIST, and this is not a formality. Without the check,
+          # a typo deploys whatever `main` happens to hold right now under a
+          # version number that means something else entirely.
+          git rev-parse -q --verify "refs/tags/backend-v$valor" >/dev/null \
+            || { echo "backend-v$valor does not exist."; exit 1; }
+
+          echo "value=$valor" >> "$GITHUB_OUTPUT"
+          echo "Deploying backend-v$valor to $HEROKU_APP"
+
+      # The source of that version, not of the branch tip.
+      - name: Check out that version
+        run: git checkout --detach "refs/tags/backend-v${{ steps.version.outputs.value }}"
+
+      - uses: docker/setup-buildx-action@v4
+
+      # Heroku's registry takes the API key as the password and ignores the
+      # user, which is what `heroku container:login` does under the hood.
+      - uses: docker/login-action@v4
+        with:
+          registry: registry.heroku.com
+          username: _
+          password: ${{ secrets.HEROKU_API_KEY }}
+
+      - name: Build and push to Heroku
+        uses: docker/build-push-action@v7
+        with:
+          context: backend
+          file: backend/Dockerfile
+          push: true
+          platforms: linux/amd64
+          # Both off, and the media types forced: this is the combination
+          # Heroku's registry accepts.
+          provenance: false
+          sbom: false
+          outputs: type=registry,oci-mediatypes=false
+          tags: registry.heroku.com/${{ env.HEROKU_APP }}/web
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # RELEASED THROUGH THE CLI, and the first attempt did it by hand.
+      #
+      # The Platform API takes `docker_image`, and the obvious value to give it
+      # -- the digest `build-push-action` reports -- is the wrong one. That is
+      # the MANIFEST digest; Heroku wants the IMAGE ID, which is the digest of
+      # the image config inside that manifest. Passing the first returns a flat
+      # `{"id":"not_found"}` that names neither field nor reason.
+      #
+      # Resolving it means a registry token dance and a manifest fetch, which
+      # is exactly what `container:release` already does. Installing the CLI is
+      # cheaper than owning a second implementation of somebody else's API.
+      - name: Release it
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: |
+          set -euo pipefail
+          npm install -g heroku --silent
+          heroku container:release web -a "$HEROKU_APP"
+          {
+            echo "### Released on Heroku"
+            echo ''
+            echo "\`$HEROKU_APP\` now runs backend-v${{ steps.version.outputs.value }}."
+            echo ''
+            echo 'NOT the attested digest: Heroku needs Docker media types, so this is a'
+            echo 'second build of the same source. The attestation covers the GHCR image.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Check it answers
+        run: |
+          set -euo pipefail
+          # Give the dyno a moment to come up before believing a failure.
+          for intento in 1 2 3 4 5 6; do
+            codigo=$(curl -sS -o /dev/null -w '%{http_code}' https://api.votain.app/health || echo 000)
+            [ "$codigo" = "200" ] && { echo "health: 200"; exit 0; }
+            echo "attempt $intento: $codigo"
+            sleep 10
+          done
+          echo "api.votain.app/health never answered 200."
+          echo "The release went out; something about the running app is wrong."
+          exit 1

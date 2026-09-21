@@ -1,0 +1,193 @@
+# Moves the confidential VM onto a published version of the backend.
+#
+# THIS IS THE DEPLOYMENT THAT CARRIES THE ARGUMENT. Heroku just has to stay up;
+# this one is the half of the thesis that says a voter does not have to trust
+# the person running the server. So it is deliberately the least automatic
+# thing in the repository: a human picks a version and presses a button.
+#
+# WHAT ACTUALLY CHANGES. The CVM runs whatever `docker-compose.yml` says, and
+# that file pins an exact DIGEST rather than a tag. Upgrading therefore means
+# rewriting one line and handing the file back to Phala, which restarts the
+# enclave and produces a new measurement. The digest is looked up from the
+# registry rather than typed, because a digest somebody transcribed by hand is
+# a digest nobody checked.
+#
+# THE COMPOSE IS COMMITTED BACK, and that is not bookkeeping. The measurement
+# an outsider verifies is of that file. If the repository says one digest and
+# the enclave runs another, the whole chain is unverifiable by exactly the
+# person it was built to convince.
+#
+# ── BEFORE THIS CAN RUN ──────────────────────────────────────────────────────
+#
+# Two repository secrets, and neither can be invented here:
+#
+#   PHALA_CLOUD_API_KEY  an API key from the Phala Cloud dashboard.
+#   PHALA_ENV            the contents of the backend's production env file,
+#                        the one kept outside this repository.
+#
+# PHALA_ENV IS NOT OPTIONAL, and the reason is worth stating plainly. The
+# enclave's environment is sealed to the deployment; an update that supplies no
+# environment is an update that can leave the backend without the keys it signs
+# credentials with. Passing it every time makes that failure impossible rather
+# than unlikely.
+
+name: deploy phala
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to deploy (e.g. 0.1.2). Empty uses the newest backend-v* tag.'
+        required: false
+        type: string
+
+env:
+  # The CVM this repository deploys to, by app id.
+  CVM: 8a4883de0784b3d5a4c8cd66738e9f559400b32a
+
+permissions:
+  # To commit the new digest back to the branch.
+  contents: write
+  packages: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Check the secrets exist
+        env:
+          CLAVE: ${{ secrets.PHALA_CLOUD_API_KEY }}
+          ENTORNO: ${{ secrets.PHALA_ENV }}
+        run: |
+          set -euo pipefail
+          falta=0
+          [ -n "${CLAVE:-}" ]   || { echo "PHALA_CLOUD_API_KEY is not set."; falta=1; }
+          [ -n "${ENTORNO:-}" ] || { echo "PHALA_ENV is not set."; falta=1; }
+          # STOPPING HERE IS THE POINT. Reaching `phala deploy` without the
+          # environment is how a running enclave loses the keys it issues
+          # credentials with, and that is not a failure worth discovering live.
+          [ "$falta" = 0 ] || { echo "See the header of this file."; exit 1; }
+
+      - name: Work out which version
+        id: version
+        env:
+          PEDIDA: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [ -n "${PEDIDA:-}" ]; then
+            valor="$PEDIDA"
+          else
+            valor=$(git tag -l 'backend-v*' | sed 's/^backend-v//' | sort -V | tail -1)
+            [ -n "$valor" ] || { echo "No backend-v* tag to deploy."; exit 1; }
+          fi
+          git rev-parse -q --verify "refs/tags/backend-v$valor" >/dev/null \
+            || { echo "backend-v$valor does not exist."; exit 1; }
+          echo "value=$valor" >> "$GITHUB_OUTPUT"
+
+      - name: Lowercase the owner
+        id: owner
+        run: echo "value=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Look up the digest
+        id: digest
+        run: |
+          set -euo pipefail
+          referencia="ghcr.io/${{ steps.owner.outputs.value }}/votain-backend:${{ steps.version.outputs.value }}"
+          valor=$(docker buildx imagetools inspect "$referencia" --format '{{.Manifest.Digest}}')
+          [ -n "$valor" ] || { echo "No digest for $referencia"; exit 1; }
+          echo "value=$valor" >> "$GITHUB_OUTPUT"
+          echo "$referencia -> $valor"
+
+      # Proof it is the image this repository built, checked BEFORE it reaches
+      # the enclave. Verifying afterwards would be asking the question too late.
+      - name: Verify the provenance
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh attestation verify \
+            "oci://ghcr.io/${{ steps.owner.outputs.value }}/votain-backend:${{ steps.version.outputs.value }}" \
+            --repo "${{ github.repository }}"
+
+      - name: Pin it in the compose
+        id: compose
+        run: |
+          set -euo pipefail
+          nueva="ghcr.io/${{ steps.owner.outputs.value }}/votain-backend:${{ steps.version.outputs.value }}@${{ steps.digest.outputs.value }}"
+          # Only the issuer line. The ingress image is pinned separately and
+          # has nothing to do with which backend version is being rolled out.
+          sed -i -E "s|(^ *image: )ghcr\.io/[^ ]*votain-backend:.*$|\1$nueva|" docker-compose.yml
+          grep -n 'votain-backend' docker-compose.yml
+          if git diff --quiet docker-compose.yml; then
+            echo "changed=no" >> "$GITHUB_OUTPUT"
+            echo "The compose already pins this digest; deploying anyway."
+          else
+            echo "changed=yes" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy it
+        env:
+          PHALA_CLOUD_API_KEY: ${{ secrets.PHALA_CLOUD_API_KEY }}
+          ENTORNO: ${{ secrets.PHALA_ENV }}
+        run: |
+          set -euo pipefail
+          npm install -g phala --silent
+
+          # Written outside the workspace so a later `git add .` can never pick
+          # it up, and removed whatever happens next.
+          archivo=$(mktemp)
+          trap 'rm -f "$archivo"' EXIT
+          printf '%s' "$ENTORNO" > "$archivo"
+
+          phala deploy \
+            --cvm-id "$CVM" \
+            --compose docker-compose.yml \
+            --env "$archivo" \
+            --wait
+
+      # GITHUB_TOKEN PUSHES DO NOT TRIGGER WORKFLOWS, so this cannot set off
+      # `checks.yml` and, through it, another image build. Worth knowing rather
+      # than discovering: the loop would publish a version per deployment.
+      - name: Record the digest
+        if: steps.compose.outputs.changed == 'yes'
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docker-compose.yml
+          git commit -m "deploy: the CVM now runs backend-v${{ steps.version.outputs.value }}
+
+          Pinned by the deploy phala workflow, to the digest it verified before
+          handing the compose to the enclave."
+          git push origin "HEAD:${{ github.ref_name }}"
+
+      - name: Check it answers
+        run: |
+          set -euo pipefail
+          for intento in 1 2 3 4 5 6 7 8 9 10; do
+            codigo=$(curl -sS -o /dev/null -w '%{http_code}' https://api.votain.app/health || echo 000)
+            [ "$codigo" = "200" ] && { echo "health: 200"; break; }
+            echo "attempt $intento: $codigo"
+            sleep 15
+          done
+          {
+            echo "### The CVM now runs backend-v${{ steps.version.outputs.value }}"
+            echo ''
+            echo '```'
+            echo "${{ steps.digest.outputs.value }}"
+            echo '```'
+            echo ''
+            echo 'DNS: the ingress writes its records only on FIRST provisioning.'
+            echo 'If api.votain.app does not resolve here, restore them by hand.'
+          } >> "$GITHUB_STEP_SUMMARY"
+          [ "${codigo:-}" = "200" ] || { echo "api.votain.app/health never answered 200."; exit 1; }

@@ -18,36 +18,61 @@
 # for this run, can only write to this repository's packages, and expires when
 # the job ends. GHCR does not accept fine-grained personal tokens, so the
 # alternative would have been a classic one sitting on a laptop.
+#
+# ── THIS USED TO FIRE ONLY ON A TAG, and why it no longer does ───────────────
+#
+# The old rule was "deliberate releases only", because the compose pins a
+# digest and a moving tag would let the measurement change under a running
+# deployment. That reasoning is sound, but it was about WHAT THE ENCLAVE RUNS,
+# not about when an image may be BUILT, and the two had been conflated.
+#
+# Publishing on every green commit is safe as long as three things hold, and
+# they are enforced below rather than hoped for:
+#
+#   1. No version is ever reused. The patch number is bumped from the highest
+#      `backend-v*` tag and the job refuses to overwrite one that exists. The
+#      old flow republished `0.1.0` on every run, which silently moved the tag
+#      that a pinned digest was supposed to make immutable.
+#   2. Every published version is recorded in the repository as a tag, so a
+#      digest can always be traced back to a commit somebody can read.
+#   3. Nothing deploys itself. Moving Heroku or the CVM onto a new image stays
+#      a separate, deliberate act: `deploy-heroku.yml` and `deploy-phala.yml`.
 
 name: backend image
 
 on:
-  # DELIBERATE RELEASES ONLY. The compose pins an exact tag, because a moving
-  # tag means the measurement can change under a running deployment — which is
-  # the thing attestation exists to rule out. So this does not fire on every
-  # push: it fires when somebody decides a version exists.
-  push:
-    tags:
-      - 'backend-v*'
+  # Called by `checks.yml` once the tests are green, which is what makes this
+  # automatic. It hands back the version and digest it produced, so a caller
+  # can say what to pin.
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version to publish. Empty bumps the patch.'
+        required: false
+        type: string
+    outputs:
+      version:
+        description: 'The version that was published'
+        value: ${{ jobs.publish.outputs.version }}
+      digest:
+        description: 'The digest of the published image'
+        value: ${{ jobs.publish.outputs.digest }}
+
   workflow_dispatch:
     inputs:
       version:
-        description: 'Image tag to publish, without the leading v (e.g. 0.1.0)'
-        required: true
-        type: string
-      deploy_heroku:
-        description: 'Also publish to Heroku and release it there'
+        description: 'Version to publish, no leading v (e.g. 0.2.0). Empty bumps the patch.'
         required: false
-        default: false
-        type: boolean
+        type: string
 
-env:
-  # Named once. Changing deployment target should be a one-line edit.
-  HEROKU_APP: votain-backend
+  # A hand-made tag still works, for a release somebody wants to name.
+  push:
+    tags:
+      - 'backend-v*'
 
 permissions:
-  contents: read
-  # Publish to this repository's packages.
+  # `write` because this records each published version as a tag.
+  contents: write
   packages: write
   # Sign the provenance. Without this the attestation step cannot mint the
   # short-lived identity it needs, and the chain above loses its middle link.
@@ -57,8 +82,15 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.value }}
+      digest: ${{ steps.push.outputs.digest }}
     steps:
+      # EVERY TAG, not just the last commit: the next version number is read
+      # from the tags, so a shallow clone would compute the same number twice.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       # DOCKER REFERENCES MUST BE LOWERCASE and the owner here is `CodeInIA`,
       # so interpolating it directly produces `ghcr.io/CodeInIA/...`, which the
@@ -69,12 +101,63 @@ jobs:
 
       - name: Work out the version
         id: version
+        env:
+          # Through the environment rather than interpolated into the script:
+          # a version somebody typed is untrusted text, and pasting it straight
+          # into a shell line is how a workflow input becomes a shell command.
+          PEDIDA: ${{ inputs.version }}
         run: |
-          if [ -n "${{ inputs.version }}" ]; then
-            echo "value=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
-          else
+          set -euo pipefail
+
+          if [ -n "${PEDIDA:-}" ]; then
+            # Somebody named it: a minor or major bump, which no rule can guess.
+            valor="$PEDIDA"
+            origen="asked for"
+          elif [ "${GITHUB_REF_TYPE:-}" = "tag" ]; then
             # refs/tags/backend-v0.1.0 -> 0.1.0
-            echo "value=${GITHUB_REF_NAME#backend-v}" >> "$GITHUB_OUTPUT"
+            valor="${GITHUB_REF_NAME#backend-v}"
+            origen="taken from the tag"
+          else
+            # THE AUTOMATIC CASE. Highest existing tag, patch plus one.
+            # `sort -V` and not `sort`, or 0.1.10 would lose to 0.1.9.
+            ultimo=$(git tag -l 'backend-v*' | sed 's/^backend-v//' | sort -V | tail -1)
+            if [ -z "$ultimo" ]; then
+              # NOTHING TO CONTINUE FROM, which is true exactly once: the first
+              # versions were published by hand, before any of this existed.
+              #
+              # The compose is the right place to start from, because it names
+              # the version that is actually deployed. Seeding a tag by hand
+              # instead would have meant pushing `backend-v0.1.0`, which fires
+              # the tag trigger below, which republishes 0.1.0 -- moving the
+              # registry tag away from the digest the enclave was attested on.
+              # The cure would have been worse than the gap.
+              ultimo=$(grep -o 'votain-backend:[0-9.]*' docker-compose.yml | head -1 | cut -d: -f2)
+              [ -n "$ultimo" ] || { echo "No tag and no version in the compose."; exit 1; }
+              echo "No backend-v* tag yet; continuing from the compose ($ultimo)."
+            fi
+            mayor=${ultimo%%.*}
+            resto=${ultimo#*.}
+            menor=${resto%%.*}
+            parche=${resto#*.}
+            valor="$mayor.$menor.$((parche + 1))"
+            origen="bumped from $ultimo"
+          fi
+
+          case "$valor" in
+            [0-9]*.[0-9]*.[0-9]*) : ;;
+            *) echo "Not a version: $valor"; exit 1 ;;
+          esac
+
+          echo "value=$valor" >> "$GITHUB_OUTPUT"
+          echo "Publishing $valor ($origen)"
+
+          # REFUSING TO REUSE A VERSION IS THE WHOLE SAFETY PROPERTY HERE.
+          # A digest pinned in the compose is only immutable if the tag beside
+          # it never moves. Skipped when a tag push triggered this, because
+          # then the tag is supposed to exist already.
+          if [ "${GITHUB_REF_TYPE:-}" != "tag" ] && git rev-parse -q --verify "refs/tags/backend-v$valor" >/dev/null; then
+            echo "backend-v$valor already exists. Pick another version."
+            exit 1
           fi
 
       - uses: docker/setup-buildx-action@v4
@@ -114,92 +197,39 @@ jobs:
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
 
-      - name: Say what to pin
-        run: |
-          echo "### Image published" >> "$GITHUB_STEP_SUMMARY"
-          echo '' >> "$GITHUB_STEP_SUMMARY"
-          echo 'Pin this digest in `docker-compose.yml`, not the tag:' >> "$GITHUB_STEP_SUMMARY"
-          echo '' >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          echo "ghcr.io/${{ steps.owner.outputs.value }}/votain-backend:${{ steps.version.outputs.value }}@${{ steps.push.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          echo '' >> "$GITHUB_STEP_SUMMARY"
-          echo 'Verify it came from this repository:' >> "$GITHUB_STEP_SUMMARY"
-          echo '' >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          echo "gh attestation verify oci://ghcr.io/${{ steps.owner.outputs.value }}/votain-backend:${{ steps.version.outputs.value }} --repo ${{ github.repository }}" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-
-      # ── Heroku, which is a different kind of deployment on purpose ──────────
+      # RECORDED IN THE REPOSITORY, so a digest can be traced to a commit
+      # without trusting a build log to still be there.
       #
-      # WHY THIS IMAGE IS NOT THE ATTESTED ONE, and the difference is worth
-      # keeping straight rather than smoothing over. Heroku's registry rejects
-      # OCI manifests, which is what the GHCR push above produces along with
-      # its signed provenance. So this builds again with Docker media types,
-      # from the same commit, and the result has a DIFFERENT digest.
-      #
-      # That is the honest shape of the two deployments: Phala is the one that
-      # can be verified from public source to running enclave; Heroku is the
-      # one that stays up for free while nobody is defending a thesis. Only the
-      # first carries the attestation, and the docs say so.
-      #
-      # It also sidesteps what cost an evening locally: Docker Desktop's
-      # containerd image store writes OCI manifests whatever you ask for, so a
-      # push to Heroku from a laptop fails with a bare "unsupported". A CI
-      # runner has no such store and buildx can simply be told the format.
-      # Heroku's registry takes the API key as the password and ignores the
-      # user, which is what `heroku container:login` does under the hood.
-      - name: Log in to the Heroku registry
-        if: inputs.deploy_heroku
-        uses: docker/login-action@v4
-        with:
-          registry: registry.heroku.com
-          username: _
-          password: ${{ secrets.HEROKU_API_KEY }}
-
-      - name: Publish to Heroku
-        if: inputs.deploy_heroku
-        id: heroku
-        uses: docker/build-push-action@v7
-        with:
-          context: backend
-          file: backend/Dockerfile
-          push: true
-          platforms: linux/amd64
-          # Both off, and the media types forced: this is the combination
-          # Heroku's registry accepts.
-          provenance: false
-          sbom: false
-          outputs: type=registry,oci-mediatypes=false
-          tags: registry.heroku.com/${{ env.HEROKU_APP }}/web
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      # RELEASED THROUGH THE CLI, and the first attempt did it by hand.
-      #
-      # The Platform API takes `docker_image`, and the obvious value to give it
-      # -- the digest `build-push-action` reports -- is the wrong one. That is
-      # the MANIFEST digest; Heroku wants the IMAGE ID, which is the digest of
-      # the image config inside that manifest. Passing the first returns a flat
-      # `{"id":"not_found"}` that names neither field nor reason.
-      #
-      # Resolving it means a registry token dance and a manifest fetch, which
-      # is exactly what `container:release` already does. Installing the CLI is
-      # cheaper than owning a second implementation of somebody else's API.
-      - name: Release it on Heroku
-        if: inputs.deploy_heroku
-        env:
-          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+      # This does not loop, and that is worth knowing rather than discovering:
+      # a push made with `GITHUB_TOKEN` does not trigger another workflow run,
+      # so tagging here cannot set off the `push: tags:` trigger above.
+      - name: Tag the commit
+        if: ${{ github.ref_type != 'tag' }}
         run: |
           set -euo pipefail
-          npm install -g heroku --silent
-          heroku container:release web -a "$HEROKU_APP"
+          etiqueta="backend-v${{ steps.version.outputs.value }}"
+          git tag "$etiqueta" "$GITHUB_SHA"
+          git push origin "$etiqueta"
+          echo "tagged $etiqueta"
+
+      - name: Say what to pin
+        run: |
+          referencia="ghcr.io/${{ steps.owner.outputs.value }}/votain-backend:${{ steps.version.outputs.value }}@${{ steps.push.outputs.digest }}"
           {
+            echo "### Image published"
             echo ''
-            echo "### Also released on Heroku"
+            echo 'Pin this digest in `docker-compose.yml`, not the tag:'
             echo ''
-            echo "\`$HEROKU_APP\` now runs the image built from this commit."
+            echo '```'
+            echo "$referencia"
+            echo '```'
             echo ''
-            echo 'NOT the attested digest: Heroku needs Docker media types, so this is a'
-            echo 'second build of the same commit. The attestation covers the GHCR image.'
+            echo 'Verify it came from this repository:'
+            echo ''
+            echo '```'
+            echo "gh attestation verify oci://ghcr.io/${{ steps.owner.outputs.value }}/votain-backend:${{ steps.version.outputs.value }} --repo ${{ github.repository }}"
+            echo '```'
+            echo ''
+            echo 'Nothing is deployed by this workflow. Run *deploy heroku* or'
+            echo '*deploy phala* to move a deployment onto it.'
           } >> "$GITHUB_STEP_SUMMARY"
