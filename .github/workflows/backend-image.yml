@@ -58,7 +58,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # DOCKER REFERENCES MUST BE LOWERCASE and the owner here is `CodeInIA`,
       # so interpolating it directly produces `ghcr.io/CodeInIA/...`, which the
@@ -77,9 +77,9 @@ jobs:
             echo "value=${GITHUB_REF_NAME#backend-v}" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
 
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -87,7 +87,7 @@ jobs:
 
       - name: Build and push
         id: push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: backend
           file: backend/Dockerfile
@@ -103,8 +103,12 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # v4 is a thin wrapper over `actions/attest`, which is where upstream says
+      # new work should go. The inputs below are unchanged, so this stays as it
+      # is until there is a reason to touch the one step whose output the whole
+      # verification story rests on.
       - name: Attest the provenance
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-name: ghcr.io/${{ steps.owner.outputs.value }}/votain-backend
           subject-digest: ${{ steps.push.outputs.digest }}
@@ -147,7 +151,7 @@ jobs:
       # user, which is what `heroku container:login` does under the hood.
       - name: Log in to the Heroku registry
         if: inputs.deploy_heroku
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: registry.heroku.com
           username: _
@@ -156,7 +160,7 @@ jobs:
       - name: Publish to Heroku
         if: inputs.deploy_heroku
         id: heroku
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: backend
           file: backend/Dockerfile
