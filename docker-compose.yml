@@ -70,7 +70,7 @@ services:
     # binds to commit a8306863, so pinning it is what makes the TEE's
     # measurement traceable all the way back to source somebody can read:
     #   gh attestation verify oci://ghcr.io/codeinia/votain-backend:0.1.0     #     --repo CodeInIA/votain
-    image: ghcr.io/codeinia/votain-backend:0.1.0@sha256:4621da1affa9b11fc9012ad92fda4a65b01be872d3325ccfce5e485ac9ef8420
+    image: ghcr.io/codeinia/votain-backend:0.1.3@sha256:2cfad10ab78b35044d747b228536ea406fb287a52002432bc3b8f0a2d2ff480f
     restart: unless-stopped
     # NO `ports`. Reachable only from `ingress`, over the compose network.
     # Publishing it too would put an unencrypted 3000 beside the TLS the
