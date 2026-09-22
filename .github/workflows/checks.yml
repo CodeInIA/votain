@@ -349,3 +349,156 @@ jobs:
             exit 1
           fi
           echo "deployment triggered"
+
+  # ── MARKING WHAT SHIPPED ────────────────────────────────────────────────────
+  #
+  # A release exists for a state that actually reached somebody, and for no
+  # other reason. A push that changes only documentation publishes nothing, so
+  # it gets no release; its commits are not lost, they appear in the notes of
+  # the next one, because the changelog spans everything since the previous
+  # release rather than the last push.
+  #
+  # CALVER, NOT SEMVER, and not an accident. `backend-v*` already belongs to
+  # the images, and the project as a whole has no semantic version: inventing
+  # `v1.0.0` would be claiming a stability nobody has promised. A date says
+  # exactly what it knows.
+  #
+  # `always()` is required because this depends on jobs that are SKIPPED in the
+  # normal case: a commit that touches only the frontend skips `image`, and one
+  # that touches only the backend skips `deploy`. Without it the release would
+  # never run at all. The results are then checked by hand, so a skipped
+  # publication is tolerated and a failed test is not.
+  release:
+    name: publish the release
+    needs: [frontend, backend, contracts, cambios, image, deploy]
+    if: |
+      always()
+        && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        && needs.frontend.result == 'success'
+        && needs.backend.result == 'success'
+        && needs.contracts.result == 'success'
+        && (needs.image.result == 'success' || needs.deploy.result == 'success')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      # EVERY TAG AND EVERY COMMIT: the notes are the range between the last
+      # release and this one, which a shallow clone cannot see.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Work out the tag
+        id: tag
+        run: |
+          set -euo pipefail
+          # Read BEFORE the new tag is chosen, or the range would end up empty.
+          anterior=$(git tag -l 'v20*' | sort -V | tail -1)
+          echo "previous=${anterior:-}" >> "$GITHUB_OUTPUT"
+
+          hoy=$(date -u +%Y.%m.%d)
+          etiqueta="v$hoy"
+          n=1
+          while git rev-parse -q --verify "refs/tags/$etiqueta" >/dev/null; do
+            n=$((n + 1))
+            etiqueta="v$hoy-$n"
+          done
+          echo "value=$etiqueta" >> "$GITHUB_OUTPUT"
+          echo "Releasing $etiqueta, previous ${anterior:-none}"
+
+      - name: Write the notes
+        env:
+          ANTERIOR: ${{ steps.tag.outputs.previous }}
+          VERSION_IMAGEN: ${{ needs.image.outputs.version }}
+          DIGEST_IMAGEN: ${{ needs.image.outputs.digest }}
+          HUBO_IMAGEN: ${{ needs.image.result }}
+          HUBO_FRONTEND: ${{ needs.deploy.result }}
+        run: |
+          set -euo pipefail
+          # THE FIRST RELEASE HAS NOTHING BEHIND IT, and without a floor its
+          # range would be the entire history: every commit since the project
+          # began, in one set of notes nobody reads. The newest `backend-v*`
+          # tag is the nearest real marker, and failing that the last
+          # twenty-five commits, which is a changelog rather than an archive.
+          if [ -n "${ANTERIOR:-}" ]; then
+            rango="$ANTERIOR..HEAD"
+          else
+            base=$(git tag -l 'backend-v*' | sort -V | tail -1)
+            if [ -n "$base" ]; then
+              rango="$base..HEAD"
+              echo "First release: starting from $base."
+            else
+              rango="-25"
+              echo "First release and no tags at all: last 25 commits."
+            fi
+          fi
+          git log $rango --no-merges --pretty=format:'%s' > asuntos.txt
+          echo "$(wc -l < asuntos.txt) commits in range $rango"
+
+          : > notas.md
+          echo '## What shipped' >> notas.md
+          echo '' >> notas.md
+          if [ "$HUBO_FRONTEND" = success ]; then
+            echo '- Frontend published to `votain.app` through 4EVERLAND.' >> notas.md
+          fi
+          if [ "$HUBO_IMAGEN" = success ]; then
+            echo "- Backend image \`backend-v$VERSION_IMAGEN\`, with signed provenance." >> notas.md
+            echo '' >> notas.md
+            echo '  ```' >> notas.md
+            echo "  ghcr.io/codeinia/votain-backend:$VERSION_IMAGEN@$DIGEST_IMAGEN" >> notas.md
+            echo '  ```' >> notas.md
+          fi
+          echo '' >> notas.md
+
+          # SUBJECTS ONLY. The commit bodies in this repository run to
+          # paragraphs, which is right in a log and unreadable in release notes.
+          # The conventional prefix is stripped once the line is under its own
+          # heading, where repeating it says nothing.
+          seccion() {
+            local patron="$1" titulo="$2" lineas
+            lineas=$(grep -E "$patron" asuntos.txt || true)
+            if [ -n "$lineas" ]; then
+              echo "### $titulo" >> notas.md
+              echo '' >> notas.md
+              printf '%s' "$lineas" | sed -E 's/^[a-z]+(\([^)]*\))?!?: //' | sed 's/^/- /' >> notas.md
+              echo '' >> notas.md
+              echo '' >> notas.md
+            fi
+          }
+
+          echo '## Changes' >> notas.md
+          echo '' >> notas.md
+          seccion '^feat(\(|!?:)' 'Features'
+          seccion '^fix(\(|!?:)' 'Fixes'
+          seccion '^perf(\(|!?:)' 'Performance'
+          seccion '^(refactor|style)(\(|!?:)' 'Refactoring'
+          seccion '^test(\(|!?:)' 'Tests'
+          seccion '^(ci|build|chore)(\(|!?:)' 'Plumbing'
+          seccion '^docs(\(|!?:)' 'Documentation'
+
+          # Anything whose subject carries no recognised prefix. Dropping these
+          # silently is how a real change goes unmentioned.
+          otros=$(grep -vE '^(feat|fix|perf|refactor|style|test|ci|build|chore|docs)(\([^)]*\))?!?: ' asuntos.txt || true)
+          if [ -n "$otros" ]; then
+            echo '### Other' >> notas.md
+            echo '' >> notas.md
+            printf '%s' "$otros" | sed 's/^/- /' >> notas.md
+            echo '' >> notas.md
+          fi
+
+          echo '' >> notas.md
+          echo 'The contracts run on a development chain until the Amoy deployment.' >> notas.md
+          cat notas.md
+
+      - name: Publish it
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          etiqueta="${{ steps.tag.outputs.value }}"
+          gh release create "$etiqueta" --title "$etiqueta" --notes-file notas.md --target "$GITHUB_SHA"
+          {
+            echo "### Release $etiqueta"
+            echo ''
+            gh release view "$etiqueta" --json url --jq .url
+          } >> "$GITHUB_STEP_SUMMARY"
