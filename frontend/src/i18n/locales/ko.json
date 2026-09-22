@@ -43,7 +43,7 @@
     "mobile_return_hint": "앱에서 확인 후 이 탭으로 돌아오세요",
     "qr_title": "World ID로 스캔",
     "qr_desc": "World ID 앱을 열고 이 코드를 스캔하여 신원을 확인하세요.",
-    "qr_waiting": "확인 대기 중...",
+    "qr_waiting": "스캔하여 계속하세요",
     "error_backend": "서버에서 확인에 실패했습니다. 다시 시도하세요.",
     "error_generic": "문제가 발생했습니다. 다시 시도하세요.",
     "back": "홈으로 돌아가기",

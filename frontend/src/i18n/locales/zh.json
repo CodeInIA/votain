@@ -43,7 +43,7 @@
     "mobile_return_hint": "在应用中验证后，请返回此标签页",
     "qr_title": "使用 World ID 扫描",
     "qr_desc": "打开 World ID 应用并扫描此代码以验证您的身份。",
-    "qr_waiting": "等待验证...",
+    "qr_waiting": "扫描以继续",
     "error_backend": "服务器端验证失败。请重试。",
     "error_generic": "出现错误。请重试。",
     "back": "返回首页",

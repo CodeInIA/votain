@@ -43,7 +43,7 @@
     "mobile_return_hint": "Après vérification dans l'app, revenez sur cet onglet",
     "qr_title": "Scanner avec World ID",
     "qr_desc": "Ouvrez l'app World ID et scannez ce code pour vérifier votre identité.",
-    "qr_waiting": "En attente de vérification...",
+    "qr_waiting": "Scannez-le pour continuer",
     "error_backend": "La vérification a échoué côté serveur. Réessayez.",
     "error_generic": "Une erreur s'est produite. Réessayez.",
     "back": "Retour à l'accueil",

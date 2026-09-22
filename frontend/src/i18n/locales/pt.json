@@ -43,7 +43,7 @@
     "mobile_return_hint": "Após verificar no app, volte para esta aba",
     "qr_title": "Escaneie com World ID",
     "qr_desc": "Abra o app World ID e escaneie este código para verificar sua identidade.",
-    "qr_waiting": "Aguardando verificação...",
+    "qr_waiting": "Leia-o para continuar",
     "error_backend": "Verificação falhou no servidor. Tente novamente.",
     "error_generic": "Algo deu errado. Tente novamente.",
     "back": "Voltar ao início",

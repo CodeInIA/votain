@@ -43,7 +43,7 @@
     "mobile_return_hint": "Keer na verificatie in de app terug naar dit tabblad",
     "qr_title": "Scan met World ID",
     "qr_desc": "Open de World ID app en scan deze code om je identiteit te verifiëren.",
-    "qr_waiting": "Wachten op verificatie...",
+    "qr_waiting": "Scan hem om door te gaan",
     "error_backend": "Verificatie mislukt op de server. Probeer opnieuw.",
     "error_generic": "Er ging iets mis. Probeer opnieuw.",
     "back": "Terug naar home",

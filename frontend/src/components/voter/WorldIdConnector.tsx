@@ -11,7 +11,7 @@
  * So it lives here once, and both callers render it.
  */
 import { useTranslation } from 'react-i18next';
-import { Loader2 } from 'lucide-react';
+import { ScanLine } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
 /** A phone or tablet: the screen that cannot photograph itself. */
@@ -56,10 +56,21 @@ export function WorldIdConnector({ uri, className }: WorldIdConnectorProps) {
         </div>
       )}
 
-      <div className="flex items-center gap-2 text-on-surface-variant text-xs">
-        <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-        <span>{t('verify.qr_waiting')}</span>
-      </div>
+      {/* NOT A SPINNER, and that was the whole problem. A turning circle says
+          the system is busy and the person should wait, so voters sat and
+          watched it while the thing it was waiting for was them. Nothing is
+          loading here: the request is open and the page is listening. What is
+          missing is a scan, so the line asks for one and the icon is still.
+
+          Hidden on mobile, where the button is the instruction and the hint
+          under it already says what happens next. A second line there only
+          competed with the one thing to press. */}
+      {!isMobile && (
+        <div className="flex items-center gap-2 text-on-surface-variant text-xs">
+          <ScanLine className="w-4 h-4 shrink-0" />
+          <span>{t('verify.qr_waiting')}</span>
+        </div>
+      )}
     </div>
   );
 }
