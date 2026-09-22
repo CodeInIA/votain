@@ -1,0 +1,84 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=Noto+Sans+JP:wght@400;700;900&family=Noto+Sans+KR:wght@400;700;900&family=Noto+Sans+SC:wght@400;700;900&family=Noto+Sans+Devanagari:wght@400;700;900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+
+      html, body { width: 1200px; height: 630px; overflow: hidden; }
+
+      body {
+        /* El mismo fondo que la portada, no una reproduccion parecida, con el
+           mismo velo oscuro: sin el, el subtitulo cae sobre los trazos claros
+           del grafico y deja de leerse, que es lo que le pasaba al primer
+           intento. Mas denso a la izquierda, donde vive el texto. */
+        background:
+          linear-gradient(100deg, rgba(8, 10, 22, 0.94) 0%, rgba(8, 10, 22, 0.88) 42%, rgba(8, 10, 22, 0.45) 100%),
+          #12141f url('BACKGROUND_URL') center/cover no-repeat;
+        /* Noto cubre los alfabetos que Inter no trae. Inter va primero, asi
+           que en latino manda Inter y en los demas caen a Noto sin mezclarse. */
+        font-family: 'Inter', 'Noto Sans JP', 'Noto Sans KR', 'Noto Sans SC',
+          'Noto Sans Devanagari', system-ui, sans-serif;
+        color: #fff;
+        padding: 78px 96px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 26px;
+      }
+
+      .marca { display: flex; align-items: center; gap: 18px; }
+      .marca img { height: 96px; }
+
+      h1 {
+        font-size: 62px;
+        font-weight: 800;
+        line-height: 1.08;
+        letter-spacing: -0.02em;
+        max-width: 760px;
+      }
+      /* Los alfabetos no latinos necesitan mas interlineado para no apelmazarse. */
+      html[lang='ja'] h1, html[lang='ko'] h1, html[lang='zh'] h1, html[lang='hi'] h1 {
+        line-height: 1.32;
+        letter-spacing: 0;
+      }
+
+      p {
+        font-size: 28px;
+        font-weight: 400;
+        line-height: 1.42;
+        color: rgba(255, 255, 255, 0.86);
+        max-width: 780px;
+      }
+
+      .etiquetas { display: flex; gap: 16px; flex-wrap: wrap; }
+      .etiquetas span {
+        border: 1px solid rgba(255, 255, 255, 0.34);
+        border-radius: 999px;
+        padding: 11px 24px;
+        font-size: 21px;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.95);
+        background: rgba(255, 255, 255, 0.05);
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="marca">
+      <img src="LOGO_URL" alt="" />
+      <img src="WORDMARK_URL" alt="" />
+    </div>
+    <h1>TITULAR</h1>
+    <p>SUBTITULO</p>
+    <div class="etiquetas">
+      <span>ETIQUETA1</span><span>ETIQUETA2</span><span>ETIQUETA3</span>
+    </div>
+  </body>
+</html>
