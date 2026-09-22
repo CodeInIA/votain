@@ -807,7 +807,7 @@ async function main(): Promise<void> {
 
   await build({
     name: "Cooperative Statutes - Two Thirds Amendment",
-    organizerName: "Cooperativa La Espiga",
+    organizerName: "Wheatsheaf Cooperative",
     description: "Amendment to the statutes. Needs at least two thirds of the ballots cast.",
     votingType: VotingType.SUPERMAJORITY_TWO_THIRDS,
     thresholdValue: 0n,
@@ -926,7 +926,7 @@ async function main(): Promise<void> {
   await build({
     name: "UB Student Union - Board Election",
     fixedSchedule: true,
-    organizerName: "Universidad de Barcelona",
+    organizerName: "University of Barcelona",
     description: "Enrollment is OPEN. Join now; voting starts in two days.",
     votingType: VotingType.SIMPLE_PLURALITY,
     thresholdValue: 0n,
@@ -941,7 +941,7 @@ async function main(): Promise<void> {
 
   await build({
     name: "Cooperative Board - Witness Confirmation",
-    organizerName: "Cooperativa La Espiga",
+    organizerName: "Wheatsheaf Cooperative",
     description: "Enrollment has closed and voting has not started yet.",
     votingType: VotingType.WITNESS_THRESHOLD,
     thresholdValue: 2n,
@@ -992,7 +992,7 @@ async function main(): Promise<void> {
   await build({
     name: "Elecciones Generales - Circunscripcion Madrid",
     fixedSchedule: true,
-    organizerName: "Junta Electoral Central",
+    organizerName: "Central Electoral Board",
     description:
       "Restricted to adults holding Spanish nationality. Enrolment requires proving both from an identity document. The proof reveals neither the date of birth nor anything beyond the nationality being on the allowed list.",
     votingType: VotingType.SIMPLE_PLURALITY,
@@ -1017,7 +1017,7 @@ async function main(): Promise<void> {
   // covers a policy whose only rule is the level itself.
   await build({
     name: "Neighbourhood Budget - One Person One Vote",
-    organizerName: "Asociacion Vecinal",
+    organizerName: "Neighbourhood Association",
     description:
       "No age or nationality rule. Voters prove they hold a real identity document, which is what stops one person enrolling twice behind two World ID accounts.",
     votingType: VotingType.SIMPLE_PLURALITY,
@@ -1038,7 +1038,7 @@ async function main(): Promise<void> {
 
   await build({
     name: "Youth Assembly - Age Restricted Ballot",
-    organizerName: "Consejo de la Juventud",
+    organizerName: "Youth Council",
     description:
       "Restricted by age alone. Nationality is never asked for, so the proof is a pure yes or no and nothing about the voter's document is disclosed at all.",
     votingType: VotingType.ABSOLUTE_MAJORITY,
@@ -1056,10 +1056,10 @@ async function main(): Promise<void> {
   // from a quarter to full. Everything else in this seed is either untouched or
   // fully voted, so the bar had exactly two appearances to be judged by.
   for (const turnout of [
-    { name: "Colegio de Arquitectos - Quarter Turnout", enrolled: 4, voted: 1 },
+    { name: "Institute of Architects - Quarter Turnout", enrolled: 4, voted: 1 },
     { name: "Federacion Deportiva - Half Turnout", enrolled: 4, voted: 2 },
-    { name: "Camara de Comercio - Two Thirds Turnout", enrolled: 6, voted: 4 },
-    { name: "Circulo de Bellas Artes - Full Turnout", enrolled: 3, voted: 3 },
+    { name: "Chamber of Commerce - Two Thirds Turnout", enrolled: 6, voted: 4 },
+    { name: "Fine Arts Circle - Full Turnout", enrolled: 3, voted: 3 },
   ]) {
     await build({
       name: turnout.name,
@@ -1083,9 +1083,9 @@ async function main(): Promise<void> {
   // what the contract deduplicates on, and the Orb is checked against the level
   // recorded in the voter's own credential at sign-in.
   await build({
-    name: "Colegio de Medicos - Orb Verified Board Election",
+    name: "Medical Association - Orb Verified Board Election",
     fixedSchedule: true,
-    organizerName: "Colegio Oficial de Medicos",
+    organizerName: "Medical Association",
     description:
       "Enrollment is open and demands the strongest personhood available: an identity document plus an Orb-verified World ID. Nothing about age or nationality is asked.",
     votingType: VotingType.SIMPLE_PLURALITY,
@@ -1106,8 +1106,8 @@ async function main(): Promise<void> {
   // The same level with an attribute rule on top, which is the combination that
   // asks the most of a voter: an Orb, a document, and a predicate proved from it.
   await build({
-    name: "Consejo General - Orb and Age Restricted",
-    organizerName: "Consejo General del Poder Ciudadano",
+    name: "General Council - Orb and Age Restricted",
+    organizerName: "General Council of Citizen Power",
     description:
       "Open for enrollment. Demands an Orb-verified World ID and an identity document proving the voter is over 18, which is the strictest combination the platform can express.",
     votingType: VotingType.ABSOLUTE_MAJORITY,
@@ -1125,7 +1125,7 @@ async function main(): Promise<void> {
   await build({
     name: "Notarial Deed - Restricted Witnesses",
     fixedSchedule: true,
-    organizerName: "Notaria Perez y Asociados",
+    organizerName: "Perez and Partners Notary",
     description:
       "A witness threshold with an age requirement, confirming the attested enrolment path works for every voting type and not only for plain plurality.",
     votingType: VotingType.WITNESS_THRESHOLD,
@@ -1141,7 +1141,7 @@ async function main(): Promise<void> {
 
   await build({
     name: "Iberian Cooperative - Members Assembly",
-    organizerName: "Cooperativa Iberica",
+    organizerName: "Iberian Cooperative",
     description:
       "Open to several nationalities, and owned by a different organizer. An allowlist of more than one country is where disclosure starts to narrow the anonymity set, which is the tradeoff this policy makes visible.",
     votingType: VotingType.SIMPLE_PLURALITY,
@@ -1184,8 +1184,8 @@ async function main(): Promise<void> {
   // UPCOMING, and the organizer kept the lever: the only election where
   // "Open enrollment now" appears at all.
   await build({
-    name: "Asamblea Vecinal - Convocatoria de Marzo",
-    organizerName: "Asociacion Vecinal Delicias",
+    name: "Neighbourhood Assembly - March Meeting",
+    organizerName: "Delicias Neighbourhood Association",
     description:
       "Announced for next week and not yet open. The organizer kept the power to bring enrolment forward, so the button to do it is on their panel.",
     votingType: VotingType.SIMPLE_PLURALITY,
@@ -1204,8 +1204,8 @@ async function main(): Promise<void> {
   // UPCOMING with the schedule given up: the same screen with the lever gone,
   // which is what makes the promise legible side by side with the one above.
   await build({
-    name: "Junta Arbitral - Laudo Vinculante",
-    organizerName: "Camara de Arbitraje de Zaragoza",
+    name: "Arbitration Board - Binding Award",
+    organizerName: "Zaragoza Arbitration Chamber",
     description:
       "Announced with dates the organizer can no longer move. Nothing about this election can be brought forward or cut short, which is the whole point of an arbitration timetable.",
     votingType: VotingType.SUPERMAJORITY_TWO_THIRDS,
@@ -1222,8 +1222,8 @@ async function main(): Promise<void> {
   // ENROLLING with a fixed schedule: closing enrolment early is refused by the
   // contract, so the panel offers nothing to press.
   await build({
-    name: "Colegio de Arquitectos - Renovacion de Junta",
-    organizerName: "Colegio Oficial de Arquitectos",
+    name: "Institute of Architects - Board Renewal",
+    organizerName: "Institute of Architects",
     description:
       "Enrolment is open and closes on the published date, whatever the roll looks like by then. The organizer gave up the power to cut it short when the election was created.",
     votingType: VotingType.ABSOLUTE_MAJORITY,
@@ -1248,8 +1248,8 @@ async function main(): Promise<void> {
   // ACTIVE with a fixed schedule: voting runs to its published end, and the
   // organizer cannot end it once the count starts looking a certain way.
   await build({
-    name: "Sindicato del Metal - Ratificacion del Convenio",
-    organizerName: "Sindicato del Metal",
+    name: "Metalworkers Union - Agreement Ratification",
+    organizerName: "Metalworkers Union",
     description:
       "A ratification ballot whose closing time was fixed at deployment. Turnout is public while it runs, and being unable to react to it is exactly what the fixed schedule is for.",
     votingType: VotingType.ABSOLUTE_MAJORITY,
@@ -1270,13 +1270,13 @@ async function main(): Promise<void> {
   // the proof. Casts no ballots, because seeding one would need the gas this
   // election exists to be missing.
   await build({
-    name: "Club Ciclista - Votacion sin Fondos",
-    organizerName: "Club Ciclista Ebro",
+    name: "Cycling Club - Voting Without Funds",
+    organizerName: "Ebro Cycling Club",
     description:
       "Created without reserving any gas. Every ballot here is paid for by the organizer, so until they top it up nobody can enrol or vote, and the app says so instead of failing halfway.",
     votingType: VotingType.SIMPLE_PLURALITY,
     thresholdValue: 0n,
-    candidates: [{ name: "Ruta del Moncayo" }, { name: "Ruta del Ebro" }],
+    candidates: [{ name: "Moncayo route" }, { name: "Ebro route" }],
     enrollFrom: -HOUR,
     enrollTo: 6 * DAY,
     voteFrom: 6 * DAY,
@@ -1289,8 +1289,8 @@ async function main(): Promise<void> {
   // which no other election on the chain produces. Roughly three ballots of gas
   // against five people who have not voted.
   await build({
-    name: "Cooperativa Agricola - Fondos Ajustados",
-    organizerName: "Cooperativa Agricola del Jalon",
+    name: "Farming Cooperative - Tight Funds",
+    organizerName: "Jalon Farming Cooperative",
     description:
       "There is gas reserved here, but not enough for everyone still expected to vote. The election works and says so, which is a different thing from being empty.",
     votingType: VotingType.SIMPLE_PLURALITY,
@@ -1316,8 +1316,8 @@ async function main(): Promise<void> {
   // that makes those two numbers differ, so it is the only thing that catches
   // it, and nothing else on this chain produces the case.
   await build({
-    name: "Comite de Etica - Voto Reemplazado",
-    organizerName: "Comite de Etica Profesional",
+    name: "Ethics Committee - Replaced Vote",
+    organizerName: "Professional Ethics Committee",
     description:
       "A single voter who voted, thought better of it, and voted again. The chain holds two ballots and one vote: the later one replaces the earlier, which is what makes a coerced vote recoverable. The published tally counts one.",
     votingType: VotingType.SIMPLE_PLURALITY,
@@ -1353,8 +1353,8 @@ async function main(): Promise<void> {
   // FIXED DATES AND NO WAY BACK. The strongest thing an organizer can promise
   // here: published dates, no early close, no cancellation.
   await build({
-    name: "Referendum Estatutario - Compromiso Total",
-    organizerName: "Fundacion Civica Aragonesa",
+    name: "Statutory Referendum - Full Commitment",
+    organizerName: "Aragon Civic Foundation",
     description:
       "Announced dates that cannot move and no power to call it off. Whatever the turnout looks like, this election runs exactly as published, which is the strongest commitment the platform lets an organizer make.",
     votingType: VotingType.SUPERMAJORITY_TWO_THIRDS,
@@ -1372,8 +1372,8 @@ async function main(): Promise<void> {
   // MOVABLE DATES, NO WAY BACK. The half nobody expects: the organizer can still
   // shorten a period, but cannot call the whole thing off.
   await build({
-    name: "Mesa Sectorial - Sin Marcha Atras",
-    organizerName: "Mesa Sectorial del Transporte",
+    name: "Transport Sector Board - No Going Back",
+    organizerName: "Transport Sector Board",
     description:
       "The organizer may bring a date forward if everyone is ready, and cannot cancel. The two promises are separate on purpose, and this is the combination that shows why.",
     votingType: VotingType.ABSOLUTE_MAJORITY,
@@ -1391,8 +1391,8 @@ async function main(): Promise<void> {
   // THE GAP. Enrolment closed, voting not yet due: the phase every early
   // function refused until `openVotingEarly` existed.
   await build({
-    name: "Consejo Escolar - Entre Plazos",
-    organizerName: "Consejo Escolar Ramon y Cajal",
+    name: "School Board - Between Windows",
+    organizerName: "Ramon y Cajal School Board",
     description:
       "Enrolment has closed and voting is not due for another day. Nothing could reach this gap before: an election offering dates the organizer can shorten could not shorten this one, and they could only wait it out.",
     votingType: VotingType.SIMPLE_PLURALITY,
@@ -1412,8 +1412,8 @@ async function main(): Promise<void> {
   // THE GAP, FIXED. The same phase on an election that cannot be hurried, so
   // the two panels can be compared side by side.
   await build({
-    name: "Camara Agraria - Entre Plazos y Fija",
-    organizerName: "Camara Agraria Provincial",
+    name: "Farmers Chamber - Between Windows, Fixed Dates",
+    organizerName: "Provincial Farmers Chamber",
     description:
       "Also waiting between the two windows, but with a schedule the organizer gave up moving. The panel offers nothing to press, and says why.",
     votingType: VotingType.SIMPLE_PLURALITY,
@@ -1430,13 +1430,13 @@ async function main(): Promise<void> {
   // UPCOMING AND UNFUNDED, which the voter sees before they can act on it: the
   // two warnings meeting on one election.
   await build({
-    name: "Ateneo Cultural - Anunciada sin Fondos",
-    organizerName: "Ateneo Cultural de Teruel",
+    name: "Cultural Society - Announced Without Funds",
+    organizerName: "Teruel Cultural Society",
     description:
       "Announced for next week with no gas reserved yet. Nothing is wrong with the election, and the organizer has time to fund it before enrolment opens.",
     votingType: VotingType.SIMPLE_PLURALITY,
     thresholdValue: 0n,
-    candidates: [{ name: "Ciclo de cine" }, { name: "Ciclo de teatro" }],
+    candidates: [{ name: "Film season" }, { name: "Theatre season" }],
     enrollFrom: 3 * DAY,
     enrollTo: 6 * DAY,
     voteFrom: 6 * DAY,

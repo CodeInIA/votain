@@ -118,6 +118,17 @@ jobs:
       # end rather than mocking it.
       - run: npm test
         working-directory: contracts
+
+      # THE SCRIPTS ARE NOT CHECKED BY EITHER OF THE TWO ABOVE, which is easy
+      # to miss: `hardhat compile` builds Solidity and `hardhat test` only
+      # loads the tests, so `scripts/` never reaches the compiler. Verified by
+      # putting a type error in `seed-demo.ts` and watching both go green.
+      #
+      # That script seeds the demo chain and `deploy.ts` is how the contracts
+      # reach a network. Neither is shipped, and both are how this project is
+      # demonstrated.
+      - run: npm run typecheck
+        working-directory: contracts
         timeout-minutes: 30
 
   # ── the gate ────────────────────────────────────────────────────────────────
