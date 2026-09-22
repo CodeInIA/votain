@@ -16,8 +16,23 @@ interface TxStep {
   done: boolean;
 }
 
+/**
+ * WHAT THE VOTER IS WAITING FOR, in their words.
+ *
+ * This modal said "Transaction confirmed" to somebody who had just cast a
+ * ballot. It is accurate and it is the wrong sentence: a voter did not send a
+ * transaction, they voted, and the word tells them nothing except that
+ * something technical happened to them. `kind` picks the sentence.
+ *
+ * `generic` keeps the transaction wording and is what the organizer's screens
+ * use. They did send a transaction, they know it, and calling it anything else
+ * would be talking down to them.
+ */
+export type TxKind = 'vote' | 'enrolment' | 'generic';
+
 interface TransactionPendingModalProps {
   state: TxState;
+  kind?: TxKind;
   steps?: TxStep[];
   txHash?: string;
   errorMessage?: string;
@@ -37,6 +52,7 @@ function usePrefersReducedMotion() {
 
 export function TransactionPendingModal({
   state,
+  kind = 'generic',
   steps,
   txHash,
   errorMessage,
@@ -78,7 +94,7 @@ export function TransactionPendingModal({
           className="fixed inset-0 z-[100] flex items-center justify-center p-4"
           aria-modal="true"
           role="dialog"
-          aria-label={t('tx.aria_label')}
+          aria-label={t(`tx.${kind}.aria_label`)}
         >
           {/* Backdrop */}
           <div className="absolute inset-0 bg-background/70 backdrop-blur-lg" />
@@ -122,9 +138,9 @@ export function TransactionPendingModal({
 
             {/* Title */}
             <h2 className="text-xl font-bold text-on-surface mb-1">
-              {state === 'pending' && t('tx.title_pending')}
-              {state === 'success' && t('tx.title_success')}
-              {state === 'failed'  && t('tx.title_failed')}
+              {state === 'pending' && t(`tx.${kind}.pending`)}
+              {state === 'success' && t(`tx.${kind}.success`)}
+              {state === 'failed'  && t(`tx.${kind}.failed`)}
             </h2>
 
             {/* Description / steps */}

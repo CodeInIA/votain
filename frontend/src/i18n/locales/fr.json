@@ -155,9 +155,9 @@
     "ends_on": "Fin {{date}}",
     "voters_short": "Votants",
     "ballots_short": "Bulletins",
-    "ballots_hint": "Bulletins enregistrés sur la chaîne. Il y en a plus que de votants parce que quelqu’un a revoté : le dernier bulletin remplace le précédent, et le décompte n’en compte toujours qu’un par personne.",
-    "reserved_short": "Reserves",
-    "reserved_hint": "Du gas que l'organisateur a bloque pour cette election. Il paie environ ce nombre de bulletins et ne peut pas etre recupere tant que l'election est en cours.",
+    "ballots_hint": "Bulletins dans le registre public. Il y en a plus que d'électeurs parce que quelqu'un a revoté : le dernier bulletin remplace le précédent, et le décompte compte toujours une voix par personne.",
+    "reserved_short": "Votes payés",
+    "reserved_hint": "L'organisateur paie chaque vote à l'avance. Voici à peu près combien restent payés ; s'ils s'épuisent, le vote s'arrête jusqu'à ce qu'il en ajoute.",
     "quorum_short": "Quorum",
     "quorum_met": "Déjà atteint.",
     "quorum_pending": "Pas encore atteint.",
@@ -175,7 +175,6 @@
     "auth_cta": "Vérifiez votre identité pour participer à cette élection.",
     "change_vote": "Changer mon vote",
     "reference": "Référence",
-    "gas_low_banner": "Votre solde de gaz est faible. Rechargez pour voter.",
     "top_up": "Recharger",
     "ends_in": "Se termine dans",
     "vote_now": "Voter maintenant",
@@ -189,7 +188,7 @@
     "cta_upcoming": "L'inscription n'a pas encore ouvert.",
     "cta_pending_vote": "L'inscription est close. Le vote n'a pas encore commencé.",
     "starts_in": "Commence dans",
-    "verified_on_chain": "Vérifié sur la blockchain",
+    "verified_on_chain": "Vérifiable par tous",
     "view_as_voter": "Voir comme électeur",
     "view_as_organizer": "Voir comme organisateur",
     "turnout_detail": "{{voted}} inscrits sur {{total}} ont voté",
@@ -223,28 +222,28 @@
     "export_json": "Exporter la piste d'audit",
     "view_ipfs": "Voir sur IPFS",
     "not_available": "Résultats pas encore disponibles.",
-    "check_ok_title": "Vérifié sur la chaîne",
+    "check_ok_title": "Vérifié avec le registre public",
     "check_ok_body": "Les décomptes publiés totalisent {{declared}} et le contrat a enregistré {{voters}} votants. Aucun bulletin n'a été inventé ni écarté.",
-    "check_bad_title": "Ne correspond pas à la chaîne",
+    "check_bad_title": "Ne correspond pas au registre public",
     "check_bad_body": "Les décomptes publiés totalisent {{declared}}, mais le contrat a enregistré {{voters}} votants. Ces deux nombres devraient être identiques.",
     "check_limit": "Aucune clé ni confiance requise : n'importe qui peut le refaire. Cela ne détecte pas un déplacement de voix entre options, qui laisse le total inchangé."
   },
   "verify_receipt": {
     "title": "Vérifier un vote",
-    "subtitle": "Saisissez un numéro de référence ou un nullificateur pour confirmer qu'un bulletin a été enregistré sur la chaîne.",
-    "placeholder": "Numéro de référence ou nullificateur…",
+    "subtitle": "Saisissez un numéro de référence pour confirmer qu'un vote a bien été enregistré.",
+    "placeholder": "Numéro de référence…",
     "hint": "Le numéro de référence s'affiche après le vote, puis dans l'historique.",
     "found": "Vote enregistré",
     "not_found": "Non trouvé",
     "not_found_desc": "Aucun vote correspondant trouvé. Vérifiez votre numéro de référence.",
     "election": "Élection",
     "status": "Statut",
-    "vote_recorded": "Enregistré sur la chaîne",
+    "vote_recorded": "Enregistré",
     "reference": "Référence",
-    "nullifier": "Nullifier",
+    "nullifier": "Identifiant du vote",
     "date": "Date",
     "ballots": "Bulletins déposés",
-    "choice_never_shown": "La chaîne enregistre qu'un bulletin a été déposé et quand, jamais ce qu'il disait. Personne ne peut lire un choix depuis un reçu, nous non plus.",
+    "choice_never_shown": "Le registre public retient qu'un vote a été émis et quand, jamais ce qu'il disait. Personne ne peut lire un choix à partir d'un reçu, nous non plus.",
     "your_receipts": "Vos reçus",
     "unlock_hint": "Ce navigateur ne connaît encore aucun bulletin. Si vous avez voté depuis un autre appareil, une pression sur votre passkey les trouvera et les retiendra ici."
   },
@@ -271,17 +270,17 @@
     "urgent_many": "{{count}} se terminent bientôt"
   },
   "zk": {
-    "title": "Génération de votre preuve",
-    "step1": "Construction de l'engagement d'identité…",
-    "step2": "Génération de la preuve à connaissance nulle…",
-    "step3": "Chiffrement et soumission…",
+    "title": "Envoi de votre vote",
+    "step1": "Préparation de votre bulletin…",
+    "step2": "Vérification de votre droit de vote, sans révéler qui vous êtes…",
+    "step3": "Chiffrement et envoi de votre vote…",
     "do_not_close": "Ne fermez pas cette fenêtre"
   },
   "confirmation": {
     "title": "Vote exprimé !",
-    "desc": "Votre vote a été enregistré sur la blockchain. Utilisez votre numéro de référence pour le vérifier à tout moment.",
+    "desc": "Votre vote a bien été enregistré. Conservez votre numéro de référence pour le vérifier quand vous le souhaitez.",
     "reference": "Numéro de référence",
-    "view_tx": "Voir sur PolygonScan",
+    "view_tx": "Voir le registre public",
     "back_elections": "Retour aux élections",
     "check_receipt": "Vérifier mon reçu"
   },
@@ -303,7 +302,7 @@
     "no_results": "Aucun vote ne correspond à votre recherche",
     "verify": "Vérifier ce reçu",
     "open": "Ouvrir cette élection",
-    "cast_at": "Quand ce bulletin a été enregistré sur la chaîne",
+    "cast_at": "Quand ce vote a été enregistré",
     "see_all": "Voir tous mes votes",
     "partial_view": "Sont affichés les bulletins que ce navigateur connaît : ceux déposés ici, plus ceux trouvés lors d'un déverrouillage précédent. Déverrouillez pour chercher ceux déposés depuis un autre appareil."
   },
@@ -556,15 +555,29 @@
     "avatar_none": "Disponible dès que vous déverrouillez votre identité sur cet appareil."
   },
   "tx": {
-    "title_pending": "Transaction en cours",
-    "title_success": "Transaction confirmée",
-    "title_failed": "Transaction échouée",
+    "vote": {
+      "pending": "Envoi de votre vote…",
+      "success": "Vote confirmé",
+      "failed": "Votre vote n'a pas pu être envoyé",
+      "aria_label": "État de votre vote"
+    },
+    "enrolment": {
+      "pending": "Finalisation de votre inscription…",
+      "success": "Inscription confirmée",
+      "failed": "Votre inscription n'a pas pu être finalisée",
+      "aria_label": "État de votre inscription"
+    },
+    "generic": {
+      "pending": "Transaction en cours",
+      "success": "Transaction confirmée",
+      "failed": "Transaction échouée",
+      "aria_label": "Statut de la transaction"
+    },
     "step_submitting": "Envoi via le relayeur…",
     "step_confirming": "En attente de confirmation blockchain…",
     "step_done": "Enregistré on-chain",
     "do_not_close": "Ne fermez pas cette fenêtre",
-    "view_tx": "Voir sur PolygonScan",
-    "aria_label": "Statut de la transaction"
+    "view_tx": "Voir sur PolygonScan"
   },
   "errors": {
     "not_found": "Page introuvable",
@@ -634,7 +647,7 @@
     "already_registered": "Cet appareil possède déjà l’une de vos passkeys",
     "cannot_seal": "La passkey de cet appareil n’a pas fonctionné : il peut en créer une mais pas s’en servir pour déverrouiller. Essayez avec votre téléphone, proposé comme option lors de l’association.",
     "remove_title": "Retirer cette passkey ?",
-    "remove_desc": "Elle ne sera plus proposée pour déverrouiller votre identité. Cela ne l’efface pas de l’historique de la chaîne : quelqu’un qui détient encore cet authentificateur et sait lire les anciennes transactions pourrait récupérer la copie chiffrée.",
+    "remove_desc": "Elle cesse d'être proposée pour déverrouiller votre identité. Cela ne l'efface pas du registre public : quiconque détient encore cet authentificateur et peut lire les entrées passées pourrait récupérer la copie chiffrée.",
     "remove_stolen": "Perdu ou volé ? Alors la retirer ne suffit pas : il faut faire tourner votre identité.",
     "remove_confirm": "Retirer",
     "remove_failed": "Impossible de retirer la passkey",
@@ -776,7 +789,7 @@
     "unavailable_help": "Elle est détenue par une clé d'accès que ce navigateur n'a pas pu atteindre. Essayez un appareil depuis lequel vous pouvez voter, ou saisissez les mots sur la page de récupération.",
     "copy_failed": "Votre navigateur a refusé la copie. Notez les mots à la main.",
     "unregistered_title": "Votre passkey fonctionne, mais elle n’est pas encore enregistrée",
-    "unregistered_desc": "Elle a bien été créée et votre phrase a été chiffrée avec, mais la copie n’a pas pu être enregistrée sur la chaîne. Vos douze mots restent sur cet appareil en attendant : gardez-les en lieu sûr. Vous pouvez réessayer l’enregistrement depuis votre profil."
+    "unregistered_desc": "Elle a été créée et votre phrase a été chiffrée avec elle, mais la copie n'a pas pu être enregistrée dans le registre public. Vos douze mots restent sur cet appareil en attendant, gardez-les en lieu sûr. Vous pouvez réessayer l'enregistrement depuis votre profil."
   },
   "recover": {
     "title": "Restaurez votre identité",

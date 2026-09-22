@@ -154,9 +154,9 @@
     "ends_on": "Endet {{date}}",
     "voters_short": "Abstimmende",
     "ballots_short": "Stimmzettel",
-    "ballots_hint": "Auf der Kette erfasste Stimmzettel. Es sind mehr als Abstimmende, weil jemand erneut abgestimmt hat: der spätere Stimmzettel ersetzt den früheren, und gezählt wird weiterhin einer pro Person.",
-    "reserved_short": "Reserviert",
-    "reserved_hint": "Gas, das der Veranstalter fur diese Wahl gesperrt hat. Es bezahlt etwa so viele Stimmen und kann wahrend der laufenden Wahl nicht zuruckgeholt werden.",
+    "ballots_hint": "Stimmzettel im öffentlichen Register. Es sind mehr als Wählende, weil jemand erneut gewählt hat: Der spätere Stimmzettel ersetzt den früheren, und gezählt wird weiterhin eine Stimme pro Person.",
+    "reserved_short": "Bezahlte Stimmen",
+    "reserved_hint": "Die veranstaltende Stelle bezahlt jede Stimme im Voraus. So viele sind noch bezahlt; sind sie aufgebraucht, ruht die Wahl, bis mehr hinzukommen.",
     "quorum_short": "Quorum",
     "quorum_met": "Bereits erreicht.",
     "quorum_pending": "Noch nicht erreicht.",
@@ -174,7 +174,6 @@
     "auth_cta": "Verifizieren Sie Ihre Identität, um an dieser Wahl teilzunehmen.",
     "change_vote": "Meine Stimme ändern",
     "reference": "Referenz",
-    "gas_low_banner": "Ihr Gasguthaben ist niedrig. Aufladen zum Abstimmen.",
     "top_up": "Aufladen",
     "ends_in": "Endet in",
     "vote_now": "Jetzt abstimmen",
@@ -188,7 +187,7 @@
     "cta_upcoming": "Die Anmeldung ist noch nicht geöffnet.",
     "cta_pending_vote": "Die Anmeldung ist geschlossen. Die Abstimmung hat noch nicht begonnen.",
     "starts_in": "Beginnt in",
-    "verified_on_chain": "Auf der Blockchain verifiziert",
+    "verified_on_chain": "Für alle überprüfbar",
     "view_as_voter": "Als Wähler ansehen",
     "view_as_organizer": "Als Veranstalter ansehen",
     "turnout_detail": "{{voted}} von {{total}} angemeldeten Wählenden haben gewählt",
@@ -221,28 +220,28 @@
     "export_json": "Prüfprotokoll exportieren",
     "view_ipfs": "Auf IPFS anzeigen",
     "not_available": "Ergebnisse noch nicht verfügbar.",
-    "check_ok_title": "Gegen die Chain geprüft",
+    "check_ok_title": "Mit dem öffentlichen Register abgeglichen",
     "check_ok_body": "Die veröffentlichten Zählwerte ergeben {{declared}}, und der Vertrag hat {{voters}} Wählende erfasst. Keine Stimme wurde erfunden oder verworfen.",
-    "check_bad_title": "Stimmt nicht mit der Chain überein",
+    "check_bad_title": "Stimmt nicht mit dem öffentlichen Register überein",
     "check_bad_body": "Die veröffentlichten Zählwerte ergeben {{declared}}, der Vertrag hat aber {{voters}} Wählende erfasst. Beide Zahlen sollten gleich sein.",
     "check_limit": "Dafür braucht es weder Schlüssel noch Vertrauen: jede Person kann es wiederholen. Ob Stimmen zwischen Optionen verschoben wurden, zeigt es nicht, denn das ändert die Summe nicht."
   },
   "verify_receipt": {
     "title": "Eine Stimme prüfen",
-    "subtitle": "Geben Sie eine Referenznummer oder einen Nullifier ein, um zu bestätigen, dass eine Stimme auf der Chain erfasst wurde.",
-    "placeholder": "Referenznummer oder Nullifier…",
+    "subtitle": "Geben Sie eine Referenznummer ein, um zu bestätigen, dass eine Stimme erfasst wurde.",
+    "placeholder": "Referenznummer…",
     "hint": "Die Referenznummer erscheint nach der Stimmabgabe und noch einmal im Verlauf.",
     "found": "Stimme erfasst",
     "not_found": "Nicht gefunden",
     "not_found_desc": "Keine übereinstimmende Stimme gefunden. Überprüfen Sie Ihre Referenznummer.",
     "election": "Wahl",
     "status": "Status",
-    "vote_recorded": "Auf der Kette erfasst",
+    "vote_recorded": "Erfasst",
     "reference": "Referenz",
-    "nullifier": "Nullifier",
+    "nullifier": "Stimmkennung",
     "date": "Datum",
     "ballots": "Abgegebene Stimmen",
-    "choice_never_shown": "Die Chain hält fest, DASS eine Stimme abgegeben wurde und wann, nie was darin stand. Aus einer Quittung kann niemand die Wahl ablesen, wir auch nicht.",
+    "choice_never_shown": "Das öffentliche Register hält fest, dass eine Stimme abgegeben wurde und wann, nie was darin stand. Niemand kann aus einer Quittung eine Wahl ablesen, wir auch nicht.",
     "your_receipts": "Ihre Quittungen",
     "unlock_hint": "Dieser Browser kennt noch keine Stimme. Falls Sie von einem anderen Gerät gewählt haben, findet eine Passkey-Bestätigung sie und merkt sie sich hier."
   },
@@ -268,17 +267,17 @@
     "urgent_one": "{{count}} endet bald"
   },
   "zk": {
-    "title": "Beweis wird generiert",
-    "step1": "Identitätsverpflichtung wird aufgebaut…",
-    "step2": "Zero-Knowledge-Beweis wird generiert…",
-    "step3": "Verschlüsseln und senden…",
+    "title": "Ihre Stimme wird gesendet",
+    "step1": "Ihr Stimmzettel wird vorbereitet…",
+    "step2": "Ihre Stimmberechtigung wird geprüft, ohne zu verraten, wer Sie sind…",
+    "step3": "Ihre Stimme wird verschlüsselt und gesendet…",
     "do_not_close": "Dieses Fenster nicht schließen"
   },
   "confirmation": {
     "title": "Stimme abgegeben!",
-    "desc": "Ihre Stimme wurde auf der Blockchain erfasst. Verwenden Sie Ihre Referenznummer, um sie jederzeit zu verifizieren.",
+    "desc": "Ihre Stimme wurde erfasst. Bewahren Sie Ihre Referenznummer auf, um sie jederzeit zu prüfen.",
     "reference": "Referenznummer",
-    "view_tx": "Auf PolygonScan anzeigen",
+    "view_tx": "Öffentlichen Eintrag ansehen",
     "back_elections": "Zurück zu den Wahlen",
     "check_receipt": "Meine Quittung prüfen"
   },
@@ -300,7 +299,7 @@
     "no_results": "Keine Stimme passt zu deiner Suche",
     "verify": "Diese Quittung prüfen",
     "open": "Diese Wahl öffnen",
-    "cast_at": "Wann dieser Stimmzettel auf der Kette erfasst wurde",
+    "cast_at": "Wann diese Stimme erfasst wurde",
     "see_all": "Alle meine Stimmen anzeigen",
     "partial_view": "Angezeigt werden die Stimmen, die dieser Browser kennt: die hier abgegebenen und alle, die ein früheres Entsperren gefunden hat. Entsperren Sie, um nach Stimmen von anderen Geräten zu suchen."
   },
@@ -551,15 +550,29 @@
     "avatar_none": "Verfügbar, sobald du deine Identität auf diesem Gerät entsperrst."
   },
   "tx": {
-    "title_pending": "Transaktion läuft",
-    "title_success": "Transaktion bestätigt",
-    "title_failed": "Transaktion fehlgeschlagen",
+    "vote": {
+      "pending": "Ihre Stimme wird gesendet…",
+      "success": "Stimme bestätigt",
+      "failed": "Ihre Stimme konnte nicht gesendet werden",
+      "aria_label": "Status Ihrer Stimme"
+    },
+    "enrolment": {
+      "pending": "Ihre Anmeldung wird abgeschlossen…",
+      "success": "Anmeldung bestätigt",
+      "failed": "Ihre Anmeldung konnte nicht abgeschlossen werden",
+      "aria_label": "Status Ihrer Anmeldung"
+    },
+    "generic": {
+      "pending": "Transaktion läuft",
+      "success": "Transaktion bestätigt",
+      "failed": "Transaktion fehlgeschlagen",
+      "aria_label": "Transaktionsstatus"
+    },
     "step_submitting": "Senden über Relayer…",
     "step_confirming": "Warte auf Blockchain-Bestätigung…",
     "step_done": "On-chain gespeichert",
     "do_not_close": "Dieses Fenster nicht schließen",
-    "view_tx": "Auf PolygonScan ansehen",
-    "aria_label": "Transaktionsstatus"
+    "view_tx": "Auf PolygonScan ansehen"
   },
   "errors": {
     "not_found": "Seite nicht gefunden",
@@ -629,7 +642,7 @@
     "already_registered": "Dieses Gerät hat bereits einen deiner Passkeys",
     "cannot_seal": "Der eigene Passkey dieses Geräts hat nicht funktioniert: es kann einen erstellen, ihn aber nicht zum Entsperren nutzen. Versuch es mit deinem Telefon, das beim Verknüpfen als Option erscheint.",
     "remove_title": "Diesen Passkey entfernen?",
-    "remove_desc": "Er wird nicht mehr zum Entsperren deiner Identität angeboten. Das löscht ihn NICHT aus der Historie der Chain: wer diesen Authenticator noch hat und alte Transaktionen lesen kann, könnte die verschlüsselte Kopie wiederherstellen.",
+    "remove_desc": "Er wird nicht mehr zum Entsperren Ihrer Identität angeboten. Aus dem öffentlichen Register wird er dadurch nicht gelöscht: Wer diesen Authentifikator noch besitzt und frühere Einträge lesen kann, könnte die verschlüsselte Kopie wiederherstellen.",
     "remove_stolen": "Verloren oder gestohlen? Dann reicht Entfernen nicht: deine Identität muss rotiert werden.",
     "remove_confirm": "Entfernen",
     "remove_failed": "Passkey konnte nicht entfernt werden",
@@ -770,7 +783,7 @@
     "unavailable_help": "Sie liegt bei einem Passkey, den dieser Browser nicht erreichen konnte. Versuchen Sie es auf einem Gerät, von dem aus Sie wählen können, oder geben Sie die Wörter auf der Wiederherstellungsseite ein.",
     "copy_failed": "Ihr Browser hat das Kopieren verweigert. Schreiben Sie die Wörter stattdessen auf.",
     "unregistered_title": "Dein Passkey funktioniert, ist aber noch nicht registriert",
-    "unregistered_desc": "Er wurde erstellt und deine Phrase damit verschlüsselt, aber die Kopie konnte nicht in der Chain gespeichert werden. Deine zwölf Wörter bleiben so lange auf diesem Gerät: bewahre sie sicher auf. Du kannst die Registrierung in deinem Profil erneut versuchen."
+    "unregistered_desc": "Sie wurde erstellt und Ihre Phrase damit verschlüsselt, aber die Kopie konnte nicht im öffentlichen Register gespeichert werden. Ihre zwölf Wörter bleiben solange auf diesem Gerät, bewahren Sie sie gut auf. Sie können die Registrierung in Ihrem Profil erneut versuchen."
   },
   "recover": {
     "title": "Identität wiederherstellen",

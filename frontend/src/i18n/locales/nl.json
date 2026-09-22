@@ -154,9 +154,9 @@
     "ends_on": "Eindigt {{date}}",
     "voters_short": "Stemmers",
     "ballots_short": "Stembiljetten",
-    "ballots_hint": "Stembiljetten die op de keten staan. Het zijn er meer dan stemmers omdat iemand opnieuw heeft gestemd: het latere biljet vervangt het eerdere, en de telling telt er nog steeds één per persoon.",
-    "reserved_short": "Gereserveerd",
-    "reserved_hint": "Gas dat de organisator voor deze verkiezing heeft vastgezet. Het betaalt ongeveer dit aantal stemmen en kan niet worden teruggehaald zolang de verkiezing loopt.",
+    "ballots_hint": "Stembiljetten in het openbare register. Het zijn er meer dan kiezers omdat iemand opnieuw heeft gestemd: het latere biljet vervangt het eerdere, en de telling telt nog steeds één per persoon.",
+    "reserved_short": "Betaalde stemmen",
+    "reserved_hint": "De organisator betaalt elke stem vooruit. Zoveel zijn er nog betaald; raken ze op, dan kan er niet gestemd worden tot er meer bij komen.",
     "quorum_short": "Quorum",
     "quorum_met": "Al bereikt.",
     "quorum_pending": "Nog niet bereikt.",
@@ -174,7 +174,6 @@
     "auth_cta": "Verifieer je identiteit om deel te nemen aan deze verkiezing.",
     "change_vote": "Mijn stem wijzigen",
     "reference": "Referentie",
-    "gas_low_banner": "Je gassaldo is laag. Aanvullen om te stemmen.",
     "top_up": "Aanvullen",
     "ends_in": "Eindigt over",
     "vote_now": "Nu stemmen",
@@ -188,7 +187,7 @@
     "cta_upcoming": "De inschrijving is nog niet geopend.",
     "cta_pending_vote": "De inschrijving is gesloten. Het stemmen is nog niet begonnen.",
     "starts_in": "Begint over",
-    "verified_on_chain": "Geverifieerd op de blockchain",
+    "verified_on_chain": "Door iedereen te controleren",
     "view_as_voter": "Bekijk als kiezer",
     "view_as_organizer": "Bekijk als organisator",
     "turnout_detail": "{{voted}} van {{total}} ingeschreven kiezers hebben gestemd",
@@ -221,28 +220,28 @@
     "export_json": "Audittrail exporteren",
     "view_ipfs": "Bekijk op IPFS",
     "not_available": "Resultaten nog niet beschikbaar.",
-    "check_ok_title": "Gecontroleerd tegen de chain",
+    "check_ok_title": "Gecontroleerd met het openbare register",
     "check_ok_body": "De gepubliceerde tellingen komen op {{declared}}, en het contract registreerde {{voters}} stemmers. Geen stem is verzonnen of weggelaten.",
-    "check_bad_title": "Komt niet overeen met de chain",
+    "check_bad_title": "Komt niet overeen met het openbare register",
     "check_bad_body": "De gepubliceerde tellingen komen op {{declared}}, maar het contract registreerde {{voters}} stemmers. Dat horen dezelfde getallen te zijn.",
     "check_limit": "Hier is geen sleutel of vertrouwen voor nodig: iedereen kan het herhalen. Het ziet niet of stemmen tussen opties zijn verschoven, want dat laat het totaal gelijk."
   },
   "verify_receipt": {
     "title": "Een stem verifiëren",
-    "subtitle": "Voer een referentienummer of nullifier in om te bevestigen dat een stem op de chain is vastgelegd.",
-    "placeholder": "Referentienummer of nullifier…",
+    "subtitle": "Voer een referentienummer in om te bevestigen dat een stem is vastgelegd.",
+    "placeholder": "Referentienummer…",
     "hint": "Het referentienummer verschijnt na het stemmen, en opnieuw in de geschiedenis.",
     "found": "Stem geregistreerd",
     "not_found": "Niet gevonden",
     "not_found_desc": "Geen overeenkomende stem gevonden. Controleer je referentienummer.",
     "election": "Verkiezing",
     "status": "Status",
-    "vote_recorded": "On-chain geregistreerd",
+    "vote_recorded": "Vastgelegd",
     "reference": "Referentie",
-    "nullifier": "Nullifier",
+    "nullifier": "Stemkenmerk",
     "date": "Datum",
     "ballots": "Uitgebrachte stemmen",
-    "choice_never_shown": "De chain legt vast DAT er gestemd is en wanneer, nooit wat er gestemd werd. Niemand kan de keuze uit een bewijs lezen, wij ook niet.",
+    "choice_never_shown": "Het openbare register houdt bij dat er een stem is uitgebracht en wanneer, nooit wat erin stond. Niemand kan uit een bewijs een keuze aflezen, wij ook niet.",
     "your_receipts": "Jouw bewijzen",
     "unlock_hint": "Deze browser kent nog geen stem. Als je vanaf een ander apparaat hebt gestemd, vindt één passkey-tik ze en onthoudt ze hier."
   },
@@ -268,17 +267,17 @@
     "urgent_one": "{{count}} eindigt binnenkort"
   },
   "zk": {
-    "title": "Bewijs genereren",
-    "step1": "Identiteitsverplichting opbouwen…",
-    "step2": "Zero-knowledge bewijs genereren…",
-    "step3": "Versleutelen en verzenden…",
+    "title": "Je stem wordt verstuurd",
+    "step1": "Je stembiljet wordt voorbereid…",
+    "step2": "We controleren of je mag stemmen, zonder te weten wie je bent…",
+    "step3": "Je stem wordt versleuteld en verstuurd…",
     "do_not_close": "Sluit dit venster niet"
   },
   "confirmation": {
     "title": "Stem uitgebracht!",
-    "desc": "Je stem is geregistreerd op de blockchain. Gebruik je referentienummer om het op elk moment te verifiëren.",
+    "desc": "Je stem is vastgelegd. Bewaar je referentienummer om het wanneer je wilt te controleren.",
     "reference": "Referentienummer",
-    "view_tx": "Bekijk op PolygonScan",
+    "view_tx": "Bekijk het openbare register",
     "back_elections": "Terug naar verkiezingen",
     "check_receipt": "Mijn bewijs controleren"
   },
@@ -300,7 +299,7 @@
     "no_results": "Geen stem komt overeen met je zoekopdracht",
     "verify": "Dit bewijs verifiëren",
     "open": "Deze verkiezing openen",
-    "cast_at": "Wanneer deze stem op de keten is vastgelegd",
+    "cast_at": "Wanneer deze stem is vastgelegd",
     "see_all": "Al mijn stemmen tonen",
     "partial_view": "Getoond worden de stemmen die deze browser kent: die hier zijn uitgebracht, plus wat een eerdere ontgrendeling vond. Ontgrendel om te zoeken naar stemmen van een ander apparaat."
   },
@@ -551,15 +550,29 @@
     "avatar_none": "Beschikbaar zodra je je identiteit op dit apparaat ontgrendelt."
   },
   "tx": {
-    "title_pending": "Transactie bezig",
-    "title_success": "Transactie bevestigd",
-    "title_failed": "Transactie mislukt",
+    "vote": {
+      "pending": "Je stem wordt verstuurd…",
+      "success": "Stem bevestigd",
+      "failed": "Je stem kon niet worden verstuurd",
+      "aria_label": "Status van je stem"
+    },
+    "enrolment": {
+      "pending": "Je inschrijving wordt afgerond…",
+      "success": "Inschrijving bevestigd",
+      "failed": "Je inschrijving kon niet worden afgerond",
+      "aria_label": "Status van je inschrijving"
+    },
+    "generic": {
+      "pending": "Transactie bezig",
+      "success": "Transactie bevestigd",
+      "failed": "Transactie mislukt",
+      "aria_label": "Transactiestatus"
+    },
     "step_submitting": "Verzenden via relayer…",
     "step_confirming": "Wachten op blockchain-bevestiging…",
     "step_done": "On-chain vastgelegd",
     "do_not_close": "Sluit dit venster niet",
-    "view_tx": "Bekijk op PolygonScan",
-    "aria_label": "Transactiestatus"
+    "view_tx": "Bekijk op PolygonScan"
   },
   "errors": {
     "not_found": "Pagina niet gevonden",
@@ -629,7 +642,7 @@
     "already_registered": "Dit apparaat heeft al een van je passkeys",
     "cannot_seal": "De eigen passkey van dit apparaat werkte niet: hij kan er een maken maar niet gebruiken om te ontgrendelen. Probeer je telefoon, die als optie verschijnt bij het koppelen.",
     "remove_title": "Deze passkey verwijderen?",
-    "remove_desc": "Hij wordt niet langer aangeboden om je identiteit te ontgrendelen. Dit wist hem NIET uit de geschiedenis van de chain: wie die authenticator nog heeft en oude transacties kan lezen, zou de versleutelde kopie kunnen terughalen.",
+    "remove_desc": "Hij wordt niet meer aangeboden om je identiteit te ontgrendelen. Dit wist hem niet uit het openbare register: wie die authenticator nog heeft en eerdere vermeldingen kan lezen, zou de versleutelde kopie kunnen herstellen.",
     "remove_stolen": "Kwijt of gestolen? Dan is verwijderen niet genoeg: je identiteit moet geroteerd worden.",
     "remove_confirm": "Verwijderen",
     "remove_failed": "Kon de passkey niet verwijderen",
@@ -770,7 +783,7 @@
     "unavailable_help": "Hij wordt bewaard door een passkey die deze browser niet kon bereiken. Probeer een apparaat waarmee je kunt stemmen, of typ de woorden in op de herstelpagina.",
     "copy_failed": "Je browser stond kopiëren niet toe. Schrijf de woorden dan zelf op.",
     "unregistered_title": "Je passkey werkt, maar is nog niet geregistreerd",
-    "unregistered_desc": "Hij is aangemaakt en je zin is ermee versleuteld, maar de kopie kon niet op de chain worden opgeslagen. Je twaalf woorden blijven ondertussen op dit apparaat: bewaar ze veilig. Je kunt de registratie opnieuw proberen vanuit je profiel."
+    "unregistered_desc": "Hij is aangemaakt en je zin is ermee versleuteld, maar de kopie kon niet in het openbare register worden opgeslagen. Je twaalf woorden blijven intussen op dit apparaat, bewaar ze dus goed. Je kunt de registratie opnieuw proberen vanuit je profiel."
   },
   "recover": {
     "title": "Herstel je identiteit",

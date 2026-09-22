@@ -154,9 +154,9 @@
     "ends_on": "Ends {{date}}",
     "voters_short": "Voters",
     "ballots_short": "Ballots",
-    "ballots_hint": "Ballots recorded on chain. There are more of them than voters because somebody voted again: the later ballot replaces the earlier one, and the count still counts one per person.",
-    "reserved_short": "Reserved",
-    "reserved_hint": "Gas the organizer has locked for this election. It pays for about this many ballots and cannot be taken back while the election is running.",
+    "ballots_hint": "Ballots in the public record. There are more of them than voters because somebody voted again: the later ballot replaces the earlier one, and the count still counts one per person.",
+    "reserved_short": "Votes paid for",
+    "reserved_hint": "The organizer pays for every vote in advance. This is roughly how many are still paid for; if they run out, voting stops until more are added.",
     "quorum_short": "Quorum",
     "quorum_met": "Already reached.",
     "quorum_pending": "Not reached yet.",
@@ -174,7 +174,6 @@
     "auth_cta": "Verify your identity to participate in this election.",
     "change_vote": "Change my vote",
     "reference": "Reference",
-    "gas_low_banner": "Your gas balance is low. Top up to vote.",
     "top_up": "Top up",
     "ends_in": "Ends in",
     "vote_now": "Vote now",
@@ -188,7 +187,7 @@
     "cta_upcoming": "Enrollment hasn't opened yet.",
     "cta_pending_vote": "Enrollment is closed. Voting hasn't started yet.",
     "starts_in": "Starts in",
-    "verified_on_chain": "Verified on blockchain",
+    "verified_on_chain": "Publicly verifiable",
     "view_as_voter": "View as voter",
     "view_as_organizer": "View as organizer",
     "turnout_detail": "{{voted}} of {{total}} enrolled voters have voted",
@@ -221,28 +220,28 @@
     "export_json": "Export audit trail",
     "view_ipfs": "View on IPFS",
     "not_available": "Results not yet available.",
-    "check_ok_title": "Checked against the chain",
+    "check_ok_title": "Checked against the public record",
     "check_ok_body": "The published counts add up to {{declared}}, and the contract recorded {{voters}} voters. No ballot was invented or dropped.",
-    "check_bad_title": "Does not match the chain",
+    "check_bad_title": "Does not match the public record",
     "check_bad_body": "The published counts add up to {{declared}}, but the contract recorded {{voters}} voters. These should be the same number.",
     "check_limit": "This needs no key and no trust: anyone can repeat it. It cannot tell whether votes were moved between options, which keeps the total unchanged."
   },
   "verify_receipt": {
     "title": "Verify a vote",
-    "subtitle": "Enter a reference number or nullifier to confirm a ballot was recorded on-chain.",
-    "placeholder": "Reference number or nullifier…",
+    "subtitle": "Enter a reference number to confirm a vote was recorded.",
+    "placeholder": "Reference number…",
     "hint": "A reference number is shown after voting, and again in the voter history.",
     "found": "Vote recorded",
     "not_found": "Not found",
     "not_found_desc": "No matching vote was found. Check your reference number and try again.",
     "election": "Election",
     "status": "Status",
-    "vote_recorded": "Recorded on-chain",
+    "vote_recorded": "Recorded",
     "reference": "Reference",
-    "nullifier": "Nullifier",
+    "nullifier": "Vote identifier",
     "date": "Date",
     "ballots": "Ballots cast",
-    "choice_never_shown": "The chain records that a ballot was cast and when, never what it said. Nobody can read a choice from a receipt, including us.",
+    "choice_never_shown": "The public record shows that a vote was cast and when, never what it said. Nobody can read a choice from a receipt, including us.",
     "your_receipts": "Your receipts",
     "unlock_hint": "This browser knows of no ballot yet. If you voted from another device, one passkey tap will find those and remember them here."
   },
@@ -268,17 +267,17 @@
     "urgent_one": "{{count}} ending soon"
   },
   "zk": {
-    "title": "Generating your proof",
-    "step1": "Building identity commitment…",
-    "step2": "Generating zero-knowledge proof…",
-    "step3": "Encrypting and submitting…",
+    "title": "Sending your vote",
+    "step1": "Preparing your ballot…",
+    "step2": "Checking that you may vote, without revealing who you are…",
+    "step3": "Encrypting and sending your vote…",
     "do_not_close": "Do not close this window"
   },
   "confirmation": {
     "title": "Vote cast!",
-    "desc": "Your vote has been recorded on the blockchain. Use your reference number to verify it anytime.",
+    "desc": "Your vote has been recorded. Keep your reference number to check it whenever you like.",
     "reference": "Reference number",
-    "view_tx": "View on PolygonScan",
+    "view_tx": "See the public record",
     "back_elections": "Back to elections",
     "check_receipt": "Check my receipt"
   },
@@ -300,7 +299,7 @@
     "no_results": "No vote matches your search",
     "verify": "Verify this receipt",
     "open": "Open this election",
-    "cast_at": "When this ballot was recorded on chain",
+    "cast_at": "When this vote was recorded",
     "see_all": "See all my votes",
     "partial_view": "Showing the ballots this browser knows about: the ones cast here, plus any found by a previous unlock. Unlock to check for ballots cast on another device since."
   },
@@ -551,15 +550,29 @@
     "avatar_none": "Available once you unlock your identity on this device."
   },
   "tx": {
-    "title_pending": "Transaction in progress",
-    "title_success": "Transaction confirmed",
-    "title_failed": "Transaction failed",
+    "vote": {
+      "pending": "Sending your vote…",
+      "success": "Vote confirmed",
+      "failed": "Your vote could not be sent",
+      "aria_label": "Vote status"
+    },
+    "enrolment": {
+      "pending": "Completing your enrolment…",
+      "success": "Enrolment confirmed",
+      "failed": "Your enrolment could not be completed",
+      "aria_label": "Enrolment status"
+    },
+    "generic": {
+      "pending": "Transaction in progress",
+      "success": "Transaction confirmed",
+      "failed": "Transaction failed",
+      "aria_label": "Transaction status"
+    },
     "step_submitting": "Submitting via relayer…",
     "step_confirming": "Awaiting blockchain confirmation…",
     "step_done": "Recorded on-chain",
     "do_not_close": "Do not close this window",
-    "view_tx": "View on PolygonScan",
-    "aria_label": "Transaction status"
+    "view_tx": "View on PolygonScan"
   },
   "errors": {
     "not_found": "Page not found",
@@ -629,7 +642,7 @@
     "already_registered": "This device already holds one of your passkeys",
     "cannot_seal": "This device's own passkey did not work: it can create one but not use it to unlock. Try your phone instead, offered as an option when you link.",
     "remove_title": "Remove this passkey?",
-    "remove_desc": "It stops being offered to unlock your identity. This does not erase it from the chain's history: anyone still holding that authenticator who can read past transactions could recover the encrypted copy.",
+    "remove_desc": "It stops being offered to unlock your identity. This does not erase it from the public record: anyone still holding that authenticator who can read past entries could recover the encrypted copy.",
     "remove_stolen": "Lost or stolen? Then removing it is not enough: your identity has to be rotated.",
     "remove_confirm": "Remove",
     "remove_failed": "Could not remove the passkey",
@@ -770,7 +783,7 @@
     "unavailable_help": "It is held by a passkey this browser could not reach. Try a device you can vote from, or type the words in on the recovery page.",
     "copy_failed": "Your browser did not allow copying. Write the words down instead.",
     "unregistered_title": "Your passkey works, but it is not registered yet",
-    "unregistered_desc": "It was created and your phrase was encrypted with it, but the copy could not be saved to the chain. Your twelve words stay on this device meanwhile, so keep them safe. You can retry the registration from your profile."
+    "unregistered_desc": "It was created and your phrase was encrypted with it, but the copy could not be saved to the public record. Your twelve words stay on this device meanwhile, so keep them safe. You can retry the registration from your profile."
   },
   "recover": {
     "title": "Restore your identity",

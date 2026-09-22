@@ -204,6 +204,14 @@ export function ElectionSchedule({
    * Off for the organizer, whose page carries a whole gas card stating the
    * same number next to the buttons that change it. One page should not
    * report one fact twice.
+   *
+   * ON FOR THE VOTER, and it was briefly taken away on the grounds that it is
+   * gas wearing a friendlier label. That was wrong. A voter cannot top the
+   * reserve up, but they can read it: it is how many more ballots this
+   * election can still accept, which is the difference between voting now and
+   * finding the door shut later. What needed fixing was its explanation, which
+   * talked about gas the organizer had locked, and now talks about votes paid
+   * for in advance.
    */
   showReserve?: boolean;
   /**

@@ -144,6 +144,29 @@ jobs:
   # repository; it does not move Heroku and it does not touch the enclave.
   # Those stay manual, in `deploy-heroku.yml` and `deploy-phala.yml`, because
   # deciding what the world talks to should be somebody's decision.
+  # THE TALLY CLI WAS IN NO JOB AT ALL, which is a strange thing to leave out:
+  # it is the auditor's path, the one that reads the encrypted ballots, adds
+  # them up and publishes the result with an IPFS receipt. Nothing here builds
+  # or runs it, so a dependency bump could break the official count and every
+  # tick would stay green.
+  #
+  # It has no tests of its own yet, so this is a type check. That is less than
+  # the other three get and a great deal more than nothing.
+  tally:
+    name: tally CLI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: scripts-tally/package-lock.json
+      - run: npm ci
+        working-directory: scripts-tally
+      - run: npm run typecheck
+        working-directory: scripts-tally
+
   # ── IS THERE A NEW IMAGE TO BUILD AT ALL ────────────────────────────────────
   #
   # Without this, every green commit on main published a version, and the first
@@ -165,7 +188,7 @@ jobs:
   # a change to HOW the image is built is a change to the image.
   cambios:
     name: has the backend changed
-    needs: [frontend, backend, contracts]
+    needs: [frontend, backend, contracts, tally]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     outputs:
@@ -242,7 +265,7 @@ jobs:
 
   image:
     name: publish the backend image
-    needs: [frontend, backend, contracts, cambios]
+    needs: [frontend, backend, contracts, tally, cambios]
     if: |
       github.event_name == 'push' && github.ref == 'refs/heads/main'
         && needs.cambios.outputs.backend == 'yes'
@@ -304,7 +327,7 @@ jobs:
 
   deploy:
     name: publish the frontend
-    needs: [frontend, backend, contracts, cambios]
+    needs: [frontend, backend, contracts, tally, cambios]
     if: |
       github.event_name == 'push' && github.ref == 'refs/heads/main'
         && needs.cambios.outputs.frontend == 'yes'
@@ -370,13 +393,14 @@ jobs:
   # publication is tolerated and a failed test is not.
   release:
     name: publish the release
-    needs: [frontend, backend, contracts, cambios, image, deploy]
+    needs: [frontend, backend, contracts, tally, cambios, image, deploy]
     if: |
       always()
         && github.event_name == 'push' && github.ref == 'refs/heads/main'
         && needs.frontend.result == 'success'
         && needs.backend.result == 'success'
         && needs.contracts.result == 'success'
+        && needs.tally.result == 'success'
         && (needs.image.result == 'success' || needs.deploy.result == 'success')
     runs-on: ubuntu-latest
     permissions:

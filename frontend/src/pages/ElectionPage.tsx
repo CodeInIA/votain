@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useRefreshOnReturn } from '../hooks/useRefreshOnReturn';
 import { useScheduleWatch } from '../hooks/useScheduleWatch';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, ExternalLink, Copy, Check, Lock, Bookmark } from 'lucide-react';
+import { ExternalLink, Copy, Check, Lock, Bookmark } from 'lucide-react';
 import { PageLayout } from '../components/layout/PageLayout';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -93,7 +93,6 @@ export default function ElectionPage() {
   );
 
   const [selectedCandidate, setSelectedCandidate] = useState('');
-  const [showGasWarning] = useState(false);
   const [referenceCopied, setReferenceCopied] = useState(false);
   const [txState, setTxState] = useState<TxState>('idle');
   const [txError, setTxError] = useState<string | null>(null);
@@ -463,17 +462,15 @@ export default function ElectionPage() {
 
         <ElectionSchedule election={election} />
 
-        {/* Gas warning banner */}
-        {showGasWarning && isActivePhase && (
-          <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-warning/10 border border-warning/20 mb-4">
-            <AlertTriangle className="w-4.5 h-4.5 text-warning shrink-0" />
-            <p className="text-xs text-warning">{t('election.gas_low_banner')}</p>
-            <Button variant="ghost" size="sm" className="ml-auto shrink-0 text-warning hover:text-warning/80"
-              onClick={() => navigate('/voter/profile')}>
-              {t('election.top_up')}
-            </Button>
-          </div>
-        )}
+        {/* NO GAS BANNER, and none is coming back. It warned a voter that
+            "your gas balance is low" and offered to top it up, which is two
+            untruths: a voter holds no balance, because the organizer's tank
+            pays every ballot through the relay, and the profile it linked to
+            has no such action. It was also unreachable, gated on a state
+            permanently set to false, so nobody ever saw it. The honest version
+            of this warning already exists as `FundingNotice`, which says the
+            election cannot pay right now and that the fix is somebody else's.
+        */}
 
         <ElectionAbout election={election} />
 
@@ -604,7 +601,10 @@ export default function ElectionPage() {
         {renderFooter()}
       </div>
 
+      {/* Enrolment, always: voting leaves this page for `ZkProofGeneration`,
+          so this modal never covers a ballot. */}
       <TransactionPendingModal
+        kind="enrolment"
         state={txState}
         errorMessage={txError ?? undefined}
         onClose={() => { setTxState('idle'); setTxError(null); }}

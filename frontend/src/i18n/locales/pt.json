@@ -155,9 +155,9 @@
     "ends_on": "Termina {{date}}",
     "voters_short": "Votantes",
     "ballots_short": "Boletins",
-    "ballots_hint": "Boletins registados na cadeia. Há mais do que votantes porque alguém votou de novo: o último boletim substitui o anterior e a contagem continua a contar um por pessoa.",
-    "reserved_short": "Reservados",
-    "reserved_hint": "Gas que o organizador bloqueou para esta eleicao. Paga cerca deste numero de votos e nao pode ser recuperado enquanto a eleicao decorre.",
+    "ballots_hint": "Boletins no registo público. Há mais do que eleitores porque alguém voltou a votar: o boletim posterior substitui o anterior, e a contagem continua a contar um por pessoa.",
+    "reserved_short": "Votos pagos",
+    "reserved_hint": "O organizador paga cada voto antecipadamente. Estes são os que ainda estão pagos; se acabarem, não é possível votar até acrescentar mais.",
     "quorum_short": "Quórum",
     "quorum_met": "Já foi atingido.",
     "quorum_pending": "Ainda não foi atingido.",
@@ -175,7 +175,6 @@
     "auth_cta": "Verifique sua identidade para participar desta eleição.",
     "change_vote": "Mudar meu voto",
     "reference": "Referência",
-    "gas_low_banner": "Seu saldo de gas está baixo. Recarregue para votar.",
     "top_up": "Recarregar",
     "ends_in": "Termina em",
     "vote_now": "Votar agora",
@@ -189,7 +188,7 @@
     "cta_upcoming": "As inscrições ainda não abriram.",
     "cta_pending_vote": "As inscrições estão encerradas. A votação ainda não começou.",
     "starts_in": "Começa em",
-    "verified_on_chain": "Verificado na blockchain",
+    "verified_on_chain": "Verificável por qualquer pessoa",
     "view_as_voter": "Ver como eleitor",
     "view_as_organizer": "Ver como organizador",
     "turnout_detail": "Votaram {{voted}} de {{total}} inscritos",
@@ -223,28 +222,28 @@
     "export_json": "Exportar trilha de auditoria",
     "view_ipfs": "Ver no IPFS",
     "not_available": "Resultados ainda não disponíveis.",
-    "check_ok_title": "Verificado na cadeia",
+    "check_ok_title": "Confirmado com o registo público",
     "check_ok_body": "As contagens publicadas somam {{declared}} e o contrato registou {{voters}} votantes. Nenhum boletim foi inventado nem descartado.",
-    "check_bad_title": "Não corresponde à cadeia",
+    "check_bad_title": "Não corresponde ao registo público",
     "check_bad_body": "As contagens publicadas somam {{declared}}, mas o contrato registou {{voters}} votantes. Deveriam ser o mesmo número.",
     "check_limit": "Não precisa de chave nem de confiar em ninguém: qualquer pessoa pode repetir. Não deteta votos movidos entre opções, porque isso não altera o total."
   },
   "verify_receipt": {
     "title": "Verifica um voto",
-    "subtitle": "Introduz um número de referência ou nulificador para confirmar que um voto ficou registado na cadeia.",
-    "placeholder": "Número de referência ou nulificador…",
+    "subtitle": "Introduza um número de referência para confirmar que um voto ficou registado.",
+    "placeholder": "Número de referência…",
     "hint": "O número de referência aparece depois de votar, e de novo no histórico.",
     "found": "Voto registrado",
     "not_found": "Não encontrado",
     "not_found_desc": "Nenhum voto correspondente encontrado. Verifique seu número de referência.",
     "election": "Eleição",
     "status": "Status",
-    "vote_recorded": "Registrado na cadeia",
+    "vote_recorded": "Registado",
     "reference": "Referência",
-    "nullifier": "Nullifier",
+    "nullifier": "Identificador do voto",
     "date": "Data",
     "ballots": "Votos depositados",
-    "choice_never_shown": "A cadeia regista que um voto foi depositado e quando, nunca o que dizia. Ninguém consegue ler a escolha a partir de um recibo, nós incluídos.",
+    "choice_never_shown": "O registo público guarda que um voto foi expresso e quando, nunca o que dizia. Ninguém consegue ler uma escolha a partir de um recibo, nós também não.",
     "your_receipts": "Os teus recibos",
     "unlock_hint": "Este navegador ainda não conhece nenhum voto. Se votaste noutro dispositivo, um toque na passkey encontra-os e guarda-os aqui."
   },
@@ -271,17 +270,17 @@
     "urgent_many": "{{count}} terminam em breve"
   },
   "zk": {
-    "title": "Gerando sua prova",
-    "step1": "Construindo compromisso de identidade…",
-    "step2": "Gerando prova de conhecimento zero…",
-    "step3": "Criptografando e enviando…",
+    "title": "A enviar o seu voto",
+    "step1": "A preparar o seu boletim…",
+    "step2": "A confirmar que pode votar, sem revelar quem é…",
+    "step3": "A cifrar e enviar o seu voto…",
     "do_not_close": "Não feche esta janela"
   },
   "confirmation": {
     "title": "Voto emitido!",
-    "desc": "Seu voto foi registrado na blockchain. Use seu número de referência para verificá-lo a qualquer momento.",
+    "desc": "O seu voto ficou registado. Guarde o número de referência para o verificar quando quiser.",
     "reference": "Número de referência",
-    "view_tx": "Ver no PolygonScan",
+    "view_tx": "Ver o registo público",
     "back_elections": "Voltar às eleições",
     "check_receipt": "Verificar o meu recibo"
   },
@@ -303,7 +302,7 @@
     "no_results": "Nenhum voto corresponde à sua pesquisa",
     "verify": "Verificar este recibo",
     "open": "Abrir esta eleição",
-    "cast_at": "Quando este boletim ficou registado na cadeia",
+    "cast_at": "Quando este voto ficou registado",
     "see_all": "Ver todos os meus votos",
     "partial_view": "Mostram-se os votos que este navegador conhece: os feitos aqui, mais os encontrados por um desbloqueio anterior. Desbloqueia para procurar os feitos noutro dispositivo."
   },
@@ -556,15 +555,29 @@
     "avatar_none": "Disponível assim que desbloquear a sua identidade neste dispositivo."
   },
   "tx": {
-    "title_pending": "Transação em andamento",
-    "title_success": "Transação confirmada",
-    "title_failed": "Transação falhou",
+    "vote": {
+      "pending": "A enviar o seu voto…",
+      "success": "Voto confirmado",
+      "failed": "Não foi possível enviar o seu voto",
+      "aria_label": "Estado do seu voto"
+    },
+    "enrolment": {
+      "pending": "A concluir a sua inscrição…",
+      "success": "Inscrição confirmada",
+      "failed": "Não foi possível concluir a sua inscrição",
+      "aria_label": "Estado da sua inscrição"
+    },
+    "generic": {
+      "pending": "Transação em andamento",
+      "success": "Transação confirmada",
+      "failed": "Transação falhou",
+      "aria_label": "Status da transação"
+    },
     "step_submitting": "Enviando via relayer…",
     "step_confirming": "Aguardando confirmação blockchain…",
     "step_done": "Registrado on-chain",
     "do_not_close": "Não feche esta janela",
-    "view_tx": "Ver no PolygonScan",
-    "aria_label": "Status da transação"
+    "view_tx": "Ver no PolygonScan"
   },
   "errors": {
     "not_found": "Página não encontrada",
@@ -634,7 +647,7 @@
     "already_registered": "Este dispositivo já tem uma das suas passkeys",
     "cannot_seal": "A passkey deste dispositivo não funcionou: consegue criá-la mas não usá-la para desbloquear. Experimente com o telemóvel, que aparece como opção ao associar.",
     "remove_title": "Remover esta passkey?",
-    "remove_desc": "Deixa de ser oferecida para desbloquear a sua identidade. Isto não a apaga do histórico da cadeia: quem ainda tiver esse autenticador e souber ler transações antigas poderia recuperar a cópia cifrada.",
+    "remove_desc": "Deixa de ser oferecido para desbloquear a sua identidade. Isto não o apaga do registo público: quem ainda tenha esse autenticador e consiga ler entradas passadas poderia recuperar a cópia cifrada.",
     "remove_stolen": "Perdeu-a ou roubaram-na? Então remover não chega: é preciso rodar a sua identidade.",
     "remove_confirm": "Remover",
     "remove_failed": "Não foi possível remover a passkey",
@@ -776,7 +789,7 @@
     "unavailable_help": "Está guardada por uma passkey que este navegador não conseguiu alcançar. Tente num dispositivo a partir do qual possa votar, ou escreva as palavras na página de recuperação.",
     "copy_failed": "O seu navegador não permitiu copiar. Anote as palavras à mão.",
     "unregistered_title": "A sua passkey funciona, mas ainda não está registada",
-    "unregistered_desc": "Foi criada e a sua frase foi cifrada com ela, mas a cópia não pôde ser guardada na cadeia. As suas doze palavras ficam entretanto neste dispositivo: guarde-as em segurança. Pode tentar de novo o registo a partir do seu perfil."
+    "unregistered_desc": "Foi criada e a sua frase foi cifrada com ela, mas a cópia não pôde ser guardada no registo público. Entretanto as suas doze palavras ficam neste dispositivo, por isso guarde-as bem. Pode tentar o registo novamente a partir do seu perfil."
   },
   "recover": {
     "title": "Recupera a tua identidade",

@@ -153,9 +153,9 @@
     "ends_on": "{{date}} 结束",
     "voters_short": "投票人数",
     "ballots_short": "票数",
-    "ballots_hint": "链上记录的票数。它多于投票人数，是因为有人重新投了票：后投的票会取代先前那张，计票时每人仍只算一票。",
-    "reserved_short": "已预留",
-    "reserved_hint": "组织者为本次选举锁定的 gas。大约可支付这么多张选票，选举进行期间无法取回。",
+    "ballots_hint": "公开记录中的选票。数量多于投票人，是因为有人重新投了票：后投的替代先前的，计票仍按每人一票计算。",
+    "reserved_short": "已付费票数",
+    "reserved_hint": "组织者预先支付每一票的费用。这是仍已付费的大致数量；用完后，需等待补充才能继续投票。",
     "quorum_short": "法定票数",
     "quorum_met": "已经达到。",
     "quorum_pending": "尚未达到。",
@@ -173,7 +173,6 @@
     "auth_cta": "验证您的身份以参与此次选举。",
     "change_vote": "更改我的投票",
     "reference": "参考编号：",
-    "gas_low_banner": "您的 Gas 余额不足，请充值后投票。",
     "top_up": "充值",
     "ends_in": "结束于",
     "vote_now": "立即投票",
@@ -187,7 +186,7 @@
     "cta_upcoming": "报名尚未开放。",
     "cta_pending_vote": "报名已关闭，投票尚未开始。",
     "starts_in": "开始于",
-    "verified_on_chain": "已在区块链上验证",
+    "verified_on_chain": "任何人都可核验",
     "view_as_voter": "以选民身份查看",
     "view_as_organizer": "以组织者身份查看",
     "turnout_detail": "{{total}} 位登记选民中已有 {{voted}} 位投票",
@@ -219,28 +218,28 @@
     "export_json": "导出审计记录",
     "view_ipfs": "在 IPFS 上查看",
     "not_available": "结果尚未公布。",
-    "check_ok_title": "已与链上核对",
+    "check_ok_title": "已与公开记录核对",
     "check_ok_body": "公布的计数合计为 {{declared}}，合约记录了 {{voters}} 名投票人。没有凭空增加，也没有丢弃任何选票。",
-    "check_bad_title": "与链上不一致",
+    "check_bad_title": "与公开记录不符",
     "check_bad_body": "公布的计数合计为 {{declared}}，但合约记录了 {{voters}} 名投票人。这两个数字本应相同。",
     "check_limit": "这不需要密钥，也不需要信任任何人，任何人都可以复核。但它看不出选票是否在选项之间被挪动，因为那样总数不变。"
   },
   "verify_receipt": {
     "title": "验证一笔投票",
-    "subtitle": "输入受理号或 nullifier，确认某张选票已记录在链上。",
-    "placeholder": "受理号或 nullifier…",
+    "subtitle": "输入查询编号，确认某次投票已被记录。",
+    "placeholder": "查询编号…",
     "hint": "受理号在投票后显示，也会出现在投票记录中。",
     "found": "投票已记录",
     "not_found": "未找到",
     "not_found_desc": "未找到匹配的投票。请检查您的参考编号。",
     "election": "选举",
     "status": "状态",
-    "vote_recorded": "已记录在链上",
+    "vote_recorded": "已记录",
     "reference": "参考编号",
-    "nullifier": "Nullifier",
+    "nullifier": "投票标识",
     "date": "日期",
     "ballots": "已投票次数",
-    "choice_never_shown": "链上记录的是投票发生的事实与时间，而不是内容。没有人能从回执读出选择，我们也不能。",
+    "choice_never_shown": "公开记录只保留投票发生过以及发生的时间，从不保留内容。没有人能从回执读出选择，我们也不能。",
     "your_receipts": "你的回执",
     "unlock_hint": "此浏览器尚不知道任何投票。如果你在其他设备上投过票，一次通行密钥操作即可找到并记在这里。"
   },
@@ -265,17 +264,17 @@
     "urgent_other": "{{count}} 即将结束"
   },
   "zk": {
-    "title": "正在生成证明",
-    "step1": "构建身份承诺…",
-    "step2": "生成零知识证明…",
-    "step3": "加密并提交…",
+    "title": "正在提交你的投票",
+    "step1": "正在准备你的选票…",
+    "step2": "正在确认你有投票资格，同时不透露你是谁…",
+    "step3": "正在加密并提交你的投票…",
     "do_not_close": "请勿关闭此窗口"
   },
   "confirmation": {
     "title": "投票成功！",
-    "desc": "您的投票已记录在区块链上。随时使用您的参考编号进行验证。",
+    "desc": "你的投票已记录。请保存查询编号，随时可以核验。",
     "reference": "参考编号",
-    "view_tx": "在 PolygonScan 上查看",
+    "view_tx": "查看公开记录",
     "back_elections": "返回选举列表",
     "check_receipt": "查看我的回执"
   },
@@ -297,7 +296,7 @@
     "no_results": "没有符合搜索条件的投票",
     "verify": "验证此回执",
     "open": "打开这场选举",
-    "cast_at": "这张选票记录到链上的时间",
+    "cast_at": "这张选票的记录时间",
     "see_all": "查看我的全部投票",
     "partial_view": "显示此浏览器已知的投票：在这里投出的，以及上次解锁时找到的。若要查找在其他设备上投出的票，请解锁。"
   },
@@ -546,15 +545,29 @@
     "avatar_none": "在本设备解锁身份后即可使用。"
   },
   "tx": {
-    "title_pending": "交易进行中",
-    "title_success": "交易已确认",
-    "title_failed": "交易失败",
+    "vote": {
+      "pending": "正在提交你的投票…",
+      "success": "投票已确认",
+      "failed": "无法提交你的投票",
+      "aria_label": "投票状态"
+    },
+    "enrolment": {
+      "pending": "正在完成你的登记…",
+      "success": "登记已确认",
+      "failed": "无法完成你的登记",
+      "aria_label": "登记状态"
+    },
+    "generic": {
+      "pending": "交易进行中",
+      "success": "交易已确认",
+      "failed": "交易失败",
+      "aria_label": "交易状态"
+    },
     "step_submitting": "通过中继器提交…",
     "step_confirming": "等待区块链确认…",
     "step_done": "已记录上链",
     "do_not_close": "请勿关闭此窗口",
-    "view_tx": "在 PolygonScan 上查看",
-    "aria_label": "交易状态"
+    "view_tx": "在 PolygonScan 上查看"
   },
   "errors": {
     "not_found": "页面未找到",
@@ -624,7 +637,7 @@
     "already_registered": "这台设备已经有你的一个通行密钥",
     "cannot_seal": "此设备自身的通行密钥没能用上：能创建但无法用来解锁。试试你的手机，绑定时会作为选项出现。",
     "remove_title": "移除这个通行密钥？",
-    "remove_desc": "它将不再被用来解锁你的身份。这并不会把它从链的历史记录中抹除：仍然持有那个认证器、又能读取旧交易的人，依然可以取回加密副本。",
+    "remove_desc": "它将不再用于解锁你的身份。这并不会把它从公开记录中抹去：仍持有该验证器并能读取过往记录的人，有可能恢复那份加密副本。",
     "remove_stolen": "丢失或被盗？那么移除并不够，需要轮换你的身份。",
     "remove_confirm": "移除",
     "remove_failed": "无法移除通行密钥",
@@ -764,7 +777,7 @@
     "unavailable_help": "它由这个浏览器无法访问的通行密钥保管。请换一台你能投票的设备，或在恢复页面输入这些词。",
     "copy_failed": "浏览器不允许复制，请手动抄写这些词。",
     "unregistered_title": "你的通行密钥可用，但尚未注册",
-    "unregistered_desc": "它已创建，你的助记词也用它加密了，但副本没能保存到链上。在此期间这十二个词会留在本设备上，请妥善保管。你可以在个人资料里重新尝试注册。"
+    "unregistered_desc": "它已创建，你的助记词也已用它加密，但副本未能保存到公开记录。在此期间，你的十二个词留在本设备上，请妥善保管。你可以在个人资料中重新尝试注册。"
   },
   "recover": {
     "title": "找回你的身份",

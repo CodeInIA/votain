@@ -155,9 +155,9 @@
     "ends_on": "Termina {{date}}",
     "voters_short": "Votanti",
     "ballots_short": "Schede",
-    "ballots_hint": "Schede registrate sulla catena. Sono più dei votanti perché qualcuno ha votato di nuovo: l’ultima scheda sostituisce la precedente e il conteggio ne conta comunque una a persona.",
-    "reserved_short": "Riservati",
-    "reserved_hint": "Gas che l'organizzatore ha bloccato per questa elezione. Paga all'incirca questo numero di voti e non puo essere recuperato mentre l'elezione e in corso.",
+    "ballots_hint": "Schede nel registro pubblico. Sono più dei votanti perché qualcuno ha votato di nuovo: la scheda successiva sostituisce la precedente, e il conteggio continua a contarne una per persona.",
+    "reserved_short": "Voti pagati",
+    "reserved_hint": "L'organizzatore paga ogni voto in anticipo. Questi sono più o meno quelli ancora pagati; se si esauriscono, non si può votare finché non ne aggiunge altri.",
     "quorum_short": "Quorum",
     "quorum_met": "Già raggiunto.",
     "quorum_pending": "Non ancora raggiunto.",
@@ -175,7 +175,6 @@
     "auth_cta": "Verifica la tua identità per partecipare a questa elezione.",
     "change_vote": "Cambia il mio voto",
     "reference": "Riferimento",
-    "gas_low_banner": "Il tuo saldo gas è basso. Ricarica per votare.",
     "top_up": "Ricarica",
     "ends_in": "Termina tra",
     "vote_now": "Vota ora",
@@ -189,7 +188,7 @@
     "cta_upcoming": "Le iscrizioni non sono ancora aperte.",
     "cta_pending_vote": "Le iscrizioni sono chiuse. Il voto non è ancora iniziato.",
     "starts_in": "Inizia tra",
-    "verified_on_chain": "Verificato sulla blockchain",
+    "verified_on_chain": "Verificabile da chiunque",
     "view_as_voter": "Vedi come elettore",
     "view_as_organizer": "Vedi come organizzatore",
     "turnout_detail": "Hanno votato {{voted}} iscritti su {{total}}",
@@ -223,28 +222,28 @@
     "export_json": "Esporta registro audit",
     "view_ipfs": "Vedi su IPFS",
     "not_available": "Risultati non ancora disponibili.",
-    "check_ok_title": "Verificato sulla catena",
+    "check_ok_title": "Verificato con il registro pubblico",
     "check_ok_body": "I conteggi pubblicati sommano {{declared}} e il contratto ha registrato {{voters}} votanti. Nessuna scheda è stata inventata o scartata.",
-    "check_bad_title": "Non corrisponde alla catena",
+    "check_bad_title": "Non corrisponde al registro pubblico",
     "check_bad_body": "I conteggi pubblicati sommano {{declared}}, ma il contratto ha registrato {{voters}} votanti. Dovrebbero essere lo stesso numero.",
     "check_limit": "Non serve alcuna chiave né fiducia: chiunque può ripeterlo. Non rileva voti spostati tra opzioni, perché il totale resta uguale."
   },
   "verify_receipt": {
     "title": "Verifica un voto",
-    "subtitle": "Inserisci un numero di riferimento o un nullificatore per confermare che una scheda è stata registrata sulla catena.",
-    "placeholder": "Numero di riferimento o nullificatore…",
+    "subtitle": "Inserisci un numero di riferimento per confermare che un voto è stato registrato.",
+    "placeholder": "Numero di riferimento…",
     "hint": "Il numero di riferimento appare dopo il voto e di nuovo nella cronologia.",
     "found": "Voto registrato",
     "not_found": "Non trovato",
     "not_found_desc": "Nessun voto corrispondente trovato. Controlla il tuo numero di riferimento.",
     "election": "Elezione",
     "status": "Stato",
-    "vote_recorded": "Registrato on-chain",
+    "vote_recorded": "Registrato",
     "reference": "Riferimento",
-    "nullifier": "Nullifier",
+    "nullifier": "Identificativo del voto",
     "date": "Data",
     "ballots": "Schede depositate",
-    "choice_never_shown": "La catena registra che una scheda è stata depositata e quando, mai cosa diceva. Nessuno può leggere la scelta da una ricevuta, noi compresi.",
+    "choice_never_shown": "Il registro pubblico conserva che un voto è stato espresso e quando, mai cosa diceva. Nessuno può leggere una scelta da una ricevuta, nemmeno noi.",
     "your_receipts": "Le tue ricevute",
     "unlock_hint": "Questo browser non conosce ancora alcun voto. Se hai votato da un altro dispositivo, un tocco della passkey li trova e li ricorda qui."
   },
@@ -271,17 +270,17 @@
     "urgent_many": "{{count}} in scadenza"
   },
   "zk": {
-    "title": "Generazione della prova",
-    "step1": "Costruzione dell'impegno di identità…",
-    "step2": "Generazione della prova a conoscenza zero…",
-    "step3": "Crittografia e invio…",
+    "title": "Invio del tuo voto",
+    "step1": "Preparazione della tua scheda…",
+    "step2": "Verifica del tuo diritto di voto, senza rivelare chi sei…",
+    "step3": "Cifratura e invio del tuo voto…",
     "do_not_close": "Non chiudere questa finestra"
   },
   "confirmation": {
     "title": "Voto espresso!",
-    "desc": "Il tuo voto è stato registrato sulla blockchain. Usa il tuo numero di riferimento per verificarlo in qualsiasi momento.",
+    "desc": "Il tuo voto è stato registrato. Conserva il numero di riferimento per verificarlo quando vuoi.",
     "reference": "Numero di riferimento",
-    "view_tx": "Vedi su PolygonScan",
+    "view_tx": "Vedi il registro pubblico",
     "back_elections": "Torna alle elezioni",
     "check_receipt": "Verifica la mia ricevuta"
   },
@@ -303,7 +302,7 @@
     "no_results": "Nessun voto corrisponde alla tua ricerca",
     "verify": "Verifica questa ricevuta",
     "open": "Apri questa elezione",
-    "cast_at": "Quando questa scheda è stata registrata sulla catena",
+    "cast_at": "Quando è stato registrato questo voto",
     "see_all": "Vedi tutti i miei voti",
     "partial_view": "Sono mostrati i voti che questo browser conosce: quelli espressi qui, più quelli trovati da uno sblocco precedente. Sblocca per cercare quelli espressi da un altro dispositivo."
   },
@@ -556,15 +555,29 @@
     "avatar_none": "Disponibile appena sblocchi la tua identità su questo dispositivo."
   },
   "tx": {
-    "title_pending": "Transazione in corso",
-    "title_success": "Transazione confermata",
-    "title_failed": "Transazione fallita",
+    "vote": {
+      "pending": "Invio del tuo voto…",
+      "success": "Voto confermato",
+      "failed": "Non è stato possibile inviare il tuo voto",
+      "aria_label": "Stato del tuo voto"
+    },
+    "enrolment": {
+      "pending": "Completamento dell'iscrizione…",
+      "success": "Iscrizione confermata",
+      "failed": "Non è stato possibile completare l'iscrizione",
+      "aria_label": "Stato della tua iscrizione"
+    },
+    "generic": {
+      "pending": "Transazione in corso",
+      "success": "Transazione confermata",
+      "failed": "Transazione fallita",
+      "aria_label": "Stato della transazione"
+    },
     "step_submitting": "Invio tramite relayer…",
     "step_confirming": "In attesa di conferma blockchain…",
     "step_done": "Registrato on-chain",
     "do_not_close": "Non chiudere questa finestra",
-    "view_tx": "Vedi su PolygonScan",
-    "aria_label": "Stato della transazione"
+    "view_tx": "Vedi su PolygonScan"
   },
   "errors": {
     "not_found": "Pagina non trovata",
@@ -634,7 +647,7 @@
     "already_registered": "Questo dispositivo ha già una delle tue passkey",
     "cannot_seal": "La passkey di questo dispositivo non ha funzionato: sa crearla ma non usarla per sbloccare. Prova con il telefono, che compare come opzione quando colleghi.",
     "remove_title": "Rimuovere questa passkey?",
-    "remove_desc": "Smetterà di essere offerta per sbloccare la tua identità. Questo non la cancella dalla cronologia della catena: chi conserva quell’autenticatore e sa leggere le transazioni passate potrebbe recuperare la copia cifrata.",
+    "remove_desc": "Smette di essere proposto per sbloccare la tua identità. Questo non lo cancella dal registro pubblico: chi conserva quell'autenticatore e può leggere le voci passate potrebbe recuperare la copia cifrata.",
     "remove_stolen": "L’hai persa o te l’hanno rubata? Allora rimuoverla non basta: bisogna ruotare la tua identità.",
     "remove_confirm": "Rimuovi",
     "remove_failed": "Non è stato possibile rimuovere la passkey",
@@ -776,7 +789,7 @@
     "unavailable_help": "La custodisce una passkey che questo browser non è riuscito a raggiungere. Prova da un dispositivo con cui puoi votare, oppure digita le parole nella pagina di recupero.",
     "copy_failed": "Il browser non ha consentito la copia. Annota le parole a mano.",
     "unregistered_title": "La tua passkey funziona, ma non è ancora registrata",
-    "unregistered_desc": "È stata creata e la tua frase è stata cifrata con essa, ma la copia non si è potuta salvare sulla catena. Le tue dodici parole restano intanto su questo dispositivo: conservale al sicuro. Puoi riprovare la registrazione dal tuo profilo."
+    "unregistered_desc": "È stata creata e la tua frase è stata cifrata con essa, ma la copia non è stata salvata nel registro pubblico. Nel frattempo le tue dodici parole restano su questo dispositivo, quindi conservale bene. Puoi riprovare la registrazione dal tuo profilo."
   },
   "recover": {
     "title": "Recupera la tua identità",
