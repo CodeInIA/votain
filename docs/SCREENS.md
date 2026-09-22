@@ -27,7 +27,7 @@ The public catalogue. Every election on the registry, with its rule, its deadlin
 <table>
   <tr>
     <td width="70%"><img src="screenshots/pc/discover.webp" alt="Elections, desktop"></td>
-    <td width="30%"><img src="screenshots/movil/discover.webp" alt="Elections, mobile"></td>
+    <td width="30%"><img src="screenshots/mobile/discover.webp" alt="Elections, mobile"></td>
   </tr>
 </table>
 
@@ -38,7 +38,7 @@ Its three phases dated, the quorum it has to clear, and a badge saying it was ve
 <table>
   <tr>
     <td width="70%"><img src="screenshots/pc/election.webp" alt="An election, desktop"></td>
-    <td width="30%"><img src="screenshots/movil/election.webp" alt="An election, mobile"></td>
+    <td width="30%"><img src="screenshots/mobile/election.webp" alt="An election, mobile"></td>
   </tr>
 </table>
 
@@ -49,7 +49,7 @@ Published totals, per option, once the homomorphic sum has been decrypted and wr
 <table>
   <tr>
     <td width="70%"><img src="screenshots/pc/results.webp" alt="Results, desktop"></td>
-    <td width="30%"><img src="screenshots/movil/results.webp" alt="Results, mobile"></td>
+    <td width="30%"><img src="screenshots/mobile/results.webp" alt="Results, mobile"></td>
   </tr>
 </table>
 
@@ -60,7 +60,7 @@ Anyone, signed in or not, can check a receipt against the chain without learning
 <table>
   <tr>
     <td width="70%"><img src="screenshots/pc/verify-receipt.webp" alt="Verify a vote, desktop"></td>
-    <td width="30%"><img src="screenshots/movil/verify-receipt.webp" alt="Verify a vote, mobile"></td>
+    <td width="30%"><img src="screenshots/mobile/verify-receipt.webp" alt="Verify a vote, mobile"></td>
   </tr>
 </table>
 
@@ -71,7 +71,7 @@ What the system promises a voter and how each promise is kept.
 <table>
   <tr>
     <td width="70%"><img src="screenshots/pc/how-it-works.webp" alt="How it works, desktop"></td>
-    <td width="30%"><img src="screenshots/movil/how-it-works.webp" alt="How it works, mobile"></td>
+    <td width="30%"><img src="screenshots/mobile/how-it-works.webp" alt="How it works, mobile"></td>
   </tr>
 </table>
 
@@ -80,7 +80,7 @@ What the system promises a voter and how each promise is kept.
 <table>
   <tr>
     <td width="70%"><img src="screenshots/pc/terms.webp" alt="Terms, desktop"></td>
-    <td width="30%"><img src="screenshots/movil/terms.webp" alt="Terms, mobile"></td>
+    <td width="30%"><img src="screenshots/mobile/terms.webp" alt="Terms, mobile"></td>
   </tr>
 </table>
 
@@ -91,7 +91,7 @@ What the chain shows, what it does not, and what an observer could still infer.
 <table>
   <tr>
     <td width="70%"><img src="screenshots/pc/privacy.webp" alt="Privacy, desktop"></td>
-    <td width="30%"><img src="screenshots/movil/privacy.webp" alt="Privacy, mobile"></td>
+    <td width="30%"><img src="screenshots/mobile/privacy.webp" alt="Privacy, mobile"></td>
   </tr>
 </table>
 
@@ -106,7 +106,7 @@ The ones this voter may take part in, with what each one is waiting for.
 <table>
   <tr>
     <td width="70%"><img src="screenshots/pc/voter-elections.webp" alt="My elections, desktop"></td>
-    <td width="30%"><img src="screenshots/movil/voter-elections.webp" alt="My elections, mobile"></td>
+    <td width="30%"><img src="screenshots/mobile/voter-elections.webp" alt="My elections, mobile"></td>
   </tr>
 </table>
 
@@ -117,7 +117,7 @@ Their own ballots, read back from the chain by a nullifier only they can compute
 <table>
   <tr>
     <td width="70%"><img src="screenshots/pc/voter-history.webp" alt="History, desktop"></td>
-    <td width="30%"><img src="screenshots/movil/voter-history.webp" alt="History, mobile"></td>
+    <td width="30%"><img src="screenshots/mobile/voter-history.webp" alt="History, mobile"></td>
   </tr>
 </table>
 
@@ -128,7 +128,7 @@ Bookmarks, encrypted under a key derived from the voter’s own secret and store
 <table>
   <tr>
     <td width="70%"><img src="screenshots/pc/voter-saved.webp" alt="Saved, desktop"></td>
-    <td width="30%"><img src="screenshots/movil/voter-saved.webp" alt="Saved, mobile"></td>
+    <td width="30%"><img src="screenshots/mobile/voter-saved.webp" alt="Saved, mobile"></td>
   </tr>
 </table>
 
@@ -139,7 +139,7 @@ The anonymous identifier, the generated pattern, the twelve-word recovery phrase
 <table>
   <tr>
     <td width="70%"><img src="screenshots/pc/voter-profile.webp" alt="Profile, desktop"></td>
-    <td width="30%"><img src="screenshots/movil/voter-profile.webp" alt="Profile, mobile"></td>
+    <td width="30%"><img src="screenshots/mobile/voter-profile.webp" alt="Profile, mobile"></td>
   </tr>
 </table>
 
@@ -154,7 +154,7 @@ Their elections, the people enrolled across them, and the gas tank that pays for
 <table>
   <tr>
     <td width="70%"><img src="screenshots/pc/organizer-dashboard.webp" alt="Dashboard, desktop"></td>
-    <td width="30%"><img src="screenshots/movil/organizer-dashboard.webp" alt="Dashboard, mobile"></td>
+    <td width="30%"><img src="screenshots/mobile/organizer-dashboard.webp" alt="Dashboard, mobile"></td>
   </tr>
 </table>
 
@@ -165,7 +165,7 @@ The wizard: rule, calendar, candidates, and who is eligible to take part.
 <table>
   <tr>
     <td width="70%"><img src="screenshots/pc/organizer-new.webp" alt="New election, desktop"></td>
-    <td width="30%"><img src="screenshots/movil/organizer-new.webp" alt="New election, mobile"></td>
+    <td width="30%"><img src="screenshots/mobile/organizer-new.webp" alt="New election, mobile"></td>
   </tr>
 </table>
 
@@ -176,7 +176,7 @@ Phase-gated controls. Which deadlines can still move, whether it can still be ca
 <table>
   <tr>
     <td width="70%"><img src="screenshots/pc/organizer-manage.webp" alt="Managing one, desktop"></td>
-    <td width="30%"><img src="screenshots/movil/organizer-manage.webp" alt="Managing one, mobile"></td>
+    <td width="30%"><img src="screenshots/mobile/organizer-manage.webp" alt="Managing one, mobile"></td>
   </tr>
 </table>
 
@@ -187,7 +187,7 @@ Deposits, reserves and what each relayed ballot actually cost, priced from past 
 <table>
   <tr>
     <td width="70%"><img src="screenshots/pc/organizer-gas.webp" alt="Gas, desktop"></td>
-    <td width="30%"><img src="screenshots/movil/organizer-gas.webp" alt="Gas, mobile"></td>
+    <td width="30%"><img src="screenshots/mobile/organizer-gas.webp" alt="Gas, mobile"></td>
   </tr>
 </table>
 
@@ -198,7 +198,7 @@ The merkle tree of an election, read from its own enrolment events.
 <table>
   <tr>
     <td width="70%"><img src="screenshots/pc/organizer-members.webp" alt="Members, desktop"></td>
-    <td width="30%"><img src="screenshots/movil/organizer-members.webp" alt="Members, mobile"></td>
+    <td width="30%"><img src="screenshots/mobile/organizer-members.webp" alt="Members, mobile"></td>
   </tr>
 </table>
 
@@ -209,7 +209,7 @@ The organizer’s own bookmarks, kept separately from the voter’s.
 <table>
   <tr>
     <td width="70%"><img src="screenshots/pc/organizer-saved.webp" alt="Saved, desktop"></td>
-    <td width="30%"><img src="screenshots/movil/organizer-saved.webp" alt="Saved, mobile"></td>
+    <td width="30%"><img src="screenshots/mobile/organizer-saved.webp" alt="Saved, mobile"></td>
   </tr>
 </table>
 
@@ -220,7 +220,7 @@ Display name, verified domains, the wallet that signs every change, and the gene
 <table>
   <tr>
     <td width="70%"><img src="screenshots/pc/organizer-profile.webp" alt="Profile, desktop"></td>
-    <td width="30%"><img src="screenshots/movil/organizer-profile.webp" alt="Profile, mobile"></td>
+    <td width="30%"><img src="screenshots/mobile/organizer-profile.webp" alt="Profile, mobile"></td>
   </tr>
 </table>
 

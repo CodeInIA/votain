@@ -43,11 +43,11 @@ Votain is a Bachelor's thesis project (TFG) demonstrating how modern cryptograph
 </table>
 
 <p align="center">
-  <img src="docs/screenshots/movil/discover.webp" alt="The election catalogue on a phone" width="270">
+  <img src="docs/screenshots/mobile/discover.webp" alt="The election catalogue on a phone" width="270">
   &nbsp;
-  <img src="docs/screenshots/movil/voter-profile.webp" alt="The voter profile on a phone" width="270">
+  <img src="docs/screenshots/mobile/voter-profile.webp" alt="The voter profile on a phone" width="270">
   &nbsp;
-  <img src="docs/screenshots/movil/organizer-dashboard.webp" alt="The organizer dashboard on a phone" width="270">
+  <img src="docs/screenshots/mobile/organizer-dashboard.webp" alt="The organizer dashboard on a phone" width="270">
 </p>
 
 **[Every screen, desktop and mobile →](docs/SCREENS.md)**
