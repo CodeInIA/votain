@@ -46,7 +46,14 @@ export function WorldIdConnector({ uri, className }: WorldIdConnectorProps) {
             <img src="/world-id-logo.svg" alt="" className="w-6 h-6" />
             {t('verify.btn_open_app')}
           </a>
-          <p className="text-on-surface-variant text-xs text-center px-4">
+          {/* A NOTE UNTIL IT BECAME THE INSTRUCTION. World App used to be handed
+              a `return_to`, so this line was a courtesy: it told the voter what
+              was about to happen anyway. Nothing brings them back now, so the
+              sentence is the only thing standing between a finished
+              verification and a voter who never returns to collect it. Grey
+              and extra small was the wrong weight for that. */}
+          <p className="text-on-surface text-sm text-center leading-relaxed px-4 py-3 rounded-2xl
+                        bg-warning/10 border border-warning/20">
             {t('verify.mobile_return_hint')}
           </p>
         </div>

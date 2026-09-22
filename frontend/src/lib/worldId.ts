@@ -15,33 +15,32 @@
  * the connector URI, and waits; `resumeWorldIdProof` is how a page that does
  * not remember starting anything finds out that it did.
  *
- * AND `return_to` IS ON NOW, on a phone, which the move is what made safe.
+ * NO `return_to`, AND THE REASON IS THE PHONE RATHER THAN THE PROTOCOL.
  *
- * It was left out for a long time. The objection was that coming back that way
- * is a cold start and a cold start LOST the verification, which made the way
- * back worse than the inconvenience it removed. That is exactly what moving
- * the request fixed, so the objection went with it.
+ * It was on for a while, sending the voter's own page so World App could bring
+ * them back instead of leaving them staring at a green tick. The intent was
+ * right and the mechanism cannot deliver it. World's documentation gives
+ * `return_to` as a deep link and its example is a custom scheme,
+ * `myapp://verify-done`, which is something an installed app registers and a
+ * website cannot. All a website can send is an https address.
  *
- * It matters more than it sounds. Without it a voter finishes in World App and
- * is simply left there, and plenty of them read a green tick as "done" and
- * never come back to the browser at all — not a lost tap, a lost sign-in.
+ * An https address on Android is handed to the DEFAULT browser, in a NEW tab.
+ * Two things follow, and the second is the serious one. The voter ends up with
+ * two tabs, the one they left and the one they arrived in. And if the browser
+ * they were using is not the default one, they arrive somewhere with no
+ * session cookie at all: signed out, in an app they do not recognise as the
+ * one they were just using.
  *
- * ONLY FROM A PHONE, and this file is the only place that can decide it. A
- * desktop shows a QR code that a PHONE scans, so `return_to` would tell that
- * phone to open this page: a second copy of the app on the wrong screen, while
- * the real one waits on the desk. The same reasoning `openWalletApp` uses.
+ * So the voter stays in World App and is told, before they go, that they have
+ * to come back themselves. That is a worse sentence to write and a better
+ * thing to happen, and the server-side request is what makes it work: the
+ * verification is held for five minutes, so a voter who takes their time and
+ * returns to a page the system discarded meanwhile still finds it waiting.
  *
- * WHERE IT LANDS. `return_to` is an https address and Android resolves one as
- * an app link, so a voter with this installed as a PWA gets the installed copy.
- * That only differs from where they started for somebody who has the PWA AND
- * is verifying in a browser tab anyway, which is not the normal case: a voter
- * has one or the other open. And it is no longer harmful either way, because a
- * WebAPK shares Chrome's cookie jar, so the cookie is there and the proof is
- * collected wherever they land.
- *
- * The server refuses a destination that is not this frontend. World App
- * navigates to it on Votain's behalf, so accepting any URL would make this an
- * open redirect wearing Votain's name.
+ * THE BACKEND STILL ACCEPTS ONE, deliberately. Nothing is wrong with
+ * `return_to`; it was the caller that could not honour it. A native Votain
+ * would register `votain://` and get exactly what this was reaching for, so
+ * the endpoint keeps the parameter and this client stops sending it.
  */
 import { type IDKitResult } from "@worldcoin/idkit-core";
 import { backendBase } from "./backend";
@@ -69,13 +68,6 @@ export type ResumedVerification =
   | { kind: "proof"; result: IDKitResult }
   /** Still out there. Put the QR back and wait, rather than the button. */
   | { kind: "waiting"; connectorURI: string };
-
-/**
- * Whether the dApp and World App are on the SAME device, which is the only
- * case where sending somebody "back" means anything.
- */
-const ON_A_PHONE =
-  typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
 function endpoint(query = ""): string {
   return `${backendBase()}/api/worldid/request${query}`;
@@ -136,9 +128,6 @@ export async function requestWorldIdProof(
     credentials: "include",
     body: JSON.stringify({
       ...(opts.action ? { action: opts.action } : {}),
-      // This exact page, so the voter comes back to where they were rather
-      // than to the front door. See the note at the top for why only here.
-      ...(ON_A_PHONE ? { returnTo: window.location.href } : {}),
     }),
   });
   if (!res.ok) throw new Error("Failed to open World ID request");

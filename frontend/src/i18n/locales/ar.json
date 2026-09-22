@@ -40,7 +40,7 @@
     "btn_verify": "التحقق عبر World ID",
     "btn_loading": "جارٍ إنشاء QR...",
     "btn_open_app": "فتح World ID",
-    "mobile_return_hint": "بعد التحقق في التطبيق، عد إلى هذه الصفحة",
+    "mobile_return_hint": "أكمل في World ID ثم عُد بنفسك إلى هذا المتصفح. لن يعيدك التطبيق.",
     "qr_title": "امسح مع World ID",
     "qr_desc": "افتح تطبيق World ID وامسح هذا الرمز للتحقق من هويتك.",
     "qr_waiting": "امسحه ضوئيًا للمتابعة",

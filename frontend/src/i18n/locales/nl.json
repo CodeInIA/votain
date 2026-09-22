@@ -40,7 +40,7 @@
     "btn_verify": "Verifieer met World ID",
     "btn_loading": "QR genereren...",
     "btn_open_app": "Open World ID",
-    "mobile_return_hint": "Keer na verificatie in de app terug naar dit tabblad",
+    "mobile_return_hint": "Rond het af in World ID en ga daarna zelf terug naar deze browser. De app brengt je niet terug.",
     "qr_title": "Scan met World ID",
     "qr_desc": "Open de World ID app en scan deze code om je identiteit te verifiëren.",
     "qr_waiting": "Scan hem om door te gaan",

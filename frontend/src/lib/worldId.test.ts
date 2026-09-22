@@ -159,14 +159,23 @@ describe('opening one', () => {
   });
 
   /**
-   * The way back, and only from a phone. A desktop QR is scanned by a PHONE,
-   * so a `returnTo` would tell that phone to open this page: a second copy of
-   * the app on the wrong screen while the real one waits on the desk.
+   * NO WAY BACK IS ASKED FOR, from either kind of device.
    *
-   * `navigator.userAgent` is what decides, and it is read when the module
-   * loads, so the import has to happen after the stub.
+   * `return_to` used to be sent from a phone, so World App could return the
+   * voter instead of leaving them on a green tick. World's own example of the
+   * parameter is a custom scheme, `myapp://verify-done`, which a native app
+   * registers and a website cannot: all this client can offer is an https
+   * address, and Android hands one of those to the DEFAULT browser in a NEW
+   * tab. Two tabs at best, and at worst a browser holding none of the voter's
+   * cookies, which is a sign-in that lands signed out.
+   *
+   * The phone case is the one that has to be pinned, because it is the one
+   * that used to behave differently. `navigator.userAgent` is read when the
+   * module loads, so the import has to happen after the stub even though
+   * nothing reads it any more: it is what would catch the parameter coming
+   * back for the wrong reason.
    */
-  it('asks to be sent back, but only from a phone', async () => {
+  it('asks to be sent back from nowhere, not even a phone', async () => {
     vi.resetModules();
     vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0)' });
     vi.stubGlobal('window', { location: { href: 'https://votain.app/voter/onboarding' } });
@@ -178,12 +187,10 @@ describe('opening one', () => {
     const movil = await import('./worldId');
     await movil.requestWorldIdProof();
 
-    expect(JSON.parse(llamadas[0].init?.body as string).returnTo).toBe(
-      'https://votain.app/voter/onboarding',
-    );
+    expect(JSON.parse(llamadas[0].init?.body as string)).not.toHaveProperty('returnTo');
   });
 
-  it('sends nobody anywhere from a desktop', async () => {
+  it('sends nobody anywhere from a desktop either', async () => {
     vi.resetModules();
     vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' });
     vi.stubGlobal('fetch', (url: string, init?: RequestInit) => {

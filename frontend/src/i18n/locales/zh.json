@@ -40,7 +40,7 @@
     "btn_verify": "使用 World ID 验证",
     "btn_loading": "生成二维码...",
     "btn_open_app": "打开 World ID",
-    "mobile_return_hint": "在应用中验证后，请返回此标签页",
+    "mobile_return_hint": "在 World ID 中完成后，请自行回到这个浏览器。应用不会把你带回来。",
     "qr_title": "使用 World ID 扫描",
     "qr_desc": "打开 World ID 应用并扫描此代码以验证您的身份。",
     "qr_waiting": "扫描以继续",

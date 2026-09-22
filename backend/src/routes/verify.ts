@@ -86,10 +86,18 @@ router.post('/worldid/request', async (req: Request, res: Response) => {
 
     const { pendingId, connectorURI } = await startPendingVerification(
       action ?? process.env.WORLD_ID_ACTION ?? 'vote-registration',
-      // Only a phone sends one, because only the browser knows whether the
-      // wallet and the dApp are on the same device. Sanitised rather than
-      // trusted: World App navigates to this on Votain's behalf, so an
-      // unchecked value is an open redirect wearing Votain's name.
+      // KEPT FOR A CLIENT THAT CAN USE IT, which the web frontend is not.
+      // `return_to` is a deep link, and World's own example is a custom
+      // scheme: `myapp://verify-done`. A native app registers one of those and
+      // World App comes back into the running instance. A website can only
+      // offer an https address, which Android hands to the DEFAULT browser in
+      // a NEW tab, possibly a browser holding none of the voter's cookies. So
+      // the web client stopped sending one and this endpoint still takes one,
+      // because the parameter is right and it was the caller that was wrong.
+      //
+      // Sanitised rather than trusted: World App navigates to this on Votain's
+      // behalf, so an unchecked value is an open redirect wearing Votain's
+      // name.
       sanitiseCallbackUrl(returnTo),
     );
 

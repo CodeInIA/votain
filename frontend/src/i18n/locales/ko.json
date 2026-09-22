@@ -40,7 +40,7 @@
     "btn_verify": "World ID로 확인",
     "btn_loading": "QR 생성 중...",
     "btn_open_app": "World ID 열기",
-    "mobile_return_hint": "앱에서 확인 후 이 탭으로 돌아오세요",
+    "mobile_return_hint": "World ID에서 마친 뒤 직접 이 브라우저로 돌아오세요. 앱이 되돌려 주지는 않습니다.",
     "qr_title": "World ID로 스캔",
     "qr_desc": "World ID 앱을 열고 이 코드를 스캔하여 신원을 확인하세요.",
     "qr_waiting": "스캔하여 계속하세요",
