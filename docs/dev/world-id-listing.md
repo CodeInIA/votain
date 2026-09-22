@@ -14,8 +14,40 @@ The languages are the ones the app actually ships, taken from
 `frontend/src/i18n/locales`. The listing had previously offered Polish and
 Turkish, which do not exist in the app, and omitted Arabic and Hindi, which do.
 
+**Eleven of the thirteen, not thirteen.** The portal's language picker has no
+Russian and no Arabic, so those two cannot be declared however the API is
+called: set through `configure_mini_app` they are accepted and then vanish from
+the form. The Russian and Arabic text below is kept anyway. The app serves both
+to anyone who visits, and the thesis can quote them; only the store cannot.
+
 App name is `Votain` in every language, including the scripts that do not use
 the Latin alphabet: it is a product name, not a word to translate.
+
+## Submission is held until Amoy
+
+The listing is finished and deliberately not submitted. The published review
+criteria require that an app "is a final version, and is not a demo, trial or
+beta version", and that its integration "functioned properly when tested".
+
+The contracts currently run on a local Hardhat node reached through a Cloudflare
+tunnel at `rpc.votain.app`. A reviewer opening `votain.app` while that laptop is
+off sees no elections at all: World ID sign-in still works, since it never
+touches the chain, and everything after it does not. Both objections disappear
+when the contracts are on Amoy, so that is the trigger.
+
+Two things to check on the way in:
+
+**The descriptions are probably empty again.** The portal's wizard blanks
+`description_how_it_works` and `description_connect`, and truncates the
+overview, every time that step is saved. It has happened twice. Read them back
+through the API and restore them before submitting, or the review is spent on
+a listing that is missing two thirds of its text.
+
+**Leave the store listing off.** "Display in the Worldcoin App Store" is
+`is_developer_allow_listing`, a parameter of the submission rather than a
+setting on the app, so it can be requested later in a second submission.
+Asking only for the verified badge is the smaller target, and public listing
+would put real people into demo elections.
 
 ## English (US)
 
