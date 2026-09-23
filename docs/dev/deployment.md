@@ -38,11 +38,33 @@ Manual entry points, at any time, for any published version:
 
 ## Where things run
 
-| | Host | Hostname | Carries the attestation |
-|---|---|---|---|
-| Frontend | 4EVERLAND / IPFS | `votain.app` | no |
-| Backend | Heroku container dyno *or* Phala Intel TDX enclave | `api.votain.app` | Phala only |
-| Chain | local Hardhat through a named Cloudflare tunnel | `rpc.votain.app` | no |
+| | Host | Hostname | Carries the attestation | Cloudflare proxy |
+|---|---|---|---|---|
+| Frontend | 4EVERLAND / IPFS | `votain.app` | no | **off**, DNS only |
+| Backend | Heroku container dyno *or* Phala Intel TDX enclave | `api.votain.app` | Phala only | on |
+| Chain | local Hardhat through a named Cloudflare tunnel | `rpc.votain.app` | no | tunnel |
+
+**The frontend records must stay DNS only.** With the proxy on, every push to
+`main` built and deployed on 4EVERLAND, and `votain.app` went on serving the
+previous deployment. Cloudflare's cache was not the cause: 4EVERLAND serves
+`index.html` with `Cache-Control: no-cache` and an ETag that is the IPFS root
+CID, and Cloudflare neither caches `no-cache` responses nor HTML by default.
+The cause is that 4EVERLAND only moves a custom domain onto each new deployment
+while it considers the domain verified, and it verifies by resolving the domain
+and expecting its own target. Proxied, the name resolves to Cloudflare, and the
+domain quietly stops following new builds. Their own troubleshooting advice is
+to disable the proxy.
+
+Nothing is lost by it. 4EVERLAND already sits behind a CDN (responses carry
+`Server: BunnyCDN`), issues the certificate itself, and a static site has no
+origin to hide. One thing to watch: `votain.app` is the zone apex, and Cloudflare
+flattens an apex CNAME even when it is not proxied. If 4EVERLAND ever reports
+the domain unverified again, that flattening is the thing to suspect.
+
+The backend is the opposite case, and works proxied: neither Heroku nor the
+enclave's ingress decides what to serve from what the name resolves to, so
+Cloudflare in front of them changes nothing about which version answers. See
+the `dns.yml` section below for why both of its CNAMEs are proxied.
 
 `api.votain.app` is the switch. The frontend bakes that URL at build time and
 never learns which host answers it, so moving between Heroku and Phala is a DNS
