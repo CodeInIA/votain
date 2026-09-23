@@ -990,7 +990,7 @@ async function main(): Promise<void> {
   // election to walk into with a real document and an empty member list.
 
   await build({
-    name: "Elecciones Generales - Circunscripcion Madrid",
+    name: "General Election - Madrid Constituency",
     fixedSchedule: true,
     organizerName: "Central Electoral Board",
     description:
@@ -1057,7 +1057,7 @@ async function main(): Promise<void> {
   // fully voted, so the bar had exactly two appearances to be judged by.
   for (const turnout of [
     { name: "Institute of Architects - Quarter Turnout", enrolled: 4, voted: 1 },
-    { name: "Federacion Deportiva - Half Turnout", enrolled: 4, voted: 2 },
+    { name: "Sports Federation - Half Turnout", enrolled: 4, voted: 2 },
     { name: "Chamber of Commerce - Two Thirds Turnout", enrolled: 6, voted: 4 },
     { name: "Fine Arts Circle - Full Turnout", enrolled: 3, voted: 3 },
   ]) {
@@ -1273,7 +1273,7 @@ async function main(): Promise<void> {
     name: "Cycling Club - Voting Without Funds",
     organizerName: "Ebro Cycling Club",
     description:
-      "Created without reserving any gas. Every ballot here is paid for by the organizer, so until they top it up nobody can enrol or vote, and the app says so instead of failing halfway.",
+      "Created without reserving anything. Every ballot here is paid for by the organizer, so until they top it up nobody can enrol or vote, and the app says so instead of failing halfway.",
     votingType: VotingType.SIMPLE_PLURALITY,
     thresholdValue: 0n,
     candidates: [{ name: "Moncayo route" }, { name: "Ebro route" }],
@@ -1292,10 +1292,10 @@ async function main(): Promise<void> {
     name: "Farming Cooperative - Tight Funds",
     organizerName: "Jalon Farming Cooperative",
     description:
-      "There is gas reserved here, but not enough for everyone still expected to vote. The election works and says so, which is a different thing from being empty.",
+      "There is a reserve here, but not enough for everyone still expected to vote. The election works and says so, which is a different thing from being empty.",
     votingType: VotingType.SIMPLE_PLURALITY,
     thresholdValue: 0n,
-    candidates: [{ name: "Ampliar la nave" }, { name: "Reparar la existente" }],
+    candidates: [{ name: "Build a new hall" }, { name: "Repair the existing one" }],
     enrollFrom: -2 * HOUR,
     enrollTo: HOUR,
     voteFrom: HOUR,
@@ -1359,7 +1359,7 @@ async function main(): Promise<void> {
       "Announced dates that cannot move and no power to call it off. Whatever the turnout looks like, this election runs exactly as published, which is the strongest commitment the platform lets an organizer make.",
     votingType: VotingType.SUPERMAJORITY_TWO_THIRDS,
     thresholdValue: 0n,
-    candidates: [{ name: "Aprobar la reforma" }, { name: "Mantener los estatutos" }],
+    candidates: [{ name: "Approve the amendment" }, { name: "Keep the statutes as they are" }],
     enrollFrom: -HOUR,
     enrollTo: 4 * DAY,
     voteFrom: 4 * DAY,
@@ -1378,7 +1378,7 @@ async function main(): Promise<void> {
       "The organizer may bring a date forward if everyone is ready, and cannot cancel. The two promises are separate on purpose, and this is the combination that shows why.",
     votingType: VotingType.ABSOLUTE_MAJORITY,
     thresholdValue: 0n,
-    candidates: [{ name: "Aceptar la propuesta" }, { name: "Volver a negociar" }],
+    candidates: [{ name: "Accept the offer" }, { name: "Go back and negotiate" }],
     enrollFrom: -2 * HOUR,
     enrollTo: 3 * DAY,
     voteFrom: 3 * DAY,
@@ -1433,7 +1433,7 @@ async function main(): Promise<void> {
     name: "Cultural Society - Announced Without Funds",
     organizerName: "Teruel Cultural Society",
     description:
-      "Announced for next week with no gas reserved yet. Nothing is wrong with the election, and the organizer has time to fund it before enrolment opens.",
+      "Announced for next week with nothing reserved yet. Nothing is wrong with the election, and the organizer has time to fund it before enrolment opens.",
     votingType: VotingType.SIMPLE_PLURALITY,
     thresholdValue: 0n,
     candidates: [{ name: "Film season" }, { name: "Theatre season" }],
