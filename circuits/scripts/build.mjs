@@ -18,11 +18,13 @@
  * contribution on top of a public powers-of-tau), publishes the resulting
  * verifiers with the deployment and discards the entropy.
  *
- * PHASE 1. Generated locally unless PTAU names a public powers-of-tau file
- * (for example Hermez's powersOfTau28_hez_final_17.ptau, large enough for the
- * default sizes). A deployment should use one: phase 1 from a ceremony with
- * many contributors, phase 2 from its own. Locally the file is generated once
- * and cached in build/, which takes a quarter of an hour at 2^17.
+ * PHASE 1. Generated locally unless PTAU names a public powers-of-tau file of
+ * at least 2^17 (the Hermez or PSE perpetual ceremonies publish them; download
+ * one and point PTAU at it). A deployment should use one: phase 1 from a
+ * ceremony with many contributors, phase 2 from its own. Locally the file is
+ * generated once and cached in build/: a quarter of an hour at 2^17 on a laptop,
+ * nearer forty minutes on a CI runner, which is why CI caches it on its own
+ * (`--ptau 17`).
  *
  * CACHING. A size whose zkey is newer than its r1cs is not set up again, only
  * re-exported, so rerunning the script is cheap. `--force` redoes everything.
@@ -188,6 +190,14 @@ function wrapVerifier(circuit, source, slots, publicCount) {
 }
 `;
   return renamed.replace(/\}\s*$/, wrapper);
+}
+
+// `--ptau <power>`: only the local phase 1 of that size, so CI can generate it
+// in a step of its own and cache it apart from everything that depends on it.
+const ptauFlag = process.argv.indexOf("--ptau");
+if (ptauFlag !== -1) {
+  console.log(await powersOfTau(Number(process.argv[ptauFlag + 1])));
+  process.exit(0);
 }
 
 // `--compile`: only the witness calculators of the smallest size, which is all

@@ -121,12 +121,13 @@ jobs:
   # they should; the build produces the verifiers the contracts compile against
   # and the proving files the contracts' E2E suite proves with.
   #
-  # CACHED ON THE SOURCES, because the trusted setup is slow: a phase 1 of 2^17
-  # takes a quarter of an hour when generated. On a cache miss it is fetched
-  # from the Hermez ceremony instead, which is also what a real deployment
-  # should start from, and only generated if that download fails. Either way
-  # the phase 2 here is the public DEVELOPMENT one, which is fine for CI and
-  # never deployable (deploy.ts refuses it off the local chain).
+  # CACHED IN TWO LAYERS, because the trusted setup is slow. The phase 1 of
+  # 2^17 takes nearly forty minutes to generate on a runner and depends on
+  # nothing in the repository, so it has a cache of its own, SAVED THE MOMENT
+  # IT EXISTS: a later step failing must not throw that work away. The rest
+  # (phase 2, verifiers, proving files) is cached on the circuit sources.
+  # The phase 2 here is the public DEVELOPMENT one, fine for CI and never
+  # deployable (deploy.ts refuses it off the local chain).
   circuits:
     name: circuits
     runs-on: ubuntu-latest
@@ -149,19 +150,26 @@ jobs:
             contracts/contracts/verifiers
             frontend/public/circuits
           key: circuits-${{ hashFiles('circuits/src/**', 'circuits/scripts/build.mjs', 'circuits/package-lock.json') }}
-      - name: Phase 1 from the Hermez ceremony
+      - uses: actions/cache/restore@v4
+        id: ptau
         if: steps.build.outputs.cache-hit != 'true'
+        with:
+          path: circuits/build/pot17_dev.ptau
+          key: ptau-dev-17-v1
+      - name: Phase 1 (generated once, then cached)
+        if: steps.build.outputs.cache-hit != 'true' && steps.ptau.outputs.cache-hit != 'true'
+        run: node scripts/build.mjs --ptau 17
         working-directory: circuits
-        run: |
-          mkdir -p build
-          curl -fsSL --retry 3 -o build/hermez17.ptau \
-            https://storage.googleapis.com/zkevm/ptau/powersOfTau28_hez_final_17.ptau \
-            && echo "PTAU=$PWD/build/hermez17.ptau" >> "$GITHUB_ENV" \
-            || echo "download failed: the build generates its own phase 1"
+        timeout-minutes: 75
+      - uses: actions/cache/save@v4
+        if: steps.build.outputs.cache-hit != 'true' && steps.ptau.outputs.cache-hit != 'true'
+        with:
+          path: circuits/build/pot17_dev.ptau
+          key: ptau-dev-17-v1
       - if: steps.build.outputs.cache-hit != 'true'
         run: npm run build
         working-directory: circuits
-        timeout-minutes: 40
+        timeout-minutes: 30
       - uses: actions/upload-artifact@v4
         with:
           name: circuits
