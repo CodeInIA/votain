@@ -19,7 +19,7 @@
  *
  * Env: as `chain/registrar.ts`.
  */
-import { getRegistryReader, getRegistryWriter, isRegistrarConfigured } from '../chain/registrar.js';
+import { getRegistryReader, isRegistrarConfigured, writeRegistry } from '../chain/registrar.js';
 import { toHex, fromHex, VaultUnavailableError } from './vault.js';
 
 /**
@@ -85,7 +85,5 @@ export async function setPreferences(nullifier: string, blob: string): Promise<v
   requireChain();
   if (blobByteLength(blob) > MAX_PREFERENCES_BYTES) throw new PreferencesTooLargeError();
 
-  const registry = getRegistryWriter();
-  const tx = await registry.setPreferences(nullifier, toHex(blob));
-  await tx.wait();
+  await writeRegistry(r => r.setPreferences(nullifier, toHex(blob)));
 }

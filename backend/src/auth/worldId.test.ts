@@ -310,3 +310,29 @@ describe('the level a session records', () => {
     );
   });
 });
+
+describe('verifyWorldIdProof, the action is the server\'s', () => {
+  test('refuses a proof made for another action, before asking the API', async () => {
+    const calls = stubApi(200, { success: true, results: [{ identifier: 'orb', success: true, nullifier: '0xa' }] });
+
+    const result = await verifyWorldIdProof({
+      action: 'some-other-action',
+      responses: [{ identifier: 'orb', nullifier: '0xa' }],
+    });
+
+    assert.equal(result.ok, false);
+    assert.equal(calls.length, 0);
+  });
+
+  test('accepts a proof that names the configured action', async () => {
+    process.env.WORLD_ID_ACTION = 'vote-registration';
+    stubApi(200, { success: true, results: [{ identifier: 'orb', success: true, nullifier: '0xa' }] });
+
+    const result = await verifyWorldIdProof({
+      action: 'vote-registration',
+      responses: [{ identifier: 'orb', nullifier: '0xa' }],
+    });
+
+    assert.equal(result.ok, true);
+  });
+});

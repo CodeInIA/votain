@@ -222,7 +222,7 @@ export function checkAttributes(
 
   // Trailing NUL bytes are how an undisclosed field comes back from the circuit,
   // and they are not an answer.
-  const nationality = (attributes.nationality ?? '').replace(/\u0000+/g, '').trim().toUpperCase();
+  const nationality = (attributes.nationality ?? '').replaceAll('\u0000', '').trim().toUpperCase();
 
   // Only an ALLOWLIST needs the value. That is the case the voter was asked to
   // reveal it for, and there is no other way to check it: an exclusion list

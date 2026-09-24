@@ -31,6 +31,10 @@ import { verifySession } from '../auth/session.js';
 import { readSessionCookie } from '../auth/cookie.js';
 import { authorisePrivateEnrolment, isRefusal } from '../eligibility/enrolment.js';
 import { readEnrolmentMode } from '../chain/election.js';
+import { consumeSession } from '../eligibility/sessions.js';
+
+/** A 2048-bit Paillier ciphertext is at most 512 bytes; see ElectionV4.MAX_BALLOT_BYTES. */
+const MAX_BALLOT_HEX = 2 + 512 * 2;
 
 const router = Router();
 
@@ -96,11 +100,14 @@ router.post('/relay/enroll', relayLimiter, async (req: Request, res: Response) =
       election,
       identityCommitment,
       authorisation.humanTag,
+      authorisation.documentTag,
       authorisation.deadline,
       authorisation.signature,
       authorisation.eligibilitySignature,
     );
     if (!relayed.relayed) return res.status(400).json({ error: relayed.error });
+    // Only now: a failed relay leaves the passport check usable for a retry.
+    if (sessionId) consumeSession(sessionId);
     return res.status(200).json({ txHash: relayed.txHash });
   }
 
@@ -110,6 +117,9 @@ router.post('/relay/enroll', relayLimiter, async (req: Request, res: Response) =
   const attested = deadline !== undefined && signature;
   if (attested && !/^\d+$/.test(personhoodNullifier ?? '')) {
     return res.status(400).json({ error: 'personhoodNullifier must be a decimal string' });
+  }
+  if (attested && (!Number.isSafeInteger(deadline) || typeof signature !== 'string')) {
+    return res.status(400).json({ error: 'deadline must be an integer and signature a string' });
   }
 
   const result = attested
@@ -137,6 +147,11 @@ router.post('/relay/vote', relayLimiter, async (req: Request, res: Response) => 
   ).filter(field => body[field] === undefined);
   if (missing.length > 0) {
     return res.status(400).json({ error: `missing fields: ${missing.join(', ')}` });
+  }
+  // Refused here as well as on chain, so an oversized body never reaches the
+  // simulation, let alone the relayer's float.
+  if (typeof body.voteCiphertext !== 'string' || body.voteCiphertext.length > MAX_BALLOT_HEX) {
+    return res.status(400).json({ error: 'voteCiphertext is not a ballot' });
   }
 
   const result = await relayVote(body as VoteCall);
