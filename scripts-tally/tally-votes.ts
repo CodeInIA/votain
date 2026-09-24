@@ -276,7 +276,7 @@ async function verifyPublished(address: string, election: Contract, provider: Js
   }
   console.log(
     `${address}: verified. The ${ballots.length} ballots on chain add up to the aggregate, and the ` +
-      `published counts [${published.join(", ")}] are proved to be its decryption: ${voters} voters.`,
+      `published counts [${published.join(", ")}] are proved to be its decryption: ${voters} voter${voters === 1n ? "" : "s"}.`,
   );
 }
 
@@ -303,7 +303,12 @@ async function main() {
   // audit still completes on those endpoints.
   const provider = new JsonRpcProvider(process.env.RPC_URL ?? "https://polygon-amoy.gateway.tenderly.co");
   const election = new Contract(address, ELECTION_ABI, provider);
-  if (doVerify) return verifyPublished(address, election, provider);
+  if (doVerify) {
+    await verifyPublished(address, election, provider);
+    // snarkjs keeps its curve's worker threads alive, so without this the
+    // process answers and then never returns to the shell.
+    process.exit(0);
+  }
 
   const [votingTypeBn, thresholdBn, name] = await Promise.all([
     election.votingType() as Promise<bigint>,

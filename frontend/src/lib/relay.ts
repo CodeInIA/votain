@@ -276,6 +276,12 @@ const ERROR_MESSAGE_KEY: Record<string, string> = {
 export function relayErrorMessage(error: unknown): string {
   if (error instanceof GasTankEmptyError) return i18n.t("errors.gas_tank_empty");
   if (isTankEmpty(error)) return i18n.t("errors.gas_tank_empty");
+  // Caught in the browser before proving (`ballot.ts`), so it never reaches the
+  // chain as a revert. Matched by name: importing the class here would close an
+  // import cycle through `semaphore.ts`.
+  if ((error as { name?: string } | null)?.name === "EpochAlreadyUsedError") {
+    return i18n.t("errors.epoch_already_cast");
+  }
 
   const key = ERROR_MESSAGE_KEY[revertNameOf(error) ?? ""];
   if (key) return i18n.t(key);

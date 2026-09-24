@@ -120,6 +120,11 @@ describe("relayErrorMessage", () => {
     }
   });
 
+  it("explains a second ballot within the hour, caught before any proving", async () => {
+    const { EpochAlreadyUsedError } = await import("./ballot");
+    expect(relayErrorMessage(new EpochAlreadyUsedError(new Date()))).toBe(i18n.t("errors.epoch_already_cast"));
+  });
+
   it("passes an unrecognised failure through verbatim", () => {
     // Losing the detail would be worse than showing it: an unknown failure is
     // the one case where the raw text is the only clue anybody has.
