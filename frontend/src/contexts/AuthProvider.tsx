@@ -296,9 +296,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   // The remembered wallet address and display name identify the organizer, so
-  // they go too. The votain_paillier_sk_* entries deliberately do NOT: they are
-  // the tally private keys for elections already on chain, and deleting them
-  // would leave those results permanently undecryptable. Signing out must not be
+  // they go too. The votain_tally_keys_* entries deliberately do NOT: they are
+  // the tally keys for elections already on chain, and deleting them would leave
+  // those results permanently undecryptable. Signing out must not be
   // able to destroy an election's outcome.
   //
   // The cached wallet SIGNATURE is a different matter and does go: it is the

@@ -224,12 +224,9 @@
     "not_available": "Los resultados aún no están disponibles.",
     "check_pending": "Comprobando el resultado publicado con las papeletas de la cadena…",
     "check_verified_title": "Verificado con las papeletas de la cadena",
-    "check_verified_body": "Los recuentos publicados son exactamente lo que suman las {{valid}} papeletas válidas, de {{voters}} votantes. Cualquiera puede repetir esta comprobación sin clave y sin confiar en nadie.",
-    "check_excluded": "Papeletas excluidas por no contener una única opción válida: {{excluded}}. Cada una se abre en la prueba publicada, así que cualquiera puede ver por qué.",
+    "check_verified_body": "La elección aceptó estos recuentos solo con una prueba de conocimiento cero de que descifran la suma de todas las papeletas, y las {{ballots}} papeletas de la cadena se han vuelto a sumar aquí hasta esa misma suma: {{voters}} votantes. Cualquiera puede repetir esta comprobación sin clave y sin confiar en nadie.",
     "check_failed_title": "No cuadra con las papeletas de la cadena",
-    "check_failed_body": "Los recuentos publicados no se han podido verificar con las papeletas registradas en la cadena. No te fíes de este resultado.",
-    "check_unproven_title": "Publicado sin prueba",
-    "check_unproven_body": "Este resultado lo publicó un contrato anterior a las pruebas de recuento, así que no se puede comprobar con las papeletas."
+    "check_failed_body": "Los recuentos publicados no se han podido verificar con las papeletas registradas en la cadena. No te fíes de este resultado."
   },
   "verify_receipt": {
     "title": "Verifica un voto",
@@ -245,7 +242,6 @@
     "reference": "Referencia",
     "nullifier": "Identificador del voto",
     "date": "Fecha",
-    "ballots": "Votos emitidos",
     "choice_never_shown": "El registro público guarda que se emitió un voto y cuándo, nunca qué decía. Nadie puede leer la elección a partir de un recibo, nosotros tampoco.",
     "your_receipts": "Tus recibos",
     "unlock_hint": "Este navegador aún no conoce ningún voto. Si votaste desde otro dispositivo, un toque de passkey los encuentra y los recuerda aquí."
@@ -476,8 +472,7 @@
     "open_voting_desc": "La inscripción ya está cerrada y la votación aún no toca. Todos los inscritos podrán votar desde este momento. La fecha de cierre no cambia.",
     "voting_opened_done": "Votación abierta",
     "void_refused": "Esta elección prometió que no se anularía y han votado suficientes personas para publicar su resultado, así que no se puede anular. Importa la clave de descifrado para publicar el resultado.",
-    "key_device_only": "La clave de descifrado de esta elección no se pudo derivar de tu wallet, así que solo existe en este dispositivo. Expórtala ahora y guárdala bien: sin ella no se puede hacer el recuento.",
-    "tally_excluded": "Papeletas excluidas por no válidas: {{excluded}}. Cada una se abre en la prueba publicada para que cualquiera pueda comprobarlo."
+    "key_device_only": "La clave de descifrado de esta elección no se pudo derivar de tu wallet, así que solo existe en este dispositivo. Expórtala ahora y guárdala bien: sin ella no se puede hacer el recuento."
   },
   "gas": {
     "title": "Gestión de Gas",
@@ -613,7 +608,9 @@
     "passkey_cancelled": "Cancelaste el diálogo de la passkey. No se ha creado nada: puedes intentarlo otra vez.",
     "list_unreadable": "Esta lista no se ha podido leer de la cadena, que no es lo mismo que esté vacía. Revisa la conexión e inténtalo otra vez.",
     "passkey_unproven": "La passkey se creó, pero aún no hemos podido confirmar que sirva para descifrar. Pulsa otra vez: se le preguntará a esa misma, sin crear ninguna nueva.",
-    "revote_too_soon": "Cambiaste tu voto hace menos de una hora. Cuenta tu última papeleta; podrás cambiarlo otra vez cuando pase la hora."
+    "epoch_already_cast": "Ya emitiste una papeleta en la última hora. Cuenta tu última papeleta; podrás cambiarla otra vez cuando pase la hora.",
+    "ballot_already_cast": "Esta papeleta ya estaba registrada. No tienes que hacer nada más: tu voto está dentro.",
+    "ballot_expired": "Esta papeleta se preparó hace demasiado tiempo para ser aceptada. Vuelve a votar; una papeleta nueva tarda unos segundos."
   },
   "demo": {
     "banner": "Datos de demostración: sin contratos desplegados. Nada de esto está en cadena."
@@ -686,7 +683,7 @@
     "title": "Privacidad",
     "updated": "Última actualización: 16 de septiembre de 2026",
     "summary_title": "En resumen",
-    "summary_1": "Nunca conocemos tu nombre, tu cara ni tus datos biométricos. No sabemos qué has votado, y el organizador tampoco, porque las papeletas se cifran antes de salir de tu dispositivo y solo se descifra el total final.",
+    "summary_1": "Nunca conocemos tu nombre, tu cara ni tus datos biométricos. No sabemos cómo has votado. Las papeletas se cifran antes de salir de tu dispositivo y solo se descifra el total final; la clave del organizador podría abrir una papeleta suelta, pero nada en ella dice de quién es.",
     "summary_2": "Esta página describe lo que el software hace realmente, no lo que estaría permitido hacer, incluidos los puntos en los que el diseño no te protege.",
     "worldid_title": "Qué nos aporta World ID",
     "worldid_1": "Al verificarte, World ID nos envía una prueba y un nulificador: un número derivado de ti y de esta aplicación. Es el mismo cada vez que vuelves, y así se impide que una misma cuenta se inscriba dos veces en la misma elección; además es distinto para cada aplicación con la que uses World ID. No demuestra que seas una única persona: la elección que lo necesite pide también una comprobación de documento, que produce un segundo número, válido solo para esa elección.",
@@ -695,8 +692,8 @@
     "identity_1": "Tu secreto de voto es una frase que se genera en tu dispositivo y se te enseña una vez, para que la guardes. Donde una passkey pueda custodiarla, se almacena una copia sellada por cada passkey que registres, para que puedas votar desde varios dispositivos sin escribir nada. Esas copias se escriben en la cadena de bloques y no en nuestro servidor, así que perdernos no te deja fuera, y lo que las abre nunca sale de tu autenticador. Nosotros no vemos la frase ni podemos recuperarla por ti.",
     "identity_2": "Esto no es un formalismo. Si pudiéramos descifrarlo, podríamos calcular el identificador que lleva tu papeleta y emparejar cada voto con quien lo emitió. El cifrado es lo que nos lo hace imposible, no solo lo que nos lo prohíbe.",
     "ballot_title": "Tu papeleta",
-    "ballot_1": "Tu elección se cifra en tu navegador antes de enviarse, con una clave que custodia el organizador. Las papeletas se suman sin descifrarse y solo se descifra el total, de modo que ningún voto individual llega a revelarse a nadie, tampoco al organizador.",
-    "ballot_2": "Puedes volver a votar tantas veces como quieras; solo cuenta la última. Las anteriores siguen almacenadas pero son indistinguibles de ella, y eso es lo que te permite sustituir discretamente un voto que hayas emitido bajo presión.",
+    "ballot_1": "Tu elección se cifra en tu navegador antes de enviarse, con claves que custodia el organizador. La elección suma todas las papeletas sin descifrarlas y solo se descifra esa suma, con una prueba que el contrato comprueba. Esas claves podrían abrir cualquier papeleta suelta, y por eso nada en una papeleta dice quién la emitió ni cuál de tus papeletas vino antes.",
+    "ballot_2": "Puedes volver a votar tantas veces como quieras, una vez por hora; solo cuenta tu última papeleta. Cada papeleta nueva anula en silencio la anterior, y un primer voto y uno cambiado son idénticos en la cadena, así que nadie que observe puede saber que volviste a votar. Eso es lo que te permite sustituir discretamente un voto que te obligaron a emitir.",
     "onchain_title": "Qué es público en la cadena de bloques",
     "onchain_1": "Público y permanente: qué elecciones existen, que una identidad está registrada en la plataforma, que alguien verificado por la plataforma se inscribió en cada elección, los votos cifrados con sus totales publicados, y las copias cifradas de cada identidad de voto, una por passkey registrada. Lo que se inscribe es un compromiso derivado solo para esa elección, así que la cadena no dice en qué elecciones participó una misma persona. Cualquiera puede leerlo todo. Esas copias son texto cifrado y solo se abren con la passkey que las creó, pero su existencia y su número sí se ven.",
     "onchain_2": "No es público: el vínculo entre una identidad inscrita y una papeleta concreta, ni el vínculo entre las inscripciones de una misma persona en elecciones distintas. Romper el primero es justamente para lo que existe la prueba de conocimiento cero, y es la razón de que todos los votos se envíen a través de un mismo contrato compartido en lugar de desde una dirección propia. El segundo es la razón de que lo que se inscribe se derive para cada elección en vez de reutilizarse.",

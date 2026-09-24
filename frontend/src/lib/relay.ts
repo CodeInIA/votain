@@ -115,8 +115,8 @@ async function localRelay(functionName: string, args: unknown[]): Promise<{ txHa
     [
       "function relayEnroll(address election, uint256 identityCommitment)",
       "function relayEnrollAttested(address election, uint256 identityCommitment, uint256 personhoodNullifier, uint256 deadline, bytes signature)",
-      "function relayEnrollPrivate(address election, uint256 identityCommitment, uint256 humanTag, uint256 deadline, bytes platformSignature, bytes eligibilitySignature)",
-      "function relayVote(address election, bytes voteCiphertext, uint256 nullifier, uint256 merkleRoot, uint256 merkleDepth, uint256[2] pA, uint256[2][2] pB, uint256[2] pC)",
+      "function relayEnrollPrivate(address election, uint256 identityCommitment, uint256 humanTag, uint256 documentTag, uint256 deadline, bytes platformSignature, bytes eligibilitySignature)",
+      "function relayVote(address election, (uint256 votersRoot, uint256 ballotsRoot, uint256 epoch, uint256 tag, uint256 epochTag, uint256 leaf, uint256[2] voteA, uint256[] voteB, uint256[2] cancelA, uint256[] cancelB) ballot, (uint256[2] a, uint256[2][2] b, uint256[2] c) proof)",
       ...RELAY_ERROR_ABI,
     ],
     new Wallet(localSigner(LOCAL_RELAY_KEY, 'relay'), provider),
@@ -177,8 +177,10 @@ const RELAY_ERROR_ABI = [
   "error UnknownOrExpiredRoot()",
   "error InvalidProof()",
   "error WrongPhase()",
-  "error RevoteTooSoon(uint256 availableAt)",
-  "error InvalidBallot()",
+  "error TagAlreadyCast()",
+  "error EpochAlreadyCast()",
+  "error WrongEpoch()",
+  "error TreeFull()",
   "error MissingDocumentTag()",
   "error UnexpectedDocumentTag()",
 ];
@@ -201,8 +203,10 @@ const SELECTOR_NAMES: Record<string, string> = {
   "0x7a651f34": "UnexpectedAttestation",
   "0x716dcc39": "AttestationExpired",
   "0x342bd384": "BadAttestation",
-  "0x6ba214a7": "RevoteTooSoon",
-  "0x76115943": "InvalidBallot",
+  "0xd775f1c5": "TagAlreadyCast",
+  "0x01988a97": "EpochAlreadyCast",
+  "0x254f6ab2": "WrongEpoch",
+  "0xb48f2cf8": "TreeFull",
   "0x23e148c2": "MissingDocumentTag",
   "0xb48b3460": "UnexpectedDocumentTag",
 };
@@ -247,7 +251,13 @@ const ERROR_MESSAGE_KEY: Record<string, string> = {
   NotPlatformVerified: "errors.not_platform_verified",
   AttestationRequired: "errors.attestation_required",
   AttestationExpired: "errors.attestation_expired",
-  RevoteTooSoon: "errors.revote_too_soon",
+  // A second ballot in the same hour: one per voter per epoch bounds how fast
+  // anyone can spend the organizer's gas.
+  EpochAlreadyCast: "errors.epoch_already_cast",
+  // The same ballot submitted twice, usually a retried request that had landed.
+  TagAlreadyCast: "errors.ballot_already_cast",
+  // A ballot proved for an epoch that has since passed: prepared, then left.
+  WrongEpoch: "errors.ballot_expired",
 };
 
 /**
@@ -437,44 +447,36 @@ export async function relayEnroll(
 
 export interface RelayVoteParams {
   election: string;
-  voteCiphertext: string;
-  nullifier: bigint;
-  merkleRoot: bigint;
-  merkleDepth: bigint;
-  pA: [bigint, bigint];
-  pB: [[bigint, bigint], [bigint, bigint]];
-  pC: [bigint, bigint];
+  ballot: {
+    votersRoot: bigint;
+    ballotsRoot: bigint;
+    epoch: bigint;
+    tag: bigint;
+    epochTag: bigint;
+    leaf: bigint;
+    voteA: [bigint, bigint];
+    voteB: bigint[];
+    cancelA: [bigint, bigint];
+    cancelB: bigint[];
+  };
+  proof: { a: [bigint, bigint]; b: [[bigint, bigint], [bigint, bigint]]; c: [bigint, bigint] };
 }
 
+/** Deep-converts bigints to decimal strings, for a JSON body. */
+const decimal = (value: unknown): unknown =>
+  typeof value === "bigint"
+    ? value.toString()
+    : Array.isArray(value)
+      ? value.map(decimal)
+      : value && typeof value === "object"
+        ? Object.fromEntries(Object.entries(value).map(([k, v]) => [k, decimal(v)]))
+        : value;
+
 export async function relayVote(p: RelayVoteParams): Promise<{ txHash: string }> {
-  if (isLocalChain()) {
-    return localRelay("relayVote", [
-      p.election,
-      p.voteCiphertext,
-      p.nullifier,
-      p.merkleRoot,
-      p.merkleDepth,
-      p.pA,
-      p.pB,
-      p.pC,
-    ]);
-  }
+  if (isLocalChain()) return localRelay("relayVote", [p.election, p.ballot, p.proof]);
 
   // "omit", not "include": see post(). The ZK proof authorises the ballot, so no
   // cookie is needed, and sending one would defeat the anonymity this path exists
   // to provide.
-  return post(
-    "/api/relay/vote",
-    {
-      election: p.election,
-      voteCiphertext: p.voteCiphertext,
-      nullifier: p.nullifier.toString(),
-      merkleRoot: p.merkleRoot.toString(),
-      merkleDepth: p.merkleDepth.toString(),
-      pA: p.pA.map(String),
-      pB: p.pB.map(pair => pair.map(String)),
-      pC: p.pC.map(String),
-    },
-    "omit",
-  );
+  return post("/api/relay/vote", decimal(p), "omit");
 }

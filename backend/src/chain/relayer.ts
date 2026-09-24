@@ -29,7 +29,7 @@ const PAYMASTER_ABI = [
   'function relayEnroll(address election, uint256 identityCommitment)',
   'function relayEnrollAttested(address election, uint256 identityCommitment, uint256 personhoodNullifier, uint256 deadline, bytes signature)',
   'function relayEnrollPrivate(address election, uint256 identityCommitment, uint256 humanTag, uint256 documentTag, uint256 deadline, bytes platformSignature, bytes eligibilitySignature)',
-  'function relayVote(address election, bytes voteCiphertext, uint256 nullifier, uint256 merkleRoot, uint256 merkleDepth, uint256[2] pA, uint256[2][2] pB, uint256[2] pC)',
+  'function relayVote(address election, (uint256 votersRoot, uint256 ballotsRoot, uint256 epoch, uint256 tag, uint256 epochTag, uint256 leaf, uint256[2] voteA, uint256[] voteB, uint256[2] cancelA, uint256[] cancelB) ballot, (uint256[2] a, uint256[2][2] b, uint256[2] c) proof)',
   // Declared so a revert this contract interface decodes arrives with a NAME
   // rather than a bare four-byte selector. It does not cover every case: a
   // failure during gas estimation is raised by the provider, which has no ABI,
@@ -50,8 +50,10 @@ const PAYMASTER_ABI = [
   'error UnknownOrExpiredRoot()',
   'error InvalidProof()',
   'error WrongPhase()',
-  'error RevoteTooSoon(uint256 availableAt)',
-  'error InvalidBallot()',
+  'error TagAlreadyCast()',
+  'error EpochAlreadyCast()',
+  'error WrongEpoch()',
+  'error TreeFull()',
   'error MissingDocumentTag()',
   'error UnexpectedDocumentTag()',
   'function organizerOf(address election) view returns (address)',
@@ -75,15 +77,58 @@ export interface RelayResult {
   error?: string;
 }
 
+/** A ballot and its proof as the browser sends them: every number a decimal string. */
 export interface VoteCall {
   election: string;
-  voteCiphertext: string;
-  nullifier: string;
-  merkleRoot: string;
-  merkleDepth: string;
-  pA: [string, string];
-  pB: [[string, string], [string, string]];
-  pC: [string, string];
+  ballot: {
+    votersRoot: string;
+    ballotsRoot: string;
+    epoch: string;
+    tag: string;
+    epochTag: string;
+    leaf: string;
+    voteA: string[];
+    voteB: string[];
+    cancelA: string[];
+    cancelB: string[];
+  };
+  proof: { a: string[]; b: string[][]; c: string[] };
+}
+
+/**
+ * Points in one of a ballot's B lists: two numbers per slot, and the largest
+ * circuit has 51 slots (50 options and the blank vote; ElectionV4.MAX_OPTIONS).
+ */
+const MAX_POINT_VALUES = 2 * 51;
+
+const isDecimal = (v: unknown): v is string => typeof v === 'string' && /^\d{1,78}$/.test(v);
+const decimals = (v: unknown, length: number | [number, number]): boolean => {
+  if (!Array.isArray(v)) return false;
+  const [min, max] = typeof length === 'number' ? [length, length] : length;
+  return v.length >= min && v.length <= max && v.every(isDecimal);
+};
+
+/**
+ * Whether a body is shaped like a ballot and its proof, before anything is
+ * simulated. The chain is the judge of whether it is a VALID one; this only
+ * keeps an oversized or malformed body from reaching the simulation at all.
+ */
+export function isVoteCall(body: unknown): body is VoteCall {
+  const { election, ballot, proof } = (body ?? {}) as Partial<VoteCall>;
+  if (typeof election !== 'string' || !ballot || !proof) return false;
+  const scalars = ['votersRoot', 'ballotsRoot', 'epoch', 'tag', 'epochTag', 'leaf'] as const;
+  return (
+    scalars.every(key => isDecimal(ballot[key])) &&
+    decimals(ballot.voteA, 2) &&
+    decimals(ballot.cancelA, 2) &&
+    decimals(ballot.voteB, [2, MAX_POINT_VALUES]) &&
+    decimals(ballot.cancelB, [2, MAX_POINT_VALUES]) &&
+    decimals(proof.a, 2) &&
+    decimals(proof.c, 2) &&
+    Array.isArray(proof.b) &&
+    proof.b.length === 2 &&
+    proof.b.every(pair => decimals(pair, 2))
+  );
 }
 
 type PaymasterMethod = 'relayEnroll' | 'relayEnrollAttested' | 'relayEnrollPrivate' | 'relayVote';
@@ -180,14 +225,21 @@ export function relayEnrollPrivate(
 }
 
 export function relayVote(call: VoteCall): Promise<RelayResult> {
+  const { ballot, proof } = call;
   return relay('relayVote', call.election, () => [
     call.election,
-    call.voteCiphertext,
-    BigInt(call.nullifier),
-    BigInt(call.merkleRoot),
-    BigInt(call.merkleDepth),
-    call.pA.map(BigInt),
-    call.pB.map(pair => pair.map(BigInt)),
-    call.pC.map(BigInt),
+    {
+      votersRoot: BigInt(ballot.votersRoot),
+      ballotsRoot: BigInt(ballot.ballotsRoot),
+      epoch: BigInt(ballot.epoch),
+      tag: BigInt(ballot.tag),
+      epochTag: BigInt(ballot.epochTag),
+      leaf: BigInt(ballot.leaf),
+      voteA: ballot.voteA.map(BigInt),
+      voteB: ballot.voteB.map(BigInt),
+      cancelA: ballot.cancelA.map(BigInt),
+      cancelB: ballot.cancelB.map(BigInt),
+    },
+    { a: proof.a.map(BigInt), b: proof.b.map(pair => pair.map(BigInt)), c: proof.c.map(BigInt) },
   ]);
 }

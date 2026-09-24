@@ -90,6 +90,9 @@ export interface ElectionNeed {
  * `distinctVoters` counts PEOPLE, not ballots, which is what makes it the right
  * figure here: a voter who changed their mind cast two ballots and is one person
  * who no longer needs paying for. `castVotes` would undercount who is left.
+ *
+ * While voting runs it is unknown, since re-votes cannot be told apart, so the
+ * whole roll is counted: an estimate of gas still needed errs towards enough.
  */
 export function remainingVoters(election: Election): number {
   const voted = election.distinctVoters ?? 0;

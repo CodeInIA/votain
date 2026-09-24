@@ -13,10 +13,10 @@ import { addresses, chainInfo } from "./deployments";
 // ────────────────────────────────────────────────
 
 export const ELECTION_FACTORY_ABI = [
-  "function createElection((string name, uint8 votingType, uint256 thresholdValue, uint256 numOptions, uint256 enrollStart, uint256 enrollEnd, uint256 voteStart, uint256 voteEnd, uint256 scope, string paillierPublicKey, string metadataJson, address eligibilityAttester, bytes32 eligibilityPolicyHash, uint8 personhood, uint256 privacyQuorum, bool fixedSchedule, bool cancellable) cfg, uint256 fromBalance) payable returns (address)",
+  "function createElection((string name, uint8 votingType, uint256 thresholdValue, uint256 numOptions, uint256 enrollStart, uint256 enrollEnd, uint256 voteStart, uint256 voteEnd, uint256[] tallyKeys, string metadataJson, address eligibilityAttester, bytes32 eligibilityPolicyHash, uint8 personhood, uint256 privacyQuorum, bool fixedSchedule, bool cancellable) cfg, uint256 fromBalance) payable returns (address)",
   "function electionsCount() view returns (uint256)",
   "function getElections(uint256 offset, uint256 limit) view returns (address[])",
-  "event ElectionCreated(address indexed electionAddress, address indexed organizer, string name, uint8 votingType, uint256 scope)",
+  "event ElectionCreated(address indexed electionAddress, address indexed organizer, string name, uint8 votingType)",
 ] as const;
 
 export const ELECTION_ABI = [
@@ -31,7 +31,9 @@ export const ELECTION_ABI = [
   "function voteStart() view returns (uint256)",
   "function voteEnd() view returns (uint256)",
   "function scope() view returns (uint256)",
-  "function paillierPublicKey() view returns (string)",
+  "function tallyKeys() view returns (uint256[])",
+  "function keysHash() view returns (uint256)",
+  "function circuitSlots() view returns (uint256)",
   "function metadataJson() view returns (string)",
   // state
   "function phase() view returns (uint8)",
@@ -39,9 +41,16 @@ export const ELECTION_ABI = [
   "function merkleTreeRoot() view returns (uint256)",
   "function merkleTreeDepth() view returns (uint256)",
   "function hasMember(uint256 identityCommitment) view returns (bool)",
-  "function nullifierNonces(uint256 nullifier) view returns (uint256)",
+  "function ballotsRoot() view returns (uint256)",
+  "function currentEpoch() view returns (uint256)",
+  "function EPOCH_LENGTH() view returns (uint256)",
+  "function usedTags(uint256 tag) view returns (bool)",
+  "function usedEpochTags(uint256 epochTag) view returns (bool)",
+  "function aggregate() view returns (uint256[2] a, uint256[] b)",
   "function voteCount() view returns (uint256)",
-  "function distinctVoters() view returns (uint256)",
+  /// How many voters the result rests on: zero until it is published or voided
+  /// below the quorum, because nothing before the tally can say.
+  "function voters() view returns (uint256)",
   "function privacyQuorum() view returns (uint256)",
   "function fixedSchedule() view returns (bool)",
   "function cancellable() view returns (bool)",
@@ -53,8 +62,6 @@ export const ELECTION_ABI = [
   "function winnerIndex() view returns (uint256)",
   // actions
   "function enroll(uint256 identityCommitment)",
-  "function enrollAttested(uint256 identityCommitment, uint256 deadline, bytes signature)",
-  "function enrollPrivate(uint256 identityCommitment, uint256 humanTag, uint256 deadline, bytes platformSignature, bytes eligibilitySignature)",
   /// Zero on elections deployed before private enrolment existed, which still
   /// take the public paths. Anything the current factory deploys answers with
   /// the platform's key and refuses those paths.
@@ -62,19 +69,19 @@ export const ELECTION_ABI = [
   "function eligibilityAttester() view returns (address)",
   "function eligibilityPolicyHash() view returns (bytes32)",
   "function personhood() view returns (uint8)",
-  "function castVote(bytes voteCiphertext, uint256 nullifier, uint256 merkleRoot, uint256 merkleDepth, uint256[2] _pA, uint256[2][2] _pB, uint256[2] _pC)",
   "function cancelElection()",
   "function openEnrollmentEarly()",
   "function openVotingEarly()",
   "function closeEnrollmentEarly()",
   "function closeVotingEarly()",
   "function markVoided()",
-  "function publishResults(string ipfsCid, uint256[] tallyResults, uint256 invalidBallots, bytes tallyProof)",
+  "function publishResults(string ipfsCid, uint256[] tallyResults, (uint256[2] a, uint256[2][2] b, uint256[2] c) proof)",
+  "function voidBelowQuorum(uint256 votersBelow, (uint256[2] a, uint256[2][2] b, uint256[2] c) proof)",
   // events
   "event MemberEnrolled(uint256 indexed identityCommitment, uint256 index, uint256 merkleTreeRoot)",
-  "event VoteCast(uint256 indexed nullifier, bytes voteCiphertext, uint256 nonce, uint256 timestamp)",
+  "event BallotCast(uint256 indexed tag, uint256 index, uint256 leaf, uint256[2] voteA, uint256[] voteB, uint256[2] cancelA, uint256[] cancelB, uint256 timestamp)",
   "event ResultsPublished(string ipfsCid, uint256[] tally, uint8 outcome, uint256 winnerIndex)",
-  "event TallyProofPublished(uint256 invalidBallots, bytes proof)",
+  "event VoidedBelowQuorum(uint256 voters)",
 ] as const;
 
 export const PAYMASTER_ABI = [
@@ -90,7 +97,7 @@ export const PAYMASTER_ABI = [
   // when it pays, so an estimate cannot promise more than a relay would get.
   "function maxGasPrice() view returns (uint256)",
   "function maxRelayGas() view returns (uint256)",
-  "function relayVote(address election, bytes voteCiphertext, uint256 nullifier, uint256 merkleRoot, uint256 merkleDepth, uint256[2] pA, uint256[2][2] pB, uint256[2] pC)",
+  "function relayVote(address election, (uint256 votersRoot, uint256 ballotsRoot, uint256 epoch, uint256 tag, uint256 epochTag, uint256 leaf, uint256[2] voteA, uint256[] voteB, uint256[2] cancelA, uint256[] cancelB) ballot, (uint256[2] a, uint256[2][2] b, uint256[2] c) proof)",
   "event Deposited(address indexed organizer, uint256 amount)",
   "event ElectionFunded(address indexed election, address indexed from, uint256 amount)",
   "event ReserveReleased(address indexed election, address indexed organizer, uint256 amount)",

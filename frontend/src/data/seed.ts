@@ -41,7 +41,7 @@ export interface VoteRecord {
   phase: ElectionPhase;
   date: Date;
   referenceNumber: string;
-  nullifier: string;
+  tag: string;
 }
 
 /**
@@ -114,7 +114,11 @@ export interface Election {
   totalEnrolled: number;
   /** Ballots on chain, re-votes included. Not the number of people. */
   castVotes: number;
-  /** People who voted at least once. What a published tally has to add up to. */
+  /**
+   * People who voted, as the tally proved it. Undefined until a result is
+   * published (or the election voided below its quorum): while voting runs,
+   * nothing public says which ballots are re-votes, so nobody can count them.
+   */
   distinctVoters?: number;
   contractAddress: string;
   ipfsCid?: string;
@@ -164,14 +168,14 @@ export interface Election {
   hasVoted?: boolean;
   userVote?: string;
   /**
-   * The vote's anonymous on-chain identifier, as `0x` hex.
+   * The tag of this device's latest ballot here, as `0x` hex: its anonymous
+   * on-chain identifier, linked to no other ballot of the voter's.
    *
-   * Named for what it is. It used to be called `referenceNumber`, which is also
-   * what the history and the confirmation screen call a TRANSACTION HASH, so
-   * one name meant two different values and either could be handed to the
-   * verifier expecting the other to work.
+   * Named for what it is, and not `referenceNumber`, which is what the history
+   * and the confirmation screen call a TRANSACTION HASH: one name for two
+   * values let either be handed to a verifier expecting the other.
    */
-  voteNullifier?: string;
+  ballotTag?: string;
   tags?: string[];
 }
 
@@ -263,7 +267,7 @@ export const ELECTIONS: Election[] = [
     isEnrolled: true,
     hasVoted: true,
     userVote: 'c10',
-    voteNullifier: 'VTN-2025-003841',
+    ballotTag: 'VTN-2025-003841',
     tags: ['government', 'regional', 'infrastructure'],
     candidates: [
       { id: 'c9',  name: 'High-speed rail expansion',  description: 'Connect all towns >5k pop. by 2030' },
@@ -298,7 +302,7 @@ export const ELECTIONS: Election[] = [
     isEnrolled: true,
     hasVoted: true,
     userVote: 'c15',
-    voteNullifier: 'VTN-2025-001122',
+    ballotTag: 'VTN-2025-001122',
     tags: ['neighbourhood', 'local'],
     candidates: [
       { id: 'c14', name: 'Itziar Zubicaray',  description: 'Incumbent president', votes: 198, isWinner: true },
@@ -373,7 +377,7 @@ export const VOTER_HISTORY: VoteRecord[] = [
     phase: 'tallying',
     date: past(3),
     referenceNumber: 'VTN-2025-003841',
-    nullifier: '0x1234…abcd',
+    tag: '0x1234…abcd',
   },
   {
     electionId: 'e4',
@@ -382,7 +386,7 @@ export const VOTER_HISTORY: VoteRecord[] = [
     phase: 'closed',
     date: past(18),
     referenceNumber: 'VTN-2025-001122',
-    nullifier: '0x5678…ef01',
+    tag: '0x5678…ef01',
   },
 ];
 

@@ -47,9 +47,9 @@ describe('tallyTotal', () => {
   });
 
   it('adds up to the number of people who voted, which is what the chain enforces', () => {
-    // `publishResults` is checked against `distinctVoters`, so an honest tally
-    // and that count are the same number. This is the relationship the two
-    // screens disagreed about.
+    // The tally proves how many voted: the counts add up to it by construction,
+    // and that is what `distinctVoters` is read from once a result is out. This
+    // is the relationship the two screens disagreed about.
     const e = election([2, 1, 0], { castVotes: 5, distinctVoters: 3 });
     expect(tallyTotal(e)).toBe(e.distinctVoters);
   });

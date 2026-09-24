@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isAddress } from 'ethers';
-import { Loader2, ShieldAlert, ShieldCheck, ShieldQuestion } from 'lucide-react';
+import { Loader2, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { Card } from './Card';
 import { cn } from '../../lib/utils';
 import { hasPublishedResults, type Election } from '../../data/seed';
@@ -11,9 +11,9 @@ import { auditPublishedTally, type TallyAudit } from '../../lib/tallyAudit';
 /**
  * A published result, checked against the ballots on chain with no key.
  *
- * Runs `verifyTally` in the reader's own browser: the published counters have
- * to be exactly what the valid final ballots add up to, and every ballot left
- * out has to be opened and shown to be invalid. Anyone can repeat it and reach
+ * The contract accepted the counts only with a proof that they decrypt its
+ * aggregate; this re-adds every ballot in the reader's own browser and checks
+ * the aggregate is their sum (see `tallyAudit`). Anyone can repeat it and reach
  * the same answer, so nobody has to take the organizer's word for the result.
  *
  * WHY IT IS A COMPONENT. The organizer, the one person who produced the
@@ -55,10 +55,8 @@ export function TallyCheck({ election, className }: { election: Election; classN
     );
   }
 
-  const Icon =
-    audit.status === 'verified' ? ShieldCheck : audit.status === 'failed' ? ShieldAlert : ShieldQuestion;
-  const tone =
-    audit.status === 'verified' ? 'text-success' : audit.status === 'failed' ? 'text-error' : 'text-warning';
+  const Icon = audit.status === 'verified' ? ShieldCheck : ShieldAlert;
+  const tone = audit.status === 'verified' ? 'text-success' : 'text-error';
 
   return (
     <Card className={cn('p-5 mb-5', className)}>
@@ -70,14 +68,9 @@ export function TallyCheck({ election, className }: { election: Election; classN
           </h2>
           <p className="text-xs text-on-surface-variant">
             {audit.status === 'verified'
-              ? t('results.check_verified_body', { valid: audit.validBallots, voters: audit.voters })
+              ? t('results.check_verified_body', { ballots: audit.ballots, voters: audit.voters })
               : t(`results.check_${audit.status}_body`)}
           </p>
-          {audit.status === 'verified' && audit.invalidBallots > 0 && (
-            <p className="text-xs text-on-surface-variant mt-2">
-              {t('results.check_excluded', { excluded: audit.invalidBallots })}
-            </p>
-          )}
           {audit.status === 'failed' && (
             <p className="text-xs text-on-surface-meta mt-2 font-mono break-words">{audit.reason}</p>
           )}

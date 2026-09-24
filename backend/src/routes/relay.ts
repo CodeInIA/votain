@@ -25,16 +25,13 @@ import {
   relayEnrollPrivate,
   relayVote,
   isRelayerConfigured,
-  type VoteCall,
+  isVoteCall,
 } from '../chain/relayer.js';
 import { verifySession } from '../auth/session.js';
 import { readSessionCookie } from '../auth/cookie.js';
 import { authorisePrivateEnrolment, isRefusal } from '../eligibility/enrolment.js';
 import { readEnrolmentMode } from '../chain/election.js';
 import { consumeSession } from '../eligibility/sessions.js';
-
-/** A 2048-bit Paillier ciphertext is at most 512 bytes; see ElectionV4.MAX_BALLOT_BYTES. */
-const MAX_BALLOT_HEX = 2 + 512 * 2;
 
 const router = Router();
 
@@ -141,20 +138,13 @@ router.post('/relay/vote', relayLimiter, async (req: Request, res: Response) => 
     return res.status(503).json({ error: 'Relayer not configured' });
   }
 
-  const body = req.body as Partial<VoteCall>;
-  const missing = (
-    ['election', 'voteCiphertext', 'nullifier', 'merkleRoot', 'merkleDepth', 'pA', 'pB', 'pC'] as const
-  ).filter(field => body[field] === undefined);
-  if (missing.length > 0) {
-    return res.status(400).json({ error: `missing fields: ${missing.join(', ')}` });
-  }
-  // Refused here as well as on chain, so an oversized body never reaches the
-  // simulation, let alone the relayer's float.
-  if (typeof body.voteCiphertext !== 'string' || body.voteCiphertext.length > MAX_BALLOT_HEX) {
-    return res.status(400).json({ error: 'voteCiphertext is not a ballot' });
+  // Refused here as well as on chain, so a malformed or oversized body never
+  // reaches the simulation, let alone the relayer's float.
+  if (!isVoteCall(req.body)) {
+    return res.status(400).json({ error: 'not a ballot: expected { election, ballot, proof } of decimal strings' });
   }
 
-  const result = await relayVote(body as VoteCall);
+  const result = await relayVote(req.body);
   if (!result.relayed) return res.status(400).json({ error: result.error });
   return res.status(200).json({ txHash: result.txHash });
 });

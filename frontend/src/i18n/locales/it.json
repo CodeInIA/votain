@@ -224,12 +224,9 @@
     "not_available": "Risultati non ancora disponibili.",
     "check_pending": "Verifica del risultato pubblicato con le schede sulla chain…",
     "check_verified_title": "Verificato con le schede sulla chain",
-    "check_verified_body": "I conteggi pubblicati sono esattamente la somma delle {{valid}} schede valide, su {{voters}} votanti. Chiunque può ripetere questa verifica senza chiavi e senza fidarsi di nessuno.",
-    "check_excluded": "Schede escluse perché non contenevano un'unica scelta valida: {{excluded}}. Ognuna è aperta nella prova pubblicata, così chiunque può vedere perché.",
+    "check_verified_body": "L'elezione ha accettato questi conteggi solo con una prova a conoscenza zero che decifrano la somma di tutte le schede, e le {{ballots}} schede sulla catena sono state risommate qui fino alla stessa somma: {{voters}} votanti. Chiunque può ripetere questa verifica senza chiavi e senza fiducia.",
     "check_failed_title": "Non corrisponde alle schede sulla chain",
-    "check_failed_body": "Non è stato possibile verificare i conteggi pubblicati con le schede registrate sulla chain. Non fare affidamento su questo risultato.",
-    "check_unproven_title": "Pubblicato senza prova",
-    "check_unproven_body": "Questo risultato è stato pubblicato da un contratto precedente alle prove di scrutinio, quindi non può essere verificato con le schede."
+    "check_failed_body": "Non è stato possibile verificare i conteggi pubblicati con le schede registrate sulla chain. Non fare affidamento su questo risultato."
   },
   "verify_receipt": {
     "title": "Verifica un voto",
@@ -245,7 +242,6 @@
     "reference": "Riferimento",
     "nullifier": "Identificativo del voto",
     "date": "Data",
-    "ballots": "Schede depositate",
     "choice_never_shown": "Il registro pubblico conserva che un voto è stato espresso e quando, mai cosa diceva. Nessuno può leggere una scelta da una ricevuta, nemmeno noi.",
     "your_receipts": "Le tue ricevute",
     "unlock_hint": "Questo browser non conosce ancora alcun voto. Se hai votato da un altro dispositivo, un tocco della passkey li trova e li ricorda qui."
@@ -476,8 +472,7 @@
     "open_voting_desc": "Le iscrizioni sono chiuse e il voto non è ancora previsto. Tutti gli iscritti potranno votare da adesso. La data di chiusura non cambia.",
     "voting_opened_done": "Il voto è aperto",
     "void_refused": "Questa elezione ha promesso di non essere annullata e hanno votato abbastanza persone da poterne pubblicare il risultato, quindi non può essere invalidata. Importa la chiave di decifratura per pubblicare il risultato.",
-    "key_device_only": "Non è stato possibile derivare dal tuo wallet la chiave di decifratura di questa elezione, quindi esiste solo su questo dispositivo. Esportala ora e conservala al sicuro: senza di essa l'elezione non può essere scrutinata.",
-    "tally_excluded": "Schede escluse perché non valide: {{excluded}}. Ognuna è aperta nella prova pubblicata perché chiunque possa verificarla."
+    "key_device_only": "Non è stato possibile derivare dal tuo wallet la chiave di decifratura di questa elezione, quindi esiste solo su questo dispositivo. Esportala ora e conservala al sicuro: senza di essa l'elezione non può essere scrutinata."
   },
   "gas": {
     "title": "Gestione Gas",
@@ -613,7 +608,9 @@
     "passkey_cancelled": "Hai chiuso la richiesta della passkey. Non è stato creato nulla: puoi riprovare.",
     "list_unreadable": "Non è stato possibile leggere questa lista dalla catena, che non è lo stesso che sia vuota. Controlla la connessione e riprova.",
     "passkey_unproven": "La passkey è stata creata, ma non abbiamo ancora potuto confermare che sappia decifrare. Premi di nuovo: viene interrogata la stessa, senza crearne una nuova.",
-    "revote_too_soon": "Hai cambiato il tuo voto meno di un'ora fa. Conta la tua ultima scheda; potrai cambiarlo di nuovo allo scadere dell'ora."
+    "epoch_already_cast": "Hai già espresso una scheda nell'ultima ora. Conta la tua ultima scheda; potrai cambiarla di nuovo allo scadere dell'ora.",
+    "ballot_already_cast": "Questa scheda era già stata registrata. Non devi fare altro: il tuo voto è dentro.",
+    "ballot_expired": "Questa scheda è stata preparata troppo tempo fa per essere accettata. Vota di nuovo; una nuova scheda richiede pochi secondi."
   },
   "demo": {
     "banner": "Dati dimostrativi: nessun contratto distribuito. Niente qui è on-chain."
@@ -686,7 +683,7 @@
     "title": "Privacy",
     "updated": "Ultimo aggiornamento: 16 settembre 2026",
     "summary_title": "In breve",
-    "summary_1": "Non conosciamo mai il tuo nome, il tuo volto né i tuoi dati biometrici. Non sappiamo cosa hai votato, e nemmeno l'organizzatore lo sa, perché le schede vengono cifrate prima di lasciare il tuo dispositivo e solo il totale finale viene decifrato.",
+    "summary_1": "Non conosciamo mai il tuo nome, il tuo volto né i tuoi dati biometrici. Non sappiamo come hai votato. Le schede vengono cifrate prima di lasciare il tuo dispositivo e viene decifrato solo il totale finale; la chiave dell'organizzatore potrebbe aprire una singola scheda, ma nulla su di essa dice di chi sia.",
     "summary_2": "Questa pagina descrive ciò che il software fa davvero, non ciò che gli sarebbe consentito fare, compresi i punti in cui la progettazione non ti protegge.",
     "worldid_title": "Che cosa ci consegna World ID",
     "worldid_1": "Quando ti verifichi, World ID ci invia una prova e un nullificatore: un numero derivato da te e da questa applicazione. È lo stesso a ogni ritorno, ed è così che si impedisce a uno stesso account di iscriversi due volte alla stessa elezione; è inoltre diverso per ogni applicazione. Non dimostra che sei una sola persona: l’elezione che lo richiede chiede anche una verifica del documento, che produce un secondo numero, valido solo per quella elezione.",
@@ -695,8 +692,8 @@
     "identity_1": "Il tuo segreto di voto è una frase generata sul tuo dispositivo e mostrata una sola volta, perché tu la conservi. Dove una passkey può custodirla, viene conservata una copia sigillata per ogni passkey che registri, così puoi votare da più dispositivi senza digitare nulla. Quelle copie sono scritte sulla blockchain e non sul nostro server, quindi perderci non ti chiude fuori, e ciò che le apre non lascia mai il tuo autenticatore. Noi non vediamo mai la frase e non possiamo recuperarla per te.",
     "identity_2": "Non è una formalità. Se potessimo decifrarlo, potremmo calcolare l'identificativo che la tua scheda porta con sé e collegare ogni voto a chi l'ha espresso. È la cifratura a renderci questo impossibile, non solo a vietarcelo.",
     "ballot_title": "La tua scheda",
-    "ballot_1": "La tua scelta viene cifrata nel tuo browser prima dell'invio, con una chiave custodita dall'organizzatore. Le schede vengono sommate mentre sono ancora cifrate e solo la somma viene decifrata, così nessun voto singolo viene mai rivelato a nessuno, nemmeno all'organizzatore.",
-    "ballot_2": "Puoi rivotare quante volte vuoi; conta solo l'ultima scheda. Le precedenti restano memorizzate ma sono indistinguibili da essa, ed è questo che ti permette di sostituire senza darlo a vedere un voto espresso sotto pressione.",
+    "ballot_1": "La tua scelta viene cifrata nel browser prima dell'invio, con chiavi custodite dall'organizzatore. L'elezione somma tutte le schede ancora cifrate e viene decifrata solo quella somma, con una prova che il contratto verifica. Quelle chiavi potrebbero aprire qualsiasi singola scheda, ed è per questo che nulla su una scheda dice chi l'ha espressa né quale delle tue schede l'ha preceduta.",
+    "ballot_2": "Puoi votare di nuovo tutte le volte che vuoi, una volta all'ora; conta solo la tua ultima scheda. Ogni nuova scheda annulla in silenzio la precedente, e un primo voto e uno cambiato sono identici sulla catena, quindi nessuno che osservi può capire che hai votato di nuovo. È questo che ti permette di sostituire discretamente un voto che ti hanno costretto a esprimere.",
     "onchain_title": "Che cosa è pubblico sulla blockchain",
     "onchain_1": "Pubblico e permanente: quali elezioni esistono, che una identità è registrata sulla piattaforma, che qualcuno verificato dalla piattaforma si è iscritto a ciascuna elezione, i voti cifrati con i totali pubblicati, e le copie sigillate di ogni identità di voto, una per passkey registrata. Ciò che si iscrive è un impegno derivato solo per quella elezione, quindi la catena non dice a quali elezioni ha partecipato una stessa persona. Chiunque può leggere tutto. Quelle copie sono testo cifrato e si aprono solo con la passkey che le ha create, ma la loro esistenza e il loro numero sono visibili.",
     "onchain_2": "Non è pubblico: il collegamento tra un'identità iscritta e una scheda specifica, né il collegamento tra le iscrizioni di una stessa persona a elezioni diverse. Spezzare il primo è esattamente lo scopo della prova a conoscenza zero, ed è il motivo per cui ogni voto viene inviato attraverso uno stesso contratto condiviso anziché da un indirizzo tutto tuo. Il secondo è il motivo per cui ciò che si iscrive viene derivato per ogni elezione invece di essere riutilizzato.",

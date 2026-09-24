@@ -367,8 +367,8 @@ export default function ElectionPage() {
 
   // Copies the FULL reference, never the shortened form on screen.
   const copyReference = async () => {
-    if (!election?.voteNullifier) return;
-    await navigator.clipboard.writeText(election.voteNullifier);
+    if (!election?.ballotTag) return;
+    await navigator.clipboard.writeText(election.ballotTag);
     setReferenceCopied(true);
     setTimeout(() => setReferenceCopied(false), 2000);
   };
@@ -574,7 +574,7 @@ export default function ElectionPage() {
             <div className="flex items-center gap-2 mb-3">
               <p className="text-xs text-on-surface-meta min-w-0">
                 {t('election.reference')}:{' '}
-                <span className="font-mono">{shortenReference(election.voteNullifier ?? '')}</span>
+                <span className="font-mono">{shortenReference(election.ballotTag ?? '')}</span>
               </p>
               <button
                 type="button"

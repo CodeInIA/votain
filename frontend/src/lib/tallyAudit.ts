@@ -1,62 +1,59 @@
 /**
  * Checks a published result against the chain, with no key and no trust.
  *
- * Reads what anyone can read: every `VoteCast`, the election's public key and
- * counter base, the published counters and the `TallyProofPublished` event,
- * and runs `verifyTally` over them. The answer is the same for every reader,
- * which is what makes the result verifiable rather than merely published.
+ * TWO FACTS MAKE A RESULT CORRECT, and this establishes the second:
+ *
+ *   1. The counts decrypt the election's aggregate. The contract verified the
+ *      tally circuit's proof of exactly that before it accepted them, and would
+ *      have refused anything else, so there is nothing left to redo here.
+ *   2. The aggregate is the sum of the ballots everyone can see. The contract
+ *      keeps it itself as ballots arrive; re-adding every `BallotCast` in the
+ *      reader's own browser and landing on the same point shows that nothing
+ *      was left out and nothing added.
+ *
+ * The answer is the same for every reader, which is what makes the result
+ * verifiable rather than merely published.
  */
+import { aggregate as addBallots, equals, unflattenPoints, type Ballot } from "./ballotCrypto";
 import { getElection } from "./contracts";
 import { eventArgs, queryLogsFrom } from "./logs";
-import { counterBaseFor } from "./paillier";
-import { decodeTallyProof, finalBallots, verifyTally } from "./tallyProof";
 
 export type TallyAudit =
-  | { status: "verified"; validBallots: number; invalidBallots: number; voters: number }
-  | { status: "failed"; reason: string; voters: number }
-  /** Published by a contract that predates the proof, so there is nothing to check. */
-  | { status: "unproven"; voters: number };
+  | { status: "verified"; ballots: number; voters: number }
+  | { status: "failed"; reason: string; voters: number };
 
 export async function auditPublishedTally(address: string): Promise<TallyAudit> {
   const election = getElection(address);
-  const [pkJson, metadataJson, tally, distinctVoters] = await Promise.all([
-    election.paillierPublicKey() as Promise<string>,
-    election.metadataJson() as Promise<string>,
-    election.tally() as Promise<bigint[]>,
-    election.distinctVoters() as Promise<bigint>,
+  const [onChain, voters, slots] = await Promise.all([
+    election.aggregate() as Promise<[bigint[], bigint[]]>,
+    election.voters() as Promise<bigint>,
+    election.numOptions().then((n: bigint) => Number(n) + 1),
   ]);
-  const voters = Number(distinctVoters);
 
-  const proofEvents = await queryLogsFrom(election, election.filters.TallyProofPublished());
-  if (proofEvents.length === 0) return { status: "unproven", voters };
-  const published = eventArgs<{ invalidBallots: bigint; proof: string }>(proofEvents[0]);
-
-  let proof;
-  try {
-    proof = decodeTallyProof(published.proof);
-  } catch {
-    return { status: "failed", reason: "the published proof cannot be read", voters };
-  }
-
-  const { n, g } = JSON.parse(pkJson) as { n: string; g: string };
-  const voteEvents = await queryLogsFrom(election, election.filters.VoteCast());
-  const ballots = finalBallots(
-    voteEvents.map(e => {
-      const args = eventArgs<{ nullifier: bigint; voteCiphertext: string; nonce: bigint }>(e);
-      return { nullifier: args.nullifier, nonce: args.nonce, ciphertext: args.voteCiphertext };
-    }),
-  );
-
-  const verdict = verifyTally({
-    publicKey: { n: BigInt(n), g: BigInt(g) },
-    ballots,
-    counts: [...tally],
-    invalidBallots: published.invalidBallots,
-    proof,
-    base: counterBaseFor(metadataJson),
+  const events = await queryLogsFrom(election, election.filters.BallotCast());
+  const ballots: Ballot[] = events.map(e => {
+    const args = eventArgs<{
+      tag: bigint;
+      voteA: bigint[];
+      voteB: bigint[];
+      cancelA: bigint[];
+      cancelB: bigint[];
+    }>(e);
+    return {
+      tag: args.tag,
+      voteA: [args.voteA[0], args.voteA[1]],
+      voteB: unflattenPoints(args.voteB),
+      cancelA: [args.cancelA[0], args.cancelA[1]],
+      cancelB: unflattenPoints(args.cancelB),
+    };
   });
 
-  return verdict.ok
-    ? { status: "verified", validBallots: verdict.validBallots, invalidBallots: verdict.invalidBallots, voters }
-    : { status: "failed", reason: verdict.reason, voters };
+  const recomputed = addBallots(ballots, slots);
+  const stored = unflattenPoints(onChain[1]);
+  const matches =
+    equals(recomputed.a, [onChain[0][0], onChain[0][1]]) && recomputed.b.every((p, i) => equals(p, stored[i]));
+
+  return matches
+    ? { status: "verified", ballots: ballots.length, voters: Number(voters) }
+    : { status: "failed", reason: "the ballots on chain do not add up to the aggregate the result was proved against", voters: Number(voters) };
 }

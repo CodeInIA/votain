@@ -885,7 +885,7 @@ export async function derivePrfSecret(
       // cache, and the authenticator may still hold the credential (the
       // organizer cleared it, moved browser, or wiped site data). Ask for it
       // before minting a new one, because for the organizer a new credential is
-      // a new PRF, which is a new Paillier key, which makes every election they
+      // a new PRF, which is a new tally key, which makes every election they
       // created on this device impossible to decrypt.
       const recovered = await assertPrf([], salt);
       if (recovered) return recovered.secret;

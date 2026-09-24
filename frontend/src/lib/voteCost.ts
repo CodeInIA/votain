@@ -26,7 +26,11 @@
 import { getPaymaster, getReadProvider } from "./contracts";
 import { eventArgs, queryLogsFrom } from "./logs";
 
-/** Used only when the chain has no ballot to learn from. */
+/**
+ * Used only when the chain has no ballot to learn from. About a million gas,
+ * what the E2E suite measures for a relayed ballot at the default circuit size,
+ * at Polygon's 30 gwei floor.
+ */
 export const VOTE_COST_FALLBACK = 0.03;
 
 /** Selector of `relayVote`, the only relay this is about. */

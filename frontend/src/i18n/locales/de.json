@@ -222,12 +222,9 @@
     "not_available": "Ergebnisse noch nicht verfügbar.",
     "check_pending": "Das veröffentlichte Ergebnis wird mit den Stimmzetteln auf der Chain abgeglichen…",
     "check_verified_title": "Mit den Stimmzetteln auf der Chain verifiziert",
-    "check_verified_body": "Die veröffentlichten Zahlen ergeben sich genau aus den {{valid}} gültigen Stimmzetteln von {{voters}} Wählenden. Jede Person kann diese Prüfung ohne Schlüssel und ohne Vertrauen wiederholen.",
-    "check_excluded": "Ausgeschlossene Stimmzettel ohne genau eine gültige Wahl: {{excluded}}. Jeder wird im veröffentlichten Nachweis geöffnet, sodass alle sehen können, warum.",
+    "check_verified_body": "Die Wahl hat diese Ergebnisse nur mit einem Zero-Knowledge-Beweis angenommen, dass sie die Summe aller Stimmzettel entschlüsseln, und die {{ballots}} Stimmzettel auf der Chain wurden hier erneut zu genau dieser Summe addiert: {{voters}} Wählende. Jeder kann diese Prüfung ohne Schlüssel und ohne Vertrauen wiederholen.",
     "check_failed_title": "Stimmt nicht mit den Stimmzetteln auf der Chain überein",
-    "check_failed_body": "Die veröffentlichten Zahlen ließen sich nicht mit den auf der Chain erfassten Stimmzetteln verifizieren. Verlassen Sie sich nicht auf dieses Ergebnis.",
-    "check_unproven_title": "Ohne Nachweis veröffentlicht",
-    "check_unproven_body": "Dieses Ergebnis stammt von einem Vertrag, der älter ist als die Auszählungsnachweise, und kann daher nicht mit den Stimmzetteln abgeglichen werden."
+    "check_failed_body": "Die veröffentlichten Zahlen ließen sich nicht mit den auf der Chain erfassten Stimmzetteln verifizieren. Verlassen Sie sich nicht auf dieses Ergebnis."
   },
   "verify_receipt": {
     "title": "Eine Stimme prüfen",
@@ -243,7 +240,6 @@
     "reference": "Referenz",
     "nullifier": "Stimmkennung",
     "date": "Datum",
-    "ballots": "Abgegebene Stimmen",
     "choice_never_shown": "Das öffentliche Register hält fest, dass eine Stimme abgegeben wurde und wann, nie was darin stand. Niemand kann aus einer Quittung eine Wahl ablesen, wir auch nicht.",
     "your_receipts": "Ihre Quittungen",
     "unlock_hint": "Dieser Browser kennt noch keine Stimme. Falls Sie von einem anderen Gerät gewählt haben, findet eine Passkey-Bestätigung sie und merkt sie sich hier."
@@ -472,8 +468,7 @@
     "open_voting_desc": "Die Anmeldung ist geschlossen und die Abstimmung noch nicht fällig. Alle Angemeldeten können ab sofort abstimmen. Das Enddatum bleibt unverändert.",
     "voting_opened_done": "Die Abstimmung ist offen",
     "void_refused": "Diese Wahl hat zugesagt, nicht abgesagt zu werden, und es haben genug Menschen abgestimmt, um ihr Ergebnis zu veröffentlichen. Sie kann daher nicht für ungültig erklärt werden. Importieren Sie den Entschlüsselungsschlüssel, um das Ergebnis zu veröffentlichen.",
-    "key_device_only": "Der Entschlüsselungsschlüssel dieser Wahl konnte nicht aus Ihrer Wallet abgeleitet werden und existiert nur auf diesem Gerät. Exportieren Sie ihn jetzt und bewahren Sie ihn sicher auf: Ohne ihn kann die Wahl nicht ausgezählt werden.",
-    "tally_excluded": "Als ungültig ausgeschlossene Stimmzettel: {{excluded}}. Jeder wird im veröffentlichten Nachweis geöffnet, damit alle ihn prüfen können."
+    "key_device_only": "Der Entschlüsselungsschlüssel dieser Wahl konnte nicht aus Ihrer Wallet abgeleitet werden und existiert nur auf diesem Gerät. Exportieren Sie ihn jetzt und bewahren Sie ihn sicher auf: Ohne ihn kann die Wahl nicht ausgezählt werden."
   },
   "gas": {
     "title": "Gas-Verwaltung",
@@ -608,7 +603,9 @@
     "passkey_cancelled": "Du hast den Passkey-Dialog abgebrochen. Es wurde nichts erstellt: du kannst es erneut versuchen.",
     "list_unreadable": "Diese Liste konnte nicht von der Chain gelesen werden, was nicht dasselbe ist wie leer zu sein. Prüfen Sie die Verbindung und versuchen Sie es erneut.",
     "passkey_unproven": "Der Passkey wurde erstellt, aber wir konnten noch nicht bestätigen, dass er entschlüsseln kann. Drück noch einmal: es wird derselbe gefragt, ohne einen neuen zu erstellen.",
-    "revote_too_soon": "Sie haben Ihre Stimme vor weniger als einer Stunde geändert. Es zählt Ihr letzter Stimmzettel; nach Ablauf der Stunde können Sie sie erneut ändern."
+    "epoch_already_cast": "Sie haben in der letzten Stunde bereits einen Stimmzettel abgegeben. Es zählt Ihr letzter Stimmzettel; nach Ablauf der Stunde können Sie ihn erneut ändern.",
+    "ballot_already_cast": "Dieser Stimmzettel wurde bereits erfasst. Sie müssen nichts weiter tun: Ihre Stimme ist abgegeben.",
+    "ballot_expired": "Dieser Stimmzettel wurde vor zu langer Zeit vorbereitet, um noch angenommen zu werden. Bitte stimmen Sie erneut ab; ein neuer Stimmzettel dauert nur wenige Sekunden."
   },
   "demo": {
     "banner": "Demo-Daten: keine Verträge bereitgestellt. Nichts hiervon ist on-chain."
@@ -681,7 +678,7 @@
     "title": "Datenschutz",
     "updated": "Zuletzt aktualisiert: 16. September 2026",
     "summary_title": "Kurz gefasst",
-    "summary_1": "Wir erfahren nie Ihren Namen, Ihr Gesicht oder Ihre biometrischen Daten. Wir wissen nicht, wie Sie gewählt haben, und die organisierende Person ebenso wenig, denn Stimmzettel werden verschlüsselt, bevor sie Ihr Gerät verlassen, und nur die Endsumme wird entschlüsselt.",
+    "summary_1": "Wir erfahren nie Ihren Namen, Ihr Gesicht oder Ihre biometrischen Daten. Wir wissen nicht, wie Sie abgestimmt haben. Stimmzettel werden verschlüsselt, bevor sie Ihr Gerät verlassen, und nur das Endergebnis wird entschlüsselt; der Schlüssel des Veranstalters könnte einen einzelnen Stimmzettel öffnen, aber nichts darauf verrät, von wem er stammt.",
     "summary_2": "Diese Seite beschreibt, was die Software tatsächlich tut, nicht was ihr erlaubt wäre, einschließlich der Stellen, an denen das Design Sie nicht schützt.",
     "worldid_title": "Was World ID uns übergibt",
     "worldid_1": "Bei der Verifizierung sendet World ID uns einen Beweis und einen Nullifier: eine Zahl, abgeleitet aus Ihnen und dieser Anwendung. Sie ist bei jeder Rückkehr dieselbe, wodurch ein Konto sich nicht zweimal für dieselbe Wahl anmelden kann, und sie ist für jede Anwendung anders. Sie belegt nicht, dass Sie eine einzelne Person sind: eine Wahl, die das verlangt, fordert zusätzlich eine Dokumentprüfung, die eine zweite Zahl liefert, die nur für diese Wahl gilt.",
@@ -690,8 +687,8 @@
     "identity_1": "Ihr Wahlgeheimnis ist eine Phrase, die auf Ihrem Gerät erzeugt und Ihnen einmal gezeigt wird, damit Sie sie aufbewahren. Wo ein Passkey sie halten kann, wird für jeden Passkey, den Sie registrieren, eine versiegelte Kopie gespeichert, damit Sie von mehreren Geräten aus wählen können, ohne etwas einzutippen. Diese Kopien werden in die Blockchain geschrieben und nicht auf unseren Server: Uns zu verlieren sperrt Sie nicht aus, und was sie öffnet, verlässt Ihren Authentifikator nie. Wir sehen die Phrase nie und können sie nicht für Sie wiederherstellen.",
     "identity_2": "Das ist keine Formalie. Könnten wir es entschlüsseln, könnten wir die Kennung Ihres Stimmzettels berechnen und jede Stimme der Person zuordnen, die sie abgegeben hat. Die Verschlüsselung macht uns das unmöglich, sie verbietet es uns nicht nur.",
     "ballot_title": "Ihr Stimmzettel",
-    "ballot_1": "Ihre Wahl wird in Ihrem Browser verschlüsselt, bevor sie abgeschickt wird, mit einem Schlüssel der organisierenden Person. Stimmzettel werden in verschlüsseltem Zustand addiert, und nur die Summe wird entschlüsselt, sodass keine einzelne Stimme jemals jemandem offengelegt wird, auch der organisierenden Person nicht.",
-    "ballot_2": "Sie dürfen beliebig oft erneut wählen; nur der letzte Stimmzettel zählt. Frühere bleiben gespeichert, sind von ihm aber nicht zu unterscheiden, und genau das erlaubt Ihnen, eine unter Druck abgegebene Stimme unbemerkt zu ersetzen.",
+    "ballot_1": "Ihre Wahl wird in Ihrem Browser verschlüsselt, bevor sie gesendet wird, mit Schlüsseln, die der Veranstalter verwahrt. Die Wahl addiert alle Stimmzettel verschlüsselt, und nur diese Summe wird je entschlüsselt, mit einem Beweis, den der Vertrag prüft. Diese Schlüssel könnten jeden einzelnen Stimmzettel öffnen, deshalb verrät nichts auf einem Stimmzettel, wer ihn abgegeben hat oder welcher Ihrer Stimmzettel ihm vorausging.",
+    "ballot_2": "Sie können so oft erneut abstimmen, wie Sie möchten, einmal pro Stunde; nur Ihr letzter Stimmzettel zählt. Jeder neue Stimmzettel hebt den vorherigen stillschweigend auf, und eine erste und eine geänderte Stimme sehen auf der Chain genau gleich aus, sodass niemand erkennen kann, dass Sie erneut abgestimmt haben. Genau das erlaubt es Ihnen, eine erzwungene Stimme unbemerkt zu ersetzen.",
     "onchain_title": "Was auf der Blockchain öffentlich ist",
     "onchain_1": "Öffentlich und dauerhaft: welche Wahlen existieren, dass eine Identität auf der Plattform registriert ist, dass sich jemand von der Plattform Verifiziertes für jede Wahl angemeldet hat, die verschlüsselten Stimmen mit ihren veröffentlichten Summen, und die versiegelten Kopien jeder Wahlidentität, eine je registriertem Passkey. Angemeldet wird ein Commitment, das nur für diese eine Wahl abgeleitet wurde, sodass die Kette nicht sagt, an welchen Wahlen eine einzelne Person teilgenommen hat. Alles davon ist lesbar. Die Kopien sind Chiffrat und öffnen sich nur mit dem Passkey, der sie erzeugt hat, aber ihre Existenz und ihre Anzahl sind sichtbar.",
     "onchain_2": "Nicht öffentlich: die Verbindung zwischen einer angemeldeten Identität und einem bestimmten Stimmzettel, und ebenso wenig die Verbindung zwischen den Anmeldungen derselben Person in verschiedenen Wahlen. Die erste zu brechen ist der Zweck des Zero-Knowledge-Beweises, und deshalb wird jede Stimme über einen gemeinsamen Vertrag eingereicht statt von einer eigenen Adresse. Die zweite ist der Grund, warum das Angemeldete je Wahl abgeleitet und nicht wiederverwendet wird.",

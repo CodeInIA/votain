@@ -14,7 +14,7 @@ import { withDistinctNames } from "./ballotNames";
 // retranslate an already-fetched election until it is refetched, which every
 // navigation does.
 import i18n from "../i18n/config";
-import { getStoredCommitment, getStoredIdentity, getStoredVoteNullifier } from "./semaphore";
+import { getStoredCommitment, getStoredIdentity, getStoredBallotTag } from "./semaphore";
 import type { Identity } from "@semaphore-protocol/identity";
 import {
   commitmentsForElections,
@@ -103,7 +103,7 @@ export async function fetchElection(address: string): Promise<Election> {
     phase,
     memberCount,
     voteCount,
-    distinctVoters,
+    provenVoters,
     resultsPublished,
     metadataJson,
     policyHashOnChain,
@@ -125,7 +125,7 @@ export async function fetchElection(address: string): Promise<Election> {
     c.phase(),
     c.memberCount(),
     c.voteCount(),
-    c.distinctVoters(),
+    c.voters() as Promise<bigint>,
     c.resultsPublished(),
     c.metadataJson(),
     c.eligibilityPolicyHash() as Promise<string>,
@@ -249,11 +249,11 @@ export async function fetchElection(address: string): Promise<Election> {
     isEnrolled = await c.hasMember(commitment);
   }
 
-  // "Already voted": verify the device's remembered vote nullifier on-chain.
+  // "Already voted": verify the device's remembered ballot tag on chain.
   let hasVoted: boolean | undefined;
-  const votedNullifier = getStoredVoteNullifier(address);
-  if (votedNullifier !== null) {
-    hasVoted = (await c.nullifierNonces(votedNullifier)) > 0n;
+  const votedTag = getStoredBallotTag(address);
+  if (votedTag !== null) {
+    hasVoted = (await c.usedTags(votedTag)) as boolean;
   }
 
   const basePhase = PHASE_MAP[Number(phase)] ?? "upcoming";
@@ -299,7 +299,9 @@ export async function fetchElection(address: string): Promise<Election> {
     requiresOrb: personhood === "orb",
     totalEnrolled: Number(memberCount),
     castVotes: Number(voteCount),
-    distinctVoters: Number(distinctVoters),
+    // Known only once the tally proves it: before that, nothing public says
+    // how many of the ballots are re-votes, which is the point.
+    distinctVoters: resultsPublished || provenVoters > 0n ? Number(provenVoters) : undefined,
     ipfsCid,
     eligibilityPolicy,
     votingType: VOTING_TYPE_MAP[Number(votingType)] ?? "simple_plurality",
@@ -312,9 +314,9 @@ export async function fetchElection(address: string): Promise<Election> {
     keyNonce: meta.keyNonce,
     isEnrolled,
     hasVoted,
-    // The vote's anonymous on-chain identifier, shown to the voter as their own
-    // receipt. Distinct from the transaction hash the history calls a reference.
-    voteNullifier: hasVoted && votedNullifier !== null ? "0x" + votedNullifier.toString(16) : undefined,
+    // The ballot's anonymous on-chain identifier, shown to the voter as their
+    // own receipt. Distinct from the transaction hash the history calls a reference.
+    ballotTag: hasVoted && votedTag !== null ? "0x" + votedTag.toString(16) : undefined,
     tags: meta.tags,
   };
 }

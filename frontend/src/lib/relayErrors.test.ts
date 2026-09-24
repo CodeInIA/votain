@@ -36,6 +36,9 @@ describe("relayErrorMessage", () => {
       ["NotPlatformVerified()", "errors.not_platform_verified"],
       ["AttestationRequired()", "errors.attestation_required"],
       ["AttestationExpired()", "errors.attestation_expired"],
+      ["EpochAlreadyCast()", "errors.epoch_already_cast"],
+      ["TagAlreadyCast()", "errors.ballot_already_cast"],
+      ["WrongEpoch()", "errors.ballot_expired"],
     ];
     for (const [raw, key] of cases) {
       expect(relayErrorMessage(new Error(raw))).toBe(i18n.t(key));
@@ -105,17 +108,16 @@ describe("relayErrorMessage", () => {
       "UnexpectedAttestation",
       "AttestationExpired",
       "BadAttestation",
-      "InvalidBallot",
       "MissingDocumentTag",
       "UnexpectedDocumentTag",
+      "TagAlreadyCast",
+      "EpochAlreadyCast",
+      "WrongEpoch",
+      "TreeFull",
     ];
     for (const name of names) {
       expect(revertNameOf({ data: id(`${name}()`).slice(0, 10) })).toBe(name);
     }
-    // The one with an argument: its selector hashes the full signature.
-    expect(revertNameOf({ data: id("RevoteTooSoon(uint256)").slice(0, 10) + "00".repeat(32) })).toBe(
-      "RevoteTooSoon",
-    );
   });
 
   it("passes an unrecognised failure through verbatim", () => {

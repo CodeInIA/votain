@@ -12,8 +12,8 @@
 - **`@radix-ui/react-select`** 2.3.3 (headless primitive, LanguageSelector)
 - **country-flag-emoji-polyfill** 0.1.8 (flag emojis on Windows/Chromium)
 - **ethers** 6.17.0 (chain reads, organizer EOA, local relay)
-- **`@semaphore-protocol/{identity,group,proof}`** 4.14.3 + **poseidon-lite** (nullifier)
-- **paillier-bigint** 3.4.3
+- **`@semaphore-protocol/{identity,group}`** 4.14.3 + **poseidon-lite** (tags, leaves)
+- **snarkjs** 0.7 (ballot and tally proofs, in the browser) + **`@zk-kit/lean-imt`** (ballots tree)
 - **`@worldcoin/idkit`** 4.2.3 + **`@worldcoin/idkit-core`** 4.2.4 (types only
   here now: the request itself is built by the backend)
 - **`@sd-jwt/core`** 0.20.0 + **`@sd-jwt/present`** 0.19.0 (no stable 0.20 of present yet)
@@ -195,7 +195,7 @@ Firefox on Windows) could enrol and then be unable to vote after a page reload. 
 - **Signing out clears the identity** (`clearIdentity` from `voterSignOut`). Leaving it
   behind let the next person on the browser inherit the previous voter's identity, since
   `getOrCreateIdentity` returns the stored one whenever the mode is "local". Organizer
-  sign-out keeps `votain_paillier_sk_*`: those decrypt results of live elections.
+  sign-out keeps `votain_tally_keys_*`: those count elections still running.
 
 ## src/ structure
 
@@ -216,7 +216,7 @@ src/
 │   ├── seed.ts                # hardcoded elections (6, all phases + 4 voting types)
 │   └── languages.ts
 └── lib/                       # contracts, deployments, relay, semaphore, identityVault,
-                               #   paillier, tally, logs, worldId
+                               #   ballotCrypto, ballot, tally, logs, worldId
 ```
 
 ## Installable, and findable
@@ -472,17 +472,20 @@ src/lib/
 ├── deployments.ts     # resolve addresses (manifest glob or VITE_* env)
 ├── contracts.ts       # ethers v6 clients + human-readable ABIs
 ├── chainElections.ts  # ElectionV4 state → Election UI model; members from events
-├── paillier.ts        # homomorphic ballot encryption (base-1e6 packing)
-├── semaphore.ts       # identity, group-from-events, nullifier, vote proof
+├── ballotCrypto.ts    # ElGamal on Baby Jubjub, tags, leaves, circuit inputs (shared with CLI + contracts)
+├── ballot.ts          # a voter's chain of ballots, building and proving the next one
+├── semaphore.ts       # identity, group-from-events, the device's last ballot tag
 ├── identityVault.ts   # seal/unseal the Semaphore secret per passkey
 ├── relay.ts           # voter calls submitted through ElectionPaymaster
 ├── logs.ts            # queryFilter from the deployment block, windowed on strict RPCs
 ├── worldId.ts         # World ID verification held by the backend: open, resume, wait
-├── tally.ts           # in-app homomorphic tally
+├── tally.ts           # decrypt the on-chain aggregate and prove it (tally circuit)
+├── tallyKey.ts        # tally keys from the wallet signature, key file
+├── tallyAudit.ts      # the reader's check: ballots on chain add up to the aggregate
 ├── countries.ts       # ISO 3166-1 alpha-3 table, localised names, flags, search
 ├── eligibility.ts     # attribute policy, its hash, and the voter-side challenge
 ├── voting.ts          # enroll / castVote / history (voter actions)
-└── organizer.ts       # createElection (+ Paillier keygen), lifecycle, gas
+└── organizer.ts       # createElection (+ tally keys), lifecycle, publish / void, gas
 src/hooks/
 ├── useElections.ts       # chain-aware list/detail (seed fallback)
 └── useOrganizerWallet.ts # injected EOA + chain enforcement (organizers)
@@ -494,24 +497,22 @@ Key rules:
   not only about gas: a per-voter sending address would publicly link a voter enrollment to
   their ballot and defeat the Semaphore proof.
 - Organizers use an **injected EOA** (MetaMask) to deploy/manage and pay for it.
-- The election's **Paillier private key** is DERIVED, not kept: from a deterministic
+- The election's **tally keys** are DERIVED, not kept: from a deterministic
   EIP-712 signature by the organizer's wallet plus the election's public `keyNonce`
-  (`lib/organizerKey.ts`, `lib/tallyKey.ts`). Nothing is at rest, so there is nothing to
-  lose and nothing to steal from a disk. A random key stored in localStorage
-  (`votain_paillier_sk_<address>`) remains the fallback for a caller with no wallet, and
-  the export exists for the tally CLI.
+  (`lib/organizerKey.ts`, `lib/tallyKey.ts`), one key per option and one for the
+  blank vote. Nothing is at rest, so there is nothing to lose and nothing to steal
+  from a disk. Random keys stored in localStorage (`votain_tally_keys_<address>`)
+  remain the fallback for a wallet that cannot derive, and the export exists for
+  the tally CLI and for another device.
 - History/receipts prove *that* and *when* you voted. They do not reveal *what*,
-  but say why precisely: the ballot is a Paillier ciphertext in the `VoteCast`
-  event, paired with the voter's nullifier, and the receipt shown to the voter IS
-  that nullifier. So the choice is hidden by the tally key being secret, not by
-  the chain being unable to hold it. Anyone with a voter's receipt AND that key
-  reads their vote, and every re-vote they made. The key never leaves the
-  organizer, is never published as an audit artefact, and the management page
-  stops offering to export it once an election is decided (see below).
-- The nullifier is not an identity: Semaphore keeps it unlinkable from the
-  enrolment commitment, so the key alone yields an anonymous table of votes and
-  deanonymizes nobody. It is the pairing with a receipt that matters, which is
-  also why it weakens coercion resistance rather than privacy in general.
+  but say why precisely: the ballot is an ElGamal ciphertext in the `BallotCast`
+  event, filed under the ballot's tag, and the receipt shown to the voter IS
+  that tag. So the choice is hidden by the tally keys being secret. Anyone with a
+  voter's receipt AND those keys reads THAT ballot. What they no longer read is
+  the voter's other ballots: each carries a tag unrelated to the others, so a
+  receipt points at one ballot and says nothing about whether it was replaced.
+- The tag is not an identity: nothing links it to the enrolment commitment, so
+  the keys alone yield an anonymous table of ballots and deanonymize nobody.
 
 ## Vote references never render at full length
 
@@ -531,58 +532,52 @@ readable.
 
 ## Coercion: what actually defends, and what only looks like it
 
-The receipt shown to a voter is their nullifier, and the `VoteCast` event pairs
-that nullifier with the ballot ciphertext. So a coercer holding both a receipt
-and the tally key reads the vote. Two ideas for closing that turn out to be
-worth writing down, one because it fails and one because it works.
+The receipt shown to a voter is their ballot's tag, and the `BallotCast` event
+pairs that tag with the ciphertext. So a coercer holding a receipt and the tally
+keys reads THAT ballot. Re-voting is what defends, and since 2026-09-24 it holds
+even against a coercer who can read chains:
 
-**Deriving the receipt from the nullifier does not help.** A one-way function of
-the nullifier looks safer, but the attacker never has to invert it: they compute
-it over every nullifier on chain, of which there are only as many as there are
-voters, and match. One-wayness buys nothing when the input space is small and
-public. More fundamentally, any receipt that lets a voter confirm their ballot is
-on chain also lets them point at it. That is the same capability, and it is the
-classic tension between individual verifiability and receipt-freeness rather than
-a formatting problem.
+**A re-vote cannot be seen.** Every ballot carries a vote and a cancellation of
+the voter's previous ballot, of nothing on a first one, proved in zero knowledge
+without saying which ballot it cancels. The tags of one voter's ballots are
+unrelated to each other. So a coercer who watched the voter cast a ballot, and
+kept its receipt, cannot tell from the chain whether a later ballot replaced it.
+Under the old scheme the ballot carried the voter's nullifier and a nonce, and a
+coercer who knew the nullifier could see that a re-vote had happened.
 
-**Re-voting is the defence, and it holds even against a coercer with the key.**
-The tally keeps only the highest nonce per nullifier (`tally.ts`), so a coercer
-can read a ballot but can never know it is the final one. To be certain they
-would have to control the voter at the moment voting closes, which is a far more
-expensive attack than reading a receipt.
+**What the key holder can still see.** The tally keys can open any single
+ballot, and its cancellation too, which shows whether that ballot replaced an
+earlier vote and for which option. Not whose ballot it is, nor which ballot it
+replaced. A coercer holding a receipt and the keys can therefore check the
+receipt's ballot and see SOME re-vote happened somewhere, never that it was their
+voter's. Removing even that needs threshold decryption; see the architecture
+document.
 
-**The threat that stays open is the organizer.** A coercer only holds the key if
-the organizer leaked it or is the coercer, and the second case breaks the
-property outright. The structural answer is threshold decryption, splitting the
-key so no single party can decrypt alone. Votain has one key and one organizer,
-so the honest claim is coercion MITIGATION through re-voting, in the Estonian
-sense, not receipt-freeness in the JCJ or Civitas sense. Worth a paragraph in the
-thesis rather than a silent gap.
+**Deriving the receipt from the tag does not help**, for the old reason: any
+receipt that lets a voter confirm their ballot is on chain also lets them point
+at it. That is the tension between individual verifiability and
+receipt-freeness, not a formatting problem. The honest claim is coercion
+resistance through invisible re-voting, not receipt-freeness in the JCJ sense.
 
 ## The tally key disappears once the election is decided
 
-Export and import of the Paillier key exist for one reason: making sure the tally
+Export and import of the tally keys exist for one reason: making sure the tally
 CAN be run, on this device or another. A closed, voided or cancelled election has
 either had its tally published or will never have one, so both actions are gone
 from that point and a line explains why.
 
-Removing the export is not only tidiness. Every ballot is a Paillier ciphertext
-stored publicly on chain, and that key is the only thing between those
-ciphertexts and reading them one at a time. Writing a fresh unencrypted copy of
-it into a Downloads folder is worth doing while it protects against losing the
-ability to count, and is pure liability afterwards. The replacement note says to
-delete the copies, and says why.
+Removing the export is not only tidiness. Every ballot is an ElGamal ciphertext
+stored publicly on chain, and those keys are the only thing between the
+ciphertexts and reading them one at a time. Writing a fresh unencrypted copy into
+a Downloads folder is worth doing while it protects against losing the ability to
+count, and is pure liability afterwards. The replacement note says to delete the
+copies, and says why.
 
-Worth stating for the thesis: this is also why the key must never be published as
-an audit artefact. Handing it to a verifier would let them confirm the tally, and
-also read every individual ballot. Votain publishes a proof of correct
-decryption instead (`src/lib/tallyProof.ts`): Paillier lets the key holder
-recover the randomness of any ciphertext, so the organizer publishes the
-randomness that opens the sum of the valid final ballots to exactly the
-published counts, and opens each ballot excluded as invalid. A stranger checks
-both against the `VoteCast` events with the public key alone, which is what the
-results screen (`TallyCheck`) and `scripts-tally --verify` do. Nothing about any
-valid ballot is revealed.
+This is also why the keys are never published as an audit artefact. The tally
+circuit proves the counts are the decryption of the election's aggregate, and
+the contract checks it before it accepts them (`lib/tally.ts`); a reader checks
+the other half, that the aggregate is the sum of the ballots on chain, with no
+key at all (`TallyCheck`, `lib/tallyAudit.ts`, `scripts-tally --verify`).
 
 ## Radix Selects are controlled, so a tap can close them
 
@@ -628,32 +623,18 @@ they were already on.
 present. It used to be three conditions in three files, and two of them tested
 `ipfsCid`, which is empty for every tally run in the app.
 
-## Tally key derivation cost
+## Tally key derivation cost, and proving cost
 
-The organizer's Paillier key is re-derived from a wallet signature rather than
-stored, which means a 2048-bit key is generated in the browser every time an
-election is created. That is pure BigInt work: **nothing in the path touches the
-chain or the network**, so the cost is identical on a local node and on Amoy.
+Deriving the tally keys is a handful of HMACs and a scalar multiplication per
+option: milliseconds. The 2048-bit Paillier key it replaced took seconds on a
+phone, which is why this section used to be long.
 
-The prime search discards candidates by trial division against the primes below
-10000 before running Miller-Rabin, and screens survivors with a single MR round
-before paying for the full forty. Roughly seven candidates in eight never reach a
-modular exponentiation. Measured in the vitest environment, one derivation went
-from **43.7s to about 6.5s**.
-
-Both filters are exact, not probabilistic shortcuts: trial division rejects only
-numbers a small prime divides, and the one-round screen rejects only numbers
-Miller-Rabin proves composite. Neither can skip a value the original walk would
-have accepted, so the derivation is unchanged.
-
-**`tallyKey.test.ts` pins the derived keypair for a fixed secret and nonce.** The
-derivation is a compatibility surface, not an implementation detail: a change
-that yields a different key silently makes every election created before it
-undecryptable. If that test fails, the fix is not to update the vector.
-
-What is left is unavoidable arithmetic, and a handful of seconds of frozen tab
-still reads as a crash. The create wizard should say what it is doing between the
-signature prompt and the transaction.
+The cost that matters now is PROVING. A ballot proof over the 5-slot circuit is
+around 73k constraints, and the tally proof around 40k; the browser downloads
+each circuit's proving key once (tens of megabytes, from `VITE_CIRCUITS_URL`) and
+proves in a few seconds on a laptop, longer on an old phone. The progress screen
+exists for that wait. Both run in snarkjs's worker threads, so the page stays
+responsive.
 
 ## What an election asks of a voter, and where that claim lives
 
@@ -749,13 +730,13 @@ which made the one public verification tool the only screen in the app that
 never touched the chain.
 
 It now goes through `findVoteReceipt` in `lib/voting.ts`, reading the same
-public `VoteCast` events the voter's own history reads. Two ways in, and the
-ambiguity between them is worth knowing about: a nullifier is a field element
+public `BallotCast` events the voter's own history reads. Two ways in, and the
+ambiguity between them is worth knowing about: a ballot tag is a field element
 and prints at exactly the same width as a transaction hash, so a `0x` string of
 32 bytes could be either and nothing about it says which. The transaction
 lookup runs first because it is one request and settles the question; only when
-no such transaction exists is the string tried as a nullifier, which costs one
-`queryFilter` per election.
+no such transaction exists is the string tried as a tag, which costs one
+indexed `queryFilter` per election.
 
 **It stays unauthenticated, and that is the point.** The value of publishing a
 nullifier is that a THIRD party can check a receipt somebody shows them: an
@@ -1222,7 +1203,7 @@ Two consequences of the roles becoming simultaneous, both on the profiles:
   stays for when the answer really is everything. Each exit clears only its own
   data (`voterSignOut` takes the voting identity and this device's vote records,
   `organizerSignOut` the remembered wallet and display name; neither touches the
-  Paillier keys, which decrypt elections already on chain) and lands the person
+  tally keys, which count elections already on chain) and lands the person
   on the remaining role's home rather than the landing page, which would read as
   having signed them out of that one too.
 

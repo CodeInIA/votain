@@ -50,7 +50,8 @@ export default function ChangeVote() {
 
   const handleConfirm = () => {
     setConfirmOpen(false);
-    // Re-vote is the same castVote path: same nullifier, next nonce is read on-chain.
+    // Re-vote is the same castVote path: it finds the voter's last ballot from
+    // their own tags and cancels it, and nothing on chain says it did.
     const optionIndex = election.candidates.findIndex(c => c.id === selected);
     navigate(`/voter/election/${election.id}/zk-proof`, {
       state: { candidateId: selected, isChangeVote: true, optionIndex, live, address: election.contractAddress },
