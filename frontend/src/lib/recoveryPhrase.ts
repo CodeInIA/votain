@@ -31,38 +31,27 @@
  */
 import { Identity } from "@semaphore-protocol/identity";
 
-/**
- * Words the phrase is built from.
- *
- * A deliberately small, plain list rather than BIP-39. These words are read off
- * a screen and typed back by someone who may never have seen a seed phrase, so
- * they are short, unambiguous when spoken, and have no near-homophones. Twelve
- * words from 128 give 84 bits, and the derivation below is deliberately slow,
- * which is what makes 84 enough: see `STRETCH_ITERATIONS`.
- *
- * NOT BIP-39 on purpose: that list exists to be compatible with wallets, and
- * borrowing it would invite someone to type this phrase into one.
- */
-const WORDS = [
-  "amber", "anchor", "apple", "arrow", "autumn", "bamboo", "beacon", "berry",
-  "bishop", "bottle", "branch", "bridge", "bronze", "butter", "cactus", "candle",
-  "canvas", "carbon", "castle", "cedar", "cherry", "chisel", "cinder", "circle",
-  "citrus", "clever", "cliff", "clover", "cobalt", "comet", "copper", "coral",
-  "cotton", "crater", "crimson", "crystal", "cyclone", "dahlia", "damson", "dawn",
-  "denim", "desert", "diamond", "dolphin", "dragon", "drift", "eagle", "ember",
-  "emerald", "falcon", "fennel", "fern", "fiddle", "flint", "forest", "fossil",
-  "galaxy", "garden", "ginger", "glacier", "granite", "gravel", "harbor", "harvest",
-  "hazel", "hollow", "indigo", "ivory", "jasmine", "jungle", "kettle", "lagoon",
-  "lantern", "laurel", "lemon", "lichen", "lilac", "linen", "lunar", "magnet",
-  "mango", "maple", "marble", "meadow", "mercury", "meteor", "mimosa", "mineral",
-  "mirror", "mosaic", "nectar", "nickel", "nutmeg", "oasis", "obsidian", "olive",
-  "onyx", "orbit", "orchid", "otter", "oyster", "pebble", "pepper", "pewter",
-  "pigeon", "pillar", "pine", "planet", "pollen", "poppy", "prairie", "prism",
-  "pumpkin", "quartz", "quiver", "raven", "ribbon", "river", "rocket", "rosemary",
-  "saffron", "sage", "salmon", "sapphire", "satin", "shadow", "shelter", "silver",
-];
+import { EFF_SHORT_WORDS } from "./wordlist";
 
-/** Words per phrase. Twelve of 128 is 84 bits. */
+/**
+ * Words the phrase is built from: see `wordlist.ts`.
+ *
+ * A plain list rather than BIP-39, on purpose. These words are read off a
+ * screen and typed back by someone who may never have seen a seed phrase, so
+ * they are short, common and unambiguous; and BIP-39 exists to be compatible
+ * with wallets, so borrowing it would invite someone to type this phrase into
+ * one.
+ *
+ * LONGER THAN IT WAS. The first list had 128 words, so twelve of them carried
+ * 84 bits. The commitments they protect are public and permanent, and a
+ * guessing attack runs against every voter at once, so the margin mattered.
+ * Twelve words from 1295 carry 124 bits, the same number of words to write
+ * down, and on top of that every guess still pays `STRETCH_ITERATIONS`.
+ */
+const WORDS = EFF_SHORT_WORDS;
+const WORD_SET: ReadonlySet<string> = new Set(WORDS);
+
+/** Words per phrase. Twelve of 1295 is about 124 bits. */
 const WORD_COUNT = 12;
 
 /** Salt of the derivation. Changing it changes every identity, so it is versioned. */
@@ -73,21 +62,27 @@ const DERIVATION_SALT = new TextEncoder().encode("votain:voter-identity:v2");
  *
  * WHY. Every voter's commitment is public and permanent in `PlatformRegistry`,
  * so an attacker can guess phrases offline, at leisure, and check each guess
- * against ALL of them at once. With a fast derivation, 84 bits spread over a
- * million voters is 2^64 guesses to find somebody: large, but a sum a
- * well-funded attacker could one day spend, against a record that never
- * expires. 600,000 rounds of PBKDF2-SHA256 (the current OWASP figure) multiply
- * every guess by about 2^19, which puts that out of reach, and costs an honest
- * voter well under a second, once, when they type their phrase.
+ * against ALL of them at once. 124 bits is out of reach already; 600,000
+ * rounds of PBKDF2-SHA256 (the current OWASP figure) multiply every guess by
+ * about 2^19 more, so a weakness found in the list or the generator later does
+ * not become a practical attack. It costs an honest voter well under a second,
+ * once, when they type their phrase.
  */
 const STRETCH_ITERATIONS = 600_000;
 
 /** A fresh phrase, from the browser's cryptographic generator. */
 export function generateRecoveryPhrase(): string {
-  // One rejection-free draw per word: 128 is a power of two, so the low seven
-  // bits of a random byte are uniform over the list with nothing to discard.
-  const bytes = crypto.getRandomValues(new Uint8Array(WORD_COUNT));
-  return Array.from(bytes, b => WORDS[b & 0x7f]).join(" ");
+  // Rejection sampling over 16-bit draws: 1295 does not divide 65536, so a
+  // plain modulo would make the first words of the list slightly likelier.
+  // Draws at or above the largest multiple of the list size are thrown away.
+  const limit = Math.floor(0x10000 / WORDS.length) * WORDS.length;
+  const words: string[] = [];
+  while (words.length < WORD_COUNT) {
+    for (const draw of crypto.getRandomValues(new Uint16Array(WORD_COUNT))) {
+      if (draw < limit && words.length < WORD_COUNT) words.push(WORDS[draw % WORDS.length]);
+    }
+  }
+  return words.join(" ");
 }
 
 /**
@@ -104,14 +99,14 @@ export function normalizePhrase(phrase: string): string {
 /** Whether a phrase could have come from here: right length, known words. */
 export function isValidPhrase(phrase: string): boolean {
   const words = normalizePhrase(phrase).split(" ");
-  return words.length === WORD_COUNT && words.every(w => WORDS.includes(w));
+  return words.length === WORD_COUNT && words.every(w => WORD_SET.has(w));
 }
 
 /** The words a phrase uses that this list does not contain, for pointing at typos. */
 export function unknownWords(phrase: string): string[] {
   return normalizePhrase(phrase)
     .split(" ")
-    .filter(w => w.length > 0 && !WORDS.includes(w));
+    .filter(w => w.length > 0 && !WORD_SET.has(w));
 }
 
 /**
