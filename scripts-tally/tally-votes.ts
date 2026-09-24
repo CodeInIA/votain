@@ -1,22 +1,27 @@
 /**
- * Votain off-chain tally.
+ * Votain off-chain tally, and the auditor's check of a published one.
  *
- * Pipeline:
+ * TALLY (the organizer, holding the key):
  *   1. Read every VoteCast event from an election.
  *   2. Coercion resistance: keep only the HIGHEST nonce per nullifier.
- *   3. Homomorphically sum the surviving Paillier ciphertexts.
- *   4. Decrypt the aggregate with the organizer's private key and unpack the
- *      per-option counters (base-B packing, blank vote = last option).
- *   5. Apply the privacy quorum, determine the outcome per voting type.
- *   6. Write an auditable JSON, optionally pin it to IPFS (Pinata) and publish
- *      the results on-chain via ElectionV4.publishResults.
+ *   3. Prove the tally with `tallyProof.ts`, the same code the browser runs:
+ *      valid ballots are summed and the sum opened to the counters; invalid
+ *      ones are excluded and each opened in public.
+ *   4. Apply the privacy quorum (the contract's own), determine the outcome.
+ *   5. Write an auditable JSON, optionally pin it to IPFS (Pinata) and publish
+ *      the results with their proof via ElectionV4.publishResults.
+ *
+ * VERIFY (anyone, with no key):
+ *   Reads the published counters and `TallyProofPublished`, and checks them
+ *   against every VoteCast on chain. Exits non-zero if they do not match.
  *
  * Usage:
  *   npm run tally -- <electionAddress> [--publish] [--pin]
+ *   npm run tally -- <electionAddress> --verify
  *
  * Env (.env):
  *   RPC_URL                  Amoy RPC
- *   PAILLIER_KEY_FILE        path to the JSON keypair exported by the organizer
+ *   PAILLIER_KEY_FILE        (tally) path to the JSON keypair exported by the organizer
  *   ORGANIZER_PRIVATE_KEY    (only with --publish) EOA that owns the election
  *   PINATA_JWT               (only with --pin) Pinata API JWT
  */
@@ -24,6 +29,14 @@ import "dotenv/config";
 import { readFileSync, writeFileSync } from "node:fs";
 import { Contract, JsonRpcProvider, Wallet } from "ethers";
 import { PublicKey, PrivateKey } from "paillier-bigint";
+import {
+  decodeTallyProof,
+  encodeTallyProof,
+  finalBallots,
+  proveTally,
+  verifyTally,
+  type FinalBallot,
+} from "../frontend/src/lib/tallyProof.js";
 
 /**
  * Fallback only. The base is fixed into every ballot at encryption time, so an
@@ -49,8 +62,12 @@ const ELECTION_ABI = [
   "function paillierPublicKey() view returns (string)",
   "function metadataJson() view returns (string)",
   "function name() view returns (string)",
-  "function publishResults(string ipfsCid, uint256[] tallyResults)",
+  "function privacyQuorum() view returns (uint256)",
+  "function resultsPublished() view returns (bool)",
+  "function tally() view returns (uint256[])",
+  "function publishResults(string ipfsCid, uint256[] tallyResults, uint256 invalidBallots, bytes tallyProof)",
   "event VoteCast(uint256 indexed nullifier, bytes voteCiphertext, uint256 nonce, uint256 timestamp)",
+  "event TallyProofPublished(uint256 invalidBallots, bytes proof)",
 ];
 
 interface SerializedKeyPair {
@@ -122,19 +139,19 @@ async function pinToIpfs(json: object): Promise<string> {
 const MAX_LOG_RANGE = 10_000;
 
 /**
- * Reads every VoteCast event for an election.
+ * Reads every event matching `filter` for an election.
  *
  * Starts from FROM_BLOCK when set (the deployment block, printed by
  * contracts/scripts/deploy.ts into deployments/amoy.json), otherwise from
  * genesis. Retries in fixed windows when the endpoint rejects the range, so the
  * audit works on any provider rather than only on the unlimited ones.
  */
-async function queryAllVoteCast(
+async function queryAll(
   election: Contract,
   provider: JsonRpcProvider,
+  filter: Parameters<Contract["queryFilter"]>[0],
 ): Promise<Awaited<ReturnType<Contract["queryFilter"]>>> {
   const from = Number(process.env.FROM_BLOCK ?? 0);
-  const filter = election.filters.VoteCast();
 
   try {
     return await election.queryFilter(filter, from);
@@ -159,6 +176,61 @@ async function queryAllVoteCast(
   }
 }
 
+/** The surviving ballot of every voter, from every VoteCast on chain. */
+async function readFinalBallots(
+  election: Contract,
+  provider: JsonRpcProvider,
+): Promise<{ ballots: FinalBallot[]; cast: number }> {
+  // An auditor must see every ballot or the tally is wrong, so a truncated log
+  // range is never acceptable here.
+  const events = await queryAll(election, provider, election.filters.VoteCast());
+  const ballots = finalBallots(
+    events.map(e => {
+      const args = (e as unknown as { args: { nullifier: bigint; voteCiphertext: string; nonce: bigint } }).args;
+      return { nullifier: args.nullifier, nonce: args.nonce, ciphertext: args.voteCiphertext };
+    }),
+  );
+  return { ballots, cast: events.length };
+}
+
+/** `--verify`: checks a published result against the chain, with no key. */
+async function verifyPublished(address: string, election: Contract, provider: JsonRpcProvider) {
+  if (!(await election.resultsPublished())) {
+    console.error("No results have been published for this election yet.");
+    process.exit(2);
+  }
+  const [pkJson, metadataJson, published] = await Promise.all([
+    election.paillierPublicKey() as Promise<string>,
+    election.metadataJson() as Promise<string>,
+    election.tally() as Promise<bigint[]>,
+  ]);
+  const proofs = await queryAll(election, provider, election.filters.TallyProofPublished());
+  if (proofs.length === 0) {
+    console.error("Published without a proof (a contract from before tally proofs): nothing to verify.");
+    process.exit(3);
+  }
+  const args = (proofs[0] as unknown as { args: { invalidBallots: bigint; proof: string } }).args;
+  const { ballots } = await readFinalBallots(election, provider);
+  const { n, g } = JSON.parse(pkJson) as { n: string; g: string };
+
+  const verdict = verifyTally({
+    publicKey: { n: BigInt(n), g: BigInt(g) },
+    ballots,
+    counts: [...published],
+    invalidBallots: args.invalidBallots,
+    proof: decodeTallyProof(args.proof),
+    base: counterBaseOf(metadataJson),
+  });
+  if (!verdict.ok) {
+    console.error(`${address}: DOES NOT VERIFY: ${verdict.reason}`);
+    process.exit(4);
+  }
+  console.log(
+    `${address}: verified. ${verdict.validBallots} valid ballots add up to the published counts ` +
+      `[${published.join(", ")}]; ${verdict.invalidBallots} excluded, each opened in the proof.`,
+  );
+}
+
 async function main() {
   const address = process.argv[2];
   if (!address) {
@@ -167,6 +239,7 @@ async function main() {
   }
   const doPublish = process.argv.includes("--publish");
   const doPin = process.argv.includes("--pin");
+  const doVerify = process.argv.includes("--verify");
 
   // Tenderly serves eth_getLogs over the full block range. drpc and publicnode
   // cap it at 10000 blocks; queryAllVoteCast() below falls back to windowed
@@ -175,6 +248,7 @@ async function main() {
     process.env.RPC_URL ?? "https://polygon-amoy.gateway.tenderly.co",
   );
   const election = new Contract(address, ELECTION_ABI, provider);
+  if (doVerify) return verifyPublished(address, election, provider);
 
   const [numOptionsBn, votingTypeBn, thresholdBn, pkJson, name] = await Promise.all([
     election.numOptions(),
@@ -187,73 +261,41 @@ async function main() {
   const votingType = Number(votingTypeBn);
   const totalSlots = numOptions + 1; // + blank vote
 
-  // 1. All votes. An auditor must see every ballot or the tally is wrong, so a
-  //    truncated log range is never acceptable here.
-  const events = await queryAllVoteCast(election, provider);
-  console.log(`Found ${events.length} VoteCast events`);
+  // 1-2. All votes, and each voter's last one.
+  const { ballots, cast } = await readFinalBallots(election, provider);
+  console.log(`Found ${cast} VoteCast events, ${ballots.length} voters after coercion-resistance dedup`);
 
-  // 2. Coercion resistance: highest nonce per nullifier wins
-  const latest = new Map<string, { ciphertext: string; nonce: bigint }>();
-  for (const e of events) {
-    const args = (e as unknown as { args: { nullifier: bigint; voteCiphertext: string; nonce: bigint } }).args;
-    const key = args.nullifier.toString();
-    const existing = latest.get(key);
-    if (!existing || args.nonce > existing.nonce) {
-      latest.set(key, { ciphertext: args.voteCiphertext, nonce: args.nonce });
-    }
-  }
-  const finalVotes = [...latest.values()];
-  console.log(`${finalVotes.length} unique voters after coercion-resistance dedup`);
-
-  // Read once: the quorum below and the counter base further down both come
-  // from it, and two round trips could disagree if the chain moved between them.
   const metadataJson: string = await election.metadataJson();
 
-  // Privacy quorum (metadata): never reveal a tally computed from too few voters
-  let privacyQuorum = 0;
-  try {
-    const meta = JSON.parse(metadataJson) as { privacyQuorum?: number };
-    privacyQuorum = meta.privacyQuorum ?? 0;
-  } catch { /* no metadata */ }
-
-  if (finalVotes.length < privacyQuorum) {
-    console.error(`Privacy quorum not met (${finalVotes.length} < ${privacyQuorum}). Election should be VOIDED.`);
+  // The contract's own privacy quorum, which is the one publishResults
+  // enforces; the copy in the metadata is for display and could disagree.
+  const privacyQuorum = Number(await election.privacyQuorum());
+  if (ballots.length < privacyQuorum) {
+    console.error(`Privacy quorum not met (${ballots.length} < ${privacyQuorum}). Election should be VOIDED.`);
     process.exit(2);
   }
 
-  // 3. Homomorphic sum
   const { publicKey, privateKey } = restoreKeyPair(
     JSON.parse(readFileSync(process.env.PAILLIER_KEY_FILE ?? "paillier-key.json", "utf-8")) as SerializedKeyPair,
   );
-  // Sanity: the key file must match the on-chain public key
+  // The key file must match the on-chain public key, or every opening fails.
   if ("0x" + publicKey.n.toString(16) !== JSON.parse(pkJson).n) {
-    console.warn("WARNING: key file public key does not match the on-chain Paillier public key");
+    throw new Error("the key file does not belong to this election's on-chain public key");
   }
 
-  let counts: bigint[];
-  if (finalVotes.length === 0) {
-    counts = new Array(totalSlots).fill(0n);
-  } else {
-    const aggregate = finalVotes.map(v => BigInt(v.ciphertext)).reduce((acc, c) => publicKey.addition(acc, c));
-    // 4. Decrypt + unpack, in the base this election recorded
-    const base = counterBaseOf(metadataJson);
-    let remaining = privateKey.decrypt(aggregate);
-    counts = [];
-    for (let i = 0; i < totalSlots; i++) {
-      counts.push(remaining % base);
-      remaining /= base;
-    }
-    if (remaining !== 0n) throw new Error("tally overflow: a counter exceeded the counter base");
-
-    // Every ballot adds one to exactly one counter, so the counters have to
-    // account for all of them. This is the check that sees a carry BETWEEN
-    // counters; the leftover above only sees one past the last.
-    const declared = counts.reduce((a, c) => a + c, 0n);
-    if (declared !== BigInt(finalVotes.length)) {
-      throw new Error(
-        `tally does not match the ballots counted: unpacked ${declared}, expected ${finalVotes.length}`,
-      );
-    }
+  // 3. Prove.
+  const proven = proveTally({
+    publicKey: { n: publicKey.n, g: publicKey.g },
+    lambda: privateKey.lambda,
+    decrypt: c => privateKey.decrypt(c),
+    ballots,
+    slots: totalSlots,
+    base: counterBaseOf(metadataJson),
+  });
+  const counts = proven.counts;
+  const proofBytes = encodeTallyProof(proven.proof);
+  if (proven.invalidBallots > 0) {
+    console.log(`${proven.invalidBallots} ballot(s) excluded as invalid, each opened in the proof`);
   }
 
   // 5. Outcome
@@ -263,9 +305,11 @@ async function main() {
   const audit = {
     election: { address, name, votingType: VOTING_TYPE[votingType], numOptions },
     computedAt: new Date().toISOString(),
-    totalVotesCast: events.length,
-    uniqueVoters: finalVotes.length,
+    totalVotesCast: cast,
+    uniqueVoters: ballots.length,
+    invalidBallots: proven.invalidBallots,
     tally: counts.map(c => Number(c)),
+    tallyProof: proofBytes,
     outcome,
     winnerIndex,
   };
@@ -287,9 +331,14 @@ async function main() {
     if (!process.env.ORGANIZER_PRIVATE_KEY) throw new Error("ORGANIZER_PRIVATE_KEY not set");
     const signer = new Wallet(process.env.ORGANIZER_PRIVATE_KEY, provider);
     const writer = election.connect(signer) as unknown as {
-      publishResults: (cid: string, tally: bigint[]) => Promise<{ wait: () => Promise<{ hash: string }> }>;
+      publishResults: (
+        cid: string,
+        tally: bigint[],
+        invalidBallots: bigint,
+        proof: string,
+      ) => Promise<{ wait: () => Promise<{ hash: string }> }>;
     };
-    const tx = await writer.publishResults(cid, counts);
+    const tx = await writer.publishResults(cid, counts, BigInt(proven.invalidBallots), proofBytes);
     const receipt = await tx.wait();
     console.log(`Results published on-chain: ${receipt.hash}`);
   }

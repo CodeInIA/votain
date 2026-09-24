@@ -4,6 +4,10 @@
   "description": "Off-chain homomorphic tally + IPFS publication for Votain elections",
   "type": "module",
   "license": "AGPL-3.0-only",
+  "engines": {
+    "node": ">=24",
+    "npm": ">=11"
+  },
   "scripts": {
     "tally": "tsx tally-votes.ts",
     "typecheck": "tsc --noEmit"
