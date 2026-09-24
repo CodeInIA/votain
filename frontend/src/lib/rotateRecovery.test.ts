@@ -37,7 +37,7 @@ vi.mock('./passkeyPrf', async () => {
 });
 
 const VIEJA =
-  'shelter drift canvas rosemary marble linen emerald eagle lilac glacier mineral hollow';
+  'salad acorn radar bagel tulip vapor wafer yeast zebra blimp cider dwarf';
 
 describe('rotating to a new identity', () => {
   beforeEach(() => {
