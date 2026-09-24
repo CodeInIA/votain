@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { network } from "hardhat";
-import { deployStack, baseConfig, DUMMY_PROOF, type Stack } from "./fixtures.js";
+import { deployStack, baseConfig, DUMMY_PROOF, makeBallot, type Stack } from "./fixtures.js";
 
 const { ethers, networkHelpers } = await network.create();
 
@@ -638,7 +638,7 @@ describe("ElectionPaymaster, what its owner cannot do", () => {
       stack.paymaster,
       "RelayParamsOutOfBounds",
     );
-    await expect(p.setRelayParams(50n * gwei, 32_000n, 16n, 3_000_001n)).to.be.revertedWithCustomError(
+    await expect(p.setRelayParams(50n * gwei, 32_000n, 16n, 6_000_001n)).to.be.revertedWithCustomError(
       stack.paymaster,
       "RelayParamsOutOfBounds",
     );
@@ -646,7 +646,7 @@ describe("ElectionPaymaster, what its owner cannot do", () => {
       stack.paymaster,
       "RelayParamsOutOfBounds",
     );
-    await expect(p.setRelayParams(500n * gwei, 100_000n, 16n, 3_000_000n)).to.emit(
+    await expect(p.setRelayParams(500n * gwei, 100_000n, 16n, 6_000_000n)).to.emit(
       stack.paymaster,
       "RelayParamsChanged",
     );
@@ -655,13 +655,18 @@ describe("ElectionPaymaster, what its owner cannot do", () => {
   });
 });
 
-describe("ElectionPaymaster, sponsored re-votes", () => {
-  it("sponsors a first ballot at once and a re-vote only after the cooldown", async () => {
+describe("ElectionPaymaster, sponsored ballots", () => {
+  /**
+   * The paymaster no longer keeps a per-voter cooldown: it keyed on the
+   * Semaphore nullifier, which made every voter's ballots publicly linkable.
+   * The election's epoch tags bound the same rate, so a relayed voter gets one
+   * sponsored ballot per epoch and the relay learns nothing about whose.
+   */
+  it("relays and reimburses a ballot, and one voter gets one per epoch", async () => {
     const now = await networkHelpers.time.latest();
     await (
       await stack.factory
         .connect(organizer)
-        // Voting open long enough for a re-vote after the cooldown.
         .createElection(baseConfig(now, { voteEnd: now + 3 * 3600 }), 0n, {
           value: ethers.parseEther("1"),
         })
@@ -674,18 +679,26 @@ describe("ElectionPaymaster, sponsored re-votes", () => {
     await (await stack.registry.registerMember(nullifier, commitment)).wait();
     await (await stack.paymaster.connect(relayer).relayEnroll(address, commitment)).wait();
     await networkHelpers.time.increaseTo(await election.voteStart());
-    const root = await election.merkleTreeRoot();
-    const vote = (ballot: string) =>
-      stack.paymaster
-        .connect(relayer)
-        .relayVote(address, ballot, 7n, root, 1n, DUMMY_PROOF.pA, DUMMY_PROOF.pB, DUMMY_PROOF.pC);
 
-    await (await vote("0x01")).wait();
-    await expect(vote("0x02")).to.be.revertedWithCustomError(stack.paymaster, "RevoteTooSoon");
+    const reserved = await stack.paymaster.reservedFor(address);
+    const first = await makeBallot(election, 0, { epochTag: 5_001n });
+    await expect(stack.paymaster.connect(relayer).relayVote(address, first.ballot, DUMMY_PROOF))
+      .to.emit(election, "BallotCast")
+      .and.to.emit(stack.paymaster, "VoteSponsored");
+    expect(await stack.paymaster.reservedFor(address)).to.be.lessThan(reserved);
 
-    // The override is delayed, never refused: after the cooldown it lands.
-    await networkHelpers.time.increase(Number(await stack.paymaster.REVOTE_COOLDOWN()));
-    await expect(vote("0x02")).to.emit(election, "VoteCast");
-    expect(await election.nullifierNonces(7n)).to.equal(2n);
+    const again = await makeBallot(election, 1, { previous: first.vote, epochTag: 5_001n });
+    await expect(
+      stack.paymaster.connect(relayer).relayVote(address, again.ballot, DUMMY_PROOF),
+    ).to.be.revertedWithCustomError(election, "EpochAlreadyCast");
+
+    // The override is delayed, never refused: next epoch, it lands.
+    await networkHelpers.time.increase(Number(await election.EPOCH_LENGTH()));
+    const later = await makeBallot(election, 1, { previous: first.vote, epochTag: 5_002n });
+    await expect(stack.paymaster.connect(relayer).relayVote(address, later.ballot, DUMMY_PROOF)).to.emit(
+      election,
+      "BallotCast",
+    );
+    expect(await election.voteCount()).to.equal(2n);
   });
 });

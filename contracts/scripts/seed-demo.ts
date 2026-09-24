@@ -4,18 +4,21 @@
  * `seed-local.ts` creates three empty elections, which is enough to see the
  * Discover grid but not enough to exercise the app. This one drives real
  * elections through their whole life: registers voters in PlatformRegistry,
- * enrols them through ElectionPaymaster, casts genuine Groth16-proved Paillier
- * ballots, re-votes to show coercion resistance, and publishes decrypted results
+ * enrols them through ElectionPaymaster, casts genuine Groth16-proved ElGamal
+ * ballots, re-votes to show coercion resistance, and publishes proved results
  * so every results layout has something to render.
  *
  * Time is moved with `evm_increaseTime`, so the historical elections are created
  * and completed FIRST and the live ones last: the chain clock only goes forward,
  * and an election created earlier would otherwise have its window dragged past.
  *
- * The Paillier private key of each tallyable election is written to
- * `deployments/tally-keys/`, because the UI normally derives it from the
- * organizer passkey and a seeded election has no passkey behind it. Import the
- * file with the "Import decryption key" button in the organizer view.
+ * The tally key file of each election left in tallying is written to
+ * `deployments/tally-keys/`, because the UI normally derives the keys from the
+ * organizer's wallet and a seeded election has no wallet signature behind it.
+ * Import the file with the "Import decryption key" button in the organizer view.
+ *
+ * Needs the circuits built (`npm run build` in circuits/): every ballot and
+ * every result is proved for real, against the verifiers deploy.ts installed.
  *
  * Usage: npx hardhat run scripts/seed-demo.ts --network localhost
  */
@@ -24,12 +27,9 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Identity } from "@semaphore-protocol/identity";
-import { Group } from "@semaphore-protocol/group";
-import { generateProof } from "@semaphore-protocol/proof";
-import { poseidon2 } from "poseidon-lite/poseidon2";
-import { generateRandomKeys, PublicKey } from "paillier-bigint";
 import type { Wallet } from "ethers";
-import { encodeTallyProof, finalBallots, proveTally } from "../../frontend/src/lib/tallyProof.js";
+import { deriveTallyKeys, flattenPoints } from "../../frontend/src/lib/ballotCrypto.js";
+import { proveBallot, proveTally } from "./lib/prover.js";
 import { createHmac } from "node:crypto";
 
 const { ethers } = await network.getOrCreate();
@@ -57,7 +57,6 @@ const ONLY = (process.env.SEED_ONLY ?? "")
 
 const HOUR = 3600;
 const DAY = 24 * HOUR;
-const COUNTER_BASE = 1_000_000_000_000n;
 
 /**
  * Privacy quorum for seeded elections. Below the number of voters each spec
@@ -66,8 +65,6 @@ const COUNTER_BASE = 1_000_000_000_000n;
  * nothing else.
  */
 const SEED_PRIVACY_QUORUM = 3;
-/// 1024-bit keeps seeding quick; the app generates 2048-bit for real elections.
-const PAILLIER_BITS = 1024;
 
 const VotingType = {
   SIMPLE_PLURALITY: 0,
@@ -76,31 +73,12 @@ const VotingType = {
   WITNESS_THRESHOLD: 3,
 } as const;
 
-const toHex = (x: bigint): string => "0x" + x.toString(16);
 
 /// Coarse timing, so a slow seed run says WHERE it is slow instead of just hanging.
 const t0 = Date.now();
 const elapsed = (): string => `${((Date.now() - t0) / 1000).toFixed(1)}s`;
 function step(label: string): void {
   console.log(`  [${elapsed()}] ${label}`);
-}
-
-/** Ballot ciphertext goes to Solidity as `bytes`, so it must have even length. */
-function encryptBallot(pk: PublicKey, optionIndex: number): string {
-  const digits = pk.encrypt(COUNTER_BASE ** BigInt(optionIndex)).toString(16);
-  return "0x" + (digits.length % 2 === 0 ? digits : "0" + digits);
-}
-
-function hashToField(v: bigint): bigint {
-  return BigInt(ethers.keccak256(ethers.zeroPadValue(ethers.toBeHex(v), 32))) >> 8n;
-}
-
-function voteNullifier(identity: Identity, scope: bigint): bigint {
-  return poseidon2([hashToField(scope), identity.secretScalar]);
-}
-
-function voteMessage(ciphertext: string, nonce: bigint): bigint {
-  return BigInt(ethers.solidityPackedKeccak256(["bytes", "uint256"], [ciphertext, nonce]));
 }
 
 /**
@@ -524,13 +502,19 @@ async function main(): Promise<void> {
     // tight and every enrollment reverted with `EnrollmentNotOpen`. The
     // advances below also step 60 seconds into each window, which sets the
     // floor.
+    //
+    // The voting window is sized by the PROVING too. A local node stamps blocks
+    // from the wall clock, and each ballot is a real Groth16 proof that takes
+    // seconds to make, so a window sized for instant ballots closed before the
+    // last of them landed. A minute per ballot is generous on any machine.
     if (spec.finish) {
-      spec = { ...spec, enrollFrom: -30, enrollTo: 60, voteFrom: 60, voteTo: 150 };
+      const ballots = spec.ballots.length + (spec.revote ? 1 : 0);
+      spec = { ...spec, enrollFrom: -30, enrollTo: 60, voteFrom: 60, voteTo: 120 + 60 * ballots };
     }
 
     const organizer = signers[spec.organizerAccount ?? 0];
-    step(`${spec.name}: generating Paillier key`);
-    const keys = await generateRandomKeys(PAILLIER_BITS);
+    // Random, and kept: a seeded election has no wallet to derive them from.
+    const keys = await deriveTallyKeys(crypto.getRandomValues(new Uint8Array(32)), "seed", spec.candidates.length + 1);
     if (spec.eligibility && !attesterWallet) {
       throw new Error(
         `"${spec.name}" declares an eligibility policy but no attester key was found. ` +
@@ -551,19 +535,14 @@ async function main(): Promise<void> {
       enrollEnd: created + spec.enrollTo,
       voteStart: created + spec.voteFrom,
       voteEnd: created + spec.voteTo,
-      scope: BigInt(ethers.hexlify(ethers.randomBytes(31))),
-      paillierPublicKey: JSON.stringify({
-        n: toHex(keys.publicKey.n),
-        g: toHex(keys.publicKey.g),
-      }),
-      // No keyNonce: the key was not derived from a passkey, so the UI will ask
-      // the organizer to import it rather than trying to re-derive it.
+      tallyKeys: flattenPoints(keys.keys),
+      // No keyNonce: the keys were not derived from a wallet, so the UI will ask
+      // the organizer to import them rather than trying to re-derive them.
       metadataJson: JSON.stringify({
         description: spec.description,
         organizerName: spec.organizerName,
         candidates: spec.candidates,
         privacyQuorum: spec.privacyQuorum ?? SEED_PRIVACY_QUORUM,
-        counterBase: COUNTER_BASE.toString(),
         ...(spec.eligibility ? { eligibility: canonicalPolicy(spec.eligibility) } : {}),
         tags: spec.tags ?? ["demo"],
       }),
@@ -700,44 +679,25 @@ async function main(): Promise<void> {
 
     // Voting.
     await advanceTo(created + spec.voteFrom + 60);
-    const group = new Group(voting.map(identity => identity.commitment));
-    const scope: bigint = await election.scope();
-
     /**
-     * `sponsored` false submits straight to the election, paying its own gas.
-     * That is how the seed re-votes: the paymaster sponsors a re-vote only an
-     * hour after the last one, and waiting an hour here would push the chain
-     * clock an hour past the wall for every election that follows.
+     * Proved and relayed exactly as a voter's browser does it. `epoch` is how
+     * the seed re-votes without waiting: one ballot per voter per epoch, and a
+     * proof may name the current epoch or the one before, so a re-vote proved
+     * for the previous epoch lands straight away. Waiting an hour instead would
+     * push the chain clock an hour past the wall for every election after it.
      */
-    const castFor = async (voterIndex: number, option: number, sponsored = true): Promise<void> => {
-      const identity = voting[voterIndex];
-      const ciphertext = encryptBallot(keys.publicKey, option);
-      const nonce: bigint = await election.nullifierNonces(voteNullifier(identity, scope));
-      const proof = await generateProof(identity, group, voteMessage(ciphertext, nonce), scope);
-      const p = proof.points.map(BigInt);
-      const args: [string, bigint, bigint, bigint, [bigint, bigint], [[bigint, bigint], [bigint, bigint]], [bigint, bigint]] = [
-        ciphertext,
-        BigInt(proof.nullifier),
-        BigInt(proof.merkleTreeRoot),
-        BigInt(proof.merkleTreeDepth),
-        [p[0], p[1]],
-        [
-          [p[2], p[3]],
-          [p[4], p[5]],
-        ],
-        [p[6], p[7]],
-      ];
-      await (
-        await (sponsored ? paymaster.relayVote(address, ...args) : election.castVote(...args))
-      ).wait();
+    const castFor = async (voterIndex: number, option: number, epoch?: bigint): Promise<void> => {
+      const { ballot, proof } = await proveBallot(election, voting[voterIndex], option, { epoch });
+      await (await paymaster.relayVote(address, ballot, proof)).wait();
     };
 
+    step(`${spec.name}: proving ${spec.ballots.length} ballots`);
     for (let i = 0; i < spec.ballots.length; i++) await castFor(i, spec.ballots[i]);
 
     const finalChoices = [...spec.ballots];
     if (spec.revote) {
       const [voterIndex, replacement] = spec.revote;
-      await castFor(voterIndex, replacement, false);
+      await castFor(voterIndex, replacement, (await election.currentEpoch()) - 1n);
       finalChoices[voterIndex] = replacement;
     }
 
@@ -750,34 +710,16 @@ async function main(): Promise<void> {
 
     if (spec.finish === "publish") {
       await advanceTo(created + spec.voteTo + 60);
-      // Proved exactly as the organizer's browser proves it, so the results
-      // screen of every seeded election verifies against its own ballots.
-      const events = await election.queryFilter(election.filters.VoteCast());
-      const tally = proveTally({
-        publicKey: { n: keys.publicKey.n, g: keys.publicKey.g },
-        lambda: keys.privateKey.lambda,
-        decrypt: c => keys.privateKey.decrypt(c),
-        ballots: finalBallots(
-          events.map(e => {
-            const a = (e as unknown as { args: { nullifier: bigint; nonce: bigint; voteCiphertext: string } }).args;
-            return { nullifier: a.nullifier, nonce: a.nonce, ciphertext: a.voteCiphertext };
-          }),
-        ),
-        slots: spec.candidates.length + 1,
-        base: COUNTER_BASE,
-      });
+      // Proved exactly as the organizer's browser proves it, and checked by
+      // the election before it accepts the result.
+      const tally = await proveTally(election, keys.secrets);
       const expected = new Array<bigint>(spec.candidates.length + 1).fill(0n);
       for (const choice of finalChoices) expected[choice] += 1n;
       if (tally.counts.join() !== expected.join()) {
         throw new Error(`${spec.name}: tallied ${tally.counts.join()}, expected ${expected.join()}`);
       }
       await (
-        await election.publishResults(
-          `Qm${spec.name.slice(0, 8).replace(/\W/g, "")}Demo`,
-          tally.counts,
-          BigInt(tally.invalidBallots),
-          encodeTallyProof(tally.proof),
-        )
+        await election.publishResults(`Qm${spec.name.slice(0, 8).replace(/\W/g, "")}Demo`, tally.counts, tally.proof)
       ).wait();
 
       const outcomeNames = ["NONE", "WINNER", "TIE", "APPROVED", "REJECTED", "THRESHOLD_NOT_MET"];
@@ -790,17 +732,8 @@ async function main(): Promise<void> {
       await advanceTo(created + spec.voteTo + 60);
       writeFileSync(
         join(keyDir, `${address}.json`),
-        JSON.stringify(
-          {
-            publicKey: { n: toHex(keys.publicKey.n), g: toHex(keys.publicKey.g) },
-            privateKey: {
-              lambda: toHex(keys.privateKey.lambda),
-              mu: toHex(keys.privateKey.mu),
-            },
-          },
-          null,
-          2,
-        ) + "\n",
+        // The format `tallyKey.ts` exports and imports.
+        JSON.stringify({ version: 2, secrets: keys.secrets.map(x => "0x" + x.toString(16)) }, null, 2) + "\n",
       );
       console.log(`OK  ${spec.name}\n    -> ${address}  [TALLYING - key in deployments/tally-keys/]`);
       return;

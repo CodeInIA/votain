@@ -8,10 +8,13 @@ import {
   Phase,
   Outcome,
   DUMMY_PROOF,
-  PLACEHOLDER_TALLY_PROOF,
   ZERO_ADDRESS,
+  makeBallot,
+  testTallySecrets,
+  type CastVote,
   type Stack,
 } from "./fixtures.js";
+import { decryptTally, unflattenPoints } from "../../frontend/src/lib/ballotCrypto.js";
 
 const { ethers, networkHelpers } = await network.create();
 
@@ -35,24 +38,27 @@ async function freshElection(overrides = {}): Promise<any> {
   return deployElection(ethers, stack, organizer, baseConfig(now, overrides));
 }
 
-/// An election whose voter count the test sets directly, for outcome arithmetic.
-async function harnessElection(overrides = {}): Promise<any> {
-  const now = await networkHelpers.time.latest();
-  return deployElection(
-    ethers,
-    stack,
-    organizer,
-    baseConfig(now, overrides),
-    ZERO_ADDRESS,
-    "ElectionV4Harness",
-  );
+/// Publishes with a proof the mock tally verifier accepts.
+function publishCall(election: any, counts: bigint[]) {
+  return election.connect(organizer).publishResults("cid", counts, DUMMY_PROOF);
 }
 
-/// Publishes with the placeholder proof and no excluded ballots.
-function publishCall(election: any, counts: bigint[], invalid = 0n) {
-  return election
-    .connect(organizer)
-    .publishResults("cid", counts, invalid, PLACEHOLDER_TALLY_PROOF);
+/// Casts one ballot for `choice`, cancelling `previous` when given.
+async function castFor(election: any, choice: number, previous: CastVote | null = null): Promise<CastVote> {
+  const { ballot, vote } = await makeBallot(election, choice, { previous });
+  await (await election.connect(voter).castVote(ballot, DUMMY_PROOF)).wait();
+  return vote;
+}
+
+/// What the contract's aggregate decrypts to under the test keys.
+async function decryptAggregate(election: any): Promise<bigint[]> {
+  const [a, b] = await election.aggregate();
+  const numOptions: bigint = await election.numOptions();
+  return decryptTally(
+    testTallySecrets(numOptions),
+    { a: [a[0], a[1]], b: unflattenPoints(b) },
+    Number(await election.voteCount()),
+  );
 }
 
 let commitmentSeq = 1_000n;
@@ -64,13 +70,12 @@ function nextCommitment(): { nullifier: bigint; commitment: bigint } {
 describe("ElectionV4, config validation", () => {
   it("rejects invalid time windows and option counts", async () => {
     const now = await networkHelpers.time.latest();
-    const Election = await ethers.getContractFactory("ElectionV4", {
-      libraries: { "PoseidonT3": stack.poseidonAddress },
-    });
+    const Election = await ethers.getContractFactory("ElectionV4", { libraries: stack.libraries });
 
     const deployWith = (cfg: ReturnType<typeof baseConfig>) =>
       Election.deploy(
-        stack.verifier.getAddress(),
+        stack.ballotVerifiers.at(-1).getAddress(),
+        stack.tallyVerifiers.at(-1).getAddress(),
         stack.registry.getAddress(),
         ZERO_ADDRESS,
         organizer.address,
@@ -105,13 +110,12 @@ describe("ElectionV4, config validation", () => {
 
   it("rejects names and metadata outside the byte bounds", async () => {
     const now = await networkHelpers.time.latest();
-    const Election = await ethers.getContractFactory("ElectionV4", {
-      libraries: { "PoseidonT3": stack.poseidonAddress },
-    });
+    const Election = await ethers.getContractFactory("ElectionV4", { libraries: stack.libraries });
 
     const deployWith = (cfg: ReturnType<typeof baseConfig>) =>
       Election.deploy(
-        stack.verifier.getAddress(),
+        stack.ballotVerifiers.at(-1).getAddress(),
+        stack.tallyVerifiers.at(-1).getAddress(),
         stack.registry.getAddress(),
         ZERO_ADDRESS,
         organizer.address,
@@ -201,7 +205,10 @@ describe("ElectionV4, enrollment", () => {
 
     expect(await election.memberCount()).to.equal(1n);
     expect(await election.hasMember(commitment)).to.equal(true);
-    expect(await election.rootTimestamps(await election.merkleTreeRoot())).to.be.greaterThan(0n);
+    // The root it replaced, the empty tree's, is recorded as superseded now, so
+    // a proof built against it stays valid for the window; the current one is not.
+    expect(await election.rootTimestamps(0n)).to.be.greaterThan(0n);
+    expect(await election.rootTimestamps(await election.merkleTreeRoot())).to.equal(0n);
 
     // Duplicate enrollment
     await expect(election.connect(voter).enroll(commitment)).to.be.revertedWithCustomError(
@@ -265,66 +272,181 @@ describe("ElectionV4, enrollment", () => {
 });
 
 describe("ElectionV4, voting", () => {
+  async function votingElection(overrides = {}): Promise<any> {
+    const election = await freshElection(overrides);
+    const { nullifier, commitment } = nextCommitment();
+    await platformRegister(nullifier, commitment);
+    await (await election.connect(voter).enroll(commitment)).wait();
+    await networkHelpers.time.increaseTo(await election.voteStart());
+    return election;
+  }
+
   it("full happy path: enroll, vote, re-vote (coercion resistance), close", async () => {
     const election = await freshElection();
     const { nullifier, commitment } = nextCommitment();
     await platformRegister(nullifier, commitment);
     await (await election.connect(voter).enroll(commitment)).wait();
 
-    const root = await election.merkleTreeRoot();
-
     // Voting not open yet
-    await expect(
-      election.connect(voter).castVote("0x01", nullifier, root, 1n, DUMMY_PROOF.pA, DUMMY_PROOF.pB, DUMMY_PROOF.pC),
-    ).to.be.revertedWithCustomError(election, "VotingNotOpen");
+    const early = await makeBallot(election, 0);
+    await expect(election.connect(voter).castVote(early.ballot, DUMMY_PROOF)).to.be.revertedWithCustomError(
+      election,
+      "VotingNotOpen",
+    );
 
     await networkHelpers.time.increaseTo(await election.voteStart());
     expect(await election.phase()).to.equal(Phase.ACTIVE);
 
-    // First vote (nonce 0)
-    await expect(
-      election.connect(voter).castVote("0x0111", nullifier, root, 1n, DUMMY_PROOF.pA, DUMMY_PROOF.pB, DUMMY_PROOF.pC),
-    ).to.emit(election, "VoteCast");
-    expect(await election.nullifierNonces(nullifier)).to.equal(1n);
+    const first = await makeBallot(election, 0);
+    await expect(election.connect(voter).castVote(first.ballot, DUMMY_PROOF)).to.emit(election, "BallotCast");
+    const rootAfterFirst = await election.ballotsRoot();
+    expect(rootAfterFirst).to.not.equal(0n);
 
-    // Re-vote (nonce 1): coercion resistance: no revert on duplicate nullifier
-    await expect(
-      election.connect(voter).castVote("0x0222", nullifier, root, 1n, DUMMY_PROOF.pA, DUMMY_PROOF.pB, DUMMY_PROOF.pC),
-    ).to.emit(election, "VoteCast");
-    expect(await election.nullifierNonces(nullifier)).to.equal(2n);
+    // The re-vote carries a cancellation of the first ballot and looks like any
+    // other ballot: nothing on chain says it is a second one.
+    const second = await makeBallot(election, 2, { previous: first.vote });
+    await expect(election.connect(voter).castVote(second.ballot, DUMMY_PROOF)).to.emit(election, "BallotCast");
     expect(await election.voteCount()).to.equal(2n);
+    expect(await decryptAggregate(election)).to.deep.equal([0n, 0n, 1n, 0n]);
 
     // After voteEnd
     await networkHelpers.time.increaseTo((await election.voteEnd()) + 1n);
     expect(await election.phase()).to.equal(Phase.TALLYING);
-    await expect(
-      election.connect(voter).castVote("0x0333", nullifier, root, 1n, DUMMY_PROOF.pA, DUMMY_PROOF.pB, DUMMY_PROOF.pC),
-    ).to.be.revertedWithCustomError(election, "VotingNotOpen");
+    const late = await makeBallot(election, 1, { previous: second.vote });
+    await expect(election.connect(voter).castVote(late.ballot, DUMMY_PROOF)).to.be.revertedWithCustomError(
+      election,
+      "VotingNotOpen",
+    );
   });
 
-  it("rejects unknown merkle roots and out-of-range depths", async () => {
-    const election = await freshElection();
-    const { nullifier, commitment } = nextCommitment();
-    await platformRegister(nullifier, commitment);
-    await (await election.connect(voter).enroll(commitment)).wait();
-    const root = await election.merkleTreeRoot();
+  it("keeps an aggregate that decrypts to each voter's LAST choice", async () => {
+    const election = await votingElection();
+    // One voter votes once; one changes 2 -> 1; one goes 1, 1, then blank.
+    await castFor(election, 0);
+    await castFor(election, 1, await castFor(election, 2));
+    await castFor(election, 3, await castFor(election, 1, await castFor(election, 1)));
 
-    await networkHelpers.time.increaseTo(await election.voteStart());
-
-    await expect(
-      election.castVote("0x01", nullifier, 999999n, 1n, DUMMY_PROOF.pA, DUMMY_PROOF.pB, DUMMY_PROOF.pC),
-    ).to.be.revertedWithCustomError(election, "UnknownOrExpiredRoot");
-
-    await expect(
-      election.castVote("0x01", nullifier, root, 0n, DUMMY_PROOF.pA, DUMMY_PROOF.pB, DUMMY_PROOF.pC),
-    ).to.be.revertedWithCustomError(election, "InvalidTreeDepth");
-
-    await expect(
-      election.castVote("0x01", nullifier, root, 33n, DUMMY_PROOF.pA, DUMMY_PROOF.pB, DUMMY_PROOF.pC),
-    ).to.be.revertedWithCustomError(election, "InvalidTreeDepth");
+    expect(await election.voteCount()).to.equal(6n);
+    expect(await decryptAggregate(election)).to.deep.equal([1n, 1n, 0n, 1n]);
   });
 
-  it("accepts recent superseded roots but rejects expired ones", async () => {
+  it("files each ballot as a leaf of the ballots tree, for the next step to prove against", async () => {
+    const election = await votingElection();
+    const { ballot } = await makeBallot(election, 0);
+    await expect(election.connect(voter).castVote(ballot, DUMMY_PROOF))
+      .to.emit(election, "BallotCast")
+      .withArgs(ballot.tag, 0n, ballot.leaf, ballot.voteA, ballot.voteB, ballot.cancelA, ballot.cancelB, (t: bigint) => t > 0n);
+    expect(await election.ballotsDepth()).to.equal(0n);
+    expect(await election.ballotsRoot()).to.equal(ballot.leaf); // a one-leaf LeanIMT's root is the leaf
+  });
+
+  it("casts each step of a chain once: a tag is refused the second time", async () => {
+    const election = await votingElection();
+    const { ballot } = await makeBallot(election, 0, { tag: 777n });
+    await (await election.connect(voter).castVote(ballot, DUMMY_PROOF)).wait();
+    const again = await makeBallot(election, 1, { tag: 777n });
+    await expect(election.connect(voter).castVote(again.ballot, DUMMY_PROOF)).to.be.revertedWithCustomError(
+      election,
+      "TagAlreadyCast",
+    );
+  });
+
+  it("takes one ballot per voter per epoch, and the next epoch takes another", async () => {
+    const election = await votingElection({ voteEnd: (await networkHelpers.time.latest()) + 100_000 });
+    const first = await makeBallot(election, 0, { epochTag: 888n });
+    await (await election.connect(voter).castVote(first.ballot, DUMMY_PROOF)).wait();
+    const second = await makeBallot(election, 1, { previous: first.vote, epochTag: 888n });
+    await expect(election.connect(voter).castVote(second.ballot, DUMMY_PROOF)).to.be.revertedWithCustomError(
+      election,
+      "EpochAlreadyCast",
+    );
+
+    await networkHelpers.time.increase(Number(await election.EPOCH_LENGTH()));
+    const later = await makeBallot(election, 1, { previous: first.vote, epochTag: 889n });
+    await expect(election.connect(voter).castVote(later.ballot, DUMMY_PROOF)).to.emit(election, "BallotCast");
+  });
+
+  it("accepts a proof for this epoch or the last, and no other", async () => {
+    const election = await votingElection({ voteEnd: (await networkHelpers.time.latest()) + 100_000 });
+    await networkHelpers.time.increase(3 * Number(await election.EPOCH_LENGTH()));
+    const epoch: bigint = await election.currentEpoch();
+
+    for (const wrong of [epoch + 1n, epoch - 2n]) {
+      const { ballot } = await makeBallot(election, 0, { epoch: wrong });
+      await expect(election.connect(voter).castVote(ballot, DUMMY_PROOF)).to.be.revertedWithCustomError(
+        election,
+        "WrongEpoch",
+      );
+    }
+    const { ballot } = await makeBallot(election, 0, { epoch: epoch - 1n });
+    await expect(election.connect(voter).castVote(ballot, DUMMY_PROOF)).to.emit(election, "BallotCast");
+  });
+
+  it("rejects unknown voter and ballot roots", async () => {
+    const election = await votingElection();
+    const voters = await makeBallot(election, 0);
+    voters.ballot.votersRoot = 999_999n;
+    await expect(election.castVote(voters.ballot, DUMMY_PROOF)).to.be.revertedWithCustomError(
+      election,
+      "UnknownOrExpiredRoot",
+    );
+    const ballots = await makeBallot(election, 0);
+    ballots.ballot.ballotsRoot = 999_999n;
+    await expect(election.castVote(ballots.ballot, DUMMY_PROOF)).to.be.revertedWithCustomError(
+      election,
+      "UnknownOrExpiredRoot",
+    );
+  });
+
+  it("keeps a superseded ballots root valid for a while, so a busy election does not strand proofs", async () => {
+    const election = await votingElection();
+    await castFor(election, 0);
+    // Built against the root of that moment, then overtaken by another ballot.
+    const stale = await makeBallot(election, 1);
+    await castFor(election, 2);
+    expect(await election.ballotsRoot()).to.not.equal(stale.ballot.ballotsRoot);
+    await expect(election.castVote(stale.ballot, DUMMY_PROOF)).to.emit(election, "BallotCast");
+  });
+
+  it("times a root's validity from when it was replaced, not from when it was made", async () => {
+    // A quiet election: one ballot, then nothing for longer than the window.
+    const election = await votingElection({ voteEnd: (await networkHelpers.time.latest()) + 100_000 });
+    await castFor(election, 0);
+    await networkHelpers.time.increase(Number(await election.MERKLE_ROOT_VALIDITY()) + 60);
+
+    // A voter proves against the current root, and someone else votes first.
+    // Their proof must survive: the root was current until a moment ago.
+    const pending = await makeBallot(election, 1);
+    await castFor(election, 2);
+    await expect(election.castVote(pending.ballot, DUMMY_PROOF)).to.emit(election, "BallotCast");
+
+    // Once the window has passed since it was replaced, it is refused.
+    const late = await makeBallot(election, 1);
+    await castFor(election, 0);
+    await networkHelpers.time.increase(Number(await election.MERKLE_ROOT_VALIDITY()) + 60);
+    await expect(election.castVote(late.ballot, DUMMY_PROOF)).to.be.revertedWithCustomError(
+      election,
+      "UnknownOrExpiredRoot",
+    );
+  });
+
+  it("refuses a ballot whose proof does not verify, or whose arrays are the wrong size", async () => {
+    const election = await votingElection();
+    const verifier = await ethers.getContractAt("MockBallotVerifier", await election.ballotVerifier());
+    await (await verifier.setAccept(false)).wait();
+    try {
+      const { ballot } = await makeBallot(election, 0);
+      await expect(election.castVote(ballot, DUMMY_PROOF)).to.be.revertedWithCustomError(election, "InvalidProof");
+    } finally {
+      await (await verifier.setAccept(true)).wait();
+    }
+
+    const { ballot } = await makeBallot(election, 0);
+    ballot.voteB = ballot.voteB.slice(2);
+    await expect(election.castVote(ballot, DUMMY_PROOF)).to.be.revertedWithCustomError(election, "InvalidProof");
+  });
+
+  it("accepts recent superseded voter roots but rejects expired ones", async () => {
     const now = await networkHelpers.time.latest();
     // Long voting window so we can play with the root validity clock
     const election = await freshElection({
@@ -349,14 +471,17 @@ describe("ElectionV4, voting", () => {
 
     // The superseded root was created long ago (enrollment happened at t≈now,
     // voting starts at now+100_000) so it is already expired.
-    await expect(
-      election.castVote("0x01", a.nullifier, oldRoot, 1n, DUMMY_PROOF.pA, DUMMY_PROOF.pB, DUMMY_PROOF.pC),
-    ).to.be.revertedWithCustomError(election, "UnknownOrExpiredRoot");
+    const stale = await makeBallot(election, 0);
+    stale.ballot.votersRoot = oldRoot;
+    await expect(election.castVote(stale.ballot, DUMMY_PROOF)).to.be.revertedWithCustomError(
+      election,
+      "UnknownOrExpiredRoot",
+    );
 
     // The current root always works
-    await expect(
-      election.castVote("0x01", a.nullifier, newRoot, 1n, DUMMY_PROOF.pA, DUMMY_PROOF.pB, DUMMY_PROOF.pC),
-    ).to.emit(election, "VoteCast");
+    const { ballot } = await makeBallot(election, 0);
+    expect(ballot.votersRoot).to.equal(newRoot);
+    await expect(election.castVote(ballot, DUMMY_PROOF)).to.emit(election, "BallotCast");
   });
 });
 
@@ -434,105 +559,104 @@ describe("ElectionV4, organizer lifecycle", () => {
     await platformRegister(nullifier, commitment);
     await (await election.connect(voter).enroll(commitment)).wait();
     await networkHelpers.time.increaseTo(await election.voteStart());
-    const root = await election.merkleTreeRoot();
+    const { ballot } = await makeBallot(election, 0);
 
     await networkHelpers.time.setNextBlockTimestamp(await election.voteEnd());
-    await expect(
-      election.connect(voter).castVote("0x01", nullifier, root, 1n, DUMMY_PROOF.pA, DUMMY_PROOF.pB, DUMMY_PROOF.pC),
-    ).to.be.revertedWithCustomError(election, "VotingNotOpen");
+    await expect(election.connect(voter).castVote(ballot, DUMMY_PROOF)).to.be.revertedWithCustomError(
+      election,
+      "VotingNotOpen",
+    );
     // The refused call mined nothing, so the pinned timestamp is still pending.
     await networkHelpers.mine();
   });
 });
 
-describe("ElectionV4, ballot size", () => {
-  it("refuses an empty ballot and one longer than any Paillier ciphertext", async () => {
-    const election = await freshElection();
-    const { nullifier, commitment } = nextCommitment();
-    await platformRegister(nullifier, commitment);
-    await (await election.connect(voter).enroll(commitment)).wait();
-    await networkHelpers.time.increaseTo(await election.voteStart());
-    const root = await election.merkleTreeRoot();
-    const cast = (ballot: string) =>
-      election.connect(voter).castVote(ballot, nullifier, root, 1n, DUMMY_PROOF.pA, DUMMY_PROOF.pB, DUMMY_PROOF.pC);
-
-    expect(await election.MAX_BALLOT_BYTES()).to.equal(512n);
-    await expect(cast("0x")).to.be.revertedWithCustomError(election, "InvalidBallot");
-    await expect(cast("0x" + "ab".repeat(513))).to.be.revertedWithCustomError(election, "InvalidBallot");
-    await expect(cast("0x" + "ab".repeat(512))).to.emit(election, "VoteCast");
-  });
-});
+/// Enrolls `n` voters and has each cast one ballot for option 0.
+async function withVoters(election: any, n: number): Promise<void> {
+  for (let i = 0; i < n; i++) {
+    const id = nextCommitment();
+    await platformRegister(id.nullifier, id.commitment);
+    await (await election.connect(voter).enroll(id.commitment)).wait();
+  }
+  await networkHelpers.time.increaseTo(await election.voteStart());
+  for (let i = 0; i < n; i++) await castFor(election, 0);
+}
 
 describe("ElectionV4, voiding an election that promised no veto", () => {
-  async function tallying(overrides = {}) {
-    const election = await harnessElection(overrides);
+  it("refuses to void once cancelling was given up and enough ballots exist for a result", async () => {
+    const election = await freshElection({ cancellable: false, privacyQuorum: 2n });
+    await withVoters(election, 2);
     await networkHelpers.time.increaseTo((await election.voteEnd()) + 1n);
-    return election;
-  }
-
-  it("refuses to void a publishable result once cancelling was given up", async () => {
-    const election = await tallying({ cancellable: false, privacyQuorum: 2n });
-    await (await election.forceDistinctVoters(2n)).wait();
     await expect(election.connect(organizer).markVoided()).to.be.revertedWithCustomError(
       election,
       "ResultPublishable",
     );
   });
 
-  it("still voids below the privacy quorum, where nothing may be published", async () => {
-    const election = await tallying({ cancellable: false, privacyQuorum: 3n });
-    await (await election.forceDistinctVoters(2n)).wait();
+  it("voids without a proof when fewer ballots than the quorum were cast", async () => {
+    const election = await freshElection({ cancellable: false, privacyQuorum: 3n });
+    await withVoters(election, 2);
+    await networkHelpers.time.increaseTo((await election.voteEnd()) + 1n);
     await expect(election.connect(organizer).markVoided()).to.emit(election, "ElectionVoided");
   });
 
   it("keeps the veto for an election that kept the power to be called off", async () => {
-    const election = await tallying({ cancellable: true });
-    await (await election.forceDistinctVoters(5n)).wait();
+    const election = await freshElection({ cancellable: true });
+    await withVoters(election, 2);
+    await networkHelpers.time.increaseTo((await election.voteEnd()) + 1n);
     await expect(election.connect(organizer).markVoided()).to.emit(election, "ElectionVoided");
   });
 });
 
-describe("ElectionV4, privacy quorum", () => {
-  /** Enrolls and votes once, so the election has exactly `n` distinct voters. */
-  async function withVoters(election: any, n: number): Promise<void> {
-    const ids = [];
-    for (let i = 0; i < n; i++) {
-      const id = nextCommitment();
-      await platformRegister(id.nullifier, id.commitment);
-      await (await election.connect(voter).enroll(id.commitment)).wait();
-      ids.push(id);
-    }
-    await networkHelpers.time.increaseTo(await election.voteStart());
-    const root = await election.merkleTreeRoot();
-    for (const id of ids) {
-      await (
-        await election
-          .connect(voter)
-          .castVote("0x01", id.nullifier, root, 1n, DUMMY_PROOF.pA, DUMMY_PROOF.pB, DUMMY_PROOF.pC)
-      ).wait();
-    }
-  }
+describe("ElectionV4, voiding below the quorum with a proof", () => {
+  it("voids when the tally proof says fewer voted than the quorum, and keeps the counts secret", async () => {
+    // Four ballots, which might be four voters: only the proof can say it was two.
+    const election = await freshElection({ cancellable: false, privacyQuorum: 3n });
+    await withVoters(election, 4);
+    await expect(election.voidBelowQuorum(2n, DUMMY_PROOF)).to.be.revertedWithCustomError(
+      election,
+      "VotingNotEnded",
+    );
+    await networkHelpers.time.increaseTo((await election.voteEnd()) + 1n);
 
-  it("counts people, not ballots, however often they re-vote", async () => {
-    const election = await freshElection();
+    await expect(election.voidBelowQuorum(2n, DUMMY_PROOF))
+      .to.emit(election, "VoidedBelowQuorum")
+      .withArgs(2n);
+    expect(await election.phase()).to.equal(Phase.VOIDED);
+    expect(await election.voters()).to.equal(2n);
+    expect(await election.tally()).to.deep.equal([]);
+  });
+
+  it("refuses a proof the tally verifier rejects", async () => {
+    const election = await freshElection({ privacyQuorum: 3n });
+    await networkHelpers.time.increaseTo((await election.voteEnd()) + 1n);
+    const verifier = await ethers.getContractAt("MockTallyVerifier", await election.tallyVerifier());
+    await (await verifier.setAccept(false)).wait();
+    try {
+      await expect(election.voidBelowQuorum(2n, DUMMY_PROOF)).to.be.revertedWithCustomError(election, "InvalidProof");
+    } finally {
+      await (await verifier.setAccept(true)).wait();
+    }
+  });
+});
+
+describe("ElectionV4, privacy quorum", () => {
+  it("measures the quorum on the voters the tally counts, not on ballots", async () => {
+    const election = await freshElection({ privacyQuorum: 2n });
     const { nullifier, commitment } = nextCommitment();
     await platformRegister(nullifier, commitment);
     await (await election.connect(voter).enroll(commitment)).wait();
     await networkHelpers.time.increaseTo(await election.voteStart());
-    const root = await election.merkleTreeRoot();
-
-    for (const ballot of ["0x01", "0x02", "0x03"]) {
-      await (
-        await election
-          .connect(voter)
-          .castVote(ballot, nullifier, root, 1n, DUMMY_PROOF.pA, DUMMY_PROOF.pB, DUMMY_PROOF.pC)
-      ).wait();
-    }
+    await castFor(election, 1, await castFor(election, 0, await castFor(election, 2)));
 
     // Three ballots, one person. The quorum is about how many people a result
-    // would expose, so re-voting must not inflate it.
+    // would expose, so re-voting must not satisfy it.
     expect(await election.voteCount()).to.equal(3n);
-    expect(await election.distinctVoters()).to.equal(1n);
+    await networkHelpers.time.increaseTo((await election.voteEnd()) + 1n);
+    await expect(publishCall(election, [0n, 1n, 0n, 0n])).to.be.revertedWithCustomError(
+      election,
+      "PrivacyQuorumNotMet",
+    );
   });
 
   it("refuses to publish a result that rests on too few voters", async () => {
@@ -555,14 +679,14 @@ describe("ElectionV4, privacy quorum", () => {
     expect(await election.phase()).to.equal(Phase.VOIDED);
   });
 
-  it("publishes once the quorum is reached", async () => {
+  it("publishes once the quorum is reached, and records how many voted", async () => {
     const election = await freshElection({ privacyQuorum: 3n });
     await withVoters(election, 3);
     await networkHelpers.time.increaseTo((await election.voteEnd()) + 1n);
 
     await (await publishCall(election, [2n, 1n, 0n, 0n])).wait();
     expect(await election.phase()).to.equal(Phase.CLOSED);
-    expect(await election.distinctVoters()).to.equal(3n);
+    expect(await election.voters()).to.equal(3n);
   });
 
   it("is off by default, so an election that sets no floor behaves as before", async () => {
@@ -572,25 +696,30 @@ describe("ElectionV4, privacy quorum", () => {
     await (await publishCall(election, [0n, 0n, 0n, 0n])).wait();
     expect(await election.phase()).to.equal(Phase.CLOSED);
   });
+
+  it("refuses a quorum the tally circuit cannot compare against", async () => {
+    await expect(freshElection({ privacyQuorum: 1n << 32n })).to.be.revertedWithCustomError(
+      await ethers.getContractFactory("ElectionV4", { libraries: stack.libraries }),
+      "InvalidConfig",
+    );
+  });
 });
 
 describe("ElectionV4, option ceiling", () => {
-  it("refuses more options than the tally encoding can carry", async () => {
+  it("refuses more options than the largest circuit holds", async () => {
     const now = await networkHelpers.time.latest();
-    const Election = await ethers.getContractFactory("ElectionV4", {
-      libraries: { "PoseidonT3": stack.poseidonAddress },
-    });
+    const Election = await ethers.getContractFactory("ElectionV4", { libraries: stack.libraries });
     const deployWith = (cfg: ReturnType<typeof baseConfig>) =>
       Election.deploy(
-        stack.verifier.getAddress(),
+        stack.ballotVerifiers.at(-1).getAddress(),
+        stack.tallyVerifiers.at(-1).getAddress(),
         stack.registry.getAddress(),
         ZERO_ADDRESS,
         organizer.address,
         cfg,
       );
 
-    // 51 counters of 12 digits would pass the 2048-bit Paillier modulus, and a
-    // tally that wraps is worse than one that was never allowed to exist.
+    // The largest circuit built holds 50 options and the blank vote.
     await expect(deployWith(baseConfig(now, { numOptions: 51n })))
       .to.be.revertedWithCustomError(Election, "InvalidConfig");
 
@@ -600,19 +729,78 @@ describe("ElectionV4, option ceiling", () => {
   });
 });
 
+describe("ElectionV4, tally keys and verifiers", () => {
+  const deploy = async (cfg: ReturnType<typeof baseConfig>, sizeIndex = 0) => {
+    const Election = await ethers.getContractFactory("ElectionV4", { libraries: stack.libraries });
+    return Election.deploy(
+      stack.ballotVerifiers[sizeIndex].getAddress(),
+      stack.tallyVerifiers[sizeIndex].getAddress(),
+      stack.registry.getAddress(),
+      ZERO_ADDRESS,
+      organizer.address,
+      cfg,
+    );
+  };
+
+  it("hashes the keys exactly as the circuits do, padded to the circuit's size", async () => {
+    const { keysHash } = await import("../../frontend/src/lib/ballotCrypto.js");
+    const { poseidon3 } = await import("poseidon-lite");
+    const now = await networkHelpers.time.latest();
+    const cfg = baseConfig(now);
+    const election = await deploy(cfg);
+    const slots = Number(await election.circuitSlots());
+    expect(slots).to.equal(5);
+    expect(await election.keysHash()).to.equal(keysHash(poseidon3, unflattenPoints(cfg.tallyKeys), slots));
+    expect(await election.tallyKeys()).to.deep.equal(cfg.tallyKeys);
+  });
+
+  it("refuses keys that are missing, off the curve or the identity", async () => {
+    const now = await networkHelpers.time.latest();
+    const Election = await ethers.getContractFactory("ElectionV4", { libraries: stack.libraries });
+    const good = baseConfig(now).tallyKeys;
+    for (const tallyKeys of [good.slice(2), [...good.slice(0, -1), good.at(-1)! + 1n], [0n, 1n, ...good.slice(2)]]) {
+      await expect(deploy(baseConfig(now, { tallyKeys }))).to.be.revertedWithCustomError(Election, "InvalidConfig");
+    }
+  });
+
+  it("refuses verifiers too small for the options, or of two different sizes", async () => {
+    const now = await networkHelpers.time.latest();
+    const Election = await ethers.getContractFactory("ElectionV4", { libraries: stack.libraries });
+    // Five options and the blank vote do not fit a five-slot circuit.
+    await expect(deploy(baseConfig(now, { numOptions: 5n }))).to.be.revertedWithCustomError(
+      Election,
+      "VerifierMismatch",
+    );
+    await expect(
+      Election.deploy(
+        stack.ballotVerifiers[0].getAddress(),
+        stack.tallyVerifiers[1].getAddress(),
+        stack.registry.getAddress(),
+        ZERO_ADDRESS,
+        organizer.address,
+        baseConfig(now),
+      ),
+    ).to.be.revertedWithCustomError(Election, "VerifierMismatch");
+  });
+
+  it("derives its scope from its own address, never from the organizer", async () => {
+    const now = await networkHelpers.time.latest();
+    const a = await deploy(baseConfig(now));
+    const b = await deploy(baseConfig(now));
+    expect(await a.scope()).to.not.equal(await b.scope());
+    const { chainId } = await ethers.provider.getNetwork();
+    const expected =
+      BigInt(ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(["uint256", "address"], [chainId, await a.getAddress()]))) >> 8n;
+    expect(await a.scope()).to.equal(expected);
+  });
+});
+
 describe("ElectionV4, publishResults & outcomes", () => {
-  /// Publishes `tallyArr` on an election whose recorded voters it accounts for.
+  /// Publishes `tallyArr`; the mock tally verifier stands in for the proof.
   async function publish(election: any, tallyArr: bigint[]): Promise<void> {
     await networkHelpers.time.increaseTo((await election.voteEnd()) + 1n);
-    await (await election.forceDistinctVoters(tallyArr.reduce((a, b) => a + b, 0n))).wait();
-    await (
-      await election
-        .connect(organizer)
-        .publishResults("QmTestCid", tallyArr, 0n, PLACEHOLDER_TALLY_PROOF)
-    ).wait();
+    await (await election.connect(organizer).publishResults("QmTestCid", tallyArr, DUMMY_PROOF)).wait();
   }
-
-  const freshElection = harnessElection;
 
   it("validates timing and tally length", async () => {
     const election = await freshElection(); // 3 options → tally length must be 4
@@ -629,32 +817,16 @@ describe("ElectionV4, publishResults & outcomes", () => {
     );
   });
 
-  it("requires the counters and the excluded ballots to account for every voter", async () => {
+  it("refuses counts the tally proof does not vouch for", async () => {
     const election = await freshElection();
     await networkHelpers.time.increaseTo((await election.voteEnd()) + 1n);
-    await (await election.forceDistinctVoters(5n)).wait();
-
-    // An invented ballot, and a dropped one.
-    await expect(publishCall(election, [3n, 2n, 1n, 0n])).to.be.revertedWithCustomError(
-      election,
-      "InvalidTally",
-    );
-    await expect(publishCall(election, [2n, 1n, 1n, 0n])).to.be.revertedWithCustomError(
-      election,
-      "InvalidTally",
-    );
-    // One ballot excluded as invalid, openly: four counted plus one excluded.
-    await expect(publishCall(election, [2n, 1n, 1n, 0n], 1n))
-      .to.emit(election, "TallyProofPublished")
-      .withArgs(1n, PLACEHOLDER_TALLY_PROOF);
-  });
-
-  it("refuses a result published without its proof", async () => {
-    const election = await freshElection();
-    await networkHelpers.time.increaseTo((await election.voteEnd()) + 1n);
-    await expect(
-      election.connect(organizer).publishResults("cid", [0n, 0n, 0n, 0n], 0n, "0x"),
-    ).to.be.revertedWithCustomError(election, "MissingTallyProof");
+    const verifier = await ethers.getContractAt("MockTallyVerifier", await election.tallyVerifier());
+    await (await verifier.setAccept(false)).wait();
+    try {
+      await expect(publishCall(election, [0n, 0n, 0n, 0n])).to.be.revertedWithCustomError(election, "InvalidProof");
+    } finally {
+      await (await verifier.setAccept(true)).wait();
+    }
   });
 
   it("SIMPLE_PLURALITY: highest vote count wins; equal top is a tie", async () => {
@@ -838,7 +1010,7 @@ describe("ElectionV4, enrollment opened early", () => {
  *
  * `closeEnrollmentEarly` and `closeVotingEarly` read as conveniences until you
  * notice what the organizer can see while using them: `memberCount` and
- * `distinctVoters` are public and rise in real time. So the roll can be cut off
+ * `voteCount` are public and rise in real time. So the roll can be cut off
  * at the moment it suits, and the vote ended at the moment the result does.
  * Neither leaves a trace saying what it was for.
  *

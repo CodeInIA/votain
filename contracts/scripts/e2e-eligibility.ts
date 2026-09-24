@@ -22,6 +22,8 @@ import { network } from "hardhat";
 import fs from "node:fs";
 import path from "node:path";
 
+import { BASE, multiply } from "../../frontend/src/lib/ballotCrypto.js";
+
 const { ethers } = await network.getOrCreate();
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
@@ -113,8 +115,8 @@ async function main() {
     enrollEnd: now + 3600,
     voteStart: now + 3600,
     voteEnd: now + 7200,
-    scope: BigInt(ethers.hexlify(ethers.randomBytes(31))),
-    paillierPublicKey: '{"n":"0x1234","g":"0x1235"}',
+    // Valid points nobody holds the secrets of: this script never counts a vote.
+    tallyKeys: [2n, 3n, 4n].flatMap(x => [...multiply(BASE, x)]),
     metadataJson: JSON.stringify(metadata),
     eligibilityAttester: attester.address,
     eligibilityPolicyHash: policyHash,
@@ -295,7 +297,6 @@ async function main() {
   const openCfg = {
     ...cfg,
     name: "Open E2E Election",
-    scope: BigInt(ethers.hexlify(ethers.randomBytes(31))),
     metadataJson: JSON.stringify({ ...metadata, eligibility: undefined }),
     eligibilityAttester: ZERO_ADDRESS,
     eligibilityPolicyHash: ethers.ZeroHash,

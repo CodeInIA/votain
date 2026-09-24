@@ -14,9 +14,9 @@ import {TwoStepOwnable} from "./TwoStepOwnable.sol";
 ///
 ///  1. **Anonymity.** With account abstraction each voter gets their own smart
 ///     account, and that address is the public `sender` of both their `enroll`
-///     and their `castVote`. Anyone could link commitment to nullifier and,
-///     through PlatformRegistry, back to the human, which defeats the Semaphore
-///     proof entirely. Routing every voter through this one contract makes the
+///     and their `castVote`. Anyone could link a voter's ballots to each other
+///     and their enrolment, and through PlatformRegistry back to the human,
+///     which defeats the zero-knowledge proof entirely. Routing every voter through this one contract makes the
 ///     caller identical for all of them, so the transport layer leaks nothing.
 ///  2. **Multi-tenant sponsorship.** Hosted paymasters fund gas per project,
 ///     billed to the project owner. There is no path for a third party to fund
@@ -28,7 +28,7 @@ import {TwoStepOwnable} from "./TwoStepOwnable.sol";
 contract ElectionPaymaster is TwoStepOwnable {
     /// @dev Fixed gas outside the metered region: the 21000 transaction base plus
     /// the reimbursement transfer and event. Calldata is charged separately per
-    /// byte, because `relayVote` carries a Paillier ciphertext and a Groth16
+    /// byte, because `relayVote` carries an encrypted ballot and a Groth16
     /// proof while `relayEnroll` carries 52 bytes: one flat constant for both
     /// would badly overcharge the cheap call and undercharge the expensive one.
     uint256 public constant DEFAULT_BASE_OVERHEAD = 32_000;
@@ -51,9 +51,11 @@ contract ElectionPaymaster is TwoStepOwnable {
     /// + two dynamic offsets + two lengths. The two signatures themselves are measured from
     /// their own lengths, as the attested path does with its one.
     uint256 private constant PRIVATE_ENROLL_CALLDATA_HEAD = 4 + 32 + (32 * 4) + (32 * 2) + (32 * 2);
-    /// relayVote head: selector + address + bytes offset + 3 uint256 + pA + pB + pC,
-    /// then the bytes tail (length word + padded contents) added at call time.
-    uint256 private constant VOTE_CALLDATA_HEAD = 4 + 32 + 32 + (32 * 3) + 64 + 128 + 64 + 32;
+    /// relayVote head: selector + address + ballot offset + the proof (eight
+    /// words, encoded in place), then the ballot's own head (six uint256, two
+    /// points, two array offsets) and the two arrays' length words. The arrays'
+    /// contents are added at call time from their lengths.
+    uint256 private constant VOTE_CALLDATA_HEAD = 4 + 32 + 32 + (32 * 8) + (32 * 12) + (32 * 2);
 
     /**
      * @dev Ceilings on what the owner may set the relay parameters to.
@@ -65,22 +67,9 @@ contract ElectionPaymaster is TwoStepOwnable {
      */
     uint256 public constant MAX_GAS_PRICE_CEILING = 500 gwei;
     uint256 public constant MAX_BASE_OVERHEAD = 100_000;
-    uint256 public constant MAX_RELAY_GAS_CEILING = 3_000_000;
+    /// A ballot on the largest circuit (51 slots) costs about 4.5M gas; see below.
+    uint256 public constant MAX_RELAY_GAS_CEILING = 6_000_000;
 
-    /**
-     * @dev Least time between two SPONSORED ballots from one voter in one
-     * election.
-     *
-     * Re-voting is the coercion defence, and relaying is permissionless, so
-     * without this one enrolled voter could re-vote in a loop, be reimbursed
-     * as their own relayer, and empty the organizer's tank until voting stops
-     * for everyone. A count cap would bound that too, but a coercer standing
-     * over the voter could spend the whole allowance and leave no override. A
-     * cooldown cannot be spent in advance: the honest override is only ever
-     * delayed, never refused, and the drain is bounded by the election's
-     * length divided by this.
-     */
-    uint256 public constant REVOTE_COOLDOWN = 1 hours;
 
     /// @dev Allowed to bind an election to its organizer (set once, to ElectionFactory).
     address public factory;
@@ -117,8 +106,6 @@ contract ElectionPaymaster is TwoStepOwnable {
     mapping(address => uint256) public reservedFor;
     /// @dev election => the organizer whose tank pays for it
     mapping(address => address) public organizerOf;
-    /// @dev election => Semaphore nullifier => when its last sponsored ballot landed.
-    mapping(address => mapping(uint256 => uint256)) public lastSponsoredBallot;
 
     uint256 private _entered;
 
@@ -141,8 +128,6 @@ contract ElectionPaymaster is TwoStepOwnable {
     error NotFactory();
     error FactoryAlreadySet();
     error RelayParamsOutOfBounds();
-    /// @dev This voter's previous sponsored ballot here is too recent; see REVOTE_COOLDOWN.
-    error RevoteTooSoon(uint256 availableAt);
     error InsufficientBalance();
     error WithdrawFailed();
     error ReimbursementFailed();
@@ -168,7 +153,11 @@ contract ElectionPaymaster is TwoStepOwnable {
         maxGasPrice = 50 gwei;
         baseOverheadGas = DEFAULT_BASE_OVERHEAD;
         calldataGasPerByte = DEFAULT_CALLDATA_GAS;
-        maxRelayGas = 2_000_000; // a ballot costs ~400k; leaves ample headroom
+        // Measured by the E2E suite: a relayed ballot costs ~1.0M gas at 5 slots and
+        // ~1.3M at 9, about 77k per further slot, so ~4.5M at the largest size. The
+        // charge is the gas actually used; this only caps it, and a cap below the
+        // real cost would leave the relayer paying the difference.
+        maxRelayGas = 5_000_000;
     }
 
     // ────────────────────────────────────────────────
@@ -461,43 +450,29 @@ contract ElectionPaymaster is TwoStepOwnable {
         _reimburse(election, organizer, startGas, billable);
     }
 
-    /// @notice Relay a voter's ballot, reimbursed from the organizer's tank.
-    /// @dev Deliberately permissionless. The zero-knowledge proof is the
-    /// authorisation, so requiring a whitelisted relayer would only add a
-    /// censorship point without adding safety. Spam is bounded because an
-    /// invalid proof reverts and the sender eats their own gas.
+    /**
+     * @notice Relay a voter's ballot, reimbursed from the organizer's tank.
+     * @dev Deliberately permissionless. The zero-knowledge proof is the
+     * authorisation, so requiring a whitelisted relayer would only add a
+     * censorship point without adding safety. Spam is bounded twice: an
+     * invalid proof reverts and the sender eats their own gas, and a valid one
+     * spends the voter's single ballot for the epoch (`ElectionV4.EPOCH_LENGTH`),
+     * so one voter can cost a tank at most one ballot per epoch. That used to
+     * be a cooldown kept here per nullifier, which was a public link between a
+     * voter's ballots; the election's epoch tags bound the same rate without it.
+     */
     function relayVote(
         address election,
-        bytes calldata voteCiphertext,
-        uint256 nullifier,
-        uint256 merkleRoot,
-        uint256 merkleDepth,
-        uint256[2] calldata pA,
-        uint256[2][2] calldata pB,
-        uint256[2] calldata pC
+        ElectionV4.BallotInput calldata ballot,
+        ElectionV4.Proof calldata proof
     ) external nonReentrant {
         uint256 startGas = gasleft();
         address organizer = _organizerOrRevert(election);
 
-        // First ballots are always sponsored; re-votes wait out the cooldown.
-        uint256 last = lastSponsoredBallot[election][nullifier];
-        if (last != 0 && block.timestamp < last + REVOTE_COOLDOWN) {
-            revert RevoteTooSoon(last + REVOTE_COOLDOWN);
-        }
-        lastSponsoredBallot[election][nullifier] = block.timestamp;
+        ElectionV4(election).castVote(ballot, proof);
 
-        ElectionV4(election).castVote(
-            voteCiphertext,
-            nullifier,
-            merkleRoot,
-            merkleDepth,
-            pA,
-            pB,
-            pC
-        );
-
-        // Derived from the ciphertext length, never from msg.data.length.
-        uint256 billable = VOTE_CALLDATA_HEAD + ((voteCiphertext.length + 31) / 32) * 32;
+        // Derived from the arrays' lengths, never from msg.data.length.
+        uint256 billable = VOTE_CALLDATA_HEAD + 32 * (ballot.voteB.length + ballot.cancelB.length);
         _reimburse(election, organizer, startGas, billable);
     }
 
