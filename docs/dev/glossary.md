@@ -26,7 +26,7 @@
 
 **Paymaster (gas tank)**: `ElectionPaymaster.sol`. Organizers deposit POL; `relayEnroll` / `relayVote` call the election and reimburse whoever relayed, out of that election's organizer's balance, in the same transaction.
 
-**ERC-2771 (Meta-transactions / Trusted Forwarder)**: allows a relay to submit on behalf of a user while preserving the real `msg.sender`. In Votain the forwarder is set to a burn address: voter calls go through `ElectionPaymaster` and neither `enroll` nor `castVote` reads `msg.sender`, so `_msgSender()` only affects organizer-only functions.
+**ERC-2771 (Meta-transactions / Trusted Forwarder)**: allows a relay to submit on behalf of a user while preserving the real `msg.sender`. Votain does not use it: voter calls go through `ElectionPaymaster` and neither `enroll` nor `castVote` reads `msg.sender`, and a trusted forwarder could speak as any organizer, so `ElectionV4` does not inherit `ERC2771Context`.
 
 **Domain claim (`OrganizerDomains`)**: the badge a voter sees on an election is a DOMAIN, not a checkmark, because a checkmark only means something if you trust whoever granted it while a domain carries its own evidence. Proof runs in two directions and needs both: DNS says the domain names the wallet (a TXT record at `_votain.<domain>` with the value `v=votain1; address=0x...`), and the chain says the wallet claims the domain (`claim`, a transaction from the organizer's own address). Verifying costs no signature; the signature records the claim, and only once DNS already agrees. The contract stores a claim and not a credential, since domain control is whatever DNS answers right now. See `docs/dev/architecture.md`.
 

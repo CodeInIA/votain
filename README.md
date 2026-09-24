@@ -2,16 +2,16 @@
 
 > End-to-end verifiable, anonymous, coercion-resistant voting dApp on Polygon Amoy.
 
-Votain is a Bachelor's thesis project (TFG) demonstrating how modern cryptographic primitives (Zero-Knowledge Proofs, Verifiable Credentials, Homomorphic Encryption and meta-transaction relaying) can be combined into a voting system where every voter can verify their ballot is counted, no one can be coerced, and no central authority can tamper with results.
+Votain is a Bachelor's thesis project (TFG) demonstrating how modern cryptographic primitives (Zero-Knowledge Proofs, Verifiable Credentials, Homomorphic Encryption and meta-transaction relaying) can be combined into a voting system where every voter can verify their ballot is counted, a coerced ballot can always be overridden, and no organizer can publish a result the ballots do not support.
 
 ## Why Votain
 
 | Property | How it is achieved |
 |----------|--------------------|
-| **End-to-end verifiable** | Every vote is a Paillier ciphertext stored on-chain, so anyone can re-run the homomorphic sum from the chain itself. The auditor CLI additionally pins a result JSON to IPFS and publishes its CID; the in-app tally does not pin yet |
+| **End-to-end verifiable** | Every vote is a Paillier ciphertext stored on-chain, and every result is published with a proof of correct decryption: the randomness that opens the sum of the valid ballots to exactly the published counts, plus a public opening of each ballot excluded as invalid. Anyone can check it against the chain with no key, in the results screen or with `npm run tally -- <election> --verify`, and a stuffed or malformed ballot is excluded in the open rather than counted. The auditor CLI additionally pins a result JSON to IPFS; the in-app tally does not pin yet |
 | **Anonymous** | Semaphore V4 zero-knowledge proofs hide voter identity inside the eligible-voters group |
-| **Coercion resistant** | Per-nullifier nonce lets a coerced voter silently override a prior ballot. Only the highest-nonce vote counts |
-| **Sybil resistant** | World ID v4 proof of personhood, bound to a per-election scope |
+| **Coercion resistant** | Per-nullifier nonce lets a coerced voter override a prior ballot later, and only the highest-nonce vote counts. The limit, stated plainly: re-votes are public per nullifier, so a coercer who learns a voter's nullifier can see THAT they re-voted, though not how. Hiding that needs a MACI-style key change and is future work. Sponsored re-votes are spaced by a one-hour cooldown, so no voter can drain the organizer's gas tank |
+| **Sybil resistant** | World ID v4 proof of personhood under one action fixed by the server, so one person holds one platform identity. Elections that require a document also refuse the same passport or ID card twice, whatever World ID account it arrives with |
 | **Eligible without identifying** | Age and nationality come from the chip in a passport or national identity card, read over NFC by the [Self](https://self.xyz) app and proved in zero knowledge. The document never leaves the phone, and age is asked as a predicate: the answer is "over 18", never a date of birth |
 | **Gasless for voters** | Ballots are relayed through `ElectionPaymaster`, reimbursed from the organizer's own gas tank; voters never hold tokens |
 | **Unlinkable on chain** | Every voter's call arrives from the same relay contract, so the sender address cannot tie an enrollment to a ballot |
@@ -78,7 +78,7 @@ User (recovery phrase + World ID)
                            Tally (Paillier homomorphic sum): in-app in the
                            browser, or the off-chain CLI (auditor path)
                            → Result JSON pinned on IPFS (Pinata, CLI)
-                           → publishResults(cid, tally) on-chain
+                           → publishResults(cid, tally, proof) on-chain
 ```
 
 Full diagram in [`docs/dev/architecture.md`](docs/dev/architecture.md).
@@ -104,7 +104,7 @@ votain/
 
 ## Tech stack
 
-**Contracts**: Solidity 0.8.37, Hardhat 3, ethers v6, OpenZeppelin 5, [`@semaphore-protocol/contracts`](https://semaphore.pse.dev/) 4.x, ERC-2771 context.
+**Contracts**: Solidity 0.8.37, Hardhat 3, ethers v6, OpenZeppelin 5, [`@semaphore-protocol/contracts`](https://semaphore.pse.dev/) 4.x.
 
 **Backend**: Node.js 24, Express 5, [`@sd-jwt/core`](https://github.com/openwallet-foundation-labs/sd-jwt-js) (EdDSA / Ed25519), [`@worldcoin/idkit-core`](https://docs.world.org/) v4, [`@selfxyz/core`](https://self.xyz) for document-backed eligibility, tsx.
 

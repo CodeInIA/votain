@@ -6,7 +6,7 @@
 
 **Votain** is an end-to-end verifiable, anonymous, coercion-resistant voting dApp on Polygon Amoy. The architecture combines:
 
-- **Smart contracts** in Solidity (Semaphore V4, ERC-2771) inside `contracts/`.
+- **Smart contracts** in Solidity (Semaphore V4) inside `contracts/`.
 - **Backend issuer** in Node.js emitting Verifiable Credentials (SD-JWT) after validating World ID, inside `backend/`. Will be deployed on a **decentralized TEE** (Phala Network) at the end.
 - **Frontend** in React + Vite with **passkey-derived identities**, homomorphic Paillier and `@semaphore-protocol/*` inside `frontend/`. Will be published on **IPFS with CI/CD (Fleek)**.
 - **Tally script** off-chain to filter votes by nullifier and decrypt results.

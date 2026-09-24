@@ -44,6 +44,11 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
         working-directory: frontend
+      # oxlint rather than ESLint: typescript-eslint does not support the
+      # TypeScript 7 compiler this project builds with, and oxlint needs no
+      # compiler at all. Correctness rules only, including react-hooks.
+      - run: npm run lint
+        working-directory: frontend
       # `npm run build` is `tsc -b && vite build`, so this covers types as well
       # as the bundle. It is also what 4EVERLAND runs, which is the point: if
       # this passes and that fails, the difference is configuration, not code.
@@ -63,6 +68,13 @@ jobs:
       # The file that keeps deep links working on IPFS. Cheap to lose in a
       # refactor of `public/`, and its absence only shows up as a 404 on a
       # reloaded route in production.
+      # Every screen, rendered in a real browser at three sizes, against the
+      # demo data with the API answering as a server with no session. Catches
+      # what unit tests cannot: a render loop, a route that crashes on load.
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - run: npm run test:e2e
+        working-directory: frontend
       - name: The SPA rewrite survived the build
         working-directory: frontend
         run: |
@@ -81,6 +93,8 @@ jobs:
           cache: npm
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
+        working-directory: backend
+      - run: npm run lint
         working-directory: backend
       - run: npm run build
         working-directory: backend
@@ -175,6 +189,8 @@ jobs:
           cache-dependency-path: scripts-tally/package-lock.json
       - run: npm ci
         working-directory: scripts-tally
+      # Type-checks `tallyProof.ts` too, which this CLI shares with the
+      # frontend: a change there that breaks the auditor's path fails here.
       - run: npm run typecheck
         working-directory: scripts-tally
 

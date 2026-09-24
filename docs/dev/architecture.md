@@ -36,7 +36,7 @@
                                │  3. Decrypt w/ passkey-derived key│
                                │  4. Generate auditable JSON      │
                                │  5. Pin to IPFS (CLI only)       │
-                               │  6. publishResults(cid, tally)  │
+                               │  6. publishResults(+ proof)     │
                                └──────────────────────────────────┘
 ```
 
@@ -100,7 +100,7 @@
    b) Offline CLI (auditor path): scripts-tally/tally-votes.ts recomputes the
       same result independently and pins the audit JSON to IPFS (Pinata).
    Both: keep max nonce per nullifier → homomorphic sum → decrypt → if
-   votes < Privacy Quorum → Voided; else publishResults(cid, tally).
+   votes < Privacy Quorum → Voided; else publishResults(cid, tally, invalid, proof).
 ```
 
 ## Module breakdown
@@ -109,7 +109,7 @@
 
 | Contract | Purpose |
 |----------|---------|
-| `ElectionV4.sol` | Single election: ERC-2771, Semaphore V4, Paillier, coercion resistance |
+| `ElectionV4.sol` | Single election: Semaphore V4, Paillier, coercion resistance |
 | `ElectionFactory.sol` | ElectionV4 deployment, paymaster fund management |
 | `ElectionPaymaster.sol` | Relay hub and gas tank: sponsors every enrolment and ballot, with gas reserved per election so it cannot be withdrawn from under the voters |
 | `PlatformRegistry.sol` | Identity commitment registry with owner access control, plus two sealed stores it cannot read: the identity vault and each voter's preferences |
@@ -1554,3 +1554,37 @@ Unlinkability, recovery after total loss of the secret, and one-human-one-vote
 cannot all hold without some party that keeps the link. The choice is where to
 put it. This design puts it in the one party that already decides who becomes a
 member, and takes it off the public record.
+
+## Known limits, stated plainly
+
+The pre-Amoy review closed what could be closed in code. These remain, and are
+written down so that nobody reads their absence as a guarantee.
+
+- **Re-votes are visible per nullifier.** Only the last ballot counts, and a
+  coerced voter can always override later, but `VoteCast` carries the
+  nullifier and nonce, so someone who learns a voter's nullifier can see that
+  they re-voted (never how). Hiding it needs a MACI-style design where ballots
+  are encrypted to a coordinator and keys can be changed silently.
+- **Sponsored re-votes wait an hour.** `ElectionPaymaster.REVOTE_COOLDOWN`
+  bounds how fast one enrolled voter can spend the organizer's tank. The honest
+  override is delayed, never refused, and a voter can still submit a re-vote
+  themselves, unsponsored, at any time.
+- **The organizer can read individual ballots.** Whoever holds the Paillier key
+  can decrypt any ciphertext on chain; the tally proof reveals nothing new, but
+  it does not take that away. Threshold decryption would.
+- **The issuer sees network metadata.** `/relay/vote` carries no session, but a
+  voter reaching it from the same address as their authenticated requests can be
+  correlated by an operator who logs addresses. The server does not log them;
+  a voter who needs more should reach it over Tor or a VPN.
+- **One backend instance.** Rate limits, eligibility sessions and World ID
+  requests in flight live in process memory, which is what a single TEE
+  deployment is. Running several instances behind a balancer would need that
+  state moved to a shared store first.
+- **No indexer.** The browser reads events in 10,000-block windows from the
+  deployment block, with bounded concurrency. That is fine for a thesis-sized
+  deployment and grows with the chain; a public platform would add an indexer
+  (a subgraph or the issuer itself) and keep the browser path for auditors.
+- **A wallet signature is the organizer's tally key.** Any site that persuades
+  an organizer to sign the same typed data obtains it, since EIP-712 cannot
+  bind a signature to an origin. Wallets whose signatures are not deterministic
+  are detected and given a random, exportable key instead.
