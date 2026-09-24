@@ -220,11 +220,14 @@
     "export_json": "Audittrail exporteren",
     "view_ipfs": "Bekijk op IPFS",
     "not_available": "Resultaten nog niet beschikbaar.",
-    "check_ok_title": "Gecontroleerd met het openbare register",
-    "check_ok_body": "De gepubliceerde tellingen komen op {{declared}}, en het contract registreerde {{voters}} stemmers. Geen stem is verzonnen of weggelaten.",
-    "check_bad_title": "Komt niet overeen met het openbare register",
-    "check_bad_body": "De gepubliceerde tellingen komen op {{declared}}, maar het contract registreerde {{voters}} stemmers. Dat horen dezelfde getallen te zijn.",
-    "check_limit": "Hier is geen sleutel of vertrouwen voor nodig: iedereen kan het herhalen. Het ziet niet of stemmen tussen opties zijn verschoven, want dat laat het totaal gelijk."
+    "check_pending": "De gepubliceerde uitslag wordt gecontroleerd tegen de stembiljetten op de chain…",
+    "check_verified_title": "Geverifieerd tegen de stembiljetten op de chain",
+    "check_verified_body": "De gepubliceerde aantallen zijn precies de optelsom van de {{valid}} geldige stembiljetten, van {{voters}} kiezers. Iedereen kan deze controle herhalen, zonder sleutel en zonder iemand te hoeven vertrouwen.",
+    "check_excluded": "Stembiljetten uitgesloten omdat ze niet precies één geldige keuze bevatten: {{excluded}}. Elk wordt geopend in het gepubliceerde bewijs, zodat iedereen kan zien waarom.",
+    "check_failed_title": "Klopt niet met de stembiljetten op de chain",
+    "check_failed_body": "De gepubliceerde aantallen konden niet worden geverifieerd tegen de stembiljetten op de chain. Vertrouw niet op deze uitslag.",
+    "check_unproven_title": "Gepubliceerd zonder bewijs",
+    "check_unproven_body": "Deze uitslag is gepubliceerd door een contract van vóór de telbewijzen en kan dus niet tegen de stembiljetten worden gecontroleerd."
   },
   "verify_receipt": {
     "title": "Een stem verifiëren",
@@ -279,7 +282,8 @@
     "reference": "Referentienummer",
     "view_tx": "Bekijk het openbare register",
     "back_elections": "Terug naar verkiezingen",
-    "check_receipt": "Mijn bewijs controleren"
+    "check_receipt": "Mijn bewijs controleren",
+    "demo_reference": "Demogegevens: er is geen stembiljet vastgelegd, dus er is geen referentie om te controleren."
   },
   "change_vote": {
     "title": "Je stem wijzigen",
@@ -466,7 +470,10 @@
     "open_voting_early": "Stemming nu openen",
     "open_voting_title": "Stemming eerder beginnen?",
     "open_voting_desc": "De inschrijving is gesloten en de stemming is nog niet aan de beurt. Alle ingeschrevenen kunnen vanaf nu stemmen. De sluitingsdatum verandert niet.",
-    "voting_opened_done": "De stemming is open"
+    "voting_opened_done": "De stemming is open",
+    "void_refused": "Deze verkiezing heeft beloofd niet te worden afgeblazen, en er hebben genoeg mensen gestemd om de uitslag te publiceren. Ze kan dus niet ongeldig worden verklaard. Importeer de ontsleutelingssleutel om de uitslag te publiceren.",
+    "key_device_only": "De ontsleutelingssleutel van deze verkiezing kon niet uit je wallet worden afgeleid en bestaat alleen op dit apparaat. Exporteer hem nu en bewaar hem goed: zonder hem kan de verkiezing niet worden geteld.",
+    "tally_excluded": "Als ongeldig uitgesloten stembiljetten: {{excluded}}. Elk wordt geopend in het gepubliceerde bewijs, zodat iedereen het kan controleren."
   },
   "gas": {
     "title": "Gasbeheer",
@@ -600,7 +607,8 @@
     "wallet_request_rejected": "Je hebt het verzoek in je wallet geannuleerd. Er is niets gebeurd.",
     "passkey_cancelled": "Je hebt het passkey-verzoek gesloten. Er is niets aangemaakt: je kunt het opnieuw proberen.",
     "list_unreadable": "Deze lijst kon niet van de chain gelezen worden, wat niet hetzelfde is als leeg zijn. Controleer de verbinding en probeer het opnieuw.",
-    "passkey_unproven": "De passkey is aangemaakt, maar we konden nog niet bevestigen dat hij kan ontsleutelen. Druk nogmaals: dezelfde wordt gevraagd, er wordt geen nieuwe aangemaakt."
+    "passkey_unproven": "De passkey is aangemaakt, maar we konden nog niet bevestigen dat hij kan ontsleutelen. Druk nogmaals: dezelfde wordt gevraagd, er wordt geen nieuwe aangemaakt.",
+    "revote_too_soon": "Je hebt je stem minder dan een uur geleden gewijzigd. Je laatste stembiljet telt; je kunt het opnieuw wijzigen zodra het uur voorbij is."
   },
   "demo": {
     "banner": "Demogegevens: geen contracten uitgerold. Niets hiervan staat on-chain."

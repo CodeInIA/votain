@@ -220,11 +220,14 @@
     "export_json": "Prüfprotokoll exportieren",
     "view_ipfs": "Auf IPFS anzeigen",
     "not_available": "Ergebnisse noch nicht verfügbar.",
-    "check_ok_title": "Mit dem öffentlichen Register abgeglichen",
-    "check_ok_body": "Die veröffentlichten Zählwerte ergeben {{declared}}, und der Vertrag hat {{voters}} Wählende erfasst. Keine Stimme wurde erfunden oder verworfen.",
-    "check_bad_title": "Stimmt nicht mit dem öffentlichen Register überein",
-    "check_bad_body": "Die veröffentlichten Zählwerte ergeben {{declared}}, der Vertrag hat aber {{voters}} Wählende erfasst. Beide Zahlen sollten gleich sein.",
-    "check_limit": "Dafür braucht es weder Schlüssel noch Vertrauen: jede Person kann es wiederholen. Ob Stimmen zwischen Optionen verschoben wurden, zeigt es nicht, denn das ändert die Summe nicht."
+    "check_pending": "Das veröffentlichte Ergebnis wird mit den Stimmzetteln auf der Chain abgeglichen…",
+    "check_verified_title": "Mit den Stimmzetteln auf der Chain verifiziert",
+    "check_verified_body": "Die veröffentlichten Zahlen ergeben sich genau aus den {{valid}} gültigen Stimmzetteln von {{voters}} Wählenden. Jede Person kann diese Prüfung ohne Schlüssel und ohne Vertrauen wiederholen.",
+    "check_excluded": "Ausgeschlossene Stimmzettel ohne genau eine gültige Wahl: {{excluded}}. Jeder wird im veröffentlichten Nachweis geöffnet, sodass alle sehen können, warum.",
+    "check_failed_title": "Stimmt nicht mit den Stimmzetteln auf der Chain überein",
+    "check_failed_body": "Die veröffentlichten Zahlen ließen sich nicht mit den auf der Chain erfassten Stimmzetteln verifizieren. Verlassen Sie sich nicht auf dieses Ergebnis.",
+    "check_unproven_title": "Ohne Nachweis veröffentlicht",
+    "check_unproven_body": "Dieses Ergebnis stammt von einem Vertrag, der älter ist als die Auszählungsnachweise, und kann daher nicht mit den Stimmzetteln abgeglichen werden."
   },
   "verify_receipt": {
     "title": "Eine Stimme prüfen",
@@ -279,7 +282,8 @@
     "reference": "Referenznummer",
     "view_tx": "Öffentlichen Eintrag ansehen",
     "back_elections": "Zurück zu den Wahlen",
-    "check_receipt": "Meine Quittung prüfen"
+    "check_receipt": "Meine Quittung prüfen",
+    "demo_reference": "Demodaten: Es wurde kein Stimmzettel erfasst, daher gibt es keine Referenz zum Prüfen."
   },
   "change_vote": {
     "title": "Ihre Stimme ändern",
@@ -466,7 +470,10 @@
     "open_voting_early": "Abstimmung jetzt öffnen",
     "open_voting_title": "Abstimmung vorzeitig beginnen?",
     "open_voting_desc": "Die Anmeldung ist geschlossen und die Abstimmung noch nicht fällig. Alle Angemeldeten können ab sofort abstimmen. Das Enddatum bleibt unverändert.",
-    "voting_opened_done": "Die Abstimmung ist offen"
+    "voting_opened_done": "Die Abstimmung ist offen",
+    "void_refused": "Diese Wahl hat zugesagt, nicht abgesagt zu werden, und es haben genug Menschen abgestimmt, um ihr Ergebnis zu veröffentlichen. Sie kann daher nicht für ungültig erklärt werden. Importieren Sie den Entschlüsselungsschlüssel, um das Ergebnis zu veröffentlichen.",
+    "key_device_only": "Der Entschlüsselungsschlüssel dieser Wahl konnte nicht aus Ihrer Wallet abgeleitet werden und existiert nur auf diesem Gerät. Exportieren Sie ihn jetzt und bewahren Sie ihn sicher auf: Ohne ihn kann die Wahl nicht ausgezählt werden.",
+    "tally_excluded": "Als ungültig ausgeschlossene Stimmzettel: {{excluded}}. Jeder wird im veröffentlichten Nachweis geöffnet, damit alle ihn prüfen können."
   },
   "gas": {
     "title": "Gas-Verwaltung",
@@ -600,7 +607,8 @@
     "wallet_request_rejected": "Du hast die Anfrage in deiner Wallet abgebrochen. Es wurde nichts ausgeführt.",
     "passkey_cancelled": "Du hast den Passkey-Dialog abgebrochen. Es wurde nichts erstellt: du kannst es erneut versuchen.",
     "list_unreadable": "Diese Liste konnte nicht von der Chain gelesen werden, was nicht dasselbe ist wie leer zu sein. Prüfen Sie die Verbindung und versuchen Sie es erneut.",
-    "passkey_unproven": "Der Passkey wurde erstellt, aber wir konnten noch nicht bestätigen, dass er entschlüsseln kann. Drück noch einmal: es wird derselbe gefragt, ohne einen neuen zu erstellen."
+    "passkey_unproven": "Der Passkey wurde erstellt, aber wir konnten noch nicht bestätigen, dass er entschlüsseln kann. Drück noch einmal: es wird derselbe gefragt, ohne einen neuen zu erstellen.",
+    "revote_too_soon": "Sie haben Ihre Stimme vor weniger als einer Stunde geändert. Es zählt Ihr letzter Stimmzettel; nach Ablauf der Stunde können Sie sie erneut ändern."
   },
   "demo": {
     "banner": "Demo-Daten: keine Verträge bereitgestellt. Nichts hiervon ist on-chain."

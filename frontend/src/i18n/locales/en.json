@@ -220,11 +220,14 @@
     "export_json": "Export audit trail",
     "view_ipfs": "View on IPFS",
     "not_available": "Results not yet available.",
-    "check_ok_title": "Checked against the public record",
-    "check_ok_body": "The published counts add up to {{declared}}, and the contract recorded {{voters}} voters. No ballot was invented or dropped.",
-    "check_bad_title": "Does not match the public record",
-    "check_bad_body": "The published counts add up to {{declared}}, but the contract recorded {{voters}} voters. These should be the same number.",
-    "check_limit": "This needs no key and no trust: anyone can repeat it. It cannot tell whether votes were moved between options, which keeps the total unchanged."
+    "check_pending": "Checking the published result against the ballots on chain…",
+    "check_verified_title": "Verified against the ballots on chain",
+    "check_verified_body": "The published counts are exactly what the {{valid}} valid ballots add up to, out of {{voters}} voters. Anyone can repeat this check with no key and no trust.",
+    "check_excluded": "Ballots excluded because they held no single valid choice: {{excluded}}. Each one is opened in the published proof, so anyone can see why.",
+    "check_failed_title": "Does not match the ballots on chain",
+    "check_failed_body": "The published counts could not be verified against the ballots recorded on chain. Do not rely on this result.",
+    "check_unproven_title": "Published without a proof",
+    "check_unproven_body": "This result was published by a contract that predates tally proofs, so it cannot be checked against the ballots."
   },
   "verify_receipt": {
     "title": "Verify a vote",
@@ -279,7 +282,8 @@
     "reference": "Reference number",
     "view_tx": "See the public record",
     "back_elections": "Back to elections",
-    "check_receipt": "Check my receipt"
+    "check_receipt": "Check my receipt",
+    "demo_reference": "Demo data: no ballot was recorded, so there is no reference to check."
   },
   "change_vote": {
     "title": "Change your vote",
@@ -466,7 +470,10 @@
     "open_voting_early": "Open voting now",
     "open_voting_title": "Start voting ahead of schedule?",
     "open_voting_desc": "Enrolment is already closed and voting is not due yet. Everyone enrolled will be able to vote from this moment. The closing date does not change.",
-    "voting_opened_done": "Voting is open"
+    "voting_opened_done": "Voting is open",
+    "void_refused": "This election promised it would not be called off, and enough people voted for its result to be published, so it cannot be voided. Import the decryption key to publish the result.",
+    "key_device_only": "This election's decryption key could not be derived from your wallet, so it exists only on this device. Export it now and keep it safe: without it the election cannot be counted.",
+    "tally_excluded": "Ballots excluded as invalid: {{excluded}}. Each is opened in the published proof so anyone can check it."
   },
   "gas": {
     "title": "Gas Management",
@@ -600,7 +607,8 @@
     "wallet_request_rejected": "You cancelled the request in your wallet. Nothing was done.",
     "passkey_cancelled": "You dismissed the passkey prompt. Nothing was created: you can try again.",
     "list_unreadable": "This list could not be read from the chain, which is not the same as it being empty. Check your connection and try again.",
-    "passkey_unproven": "The passkey was created, but we could not confirm yet that it can decrypt. Press again: the same one is asked, and no new passkey is created."
+    "passkey_unproven": "The passkey was created, but we could not confirm yet that it can decrypt. Press again: the same one is asked, and no new passkey is created.",
+    "revote_too_soon": "You changed your vote less than an hour ago. Your latest ballot is the one that counts; you can change it again once the hour is up."
   },
   "demo": {
     "banner": "Demo data: no contracts deployed. Nothing here is on-chain."

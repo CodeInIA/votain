@@ -222,11 +222,14 @@
     "export_json": "Exporter la piste d'audit",
     "view_ipfs": "Voir sur IPFS",
     "not_available": "Résultats pas encore disponibles.",
-    "check_ok_title": "Vérifié avec le registre public",
-    "check_ok_body": "Les décomptes publiés totalisent {{declared}} et le contrat a enregistré {{voters}} votants. Aucun bulletin n'a été inventé ni écarté.",
-    "check_bad_title": "Ne correspond pas au registre public",
-    "check_bad_body": "Les décomptes publiés totalisent {{declared}}, mais le contrat a enregistré {{voters}} votants. Ces deux nombres devraient être identiques.",
-    "check_limit": "Aucune clé ni confiance requise : n'importe qui peut le refaire. Cela ne détecte pas un déplacement de voix entre options, qui laisse le total inchangé."
+    "check_pending": "Vérification du résultat publié avec les bulletins enregistrés sur la chaîne…",
+    "check_verified_title": "Vérifié avec les bulletins sur la chaîne",
+    "check_verified_body": "Les décomptes publiés correspondent exactement à la somme des {{valid}} bulletins valides, sur {{voters}} votants. Tout le monde peut refaire cette vérification sans clé et sans faire confiance à personne.",
+    "check_excluded": "Bulletins exclus faute de contenir un seul choix valide : {{excluded}}. Chacun est ouvert dans la preuve publiée, pour que chacun puisse voir pourquoi.",
+    "check_failed_title": "Ne correspond pas aux bulletins sur la chaîne",
+    "check_failed_body": "Les décomptes publiés n'ont pas pu être vérifiés avec les bulletins enregistrés sur la chaîne. Ne vous fiez pas à ce résultat.",
+    "check_unproven_title": "Publié sans preuve",
+    "check_unproven_body": "Ce résultat a été publié par un contrat antérieur aux preuves de dépouillement, il ne peut donc pas être vérifié avec les bulletins."
   },
   "verify_receipt": {
     "title": "Vérifier un vote",
@@ -282,7 +285,8 @@
     "reference": "Numéro de référence",
     "view_tx": "Voir le registre public",
     "back_elections": "Retour aux élections",
-    "check_receipt": "Vérifier mon reçu"
+    "check_receipt": "Vérifier mon reçu",
+    "demo_reference": "Données de démonstration : aucun bulletin n'a été enregistré, il n'y a donc pas de référence à vérifier."
   },
   "change_vote": {
     "title": "Changer votre vote",
@@ -470,7 +474,10 @@
     "open_voting_early": "Ouvrir le vote",
     "open_voting_title": "Commencer le vote en avance ?",
     "open_voting_desc": "Les inscriptions sont closes et le vote n’est pas encore dû. Tous les inscrits pourront voter dès maintenant. La date de clôture ne change pas.",
-    "voting_opened_done": "Le vote est ouvert"
+    "voting_opened_done": "Le vote est ouvert",
+    "void_refused": "Cette élection s'est engagée à ne pas être annulée, et assez de personnes ont voté pour que son résultat soit publié : elle ne peut donc pas être invalidée. Importez la clé de déchiffrement pour publier le résultat.",
+    "key_device_only": "La clé de déchiffrement de cette élection n'a pas pu être dérivée de votre portefeuille : elle n'existe que sur cet appareil. Exportez-la maintenant et conservez-la en lieu sûr, sans elle l'élection ne peut pas être dépouillée.",
+    "tally_excluded": "Bulletins exclus comme invalides : {{excluded}}. Chacun est ouvert dans la preuve publiée pour que tout le monde puisse le vérifier."
   },
   "gas": {
     "title": "Gestion du gaz",
@@ -605,7 +612,8 @@
     "wallet_request_rejected": "Vous avez annulé la demande dans votre portefeuille. Rien n’a été fait.",
     "passkey_cancelled": "Vous avez fermé la demande de passkey. Rien n’a été créé : vous pouvez réessayer.",
     "list_unreadable": "Cette liste n’a pas pu être lue depuis la chaîne, ce qui n’est pas la même chose qu’une liste vide. Vérifiez la connexion et réessayez.",
-    "passkey_unproven": "La passkey a été créée, mais nous n’avons pas encore pu confirmer qu’elle peut déchiffrer. Appuyez à nouveau : c’est la même qui sera interrogée, sans en créer de nouvelle."
+    "passkey_unproven": "La passkey a été créée, mais nous n’avons pas encore pu confirmer qu’elle peut déchiffrer. Appuyez à nouveau : c’est la même qui sera interrogée, sans en créer de nouvelle.",
+    "revote_too_soon": "Vous avez modifié votre vote il y a moins d'une heure. Votre dernier bulletin est celui qui compte ; vous pourrez le modifier à nouveau une fois l'heure écoulée."
   },
   "demo": {
     "banner": "Données de démonstration: aucun contrat déployé. Rien ici n'est sur la blockchain."

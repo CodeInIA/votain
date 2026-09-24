@@ -213,6 +213,11 @@ let cachedIdentity: Identity | null = null;
 
 /** Caches the identity and remembers its public commitment for read-only checks. */
 function remember(id: Identity): Identity {
+  // A DIFFERENT identity (a recovery, another phrase) makes every per-election
+  // commitment stored for the previous one wrong: they would answer "enrolled"
+  // for elections this identity never joined.
+  const previous = localStorage.getItem(IDENTITY_COMMITMENT_KEY);
+  if (previous !== null && previous !== id.commitment.toString()) forgetElectionIdentities();
   cachedIdentity = id;
   localStorage.setItem(IDENTITY_COMMITMENT_KEY, id.commitment.toString());
   return id;

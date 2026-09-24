@@ -118,54 +118,10 @@ export function encryptBallot(
   optionIndex: number,
   base: bigint = COUNTER_BASE,
 ): string {
+  if (!Number.isInteger(optionIndex) || optionIndex < 0) {
+    throw new Error(`not an option index: ${optionIndex}`);
+  }
   const pk = parsePublicKey(publicKeyJson);
   const plaintext = base ** BigInt(optionIndex);
   return toBytesHex(pk.encrypt(plaintext));
-}
-
-/** Homomorphically adds a list of 0x-hex ciphertexts. */
-export function addCiphertexts(publicKey: PublicKey, ciphertexts: string[]): bigint {
-  if (ciphertexts.length === 0) throw new Error("no ciphertexts to add");
-  return ciphertexts.map(fromHex).reduce((acc, c) => publicKey.addition(acc, c));
-}
-
-/**
- * Decrypts an aggregated ciphertext and unpacks the per-option counters.
- *
- * `expectedBallots` is what makes the result trustworthy rather than merely
- * plausible. Every ballot adds exactly one to exactly one counter, so the
- * counters must sum to the number of ballots that went in. That single equality
- * catches everything this function can get wrong: a counter that overflowed into
- * its neighbour, a key that does not belong to this election, a ciphertext that
- * was corrupted on the way.
- *
- * The old check, "nothing is left over after the last counter", only caught an
- * overflow out of the TOP counter. An option that passed the base carried into
- * the next one, the leftover still came out zero, and the tally was quietly
- * wrong with nothing to show for it.
- */
-export function decryptTally(
-  keyPair: { publicKey: PublicKey; privateKey: PrivateKey },
-  aggregated: bigint,
-  numOptionsWithBlank: number,
-  base: bigint = COUNTER_BASE,
-  expectedBallots?: number,
-): bigint[] {
-  let remaining = keyPair.privateKey.decrypt(aggregated);
-  const counts: bigint[] = [];
-  for (let i = 0; i < numOptionsWithBlank; i++) {
-    counts.push(remaining % base);
-    remaining /= base;
-  }
-  if (remaining !== 0n) throw new Error("tally overflow: counters exceeded the counter base");
-
-  if (expectedBallots !== undefined) {
-    const total = counts.reduce((a, c) => a + c, 0n);
-    if (total !== BigInt(expectedBallots)) {
-      throw new Error(
-        `tally does not match the ballots counted: unpacked ${total}, expected ${expectedBallots}`,
-      );
-    }
-  }
-  return counts;
 }

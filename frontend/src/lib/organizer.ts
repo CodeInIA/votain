@@ -13,6 +13,7 @@ import { eventArgs, queryLogsFrom } from "./logs";
 import { fetchOrganizerElectionAddresses } from "./chainElections";
 import { COUNTER_BASE, generateElectionKeys, type SerializedKeyPair } from "./paillier";
 import { deriveElectionKeys, newKeyNonce } from "./tallyKey";
+import { signsDeterministically } from "./organizerKey";
 import {
   effectivePersonhood,
   isCoherentPolicy,
@@ -172,10 +173,11 @@ export async function createElection(
   const { ethers } = await import("ethers");
 
   // 1. Tally keypair. Preferred: derive deterministically from the organizer's
-  //    passkey PRF, keyed by a public per-election nonce. Nothing is stored at
-  //    rest and the key can be re-derived on any device the passkey syncs to.
-  //    Fallback (no PRF passkey): a random key that must be stored/exported,
-  //    since it could never be reproduced.
+  //    wallet signature (`organizerKey.ts`), keyed by a public per-election
+  //    nonce. Nothing is stored at rest and the key can be re-derived on any
+  //    device the wallet reaches. Fallback (a wallet whose signatures are not
+  //    deterministic): a random key that must be stored/exported, since a
+  //    derived one could never be reproduced.
   // Refused here and not only in the wizard, because this is the last code the
   // app runs before a transaction exists and the wizard is one caller of it.
   // It is NOT a defence against a transaction built by hand, which never comes
@@ -185,7 +187,9 @@ export async function createElection(
   }
 
   const keyNonce = newKeyNonce();
-  const derived = await deriveElectionKeys(keyNonce, signer);
+  const derived = (await signsDeterministically(signer))
+    ? await deriveElectionKeys(keyNonce, signer)
+    : null;
   const keyDerivable = derived !== null;
   const paillierKeys = derived ?? (await generateElectionKeys());
 
@@ -362,18 +366,24 @@ export async function markVoided(signer: Signer, address: string): Promise<strin
 }
 
 /**
- * Publishes the decrypted tally. The contract derives the outcome from these
- * counts, so it must carry one entry per option plus the blank vote, in order.
- * `ipfsCid` is the audit-trail CID: empty when the tally was run in-app, which
- * does not pin (the CLI path does).
+ * Publishes the decrypted tally with its proof. The contract derives the
+ * outcome from these counts, so it must carry one entry per option plus the
+ * blank vote, in order, and together with `invalidBallots` they must account
+ * for every voter. `ipfsCid` is the audit-trail CID: empty when the tally was
+ * run in-app, which does not pin (the CLI path does).
  */
 export async function publishResults(
   signer: Signer,
   address: string,
-  counts: number[],
+  tally: { counts: number[]; invalidBallots: number; proof: string },
   ipfsCid = "",
 ): Promise<string> {
-  const tx = await getElection(address, signer).publishResults(ipfsCid, counts.map(BigInt));
+  const tx = await getElection(address, signer).publishResults(
+    ipfsCid,
+    tally.counts.map(BigInt),
+    BigInt(tally.invalidBallots),
+    tally.proof,
+  );
   return waitForLifecycleTx(tx);
 }
 

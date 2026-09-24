@@ -177,6 +177,10 @@ const RELAY_ERROR_ABI = [
   "error UnknownOrExpiredRoot()",
   "error InvalidProof()",
   "error WrongPhase()",
+  "error RevoteTooSoon(uint256 availableAt)",
+  "error InvalidBallot()",
+  "error MissingDocumentTag()",
+  "error UnexpectedDocumentTag()",
 ];
 
 /**
@@ -197,6 +201,10 @@ const SELECTOR_NAMES: Record<string, string> = {
   "0x7a651f34": "UnexpectedAttestation",
   "0x716dcc39": "AttestationExpired",
   "0x342bd384": "BadAttestation",
+  "0x6ba214a7": "RevoteTooSoon",
+  "0x76115943": "InvalidBallot",
+  "0x23e148c2": "MissingDocumentTag",
+  "0xb48b3460": "UnexpectedDocumentTag",
 };
 
 /** What the chain actually refused with, by whichever route the error kept it. */
@@ -239,6 +247,7 @@ const ERROR_MESSAGE_KEY: Record<string, string> = {
   NotPlatformVerified: "errors.not_platform_verified",
   AttestationRequired: "errors.attestation_required",
   AttestationExpired: "errors.attestation_expired",
+  RevoteTooSoon: "errors.revote_too_soon",
 };
 
 /**
@@ -326,6 +335,8 @@ export interface EnrollAttestationInput {
  */
 interface EnrolmentVoucher {
   humanTag: string;
+  /** "0" unless the election requires a document, then the document's tag. */
+  documentTag: string;
   deadline: number;
   signature: string;
   eligibilitySignature: string;
@@ -375,6 +386,7 @@ export async function relayEnrollPrivate(
       election,
       identityCommitment,
       BigInt(voucher.humanTag),
+      BigInt(voucher.documentTag),
       BigInt(voucher.deadline),
       voucher.signature,
       voucher.eligibilitySignature,
@@ -417,7 +429,7 @@ export async function relayEnroll(
     {
       election,
       identityCommitment: identityCommitment.toString(),
-      ...(attestation ?? {}),
+      ...attestation,
     },
     "include",
   );

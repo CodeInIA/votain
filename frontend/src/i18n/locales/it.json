@@ -222,11 +222,14 @@
     "export_json": "Esporta registro audit",
     "view_ipfs": "Vedi su IPFS",
     "not_available": "Risultati non ancora disponibili.",
-    "check_ok_title": "Verificato con il registro pubblico",
-    "check_ok_body": "I conteggi pubblicati sommano {{declared}} e il contratto ha registrato {{voters}} votanti. Nessuna scheda è stata inventata o scartata.",
-    "check_bad_title": "Non corrisponde al registro pubblico",
-    "check_bad_body": "I conteggi pubblicati sommano {{declared}}, ma il contratto ha registrato {{voters}} votanti. Dovrebbero essere lo stesso numero.",
-    "check_limit": "Non serve alcuna chiave né fiducia: chiunque può ripeterlo. Non rileva voti spostati tra opzioni, perché il totale resta uguale."
+    "check_pending": "Verifica del risultato pubblicato con le schede sulla chain…",
+    "check_verified_title": "Verificato con le schede sulla chain",
+    "check_verified_body": "I conteggi pubblicati sono esattamente la somma delle {{valid}} schede valide, su {{voters}} votanti. Chiunque può ripetere questa verifica senza chiavi e senza fidarsi di nessuno.",
+    "check_excluded": "Schede escluse perché non contenevano un'unica scelta valida: {{excluded}}. Ognuna è aperta nella prova pubblicata, così chiunque può vedere perché.",
+    "check_failed_title": "Non corrisponde alle schede sulla chain",
+    "check_failed_body": "Non è stato possibile verificare i conteggi pubblicati con le schede registrate sulla chain. Non fare affidamento su questo risultato.",
+    "check_unproven_title": "Pubblicato senza prova",
+    "check_unproven_body": "Questo risultato è stato pubblicato da un contratto precedente alle prove di scrutinio, quindi non può essere verificato con le schede."
   },
   "verify_receipt": {
     "title": "Verifica un voto",
@@ -282,7 +285,8 @@
     "reference": "Numero di riferimento",
     "view_tx": "Vedi il registro pubblico",
     "back_elections": "Torna alle elezioni",
-    "check_receipt": "Verifica la mia ricevuta"
+    "check_receipt": "Verifica la mia ricevuta",
+    "demo_reference": "Dati dimostrativi: non è stata registrata alcuna scheda, quindi non c'è un riferimento da verificare."
   },
   "change_vote": {
     "title": "Cambia il tuo voto",
@@ -470,7 +474,10 @@
     "open_voting_early": "Apri il voto ora",
     "open_voting_title": "Iniziare il voto in anticipo?",
     "open_voting_desc": "Le iscrizioni sono chiuse e il voto non è ancora previsto. Tutti gli iscritti potranno votare da adesso. La data di chiusura non cambia.",
-    "voting_opened_done": "Il voto è aperto"
+    "voting_opened_done": "Il voto è aperto",
+    "void_refused": "Questa elezione ha promesso di non essere annullata e hanno votato abbastanza persone da poterne pubblicare il risultato, quindi non può essere invalidata. Importa la chiave di decifratura per pubblicare il risultato.",
+    "key_device_only": "Non è stato possibile derivare dal tuo wallet la chiave di decifratura di questa elezione, quindi esiste solo su questo dispositivo. Esportala ora e conservala al sicuro: senza di essa l'elezione non può essere scrutinata.",
+    "tally_excluded": "Schede escluse perché non valide: {{excluded}}. Ognuna è aperta nella prova pubblicata perché chiunque possa verificarla."
   },
   "gas": {
     "title": "Gestione Gas",
@@ -605,7 +612,8 @@
     "wallet_request_rejected": "Hai annullato la richiesta nel tuo wallet. Non è stato fatto nulla.",
     "passkey_cancelled": "Hai chiuso la richiesta della passkey. Non è stato creato nulla: puoi riprovare.",
     "list_unreadable": "Non è stato possibile leggere questa lista dalla catena, che non è lo stesso che sia vuota. Controlla la connessione e riprova.",
-    "passkey_unproven": "La passkey è stata creata, ma non abbiamo ancora potuto confermare che sappia decifrare. Premi di nuovo: viene interrogata la stessa, senza crearne una nuova."
+    "passkey_unproven": "La passkey è stata creata, ma non abbiamo ancora potuto confermare che sappia decifrare. Premi di nuovo: viene interrogata la stessa, senza crearne una nuova.",
+    "revote_too_soon": "Hai cambiato il tuo voto meno di un'ora fa. Conta la tua ultima scheda; potrai cambiarlo di nuovo allo scadere dell'ora."
   },
   "demo": {
     "banner": "Dati dimostrativi: nessun contratto distribuito. Niente qui è on-chain."

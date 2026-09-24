@@ -37,8 +37,8 @@ import { Identity } from "@semaphore-protocol/identity";
  * A deliberately small, plain list rather than BIP-39. These words are read off
  * a screen and typed back by someone who may never have seen a seed phrase, so
  * they are short, unambiguous when spoken, and have no near-homophones. Twelve
- * words from 128 give 84 bits, which is far past what an attacker could search
- * when every guess has to be checked against a Semaphore commitment.
+ * words from 128 give 84 bits, and the derivation below is deliberately slow,
+ * which is what makes 84 enough: see `STRETCH_ITERATIONS`.
  *
  * NOT BIP-39 on purpose: that list exists to be compatible with wallets, and
  * borrowing it would invite someone to type this phrase into one.
@@ -65,7 +65,22 @@ const WORDS = [
 /** Words per phrase. Twelve of 128 is 84 bits. */
 const WORD_COUNT = 12;
 
-const HKDF_INFO = new TextEncoder().encode("votain:voter-identity:v1");
+/** Salt of the derivation. Changing it changes every identity, so it is versioned. */
+const DERIVATION_SALT = new TextEncoder().encode("votain:voter-identity:v2");
+
+/**
+ * How slow deriving an identity from a phrase is, on purpose.
+ *
+ * WHY. Every voter's commitment is public and permanent in `PlatformRegistry`,
+ * so an attacker can guess phrases offline, at leisure, and check each guess
+ * against ALL of them at once. With a fast derivation, 84 bits spread over a
+ * million voters is 2^64 guesses to find somebody: large, but a sum a
+ * well-funded attacker could one day spend, against a record that never
+ * expires. 600,000 rounds of PBKDF2-SHA256 (the current OWASP figure) multiply
+ * every guess by about 2^19, which puts that out of reach, and costs an honest
+ * voter well under a second, once, when they type their phrase.
+ */
+const STRETCH_ITERATIONS = 600_000;
 
 /** A fresh phrase, from the browser's cryptographic generator. */
 export function generateRecoveryPhrase(): string {
@@ -102,10 +117,11 @@ export function unknownWords(phrase: string): string[] {
 /**
  * The Semaphore identity a phrase reconstructs.
  *
- * Through HKDF rather than handing the phrase to `Identity` directly: the
- * derivation is then domain-separated, so the same phrase used for anything
- * else later cannot produce the same secret, and the identity does not depend
- * on how a library happens to hash its input today.
+ * Through a salted, stretched KDF rather than handing the phrase to `Identity`
+ * directly: the derivation is domain-separated, so the same phrase used for
+ * anything else later cannot produce the same secret; it does not depend on how
+ * a library happens to hash its input today; and every guess costs an attacker
+ * `STRETCH_ITERATIONS` rounds.
  */
 export async function identityFromPhrase(phrase: string): Promise<Identity> {
   const normalized = normalizePhrase(phrase);
@@ -116,12 +132,12 @@ export async function identityFromPhrase(phrase: string): Promise<Identity> {
   const ikm = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(normalized) as BufferSource,
-    "HKDF",
+    "PBKDF2",
     false,
     ["deriveBits"],
   );
   const bits = await crypto.subtle.deriveBits(
-    { name: "HKDF", hash: "SHA-256", salt: new Uint8Array(32), info: HKDF_INFO },
+    { name: "PBKDF2", hash: "SHA-256", salt: DERIVATION_SALT, iterations: STRETCH_ITERATIONS },
     ikm,
     256,
   );

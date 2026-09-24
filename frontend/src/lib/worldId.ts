@@ -48,8 +48,6 @@ import { backendBase } from "./backend";
 export interface WorldIdRequestOptions {
   /** Called once the QR / deep-link URI is ready, so the UI can render it. */
   onConnectorUri?: (uri: string) => void;
-  /** Overrides the configured action (each action yields its own nullifier). */
-  action?: string;
   /** Lets a screen that is unmounting stop waiting without cancelling anything. */
   signal?: AbortSignal;
 }
@@ -126,9 +124,9 @@ export async function requestWorldIdProof(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({
-      ...(opts.action ? { action: opts.action } : {}),
-    }),
+    // No action: the server fixes it, since each action would yield its own
+    // nullifier and with it a second identity for the same person.
+    body: JSON.stringify({}),
   });
   if (!res.ok) throw new Error("Failed to open World ID request");
 

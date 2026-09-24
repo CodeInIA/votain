@@ -105,10 +105,17 @@ describe("relayErrorMessage", () => {
       "UnexpectedAttestation",
       "AttestationExpired",
       "BadAttestation",
+      "InvalidBallot",
+      "MissingDocumentTag",
+      "UnexpectedDocumentTag",
     ];
     for (const name of names) {
       expect(revertNameOf({ data: id(`${name}()`).slice(0, 10) })).toBe(name);
     }
+    // The one with an argument: its selector hashes the full signature.
+    expect(revertNameOf({ data: id("RevoteTooSoon(uint256)").slice(0, 10) + "00".repeat(32) })).toBe(
+      "RevoteTooSoon",
+    );
   });
 
   it("passes an unrecognised failure through verbatim", () => {

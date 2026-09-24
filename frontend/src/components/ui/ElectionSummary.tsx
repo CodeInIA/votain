@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EyeOff, Fuel, Info, Percent, Repeat2, Users, Vote } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { cn } from '../../lib/utils';
 import { Badge } from './Badge';
 import { BlockchainBadge } from './BlockchainBadge';
@@ -235,11 +235,12 @@ export function ElectionSchedule({
   /**
    * The sentence still being shown, which outlives the press that closed it.
    *
-   * A ref and not state: nothing should re-render because a hint finished
-   * closing, and the value is only ever read in the same pass that writes it.
+   * State set during render, React's pattern for remembering a previous
+   * render: it only changes when a DIFFERENT hint opens, which re-renders
+   * anyway, so nothing re-renders because a hint finished closing.
    */
-  const lastHint = useRef<string | null>(null);
-  if (openHint) lastHint.current = openHint;
+  const [lastHint, setLastHint] = useState<string | null>(null);
+  if (openHint && openHint !== lastHint) setLastHint(openHint);
   const funding = useElectionFunding(election.contractAddress);
   const voteCost = useVoteCost();
   const reservedBallots = Math.floor(funding.reserved / voteCost.matic);
@@ -345,7 +346,7 @@ export function ElectionSchedule({
   }
 
 
-  const shownHint = figures.find(f => f.id === (openHint ?? lastHint.current))?.hint;
+  const shownHint = figures.find(f => f.id === (openHint ?? lastHint))?.hint;
 
   return (
     <Card className="p-4 mb-4 flex flex-col sm:flex-row items-start gap-4">

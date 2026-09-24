@@ -211,6 +211,14 @@ export default function ElectionManagement() {
   // The key exists to make the tally possible. A decided election has either had
   // its tally published or will never have one, so from here it is only a
   // liability to be disposed of.
+  /**
+   * An election that gave up being called off cannot be voided once its result
+   * is publishable: the organizer can read the result first, so voiding it
+   * would be the veto they promised not to have. `markVoided` reverts with
+   * `ResultPublishable`, and the button would only lead there.
+   */
+  const voidRefused =
+    election.cancellable === false && (election.distinctVoters ?? 0) >= election.privacyQuorum;
   const keyStillNeeded = !['closed', 'voided', 'cancelled'].includes(election.phase);
 
   // Drop the decrypted counts on close so reopening always recomputes from the
@@ -309,7 +317,7 @@ export default function ElectionManagement() {
       // Publishing is a transaction like every other write here, and it was the
       // one that never brought the wallet forward.
       await wallet.withWalletApp(
-        () => publishResults(signer, election.contractAddress, tallyPreview.counts),
+        () => publishResults(signer, election.contractAddress, tallyPreview),
         () => toast({ title: t('errors.confirm_in_wallet_app'), variant: 'info' }),
       );
       toast({ title: t('election_mgmt.results_published'), variant: 'success' });
@@ -565,6 +573,12 @@ export default function ElectionManagement() {
             <>
               <input ref={keyFileInput} type="file" accept="application/json,.json"
                 className="hidden" onChange={handleImportKey} />
+              {/* A key that could not be derived from the wallet (see
+                  `signsDeterministically`) exists on this device only: losing
+                  the browser data would make the election impossible to count. */}
+              {tallyKeyPresent && !election.keyNonce && (
+                <p className="text-xs text-warning px-1 pb-2">{t('election_mgmt.key_device_only')}</p>
+              )}
               {tallyKeyPresent ? (
                 <Button variant="ghost" className="w-full rounded-2xl" disabled={busy}
                   onClick={handleExportKey}>
@@ -662,6 +676,11 @@ export default function ElectionManagement() {
                     <span className="font-semibold text-on-surface tabular-nums">{n}</span>
                   </div>
                 ))}
+                {tallyPreview.invalidBallots > 0 && (
+                  <p className="text-xs text-on-surface-variant mt-1">
+                    {t('election_mgmt.tally_excluded', { excluded: tallyPreview.invalidBallots })}
+                  </p>
+                )}
                 {!tallyPreview.quorumMet && (
                   <p className="text-xs text-warning mt-1">
                     {t('election_mgmt.tally_quorum_short', {
@@ -686,7 +705,12 @@ export default function ElectionManagement() {
 
             <div className="flex gap-3">
               <Button variant="ghost" className="flex-1" disabled={busy} onClick={closeTallyModal}>{t('common.close')}</Button>
-              {!tallyKeyPresent ? (
+              {!tallyKeyPresent && voidRefused ? (
+                // The contract refuses: see `voidRefused`.
+                <p className="flex-1 text-xs text-on-surface-variant self-center">
+                  {t('election_mgmt.void_refused')}
+                </p>
+              ) : !tallyKeyPresent ? (
                 // No key here: the election can still be voided if that's the intent.
                 <Button variant="default" className="flex-1 border-error/30 text-error hover:bg-error/10" disabled={busy}
                   onClick={() => runAction(t('election_mgmt.voided_done'), markVoided, () => setTallyModal(false))}>

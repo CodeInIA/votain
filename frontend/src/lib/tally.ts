@@ -4,8 +4,14 @@
  * Mirrors the pipeline in `scripts-tally/tally-votes.ts`, minus the IPFS
  * pinning: read every VoteCast event, keep only the highest nonce per nullifier
  * (coercion resistance, a coerced ballot is always superseded by a later one),
- * sum the surviving Paillier ciphertexts homomorphically, and decrypt the single
- * aggregate. Individual ballots are never decrypted.
+ * and prove the result with `tallyProof.ts`.
+ *
+ * WHAT THE KEY SEES. To prove the tally, each surviving ballot is decrypted on
+ * this device to tell a valid one from garbage or a stuffed one. That is no new
+ * power: the ciphertexts are public and whoever holds this key could always
+ * decrypt them. What leaves the device is only what the proof needs: the
+ * totals, the randomness that opens their sum, and an opening of each ballot
+ * excluded as invalid. Nothing about any valid ballot is published.
  *
  * The private key is read from local storage on the organizer's device and never
  * leaves it. `scripts-tally` stays in the repo as the auditor-facing path: it
@@ -16,15 +22,9 @@ import type { Signer } from "ethers";
 import { getElection } from "./contracts";
 import { eventArgs, queryLogsFrom } from "./logs";
 import { loadElectionPrivateKey, storeElectionPrivateKey } from "./organizer";
-import {
-  addCiphertexts,
-  counterBaseFor,
-  decryptTally,
-  restoreKeyPair,
-  type SerializedKeyPair,
-} from "./paillier";
+import { counterBaseFor, restoreKeyPair, type SerializedKeyPair } from "./paillier";
 import { deriveElectionKeys } from "./tallyKey";
-
+import { encodeTallyProof, finalBallots, proveTally } from "./tallyProof";
 
 export interface TallyResult {
   /** Vote counts per option; the LAST entry is the blank vote. */
@@ -36,6 +36,10 @@ export interface TallyResult {
   /** True when `voters` is below the election's privacy quorum. */
   quorumMet: boolean;
   privacyQuorum: number;
+  /** Final ballots excluded because they encrypt no single valid choice. */
+  invalidBallots: number;
+  /** The encoded decryption proof `publishResults` carries. */
+  proof: string;
 }
 
 /**
@@ -106,20 +110,21 @@ export async function importTallyKey(address: string, fileText: string): Promise
 // only wants the shape of a tally need not connect a wallet.
 export async function computeTally(address: string, signer?: Signer): Promise<TallyResult> {
   const election = getElection(address);
-  const [numOptionsBn, pkJson, metadataJson] = await Promise.all([
+  const [numOptionsBn, pkJson, metadataJson, quorumBn] = await Promise.all([
     election.numOptions(),
     election.paillierPublicKey(),
     election.metadataJson(),
+    election.privacyQuorum() as Promise<bigint>,
   ]);
   const totalSlots = Number(numOptionsBn) + 1; // + blank vote
+  // The contract's own floor, which is the one `publishResults` enforces. The
+  // copy in the metadata is for display and could disagree with it.
+  const privacyQuorum = Number(quorumBn);
 
-  let privacyQuorum = 0;
   let keyNonce: string | undefined;
   try {
-    const meta = JSON.parse(metadataJson) as { privacyQuorum?: number; keyNonce?: string };
-    privacyQuorum = meta.privacyQuorum ?? 0;
-    keyNonce = meta.keyNonce;
-  } catch { /* no metadata: treat as no quorum, no derivable key */ }
+    keyNonce = (JSON.parse(metadataJson) as { keyNonce?: string }).keyNonce;
+  } catch { /* no metadata: no derivable key */ }
 
   // Imported/stored key first, else re-derive (prompts for a wallet signature).
   const keys = await resolveTallyKey(address, keyNonce, signer);
@@ -132,40 +137,29 @@ export async function computeTally(address: string, signer?: Signer): Promise<Ta
   }
 
   const events = await queryLogsFrom(election, election.filters.VoteCast());
+  const ballots = finalBallots(
+    events.map(e => {
+      const args = eventArgs<{ nullifier: bigint; voteCiphertext: string; nonce: bigint }>(e);
+      return { nullifier: args.nullifier, nonce: args.nonce, ciphertext: args.voteCiphertext };
+    }),
+  );
 
-  // Coercion resistance: only the highest nonce per nullifier survives.
-  const latest = new Map<string, { ciphertext: string; nonce: bigint }>();
-  for (const e of events) {
-    const args = eventArgs<{ nullifier: bigint; voteCiphertext: string; nonce: bigint }>(e);
-    const key = args.nullifier.toString();
-    const existing = latest.get(key);
-    if (!existing || args.nonce > existing.nonce) {
-      latest.set(key, { ciphertext: args.voteCiphertext, nonce: args.nonce });
-    }
-  }
-
-  const finalVotes = [...latest.values()];
-  const quorumMet = finalVotes.length >= privacyQuorum;
-
-  // With no votes there is nothing to add: report an all-zero tally rather than
-  // letting addCiphertexts throw on an empty list.
-  // One ballot per voter reaches the sum, so the unpacked counters have to add
-  // up to exactly this many. `decryptTally` refuses anything else.
-  const counts = finalVotes.length === 0
-    ? Array.from({ length: totalSlots }, () => 0)
-    : decryptTally(
-        { publicKey, privateKey },
-        addCiphertexts(publicKey, finalVotes.map(v => v.ciphertext)),
-        totalSlots,
-        counterBaseFor(metadataJson),
-        finalVotes.length,
-      ).map(Number);
+  const proven = proveTally({
+    publicKey: { n: publicKey.n, g: publicKey.g },
+    lambda: privateKey.lambda,
+    decrypt: c => privateKey.decrypt(c),
+    ballots,
+    slots: totalSlots,
+    base: counterBaseFor(metadataJson),
+  });
 
   return {
-    counts,
-    voters: finalVotes.length,
+    counts: proven.counts.map(Number),
+    voters: ballots.length,
     ballotsCast: events.length,
-    quorumMet,
+    quorumMet: ballots.length >= privacyQuorum,
     privacyQuorum,
+    invalidBallots: proven.invalidBallots,
+    proof: encodeTallyProof(proven.proof),
   };
 }

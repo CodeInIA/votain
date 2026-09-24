@@ -77,16 +77,21 @@ async function tallySignature(signer: Signer): Promise<string> {
   const cached = sessionSignatures.get(address);
   if (cached) return cached;
 
+  const signature = await requestSignature(signer, address);
+  sessionSignatures.set(address, signature);
+  return signature;
+}
+
+/** Asks the wallet, every time. */
+async function requestSignature(signer: Signer, address: string): Promise<string> {
   const network = await signer.provider?.getNetwork();
   const domain = { ...DOMAIN, chainId: Number(network?.chainId ?? 0) };
 
   try {
-    const signature = await signer.signTypedData(domain, TYPES as never, {
+    return await signer.signTypedData(domain, TYPES as never, {
       purpose: PURPOSE,
       organizer: address,
     });
-    sessionSignatures.set(address, signature);
-    return signature;
   } catch (e) {
     const err = e as { code?: number | string };
     if (err?.code === 4001 || err?.code === "ACTION_REJECTED") {
@@ -94,6 +99,47 @@ async function tallySignature(signer: Signer): Promise<string> {
     }
     throw e;
   }
+}
+
+/** Where the answer to `signsDeterministically` is remembered, per address. */
+const DETERMINISM_KEY_PREFIX = "votain_deterministic_signer:";
+
+/**
+ * Whether this wallet signs the same payload to the same bytes, checked once.
+ *
+ * THE ASSUMPTION ABOVE IS NOT UNIVERSAL. RFC 6979 is what MetaMask and most
+ * software wallets do, but an MPC wallet, a smart-contract wallet answering
+ * through ERC-1271, or a hardware signer with randomised nonces returns a
+ * different signature every time. Deriving a tally key from one of those
+ * works exactly once: the next derivation, on this device or another, yields a
+ * different key and the election can never be decrypted.
+ *
+ * So the first time an address is used, it signs twice and the two are
+ * compared. A wallet that fails gets a random key for each election instead,
+ * kept on this device and offered for export, which is the path an organizer
+ * without a derivable key already had. The answer is remembered, so the second
+ * prompt happens once per wallet, not once per election.
+ */
+export async function signsDeterministically(signer: Signer): Promise<boolean> {
+  const address = (await signer.getAddress()).toLowerCase();
+  const key = DETERMINISM_KEY_PREFIX + address;
+  try {
+    const known = localStorage.getItem(key);
+    if (known === "yes" || known === "no") return known === "yes";
+  } catch {
+    /* storage unavailable: ask the wallet */
+  }
+
+  const first = await tallySignature(signer);
+  const second = await requestSignature(signer, address);
+  const deterministic = first === second;
+  try {
+    localStorage.setItem(key, deterministic ? "yes" : "no");
+  } catch {
+    /* not remembered: asked again next time, which is safe */
+  }
+  if (!deterministic) sessionSignatures.delete(address);
+  return deterministic;
 }
 
 /** HKDF over arbitrary key material, to 32 bytes. */

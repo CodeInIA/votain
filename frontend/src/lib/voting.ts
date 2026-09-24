@@ -22,6 +22,10 @@ import type { Identity } from "@semaphore-protocol/identity";
 import { identityForElection } from "./electionIdentity";
 import { claimAttestation } from "./eligibility";
 import { counterBaseFor, encryptBallot } from "./paillier";
+import { mapWithConcurrency } from "./utils";
+
+/** Elections read at once when a screen fans out over all of them. */
+const READ_CONCURRENCY = 6;
 import {
   computeNullifier,
   ensureRegistered,
@@ -68,9 +72,13 @@ async function enrolsPrivately(electionAddress: string): Promise<boolean> {
   try {
     const attester: string = await getElection(electionAddress).platformAttester();
     answer = attester !== "0x0000000000000000000000000000000000000000";
-  } catch {
-    // An election deployed before the function existed reverts rather than
-    // answering zero. Same meaning: the old doors.
+  } catch (error: unknown) {
+    // An election deployed before the function existed REVERTS rather than
+    // answering zero. Same meaning: the old doors. Anything else (the RPC
+    // down, a timeout) is not an answer at all: caching "public" then would
+    // have this tab enrol and vote with the wrong identity until it reloads,
+    // so it is thrown and asked again next time.
+    if ((error as { code?: string } | null)?.code !== "CALL_EXCEPTION") throw error;
     answer = false;
   }
   privateEnrolment.set(key, answer);
@@ -280,8 +288,14 @@ export async function findVoteReceipt(
   const nullifier = parseNullifier(trimmed);
   if (nullifier === null) return null;
 
-  for (const el of elections) {
-    const receipts = await fetchVoteReceipts(el.contractAddress, nullifier);
+  // In parallel, then the first match in the order given, so the answer is
+  // the same as the one-at-a-time loop gave, without waiting on every miss.
+  const found = await mapWithConcurrency(elections, READ_CONCURRENCY, el =>
+    fetchVoteReceipts(el.contractAddress, nullifier),
+  );
+  for (let i = 0; i < elections.length; i++) {
+    const el = elections[i];
+    const receipts = found[i];
     if (receipts.length === 0) continue;
     const last = receipts[receipts.length - 1];
     return {
@@ -370,11 +384,16 @@ export async function fetchLocalVoteHistory(
   elections: { contractAddress: string; title: string; phase: string }[],
 ): Promise<VoteHistoryEntry[]> {
   const entries: VoteHistoryEntry[] = [];
-  for (const el of elections) {
+  const known = elections.flatMap(el => {
     const nullifier = getStoredVoteNullifier(el.contractAddress);
-    if (nullifier === null) continue;
-
-    const receipts = await fetchVoteReceipts(el.contractAddress, nullifier);
+    return nullifier === null ? [] : [{ el, nullifier }];
+  });
+  const found = await mapWithConcurrency(known, READ_CONCURRENCY, ({ el, nullifier }) =>
+    fetchVoteReceipts(el.contractAddress, nullifier),
+  );
+  for (let i = 0; i < known.length; i++) {
+    const { el, nullifier } = known[i];
+    const receipts = found[i];
     if (receipts.length === 0) continue;
 
     const last = receipts[receipts.length - 1];
@@ -403,7 +422,7 @@ export async function fetchVoteHistory(
   if (!master) return [];
 
   const entries: VoteHistoryEntry[] = [];
-  for (const el of elections) {
+  const looked = await mapWithConcurrency(elections, READ_CONCURRENCY, async el => {
     const election = getElection(el.contractAddress);
     const scope: bigint = el.scope ?? BigInt(await election.scope());
     // Per election, because that is what the ballot was cast with wherever the
@@ -411,7 +430,9 @@ export async function fetchVoteHistory(
     // found nothing at all there, which reads as "you never voted".
     const identity = await votingIdentity(el.contractAddress, master);
     const nullifier = computeNullifier(identity, scope);
-    const receipts = await fetchVoteReceipts(el.contractAddress, nullifier);
+    return { el, nullifier, receipts: await fetchVoteReceipts(el.contractAddress, nullifier) };
+  });
+  for (const { el, nullifier, receipts } of looked) {
     if (receipts.length === 0) continue;
 
     // Learned once, so this browser stops needing the passkey to answer the

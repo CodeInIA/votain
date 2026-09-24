@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, useEffectEvent, type ReactNode } from 'react';
 import { clearSessionSecrets } from '../lib/passkeyPrf';
 import { clearOrganizerKeyCache } from '../lib/organizerKey';
 import { clearIdentity } from '../lib/semaphore';
@@ -165,6 +165,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // that had ended: the first anyone heard of it was an action failing. It now
   // runs again whenever the tab comes back, and a timer wakes it when the
   // credential's own expiry arrives.
+  // Effect events: the effects below run once and keep listening, and these
+  // let them call the latest version of each handler without re-subscribing.
+  const onSessionEnded = useEffectEvent(endExpiredVoterSession);
+  const onMembershipCheck = useEffectEvent(reconcileMembership);
+
   useEffect(() => {
     let cancelled = false;
     let expiryTimer: number | undefined;
@@ -183,7 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // they have no way to check it.
             const believed = localStorage.getItem(VOTER_KEY) === 'true';
             // Definitive "not authenticated": clear any (possibly spoofed) flag.
-            endExpiredVoterSession();
+            onSessionEnded();
             if (believed) announceSessionExpired();
             return null;
           }
@@ -214,7 +219,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // this person a credential; being a member says the chain holds
           // them, and the two part company whenever the registry is replaced
           // under a live session, which on a local chain is every restart.
-          if (data.nullifier) void reconcileMembership(data.nullifier);
+          if (data.nullifier) void onMembershipCheck(data.nullifier);
 
           // The credential's own deadline, from the credential. A tab open
           // across it ends the session at the right moment instead of carrying
@@ -223,7 +228,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (remaining === null) return;
           window.clearTimeout(expiryTimer);
           expiryTimer = window.setTimeout(
-            () => (remaining === 0 ? endExpiredVoterSession() : reconcile()),
+            () => (remaining === 0 ? onSessionEnded() : reconcile()),
             remaining,
           );
         })
@@ -252,7 +257,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * credential REVOKED before its expiry.
    */
   useEffect(() => {
-    const onExpired = () => endExpiredVoterSession();
+    const onExpired = () => onSessionEnded();
     window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
     return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
   }, []);

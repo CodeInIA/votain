@@ -33,6 +33,11 @@ vi.mock('./contracts', () => ({
   getElection: (address: string) => ({
     address,
     scope: async () => 7n,
+    // An election from before private enrolment: the call REVERTS, which is
+    // how the chain says "the old doors".
+    platformAttester: async () => {
+      throw Object.assign(new Error('execution reverted'), { code: 'CALL_EXCEPTION' });
+    },
     filters: { VoteCast: () => ({}) },
   }),
   getReadProvider: () => ({}),

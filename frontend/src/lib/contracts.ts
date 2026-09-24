@@ -69,11 +69,12 @@ export const ELECTION_ABI = [
   "function closeEnrollmentEarly()",
   "function closeVotingEarly()",
   "function markVoided()",
-  "function publishResults(string ipfsCid, uint256[] tallyResults)",
+  "function publishResults(string ipfsCid, uint256[] tallyResults, uint256 invalidBallots, bytes tallyProof)",
   // events
   "event MemberEnrolled(uint256 indexed identityCommitment, uint256 index, uint256 merkleTreeRoot)",
   "event VoteCast(uint256 indexed nullifier, bytes voteCiphertext, uint256 nonce, uint256 timestamp)",
   "event ResultsPublished(string ipfsCid, uint256[] tally, uint8 outcome, uint256 winnerIndex)",
+  "event TallyProofPublished(uint256 invalidBallots, bytes proof)",
 ] as const;
 
 export const PAYMASTER_ABI = [

@@ -64,7 +64,7 @@ export function fingerprintOf(value: string): FingerprintShape {
   const bits = hash32(value.toLowerCase());
   const hue = hash32(`${value.toLowerCase()}:hue`) % 360;
 
-  const cells: boolean[] = new Array(GRID * ROWS).fill(false);
+  const cells: boolean[] = Array.from({ length: GRID * ROWS }, () => false);
   for (let row = 0; row < ROWS; row++) {
     for (let col = 0; col < COLUMNS; col++) {
       const on = ((bits >>> (row * COLUMNS + col)) & 1) === 1;

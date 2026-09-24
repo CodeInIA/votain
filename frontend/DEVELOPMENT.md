@@ -575,11 +575,14 @@ delete the copies, and says why.
 
 Worth stating for the thesis: this is also why the key must never be published as
 an audit artefact. Handing it to a verifier would let them confirm the tally, and
-also read every individual ballot. A system that wants third-party verification
-of the count publishes a proof of correct decryption instead, which Votain does
-not implement. The count is verifiable here in the weaker sense that it is
-immutable and its inputs are public, not in the sense that a stranger can
-recompute it.
+also read every individual ballot. Votain publishes a proof of correct
+decryption instead (`src/lib/tallyProof.ts`): Paillier lets the key holder
+recover the randomness of any ciphertext, so the organizer publishes the
+randomness that opens the sum of the valid final ballots to exactly the
+published counts, and opens each ballot excluded as invalid. A stranger checks
+both against the `VoteCast` events with the public key alone, which is what the
+results screen (`TallyCheck`) and `scripts-tally --verify` do. Nothing about any
+valid ballot is revealed.
 
 ## Radix Selects are controlled, so a tap can close them
 

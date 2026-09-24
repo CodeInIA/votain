@@ -222,11 +222,14 @@
     "export_json": "Exportar trilha de auditoria",
     "view_ipfs": "Ver no IPFS",
     "not_available": "Resultados ainda não disponíveis.",
-    "check_ok_title": "Confirmado com o registo público",
-    "check_ok_body": "As contagens publicadas somam {{declared}} e o contrato registou {{voters}} votantes. Nenhum boletim foi inventado nem descartado.",
-    "check_bad_title": "Não corresponde ao registo público",
-    "check_bad_body": "As contagens publicadas somam {{declared}}, mas o contrato registou {{voters}} votantes. Deveriam ser o mesmo número.",
-    "check_limit": "Não precisa de chave nem de confiar em ninguém: qualquer pessoa pode repetir. Não deteta votos movidos entre opções, porque isso não altera o total."
+    "check_pending": "A verificar o resultado publicado com os boletins na blockchain…",
+    "check_verified_title": "Verificado com os boletins na blockchain",
+    "check_verified_body": "As contagens publicadas são exatamente a soma dos {{valid}} boletins válidos, de {{voters}} votantes. Qualquer pessoa pode repetir esta verificação sem chave e sem confiar em ninguém.",
+    "check_excluded": "Boletins excluídos por não conterem uma única escolha válida: {{excluded}}. Cada um é aberto na prova publicada, para que qualquer pessoa veja porquê.",
+    "check_failed_title": "Não corresponde aos boletins na blockchain",
+    "check_failed_body": "Não foi possível verificar as contagens publicadas com os boletins registados na blockchain. Não confie neste resultado.",
+    "check_unproven_title": "Publicado sem prova",
+    "check_unproven_body": "Este resultado foi publicado por um contrato anterior às provas de apuramento, por isso não pode ser verificado com os boletins."
   },
   "verify_receipt": {
     "title": "Verifica um voto",
@@ -282,7 +285,8 @@
     "reference": "Número de referência",
     "view_tx": "Ver o registo público",
     "back_elections": "Voltar às eleições",
-    "check_receipt": "Verificar o meu recibo"
+    "check_receipt": "Verificar o meu recibo",
+    "demo_reference": "Dados de demonstração: nenhum boletim foi registado, por isso não há referência para verificar."
   },
   "change_vote": {
     "title": "Mudar seu voto",
@@ -470,7 +474,10 @@
     "open_voting_early": "Abrir a votação agora",
     "open_voting_title": "Começar a votação mais cedo?",
     "open_voting_desc": "As inscrições já fecharam e a votação ainda não é devida. Todos os inscritos poderão votar a partir de agora. A data de fecho não muda.",
-    "voting_opened_done": "Votação aberta"
+    "voting_opened_done": "Votação aberta",
+    "void_refused": "Esta eleição comprometeu-se a não ser cancelada e votaram pessoas suficientes para publicar o resultado, por isso não pode ser anulada. Importe a chave de desencriptação para publicar o resultado.",
+    "key_device_only": "A chave de desencriptação desta eleição não pôde ser derivada da sua carteira, por isso só existe neste dispositivo. Exporte-a agora e guarde-a em segurança: sem ela a eleição não pode ser apurada.",
+    "tally_excluded": "Boletins excluídos por serem inválidos: {{excluded}}. Cada um é aberto na prova publicada para que qualquer pessoa o possa verificar."
   },
   "gas": {
     "title": "Gestão de Gas",
@@ -605,7 +612,8 @@
     "wallet_request_rejected": "Cancelou o pedido na sua carteira. Não foi feito nada.",
     "passkey_cancelled": "Fechou o pedido da passkey. Não foi criado nada: pode tentar de novo.",
     "list_unreadable": "Não foi possível ler esta lista a partir da cadeia, o que não é o mesmo que estar vazia. Verifica a ligação e tenta de novo.",
-    "passkey_unproven": "A passkey foi criada, mas ainda não conseguimos confirmar que consegue decifrar. Prima outra vez: é a mesma que será consultada, sem criar nenhuma nova."
+    "passkey_unproven": "A passkey foi criada, mas ainda não conseguimos confirmar que consegue decifrar. Prima outra vez: é a mesma que será consultada, sem criar nenhuma nova.",
+    "revote_too_soon": "Alterou o seu voto há menos de uma hora. Conta o seu último boletim; poderá alterá-lo novamente quando passar a hora."
   },
   "demo": {
     "banner": "Dados de demonstração: sem contratos implantados. Nada aqui está on-chain."

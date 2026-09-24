@@ -23,7 +23,6 @@ export interface Deployment {
   };
   config?: {
     entryPoint?: string;
-    trustedForwarder?: string;
   };
 }
 

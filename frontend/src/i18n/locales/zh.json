@@ -218,11 +218,14 @@
     "export_json": "导出审计记录",
     "view_ipfs": "在 IPFS 上查看",
     "not_available": "结果尚未公布。",
-    "check_ok_title": "已与公开记录核对",
-    "check_ok_body": "公布的计数合计为 {{declared}}，合约记录了 {{voters}} 名投票人。没有凭空增加，也没有丢弃任何选票。",
-    "check_bad_title": "与公开记录不符",
-    "check_bad_body": "公布的计数合计为 {{declared}}，但合约记录了 {{voters}} 名投票人。这两个数字本应相同。",
-    "check_limit": "这不需要密钥，也不需要信任任何人，任何人都可以复核。但它看不出选票是否在选项之间被挪动，因为那样总数不变。"
+    "check_pending": "正在将公布的结果与链上的选票进行核对…",
+    "check_verified_title": "已与链上的选票核对",
+    "check_verified_body": "公布的计票结果恰好等于 {{voters}} 名投票者的 {{valid}} 张有效选票之和。任何人都可以在没有密钥、无需信任任何人的情况下重复此核对。",
+    "check_excluded": "因未包含唯一有效选项而被排除的选票：{{excluded}} 张。每一张都在公布的证明中公开，任何人都能看到原因。",
+    "check_failed_title": "与链上的选票不符",
+    "check_failed_body": "无法根据链上记录的选票核实公布的计票结果。请勿依赖此结果。",
+    "check_unproven_title": "未附证明即公布",
+    "check_unproven_body": "此结果由计票证明出现之前的合约公布，因此无法与选票核对。"
   },
   "verify_receipt": {
     "title": "验证一笔投票",
@@ -276,7 +279,8 @@
     "reference": "参考编号",
     "view_tx": "查看公开记录",
     "back_elections": "返回选举列表",
-    "check_receipt": "查看我的回执"
+    "check_receipt": "查看我的回执",
+    "demo_reference": "演示数据：未记录任何选票，因此没有可核对的参考编号。"
   },
   "change_vote": {
     "title": "更改您的投票",
@@ -462,7 +466,10 @@
     "open_voting_early": "立即开放投票",
     "open_voting_title": "提前开始投票？",
     "open_voting_desc": "登记已结束，投票尚未开始。所有已登记的人从现在起即可投票。截止日期不变。",
-    "voting_opened_done": "投票已开放"
+    "voting_opened_done": "投票已开放",
+    "void_refused": "此选举承诺不会被取消，且投票人数已足以公布结果，因此不能作废。请导入解密密钥以公布结果。",
+    "key_device_only": "无法从你的钱包派生此选举的解密密钥，因此它只存在于此设备上。请立即导出并妥善保管：没有它就无法计票。",
+    "tally_excluded": "作为无效选票被排除：{{excluded}} 张。每一张都在公布的证明中公开，任何人都可以核查。"
   },
   "gas": {
     "title": "Gas 管理",
@@ -595,7 +602,8 @@
     "wallet_request_rejected": "你在钱包中取消了请求，未执行任何操作。",
     "passkey_cancelled": "你关闭了通行密钥请求。没有创建任何内容，可以再试一次。",
     "list_unreadable": "无法从链上读取此列表，这并不等于列表为空。请检查连接后重试。",
-    "passkey_unproven": "通行密钥已创建，但还无法确认它能用于解密。请再按一次：会向同一个密钥提问，不会创建新的。"
+    "passkey_unproven": "通行密钥已创建，但还无法确认它能用于解密。请再按一次：会向同一个密钥提问，不会创建新的。",
+    "revote_too_soon": "你在不到一小时前更改了投票。以你最新的选票为准；一小时后可以再次更改。"
   },
   "demo": {
     "banner": "演示数据：未部署合约。此处内容均不在链上。"
