@@ -2,7 +2,6 @@
 pragma solidity ^0.8.37;
 
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 import {ISemaphoreVerifier} from "@semaphore-protocol/contracts/interfaces/ISemaphoreVerifier.sol";
 import {InternalLeanIMT, LeanIMTData} from "@zk-kit/lean-imt.sol/InternalLeanIMT.sol";
 
@@ -19,7 +18,12 @@ interface IPlatformRegistry {
 /// later cast Paillier-encrypted votes proving group membership with a Semaphore V4
 /// zero-knowledge proof. Re-voting is allowed: only the highest nonce per nullifier
 /// counts at tally time (coercion resistance).
-contract ElectionV4 is ERC2771Context {
+///
+/// No meta-transaction forwarder, and deliberately: voters reach this contract
+/// through ElectionPaymaster and nothing they call reads the sender, while the
+/// organizer signs their own transactions. A trusted forwarder would only add
+/// a party able to speak as the organizer.
+contract ElectionV4 {
     using InternalLeanIMT for LeanIMTData;
 
     // ────────────────────────────────────────────────
@@ -101,6 +105,16 @@ contract ElectionV4 is ERC2771Context {
      */
     uint256 public constant MAX_OPTIONS = 50;
 
+    /**
+     * @dev Ceiling on one ballot's size in bytes.
+     *
+     * A Paillier ciphertext lives modulo n², so under the platform's 2048-bit
+     * keys it is at most 4096 bits: 512 bytes. Anything longer cannot be a
+     * ballot, and accepting it would let one voter make every relayed ballot
+     * as expensive as the gas cap allows, paid from the organizer's tank.
+     */
+    uint256 public constant MAX_BALLOT_BYTES = 512;
+
     address public immutable organizer;
     ISemaphoreVerifier public immutable verifier;
     IPlatformRegistry public immutable registry;
@@ -181,7 +195,7 @@ contract ElectionV4 is ERC2771Context {
     /// nullifier is the same number in every election, the tag is not.
     bytes32 private constant PRIVATE_ENROLL_TYPEHASH =
         keccak256(
-            "PrivateEnrollment(uint256 identityCommitment,uint256 humanTag,uint256 deadline)"
+            "PrivateEnrollment(uint256 identityCommitment,uint256 humanTag,uint256 documentTag,uint256 deadline)"
         );
 
     /**
@@ -350,6 +364,17 @@ contract ElectionV4 is ERC2771Context {
     event ElectionCancelled(address indexed by);
     event ElectionVoided(address indexed by);
     event ResultsPublished(string ipfsCid, uint256[] tally, Outcome outcome, uint256 winnerIndex);
+    /**
+     * @notice The evidence that the published counts are what the ballots hold.
+     *
+     * UTF-8 JSON, produced and checked by `tallyProof.ts`: the randomness that
+     * opens the product of every valid final ballot to exactly the published
+     * counts, and an opening of each ballot excluded as invalid. Anyone can
+     * check it against the ciphertexts in `VoteCast` without any key. Emitted
+     * rather than stored, because it is read by auditors and never by this
+     * contract.
+     */
+    event TallyProofPublished(uint256 invalidBallots, bytes proof);
 
     /**
      * Name and metadata bounds, in BYTES rather than characters: Solidity cannot
@@ -398,13 +423,23 @@ contract ElectionV4 is ERC2771Context {
     error PersonhoodNullifierUsed();
     error TooManyOptions();
     error PrivacyQuorumNotMet();
+    /// @dev An empty ballot, or one longer than any Paillier ciphertext can be.
+    error InvalidBallot();
+    /// @dev A non-cancellable election whose result can be published cannot be voided.
+    error ResultPublishable();
+    /// @dev A gated private enrolment arrived without the document tag.
+    error MissingDocumentTag();
+    /// @dev A document tag on an election with no document requirement.
+    error UnexpectedDocumentTag();
+    /// @dev A result was published without the proof that makes it checkable.
+    error MissingTallyProof();
 
     // ────────────────────────────────────────────────
     // Modifiers
     // ────────────────────────────────────────────────
 
     modifier onlyOrganizer() {
-        if (_msgSender() != organizer) revert NotOrganizer();
+        if (msg.sender != organizer) revert NotOrganizer();
         _;
     }
 
@@ -420,13 +455,12 @@ contract ElectionV4 is ERC2771Context {
     // ────────────────────────────────────────────────
 
     constructor(
-        address trustedForwarder,
         address _verifier,
         address _registry,
         address _platformAttester,
         address _organizer,
         Config memory cfg
-    ) ERC2771Context(trustedForwarder) {
+    ) {
         if (
             _verifier == address(0) ||
             _registry == address(0) ||
@@ -650,6 +684,7 @@ contract ElectionV4 is ERC2771Context {
     function enrollPrivate(
         uint256 identityCommitment,
         uint256 humanTag,
+        uint256 documentTag,
         uint256 deadline,
         bytes calldata platformSignature,
         bytes calldata eligibilitySignature
@@ -658,7 +693,23 @@ contract ElectionV4 is ERC2771Context {
         if (block.timestamp > deadline) revert AttestationExpired();
         if (humanTag == 0) revert MissingHumanTag();
 
-        bytes32 digest = privateEnrollmentDigest(identityCommitment, humanTag, deadline);
+        /**
+         * ONE DOCUMENT, ONE LEAF, which `humanTag` alone cannot promise. The
+         * tag is derived from the World ID account, and below Orb an account
+         * is not a person: somebody holding several could pass the same
+         * passport check once per account and enrol once per account. A gated
+         * election therefore carries a second tag derived from the document
+         * the voter proved, and refuses it the second time, exactly as the
+         * public path refuses a reused personhood nullifier.
+         */
+        if (eligibilityAttester != address(0)) {
+            if (documentTag == 0) revert MissingDocumentTag();
+            if (usedPersonhoodNullifiers[documentTag]) revert PersonhoodNullifierUsed();
+        } else if (documentTag != 0) {
+            revert UnexpectedDocumentTag();
+        }
+
+        bytes32 digest = privateEnrollmentDigest(identityCommitment, humanTag, documentTag, deadline);
         _requireSignature(digest, platformSignature, platformAttester);
 
         // The organizer's own gatekeeper, where they named one. It signs the
@@ -667,6 +718,7 @@ contract ElectionV4 is ERC2771Context {
         // only add a second thing to keep in step.
         if (eligibilityAttester != address(0)) {
             _requireSignature(digest, eligibilitySignature, eligibilityAttester);
+            usedPersonhoodNullifiers[documentTag] = true;
         }
 
         _insertMember(identityCommitment, humanTag);
@@ -676,10 +728,11 @@ contract ElectionV4 is ERC2771Context {
     function privateEnrollmentDigest(
         uint256 identityCommitment,
         uint256 humanTag,
+        uint256 documentTag,
         uint256 deadline
     ) public view returns (bytes32) {
         bytes32 structHash = keccak256(
-            abi.encode(PRIVATE_ENROLL_TYPEHASH, identityCommitment, humanTag, deadline)
+            abi.encode(PRIVATE_ENROLL_TYPEHASH, identityCommitment, humanTag, documentTag, deadline)
         );
         return keccak256(abi.encodePacked(hex"1901", _domainSeparator(), structHash));
     }
@@ -762,14 +815,19 @@ contract ElectionV4 is ERC2771Context {
         uint256[2][2] calldata _pB,
         uint256[2] calldata _pC
     ) external notDecided {
-        if (block.timestamp < voteStart || block.timestamp > voteEnd) revert VotingNotOpen();
+        // `voteEnd` is exclusive, matching `phase()`: the second it reads
+        // TALLYING, no ballot lands.
+        if (block.timestamp < voteStart || block.timestamp >= voteEnd) revert VotingNotOpen();
+        if (voteCiphertext.length == 0 || voteCiphertext.length > MAX_BALLOT_BYTES) {
+            revert InvalidBallot();
+        }
         if (merkleDepth < MIN_TREE_DEPTH || merkleDepth > MAX_TREE_DEPTH) revert InvalidTreeDepth();
 
         // The proof must be built against the current tree root, or a recent root
         // still inside its validity window.
         if (merkleRoot != membersTree._root()) {
-            uint256 createdAt = rootTimestamps[merkleRoot];
-            if (createdAt == 0 || block.timestamp > createdAt + MERKLE_ROOT_VALIDITY) {
+            uint256 rootCreatedAt = rootTimestamps[merkleRoot];
+            if (rootCreatedAt == 0 || block.timestamp > rootCreatedAt + MERKLE_ROOT_VALIDITY) {
                 revert UnknownOrExpiredRoot();
             }
         }
@@ -808,9 +866,9 @@ contract ElectionV4 is ERC2771Context {
     /// @notice Cancel the election before it ends. Terminal.
     function cancelElection() external onlyOrganizer notDecided {
         if (!cancellable) revert NotCancellable();
-        if (block.timestamp > voteEnd) revert WrongPhase();
+        if (block.timestamp >= voteEnd) revert WrongPhase();
         cancelled = true;
-        emit ElectionCancelled(_msgSender());
+        emit ElectionCancelled(msg.sender);
     }
 
     /**
@@ -876,57 +934,68 @@ contract ElectionV4 is ERC2771Context {
     /// @notice End the voting period now, moving the election into tallying.
     function closeVotingEarly() external onlyOrganizer notDecided {
         if (fixedSchedule) revert ScheduleIsFixed();
-        if (block.timestamp < voteStart || block.timestamp > voteEnd) revert WrongPhase();
+        if (block.timestamp < voteStart || block.timestamp >= voteEnd) revert WrongPhase();
         voteEnd = block.timestamp;
         emit VotingClosedEarly(voteEnd);
     }
 
-    /// @notice Void the election during tallying (e.g. privacy quorum not met). Terminal.
+    /**
+     * @notice Void the election during tallying. Terminal.
+     *
+     * Always open below the privacy quorum, where no result may be published.
+     * Above it, only on an election that kept the power to be called off: the
+     * organizer holds the key and can read the result before deciding, so
+     * voiding a publishable result is a veto, and an election that promised no
+     * veto (`cancellable == false`) must not keep this one.
+     */
     function markVoided() external onlyOrganizer notDecided {
-        if (block.timestamp <= voteEnd) revert VotingNotEnded();
+        if (block.timestamp < voteEnd) revert VotingNotEnded();
+        if (!cancellable && distinctVoters >= privacyQuorum) revert ResultPublishable();
         voided = true;
-        emit ElectionVoided(_msgSender());
+        emit ElectionVoided(msg.sender);
     }
 
-    /// @notice Publish the decrypted tally and its IPFS audit trail. Terminal.
-    /// @param ipfsCid CID of the auditable tally JSON pinned on IPFS.
-    /// @param tallyResults Vote counts per option; the LAST entry is the blank vote.
+    /**
+     * @notice Publish the decrypted tally with the proof that it is correct. Terminal.
+     * @param ipfsCid CID of the auditable tally JSON pinned on IPFS, or empty.
+     * @param tallyResults Vote counts per option; the LAST entry is the blank vote.
+     * @param invalidBallots Final ballots excluded because they encrypt no valid
+     * choice. Each one is opened in `tallyProof`, so excluding an honest ballot
+     * is detectable by anyone.
+     * @param tallyProof The decryption proof, see `TallyProofPublished`.
+     *
+     * THE COUNTERS MUST ACCOUNT FOR EVERY VOTER. Each person's surviving ballot
+     * either adds exactly one to exactly one counter or is excluded as
+     * invalid, so the two together equal `distinctVoters`. That used to be
+     * left unchecked, because a single malformed ballot made any honest tally
+     * miss the total and the rule would have let one voter block publication.
+     * Excluding such ballots openly removes that power, so the check is now
+     * safe and turns an invented or dropped ballot into a revert.
+     *
+     * What this contract cannot afford to check is the proof itself: it needs
+     * every ciphertext and 4096-bit arithmetic. It requires one to be present
+     * and publishes it, and every reader of the result verifies it.
+     */
     function publishResults(
         string calldata ipfsCid,
-        uint256[] calldata tallyResults
+        uint256[] calldata tallyResults,
+        uint256 invalidBallots,
+        bytes calldata tallyProof
     ) external onlyOrganizer notDecided {
-        if (block.timestamp <= voteEnd) revert VotingNotEnded();
+        if (block.timestamp < voteEnd) revert VotingNotEnded();
         if (tallyResults.length != numOptions + 1) revert InvalidTally();
+        if (tallyProof.length == 0) revert MissingTallyProof();
 
         // Below the quorum there is no publishable result, only `markVoided`.
         // Enforced here rather than in the client that draws the button,
         // because a rule a wallet can step around is not a rule.
         if (distinctVoters < privacyQuorum) revert PrivacyQuorumNotMet();
 
-        // NOT CHECKED HERE: that the counters sum to `distinctVoters`.
-        //
-        // It is true of every honest tally, and refusing anything else looks
-        // like the obvious way to make ballot stuffing impossible. It is not,
-        // for two reasons that only show up together.
-        //
-        // This contract never validates a ciphertext; it validates the proof of
-        // membership around one. So an enrolled voter can cast arbitrary bytes
-        // as their ballot, and no tally over that election will ever sum to the
-        // voter count again. The rule would hand any single voter the power to
-        // make any election permanently unpublishable.
-        //
-        // And it would buy little: an organizer inclined to falsify moves votes
-        // BETWEEN options and keeps the total right, which the sum cannot see.
-        // It would stop the crude attack at the price of a denial of service,
-        // and leave the careful one untouched.
-        //
-        // The equality is checked where it is safe and useful instead: in the
-        // client, as `decryptTally`'s `expectedBallots`, where it turns a
-        // corrupted or overflowed tally into a visible error rather than a
-        // wrong number; and on the results screen, where `distinctVoters` is
-        // public and anyone can compare it against the published counters. What
-        // would make stuffing genuinely impossible is a ballot validity proof,
-        // and that is a different piece of work.
+        uint256 counted = invalidBallots;
+        for (uint256 i = 0; i < tallyResults.length; i++) {
+            counted += tallyResults[i];
+        }
+        if (counted != distinctVoters) revert InvalidTally();
 
         (Outcome computed, uint256 winIdx) = _computeOutcome(tallyResults);
 
@@ -937,6 +1006,7 @@ contract ElectionV4 is ERC2771Context {
         resultsPublished = true;
 
         emit ResultsPublished(ipfsCid, tallyResults, computed, winIdx);
+        emit TallyProofPublished(invalidBallots, tallyProof);
     }
 
     // ────────────────────────────────────────────────

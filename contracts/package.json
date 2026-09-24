@@ -6,6 +6,10 @@
   "directories": {
     "test": "test"
   },
+  "engines": {
+    "node": ">=24",
+    "npm": ">=11"
+  },
   "scripts": {
     "test": "hardhat test",
     "build": "hardhat compile",

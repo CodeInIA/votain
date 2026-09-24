@@ -9,6 +9,9 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "outDir": "dist",
+    // One level up: the E2E suite and the seed share `tallyProof.ts` with the
+    // frontend, so the three can never disagree about what a valid tally is.
+    "rootDir": "..",
     "types": ["node", "mocha"]
   }
 }

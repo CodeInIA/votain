@@ -4,14 +4,13 @@ import { deployStack, baseConfig, VotingType, type Stack } from "./fixtures.js";
 
 const { ethers, networkHelpers } = await network.create();
 
-const FORWARDER = ethers.Wallet.createRandom().address;
 
 let stack: Stack;
 let organizer: any;
 
 before(async () => {
   [, organizer] = await ethers.getSigners();
-  stack = await deployStack(ethers, FORWARDER);
+  stack = await deployStack(ethers);
 });
 
 describe("ElectionFactory", () => {

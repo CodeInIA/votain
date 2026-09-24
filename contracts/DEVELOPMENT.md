@@ -15,9 +15,9 @@
 
 | Contract | Description |
 |----------|-------------|
-| ElectionV4.sol | Single election. On-chain Semaphore V4 group (LeanIMT/PoseidonT3), `enroll` gated to PlatformRegistry members plus an optional attribute policy (`enrollAttested`), `castVote` (bytes Paillier ciphertext) with merkle-root validation + coercion resistance (nullifier+nonce), `VotingType` enum + `thresholdValue`, lifecycle (cancel/closeEarly/void/publishResults with per-type outcome). ERC-2771 meta-tx. |
+| ElectionV4.sol | Single election. On-chain Semaphore V4 group (LeanIMT/PoseidonT3), `enroll` gated to PlatformRegistry members plus an optional attribute policy (`enrollAttested`), `castVote` (bytes Paillier ciphertext) with merkle-root validation + coercion resistance (nullifier+nonce), `VotingType` enum + `thresholdValue`, lifecycle (cancel/closeEarly/void/publishResults with per-type outcome). `castVote` refuses ballots over 512 bytes; `publishResults` requires the counters plus the excluded ballots to equal `distinctVoters` and emits the tally proof (`TallyProofPublished`); `markVoided` is refused on a non-cancellable election whose result is publishable. `enrollPrivate` carries a `documentTag` on gated elections so one document enrols once. No meta-transaction forwarder. |
 | ElectionFactory.sol | Deploys ElectionV4 from a `Config` struct, routes MATIC deposit to the paymaster, enumerable `getElections(offset, limit)`. |
-| ElectionPaymaster.sol | Gas tank **and relay hub**. `relayEnroll` / `relayEnrollAttested` / `relayVote` call the election and reimburse the caller from `gasBalance[organizerOf[election]]` in the same tx. `depositFor` / `withdraw`; `setFactory` and `setRelayParams` are onlyOwner. |
+| ElectionPaymaster.sol | Gas tank **and relay hub**. `relayEnroll` / `relayEnrollAttested` / `relayEnrollPrivate` / `relayVote` call the election and reimburse the caller from the election's reserve, then the organizer's free balance, in the same tx. Sponsored re-votes wait out `REVOTE_COOLDOWN` (1 h) per nullifier. `deposit` / `depositForElection` / `withdraw`; `setFactory` is onlyOwner and settable ONCE; `setRelayParams` is onlyOwner within fixed ceilings. Ownership is `TwoStepOwnable`, shared with `PlatformRegistry`. |
 | PlatformRegistry.sol | Identity-commitment registry (issuer-owned). Gates enrollment. Binds one World ID nullifier to exactly one active commitment; `rotateMember` is the recovery path and revokes the old commitment atomically. `nullifierOf` resolves a commitment (even a revoked one) back to its human. |
 | vendor/SemaphoreVerifierVendor.sol | `SemaphoreVerifierV4`: official Groth16 verifier (production). |
 | mocks/MockVerifier.sol | Always-true verifier, unit tests only. |
@@ -284,7 +284,6 @@ which is why the ceiling matters more than the floor.
 ```
 AMOY_RPC_URL=https://polygon-amoy.drpc.org
 PRIVATE_KEY=0x...          # deployer key (also PlatformRegistry owner). Never commit.
-TRUSTED_FORWARDER=0x...dEaD # burn address, see below
 USE_REAL_VERIFIER=true     # optional, use SemaphoreVerifierV4 on a local net too
 ```
 
@@ -294,14 +293,13 @@ endpoints: `polygon-amoy.drpc.org`, `polygon-amoy-bor-rpc.publicnode.com`,
 here, but the frontend and the tally need Tenderly (the others cap `eth_getLogs` at 10000
 blocks).
 
-### On TRUSTED_FORWARDER
+### No trusted forwarder
 
-There is no forwarder to point at. Voter calls arrive through `ElectionPaymaster`, and neither
-`enroll` nor `castVote` reads `msg.sender` anyway, so `ERC2771Context._msgSender()` only
-affects the organizer-only functions, where organizers sign with MetaMask directly. Set it to
-`0x000000000000000000000000000000000000dEaD` so `_msgSender()` always equals `msg.sender`.
-Leaving it unset makes `deploy.ts` fall back to the deployer address, which would let that key
-impersonate any organizer.
+`ElectionV4` does not inherit `ERC2771Context`. Voter calls arrive through
+`ElectionPaymaster`, and neither `enroll` nor `castVote` reads the sender, while organizers
+sign their own transactions. A trusted forwarder would therefore add nothing but a party able
+to speak as any organizer, which is exactly what the old fallback to the deployer's address
+made possible. There is nothing to configure.
 
 ## Deployment cost
 

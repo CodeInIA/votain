@@ -2,6 +2,7 @@
 pragma solidity ^0.8.37;
 
 import {ElectionV4} from "./ElectionV4.sol";
+import {TwoStepOwnable} from "./TwoStepOwnable.sol";
 
 /// @title ElectionPaymaster
 /// @notice Gas tank and relay hub. Organizers deposit POL for their own
@@ -24,7 +25,7 @@ import {ElectionV4} from "./ElectionV4.sol";
 /// Neither `ElectionV4.enroll` nor `ElectionV4.castVote` reads `msg.sender`:
 /// enrollment is gated on the registry and voting on a zero-knowledge proof.
 /// That is what makes relaying safe.
-contract ElectionPaymaster {
+contract ElectionPaymaster is TwoStepOwnable {
     /// @dev Fixed gas outside the metered region: the 21000 transaction base plus
     /// the reimbursement transfer and event. Calldata is charged separately per
     /// byte, because `relayVote` carries a Paillier ciphertext and a Groth16
@@ -46,17 +47,42 @@ contract ElectionPaymaster {
     /// relayEnrollAttested head: selector + address + 3 uint256 + bytes offset +
     /// length word, then the padded signature added at call time.
     uint256 private constant ATTESTED_ENROLL_CALLDATA_HEAD = 4 + 32 + (32 * 3) + 32 + 32;
-    /// @dev selector + election + (commitment, tag, deadline) + two dynamic
-    /// offsets + two lengths. The two signatures themselves are measured from
+    /// @dev selector + election + (commitment, humanTag, documentTag, deadline)
+    /// + two dynamic offsets + two lengths. The two signatures themselves are measured from
     /// their own lengths, as the attested path does with its one.
-    uint256 private constant PRIVATE_ENROLL_CALLDATA_HEAD = 4 + 32 + (32 * 3) + (32 * 2) + (32 * 2);
+    uint256 private constant PRIVATE_ENROLL_CALLDATA_HEAD = 4 + 32 + (32 * 4) + (32 * 2) + (32 * 2);
     /// relayVote head: selector + address + bytes offset + 3 uint256 + pA + pB + pC,
     /// then the bytes tail (length word + padded contents) added at call time.
     uint256 private constant VOTE_CALLDATA_HEAD = 4 + 32 + 32 + (32 * 3) + 64 + 128 + 64 + 32;
 
-    address public owner;
-    address public pendingOwner;
-    /// @dev Allowed to bind an election to its organizer (set to ElectionFactory).
+    /**
+     * @dev Ceilings on what the owner may set the relay parameters to.
+     *
+     * The owner is also free to relay, so without these the owner could raise
+     * the reimbursed price and gas to whatever a tank holds and collect it one
+     * ballot at a time. Bounded, the worst an owner can do is overpay a relayer
+     * by a known factor on work that was genuinely done.
+     */
+    uint256 public constant MAX_GAS_PRICE_CEILING = 500 gwei;
+    uint256 public constant MAX_BASE_OVERHEAD = 100_000;
+    uint256 public constant MAX_RELAY_GAS_CEILING = 3_000_000;
+
+    /**
+     * @dev Least time between two SPONSORED ballots from one voter in one
+     * election.
+     *
+     * Re-voting is the coercion defence, and relaying is permissionless, so
+     * without this one enrolled voter could re-vote in a loop, be reimbursed
+     * as their own relayer, and empty the organizer's tank until voting stops
+     * for everyone. A count cap would bound that too, but a coercer standing
+     * over the voter could spend the whole allowance and leave no override. A
+     * cooldown cannot be spent in advance: the honest override is only ever
+     * delayed, never refused, and the drain is bounded by the election's
+     * length divided by this.
+     */
+    uint256 public constant REVOTE_COOLDOWN = 1 hours;
+
+    /// @dev Allowed to bind an election to its organizer (set once, to ElectionFactory).
     address public factory;
 
     /// @dev Upper bound on the gas price a relayer may be reimbursed at, so a
@@ -91,11 +117,11 @@ contract ElectionPaymaster {
     mapping(address => uint256) public reservedFor;
     /// @dev election => the organizer whose tank pays for it
     mapping(address => address) public organizerOf;
+    /// @dev election => Semaphore nullifier => when its last sponsored ballot landed.
+    mapping(address => mapping(uint256 => uint256)) public lastSponsoredBallot;
 
     uint256 private _entered;
 
-    event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     /// @dev No `from`: a tank is only ever filled by its owner, so the two were
     /// always the same address and one of them was decoration.
     event Deposited(address indexed organizer, uint256 amount);
@@ -112,9 +138,11 @@ contract ElectionPaymaster {
         uint256 maxRelayGas
     );
 
-    error NotOwner();
-    error NotPendingOwner();
     error NotFactory();
+    error FactoryAlreadySet();
+    error RelayParamsOutOfBounds();
+    /// @dev This voter's previous sponsored ballot here is too recent; see REVOTE_COOLDOWN.
+    error RevoteTooSoon(uint256 availableAt);
     error InsufficientBalance();
     error WithdrawFailed();
     error ReimbursementFailed();
@@ -124,13 +152,7 @@ contract ElectionPaymaster {
     error NothingReserved();
     /// @dev Only the organizer an election was registered to may spend their balance on it.
     error NotElectionOrganizer();
-    error ZeroAddress();
     error Reentrancy();
-
-    modifier onlyOwner() {
-        if (msg.sender != owner) revert NotOwner();
-        _;
-    }
 
     modifier nonReentrant() {
         if (_entered == 1) revert Reentrancy();
@@ -140,7 +162,6 @@ contract ElectionPaymaster {
     }
 
     constructor() {
-        owner = msg.sender;
         // Polygon's enforced floor sits at 25 to 30 gwei. This leaves headroom for
         // congestion without letting a careless relayer burn a tank several times
         // faster than necessary.
@@ -154,8 +175,18 @@ contract ElectionPaymaster {
     // Configuration
     // ────────────────────────────────────────────────
 
+    /**
+     * @notice Names the factory, once.
+     *
+     * ONCE, because the factory is the one contract this one trusts to say who
+     * organises an election and to spend an organizer's balance on it. An owner
+     * able to swap it could install a factory that registers elections to
+     * themselves and moves everybody's free balance into them. A new factory
+     * means a new paymaster, which organizers can see and choose to fund.
+     */
     function setFactory(address _factory) external onlyOwner {
         if (_factory == address(0)) revert ZeroAddress();
+        if (factory != address(0)) revert FactoryAlreadySet();
         factory = _factory;
         emit FactoryChanged(_factory);
     }
@@ -166,6 +197,14 @@ contract ElectionPaymaster {
         uint256 _calldataGasPerByte,
         uint256 _maxRelayGas
     ) external onlyOwner {
+        if (
+            _maxGasPrice == 0 ||
+            _maxGasPrice > MAX_GAS_PRICE_CEILING ||
+            _baseOverheadGas > MAX_BASE_OVERHEAD ||
+            _calldataGasPerByte > DEFAULT_CALLDATA_GAS ||
+            _maxRelayGas == 0 ||
+            _maxRelayGas > MAX_RELAY_GAS_CEILING
+        ) revert RelayParamsOutOfBounds();
         maxGasPrice = _maxGasPrice;
         baseOverheadGas = _baseOverheadGas;
         calldataGasPerByte = _calldataGasPerByte;
@@ -225,9 +264,9 @@ contract ElectionPaymaster {
      * Paying for an election is not a donation to the election. It is taking on
      * the organizer's obligation, and the refund is what proves it.
      *
-     * Someone who genuinely wants to help still can, through `depositFor`, which
-     * is open to anyone: there the money lands in the organizer's balance, where
-     * it is plainly a gift and is never mistaken for a reserve.
+     * Someone who genuinely wants to help still can: a plain transfer to the
+     * organizer's wallet is plainly a gift, and leaves them to decide whether it
+     * goes into a tank at all.
      *
      * The factory is allowed because it forwards value on behalf of the very
      * account creating the election, which is that election's organizer.
@@ -255,10 +294,8 @@ contract ElectionPaymaster {
      * `withdraw`, and everything else is the balance moving between two columns
      * of the same tank.
      *
-     * ONLY THE ORGANIZER OF THAT ELECTION, unlike `depositForElection`, and the
-     * difference is the point: there you are committing your own money and
-     * anyone may want an election to go ahead, here you are spending someone's
-     * balance and only they may decide that.
+     * ONLY THE ORGANIZER OF THAT ELECTION, like `depositForElection`: it spends
+     * their balance and only they may decide that.
      */
     function reserveFromBalance(address election, uint256 amount) external {
         if (organizerOf[election] != msg.sender) revert NotElectionOrganizer();
@@ -286,6 +323,9 @@ contract ElectionPaymaster {
      */
     function reserveFromBalanceFor(address election, address organizer, uint256 amount) external {
         if (msg.sender != factory) revert NotFactory();
+        // Defence in depth: even the factory may only spend an organizer's
+        // balance on an election registered to that same organizer.
+        if (organizerOf[election] != organizer) revert NotElectionOrganizer();
         if (gasBalance[organizer] < amount) revert InsufficientBalance();
 
         gasBalance[organizer] -= amount;
@@ -312,7 +352,7 @@ contract ElectionPaymaster {
 
         ElectionV4 e = ElectionV4(election);
         // `voteEnd` moves when voting is closed early, so this follows it.
-        bool over = e.cancelled() || e.voided() || block.timestamp > e.voteEnd();
+        bool over = e.cancelled() || e.voided() || block.timestamp >= e.voteEnd();
         if (!over) revert ElectionStillOpen();
 
         uint256 amount = reservedFor[election];
@@ -395,6 +435,7 @@ contract ElectionPaymaster {
         address election,
         uint256 identityCommitment,
         uint256 humanTag,
+        uint256 documentTag,
         uint256 deadline,
         bytes calldata platformSignature,
         bytes calldata eligibilitySignature
@@ -405,6 +446,7 @@ contract ElectionPaymaster {
         ElectionV4(election).enrollPrivate(
             identityCommitment,
             humanTag,
+            documentTag,
             deadline,
             platformSignature,
             eligibilitySignature
@@ -436,6 +478,13 @@ contract ElectionPaymaster {
     ) external nonReentrant {
         uint256 startGas = gasleft();
         address organizer = _organizerOrRevert(election);
+
+        // First ballots are always sponsored; re-votes wait out the cooldown.
+        uint256 last = lastSponsoredBallot[election][nullifier];
+        if (last != 0 && block.timestamp < last + REVOTE_COOLDOWN) {
+            revert RevoteTooSoon(last + REVOTE_COOLDOWN);
+        }
+        lastSponsoredBallot[election][nullifier] = block.timestamp;
 
         ElectionV4(election).castVote(
             voteCiphertext,
@@ -520,25 +569,5 @@ contract ElectionPaymaster {
         address organizer = organizerOf[election];
         if (organizer == address(0)) revert UnknownElection();
         return (reservedFor[election], gasBalance[organizer]);
-    }
-
-    /// @notice Hand control to another address.
-    /// @dev Lets the deployer key stay offline while a separate hot wallet does
-    /// the day-to-day work. Without it the deployer key has to live wherever the
-    /// operational calls are made, which for a registry means the issuer server.
-    /// Two-step on purpose: a typo here would brick the contract permanently.
-    function transferOwnership(address newOwner) external onlyOwner {
-        if (newOwner == address(0)) revert ZeroAddress();
-        pendingOwner = newOwner;
-        emit OwnershipTransferStarted(owner, newOwner);
-    }
-
-    /// @notice Called by the incoming owner to prove the address is usable.
-    function acceptOwnership() external {
-        if (msg.sender != pendingOwner) revert NotPendingOwner();
-        address previous = owner;
-        owner = pendingOwner;
-        pendingOwner = address(0);
-        emit OwnershipTransferred(previous, owner);
     }
 }

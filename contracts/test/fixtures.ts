@@ -78,6 +78,7 @@ export function privateEnrollmentTypedData(
   identityCommitment: bigint,
   humanTag: bigint,
   deadline: number | bigint,
+  documentTag: bigint = 0n,
 ) {
   return {
     domain: {
@@ -90,10 +91,11 @@ export function privateEnrollmentTypedData(
       PrivateEnrollment: [
         { name: "identityCommitment", type: "uint256" },
         { name: "humanTag", type: "uint256" },
+        { name: "documentTag", type: "uint256" },
         { name: "deadline", type: "uint256" },
       ],
     },
-    value: { identityCommitment, humanTag, deadline },
+    value: { identityCommitment, humanTag, documentTag, deadline },
   };
 }
 
@@ -105,6 +107,7 @@ export async function signPrivateEnrollment(
   identityCommitment: bigint,
   humanTag: bigint,
   deadline: number | bigint,
+  documentTag: bigint = 0n,
 ): Promise<string> {
   const { domain, types, value } = privateEnrollmentTypedData(
     electionAddress,
@@ -112,6 +115,7 @@ export async function signPrivateEnrollment(
     identityCommitment,
     humanTag,
     deadline,
+    documentTag,
   );
   return attester.signTypedData(domain, types, value);
 }
@@ -121,7 +125,6 @@ export async function signPrivateEnrollment(
 /// the old public way: the tests for the private path pass a key explicitly.
 export async function deployStack(
   ethers: any,
-  forwarder: string,
   platformAttester: string = ZERO_ADDRESS,
 ): Promise<Stack> {
   const poseidonAddress = await deployPoseidonT3(ethers);
@@ -143,7 +146,6 @@ export async function deployStack(
   });
   const factory = await Factory.deploy(
     await paymaster.getAddress(),
-    forwarder,
     await verifier.getAddress(),
     await registry.getAddress(),
     platformAttester,
@@ -236,16 +238,15 @@ export function baseConfig(now: number, overrides: Partial<ElectionConfig> = {})
 export async function deployElection(
   ethers: any,
   stack: Stack,
-  forwarder: string,
   organizer: any,
   cfg: ElectionConfig,
   platformAttester: string = ZERO_ADDRESS,
+  contractName: "ElectionV4" | "ElectionV4Harness" = "ElectionV4",
 ): Promise<any> {
-  const Election = await ethers.getContractFactory("ElectionV4", {
+  const Election = await ethers.getContractFactory(contractName, {
     libraries: { [POSEIDON_FQN]: stack.poseidonAddress },
   });
   const election = await Election.deploy(
-    forwarder,
     await stack.verifier.getAddress(),
     await stack.registry.getAddress(),
     platformAttester,
@@ -255,6 +256,10 @@ export async function deployElection(
   await election.waitForDeployment();
   return election;
 }
+
+/// A placeholder tally proof. The contract requires one to be present and
+/// publishes it; verifying it is the readers' job, tested in the frontend.
+export const PLACEHOLDER_TALLY_PROOF = "0x7b7d";
 
 /// Dummy Groth16 proof accepted by the MockVerifier.
 export const DUMMY_PROOF = {

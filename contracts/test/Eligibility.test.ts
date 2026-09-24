@@ -12,7 +12,6 @@ import {
 
 const { ethers, networkHelpers } = await network.create();
 
-const FORWARDER = ethers.Wallet.createRandom().address;
 const POLICY_HASH = ethers.keccak256(
   ethers.toUtf8Bytes('{"minAge":18,"allowedCountries":["ESP"]}'),
 );
@@ -25,7 +24,7 @@ let chainId: bigint;
 
 before(async () => {
   [, organizer, attester, outsider] = await ethers.getSigners();
-  stack = await deployStack(ethers, FORWARDER);
+  stack = await deployStack(ethers);
   chainId = (await ethers.provider.getNetwork()).chainId;
 });
 
@@ -56,7 +55,6 @@ async function gatedElection(overrides = {}): Promise<any> {
   return deployElection(
     ethers,
     stack,
-    FORWARDER,
     organizer,
     baseConfig(now, {
       eligibilityAttester: attester.address,
@@ -71,7 +69,7 @@ async function gatedElection(overrides = {}): Promise<any> {
 
 async function openElection(): Promise<any> {
   const now = await networkHelpers.time.latest();
-  return deployElection(ethers, stack, FORWARDER, organizer, baseConfig(now));
+  return deployElection(ethers, stack, organizer, baseConfig(now));
 }
 
 async function futureDeadline(): Promise<number> {
@@ -87,7 +85,6 @@ describe("ElectionV4, eligibility config", () => {
 
     const deployWith = (cfg: ReturnType<typeof baseConfig>) =>
       Election.deploy(
-        FORWARDER,
         stack.verifier.getAddress(),
         stack.registry.getAddress(),
         ZERO_ADDRESS,
@@ -112,7 +109,6 @@ describe("ElectionV4, eligibility config", () => {
       libraries: { PoseidonT3: stack.poseidonAddress },
     });
     return Election.deploy(
-      FORWARDER,
       stack.verifier.getAddress(),
       stack.registry.getAddress(),
       ZERO_ADDRESS,

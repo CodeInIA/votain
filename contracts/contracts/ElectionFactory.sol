@@ -9,7 +9,6 @@ import {ElectionPaymaster} from "./ElectionPaymaster.sol";
 /// to the gas paymaster. Keeps an enumerable list of every election created.
 contract ElectionFactory {
     ElectionPaymaster public immutable paymaster;
-    address public immutable forwarder;
     address public immutable verifier;
     address public immutable registry;
     /**
@@ -40,20 +39,17 @@ contract ElectionFactory {
 
     constructor(
         address _paymaster,
-        address _forwarder,
         address _verifier,
         address _registry,
         address _platformAttester
     ) {
         if (
             _paymaster == address(0) ||
-            _forwarder == address(0) ||
             _verifier == address(0) ||
             _registry == address(0)
         ) revert ZeroAddress();
 
         paymaster = ElectionPaymaster(payable(_paymaster));
-        forwarder = _forwarder;
         verifier = _verifier;
         registry = _registry;
         platformAttester = _platformAttester;
@@ -74,7 +70,6 @@ contract ElectionFactory {
         uint256 fromBalance
     ) external payable returns (address) {
         ElectionV4 newElection = new ElectionV4(
-            forwarder,
             verifier,
             registry,
             platformAttester,
@@ -121,8 +116,9 @@ contract ElectionFactory {
         uint256 total = elections.length;
         if (offset >= total) return new address[](0);
 
-        uint256 end = offset + limit;
-        if (end > total) end = total;
+        // Clamped before adding, so a caller asking for "everything" with a
+        // huge limit gets the rest of the list rather than an overflow revert.
+        uint256 end = limit > total - offset ? total : offset + limit;
 
         page = new address[](end - offset);
         for (uint256 i = offset; i < end; i++) {

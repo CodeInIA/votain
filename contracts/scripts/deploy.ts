@@ -104,14 +104,6 @@ async function main() {
   await verifier.waitForDeployment();
   console.log(`${verifierName}:`, await verifier.getAddress());
 
-  // ERC-2771 forwarder. Voter calls arrive via ElectionPaymaster and neither
-  // enroll nor castVote reads msg.sender, so a burn address is the right value;
-  // see contracts/DEVELOPMENT.md.
-  const forwarder = process.env.TRUSTED_FORWARDER ?? deployer.address;
-  if (!process.env.TRUSTED_FORWARDER) {
-    console.warn("WARN: TRUSTED_FORWARDER not set, falling back to deployer address");
-  }
-
   const platformAttester = resolvePlatformAttester();
   if (platformAttester === ZERO_ADDRESS) {
     const complaint =
@@ -145,7 +137,6 @@ async function main() {
   });
   const factory = await Factory.deploy(
     await paymaster.getAddress(),
-    forwarder,
     await verifier.getAddress(),
     await registry.getAddress(),
     platformAttester,
@@ -177,7 +168,6 @@ async function main() {
       ElectionFactory: await factory.getAddress(),
       PoseidonT3: poseidonAddress,
     },
-    config: { trustedForwarder: forwarder },
   };
 
   const manifest = JSON.stringify(deployment, null, 2) + "\n";

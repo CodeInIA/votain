@@ -29,6 +29,7 @@ import { generateProof } from "@semaphore-protocol/proof";
 import { poseidon2 } from "poseidon-lite/poseidon2";
 import { generateRandomKeys, PublicKey } from "paillier-bigint";
 import type { Wallet } from "ethers";
+import { encodeTallyProof, finalBallots, proveTally } from "../../frontend/src/lib/tallyProof.js";
 import { createHmac } from "node:crypto";
 
 const { ethers } = await network.getOrCreate();
@@ -282,6 +283,7 @@ const PRIVATE_ENROLLMENT_TYPES = {
   PrivateEnrollment: [
     { name: "identityCommitment", type: "uint256" },
     { name: "humanTag", type: "uint256" },
+    { name: "documentTag", type: "uint256" },
     { name: "deadline", type: "uint256" },
   ],
 } as const;
@@ -321,17 +323,38 @@ async function electionIdentity(master: Identity, electionAddress: string): Prom
  * The tag that says "this person, here", and nothing anywhere else.
  *
  * MIRRORS `humanTagFor` in backend/src/eligibility/attester.ts, including the
- * key it is derived under. The two have to agree, because a voter seeded here
+ * per-epoch key it is derived under (ENROLMENT_TAG_KEYS). The two have to agree, because a voter seeded here
  * may later enrol through the running dApp in the same election, and a second
  * tag for the same human would be a second leaf and a second vote.
  */
-function humanTagFor(worldIdNullifier: bigint, electionAddress: string): bigint {
-  if (!attesterKey) throw new Error("no attester key: cannot derive an enrolment tag");
-  const tagKey = createHmac("sha256", "votain/enrolment-tag/v1").update(attesterKey).digest();
+function tagKeyFor(createdAtSeconds: number): string {
+  const d = new Date(createdAtSeconds * 1000);
+  const epoch = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+  const secret = tagKeys?.[epoch];
+  if (!secret) {
+    throw new Error(
+      `no enrolment tag key for epoch ${epoch}: set ENROLMENT_TAG_KEYS in backend/.env ` +
+        "(or SEED_TAG_KEYS here) to the same JSON the backend uses",
+    );
+  }
+  return "0x" + createHmac("sha256", "votain/enrolment-tag/v2").update(secret).digest("hex");
+}
+
+function humanTagFor(worldIdNullifier: bigint, electionAddress: string, createdAt: number): bigint {
   return BigInt(
     ethers.solidityPackedKeccak256(
       ["bytes32", "uint256", "address"],
-      ["0x" + tagKey.toString("hex"), worldIdNullifier, ethers.getAddress(electionAddress)],
+      [tagKeyFor(createdAt), worldIdNullifier, ethers.getAddress(electionAddress)],
+    ),
+  );
+}
+
+/** MIRRORS `documentTagFor` in backend/src/eligibility/attester.ts, for the same reason. */
+function documentTagFor(documentNullifier: bigint, electionAddress: string, createdAt: number): bigint {
+  return BigInt(
+    ethers.solidityPackedKeccak256(
+      ["bytes32", "string", "uint256", "address"],
+      [tagKeyFor(createdAt), "votain/document-tag/v1", documentNullifier, ethers.getAddress(electionAddress)],
     ),
   );
 }
@@ -367,6 +390,24 @@ function readAttesterKey(): string | undefined {
 }
 
 const attesterKey = readAttesterKey();
+
+/** The backend's ENROLMENT_TAG_KEYS, read the same way and for the same reason. */
+function readTagKeys(): Record<string, string> | undefined {
+  const raw =
+    process.env.SEED_TAG_KEYS ??
+    (() => {
+      try {
+        const backendEnv = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "backend", ".env");
+        return readFileSync(backendEnv, "utf-8").match(/^ENROLMENT_TAG_KEYS=(.+)$/m)?.[1].trim();
+      } catch {
+        return undefined;
+      }
+    })();
+  if (!raw) return undefined;
+  return JSON.parse(raw.replace(/^'(.*)'$/, "$1")) as Record<string, string>;
+}
+
+const tagKeys = readTagKeys();
 const attesterWallet = attesterKey ? new ethers.Wallet(attesterKey) : null;
 
 async function main(): Promise<void> {
@@ -591,12 +632,20 @@ async function main(): Promise<void> {
     for (const v of participants) {
       if (enrolsPrivately) {
         const identity = await electionIdentity(v.identity, address);
-        const tag = humanTagFor(v.worldId, address);
+        const tag = humanTagFor(v.worldId, address, created);
+        // Stands in for the nullifier a document proof would yield, as below.
+        const documentTag = spec.eligibility
+          ? documentTagFor(
+              BigInt(ethers.keccak256(ethers.toUtf8Bytes(`seed-document-${address}-${v.worldId}`))) >> 8n,
+              address,
+              created,
+            )
+          : 0n;
         const deadline = (await chainNow()) + 900;
         const signature = await (attesterWallet as Wallet).signTypedData(
           { name: "VotainElection", version: "1", chainId, verifyingContract: address },
           PRIVATE_ENROLLMENT_TYPES as unknown as Record<string, Array<{ name: string; type: string }>>,
-          { identityCommitment: identity.commitment, humanTag: tag, deadline },
+          { identityCommitment: identity.commitment, humanTag: tag, documentTag, deadline },
         );
         // The gated case needs the organizer's gatekeeper too, and the seed
         // holds that key as well: same digest, same signer, same signature.
@@ -605,6 +654,7 @@ async function main(): Promise<void> {
             address,
             identity.commitment,
             tag,
+            documentTag,
             deadline,
             signature,
             spec.eligibility ? signature : "0x",
@@ -653,26 +703,32 @@ async function main(): Promise<void> {
     const group = new Group(voting.map(identity => identity.commitment));
     const scope: bigint = await election.scope();
 
-    const castFor = async (voterIndex: number, option: number): Promise<void> => {
+    /**
+     * `sponsored` false submits straight to the election, paying its own gas.
+     * That is how the seed re-votes: the paymaster sponsors a re-vote only an
+     * hour after the last one, and waiting an hour here would push the chain
+     * clock an hour past the wall for every election that follows.
+     */
+    const castFor = async (voterIndex: number, option: number, sponsored = true): Promise<void> => {
       const identity = voting[voterIndex];
       const ciphertext = encryptBallot(keys.publicKey, option);
       const nonce: bigint = await election.nullifierNonces(voteNullifier(identity, scope));
       const proof = await generateProof(identity, group, voteMessage(ciphertext, nonce), scope);
       const p = proof.points.map(BigInt);
+      const args: [string, bigint, bigint, bigint, [bigint, bigint], [[bigint, bigint], [bigint, bigint]], [bigint, bigint]] = [
+        ciphertext,
+        BigInt(proof.nullifier),
+        BigInt(proof.merkleTreeRoot),
+        BigInt(proof.merkleTreeDepth),
+        [p[0], p[1]],
+        [
+          [p[2], p[3]],
+          [p[4], p[5]],
+        ],
+        [p[6], p[7]],
+      ];
       await (
-        await paymaster.relayVote(
-          address,
-          ciphertext,
-          BigInt(proof.nullifier),
-          BigInt(proof.merkleTreeRoot),
-          BigInt(proof.merkleTreeDepth),
-          [p[0], p[1]],
-          [
-            [p[2], p[3]],
-            [p[4], p[5]],
-          ],
-          [p[6], p[7]],
-        )
+        await (sponsored ? paymaster.relayVote(address, ...args) : election.castVote(...args))
       ).wait();
     };
 
@@ -681,7 +737,7 @@ async function main(): Promise<void> {
     const finalChoices = [...spec.ballots];
     if (spec.revote) {
       const [voterIndex, replacement] = spec.revote;
-      await castFor(voterIndex, replacement);
+      await castFor(voterIndex, replacement, false);
       finalChoices[voterIndex] = replacement;
     }
 
@@ -694,10 +750,34 @@ async function main(): Promise<void> {
 
     if (spec.finish === "publish") {
       await advanceTo(created + spec.voteTo + 60);
-      const counts = new Array<bigint>(spec.candidates.length + 1).fill(0n);
-      for (const choice of finalChoices) counts[choice] += 1n;
+      // Proved exactly as the organizer's browser proves it, so the results
+      // screen of every seeded election verifies against its own ballots.
+      const events = await election.queryFilter(election.filters.VoteCast());
+      const tally = proveTally({
+        publicKey: { n: keys.publicKey.n, g: keys.publicKey.g },
+        lambda: keys.privateKey.lambda,
+        decrypt: c => keys.privateKey.decrypt(c),
+        ballots: finalBallots(
+          events.map(e => {
+            const a = (e as unknown as { args: { nullifier: bigint; nonce: bigint; voteCiphertext: string } }).args;
+            return { nullifier: a.nullifier, nonce: a.nonce, ciphertext: a.voteCiphertext };
+          }),
+        ),
+        slots: spec.candidates.length + 1,
+        base: COUNTER_BASE,
+      });
+      const expected = new Array<bigint>(spec.candidates.length + 1).fill(0n);
+      for (const choice of finalChoices) expected[choice] += 1n;
+      if (tally.counts.join() !== expected.join()) {
+        throw new Error(`${spec.name}: tallied ${tally.counts.join()}, expected ${expected.join()}`);
+      }
       await (
-        await election.publishResults(`Qm${spec.name.slice(0, 8).replace(/\W/g, "")}Demo`, counts)
+        await election.publishResults(
+          `Qm${spec.name.slice(0, 8).replace(/\W/g, "")}Demo`,
+          tally.counts,
+          BigInt(tally.invalidBallots),
+          encodeTallyProof(tally.proof),
+        )
       ).wait();
 
       const outcomeNames = ["NONE", "WINNER", "TIE", "APPROVED", "REJECTED", "THRESHOLD_NOT_MET"];

@@ -8,13 +8,13 @@ import {
   Phase,
   Outcome,
   DUMMY_PROOF,
+  PLACEHOLDER_TALLY_PROOF,
   ZERO_ADDRESS,
   type Stack,
 } from "./fixtures.js";
 
 const { ethers, networkHelpers } = await network.create();
 
-const FORWARDER = ethers.Wallet.createRandom().address;
 
 let stack: Stack;
 let organizer: any;
@@ -22,7 +22,7 @@ let voter: any;
 
 before(async () => {
   [, organizer, voter] = await ethers.getSigners();
-  stack = await deployStack(ethers, FORWARDER);
+  stack = await deployStack(ethers);
 });
 
 /// Registers a member on the platform registry (issuer-owned) so it can enroll.
@@ -32,7 +32,27 @@ async function platformRegister(nullifier: bigint, commitment: bigint): Promise<
 
 async function freshElection(overrides = {}): Promise<any> {
   const now = await networkHelpers.time.latest();
-  return deployElection(ethers, stack, FORWARDER, organizer, baseConfig(now, overrides));
+  return deployElection(ethers, stack, organizer, baseConfig(now, overrides));
+}
+
+/// An election whose voter count the test sets directly, for outcome arithmetic.
+async function harnessElection(overrides = {}): Promise<any> {
+  const now = await networkHelpers.time.latest();
+  return deployElection(
+    ethers,
+    stack,
+    organizer,
+    baseConfig(now, overrides),
+    ZERO_ADDRESS,
+    "ElectionV4Harness",
+  );
+}
+
+/// Publishes with the placeholder proof and no excluded ballots.
+function publishCall(election: any, counts: bigint[], invalid = 0n) {
+  return election
+    .connect(organizer)
+    .publishResults("cid", counts, invalid, PLACEHOLDER_TALLY_PROOF);
 }
 
 let commitmentSeq = 1_000n;
@@ -50,7 +70,6 @@ describe("ElectionV4, config validation", () => {
 
     const deployWith = (cfg: ReturnType<typeof baseConfig>) =>
       Election.deploy(
-        FORWARDER,
         stack.verifier.getAddress(),
         stack.registry.getAddress(),
         ZERO_ADDRESS,
@@ -92,7 +111,6 @@ describe("ElectionV4, config validation", () => {
 
     const deployWith = (cfg: ReturnType<typeof baseConfig>) =>
       Election.deploy(
-        FORWARDER,
         stack.verifier.getAddress(),
         stack.registry.getAddress(),
         ZERO_ADDRESS,
@@ -404,9 +422,73 @@ describe("ElectionV4, organizer lifecycle", () => {
     await expect(election.connect(organizer).markVoided()).to.emit(election, "ElectionVoided");
     expect(await election.phase()).to.equal(Phase.VOIDED);
 
+    await expect(publishCall(election, [1n, 1n, 1n, 0n])).to.be.revertedWithCustomError(
+      election,
+      "AlreadyDecided",
+    );
+  });
+
+  it("takes no ballot at voteEnd itself, the second phase() reads TALLYING", async () => {
+    const election = await freshElection();
+    const { nullifier, commitment } = nextCommitment();
+    await platformRegister(nullifier, commitment);
+    await (await election.connect(voter).enroll(commitment)).wait();
+    await networkHelpers.time.increaseTo(await election.voteStart());
+    const root = await election.merkleTreeRoot();
+
+    await networkHelpers.time.setNextBlockTimestamp(await election.voteEnd());
     await expect(
-      election.connect(organizer).publishResults("cid", [1n, 1n, 1n, 0n]),
-    ).to.be.revertedWithCustomError(election, "AlreadyDecided");
+      election.connect(voter).castVote("0x01", nullifier, root, 1n, DUMMY_PROOF.pA, DUMMY_PROOF.pB, DUMMY_PROOF.pC),
+    ).to.be.revertedWithCustomError(election, "VotingNotOpen");
+    // The refused call mined nothing, so the pinned timestamp is still pending.
+    await networkHelpers.mine();
+  });
+});
+
+describe("ElectionV4, ballot size", () => {
+  it("refuses an empty ballot and one longer than any Paillier ciphertext", async () => {
+    const election = await freshElection();
+    const { nullifier, commitment } = nextCommitment();
+    await platformRegister(nullifier, commitment);
+    await (await election.connect(voter).enroll(commitment)).wait();
+    await networkHelpers.time.increaseTo(await election.voteStart());
+    const root = await election.merkleTreeRoot();
+    const cast = (ballot: string) =>
+      election.connect(voter).castVote(ballot, nullifier, root, 1n, DUMMY_PROOF.pA, DUMMY_PROOF.pB, DUMMY_PROOF.pC);
+
+    expect(await election.MAX_BALLOT_BYTES()).to.equal(512n);
+    await expect(cast("0x")).to.be.revertedWithCustomError(election, "InvalidBallot");
+    await expect(cast("0x" + "ab".repeat(513))).to.be.revertedWithCustomError(election, "InvalidBallot");
+    await expect(cast("0x" + "ab".repeat(512))).to.emit(election, "VoteCast");
+  });
+});
+
+describe("ElectionV4, voiding an election that promised no veto", () => {
+  async function tallying(overrides = {}) {
+    const election = await harnessElection(overrides);
+    await networkHelpers.time.increaseTo((await election.voteEnd()) + 1n);
+    return election;
+  }
+
+  it("refuses to void a publishable result once cancelling was given up", async () => {
+    const election = await tallying({ cancellable: false, privacyQuorum: 2n });
+    await (await election.forceDistinctVoters(2n)).wait();
+    await expect(election.connect(organizer).markVoided()).to.be.revertedWithCustomError(
+      election,
+      "ResultPublishable",
+    );
+  });
+
+  it("still voids below the privacy quorum, where nothing may be published", async () => {
+    const election = await tallying({ cancellable: false, privacyQuorum: 3n });
+    await (await election.forceDistinctVoters(2n)).wait();
+    await expect(election.connect(organizer).markVoided()).to.emit(election, "ElectionVoided");
+  });
+
+  it("keeps the veto for an election that kept the power to be called off", async () => {
+    const election = await tallying({ cancellable: true });
+    await (await election.forceDistinctVoters(5n)).wait();
+    await expect(election.connect(organizer).markVoided()).to.emit(election, "ElectionVoided");
   });
 });
 
@@ -458,9 +540,10 @@ describe("ElectionV4, privacy quorum", () => {
     await withVoters(election, 2);
     await networkHelpers.time.increaseTo((await election.voteEnd()) + 1n);
 
-    await expect(
-      election.connect(organizer).publishResults("cid", [1n, 1n, 0n, 0n]),
-    ).to.be.revertedWithCustomError(election, "PrivacyQuorumNotMet");
+    await expect(publishCall(election, [1n, 1n, 0n, 0n])).to.be.revertedWithCustomError(
+      election,
+      "PrivacyQuorumNotMet",
+    );
   });
 
   it("leaves voiding as the way out, so the election still reaches an end", async () => {
@@ -477,7 +560,7 @@ describe("ElectionV4, privacy quorum", () => {
     await withVoters(election, 3);
     await networkHelpers.time.increaseTo((await election.voteEnd()) + 1n);
 
-    await (await election.connect(organizer).publishResults("cid", [2n, 1n, 0n, 0n])).wait();
+    await (await publishCall(election, [2n, 1n, 0n, 0n])).wait();
     expect(await election.phase()).to.equal(Phase.CLOSED);
     expect(await election.distinctVoters()).to.equal(3n);
   });
@@ -486,7 +569,7 @@ describe("ElectionV4, privacy quorum", () => {
     const election = await freshElection();
     expect(await election.privacyQuorum()).to.equal(0n);
     await networkHelpers.time.increaseTo((await election.voteEnd()) + 1n);
-    await (await election.connect(organizer).publishResults("cid", [1n, 0n, 0n, 0n])).wait();
+    await (await publishCall(election, [0n, 0n, 0n, 0n])).wait();
     expect(await election.phase()).to.equal(Phase.CLOSED);
   });
 });
@@ -499,7 +582,6 @@ describe("ElectionV4, option ceiling", () => {
     });
     const deployWith = (cfg: ReturnType<typeof baseConfig>) =>
       Election.deploy(
-        FORWARDER,
         stack.verifier.getAddress(),
         stack.registry.getAddress(),
         ZERO_ADDRESS,
@@ -519,22 +601,60 @@ describe("ElectionV4, option ceiling", () => {
 });
 
 describe("ElectionV4, publishResults & outcomes", () => {
+  /// Publishes `tallyArr` on an election whose recorded voters it accounts for.
   async function publish(election: any, tallyArr: bigint[]): Promise<void> {
     await networkHelpers.time.increaseTo((await election.voteEnd()) + 1n);
-    await (await election.connect(organizer).publishResults("QmTestCid", tallyArr)).wait();
+    await (await election.forceDistinctVoters(tallyArr.reduce((a, b) => a + b, 0n))).wait();
+    await (
+      await election
+        .connect(organizer)
+        .publishResults("QmTestCid", tallyArr, 0n, PLACEHOLDER_TALLY_PROOF)
+    ).wait();
   }
+
+  const freshElection = harnessElection;
 
   it("validates timing and tally length", async () => {
     const election = await freshElection(); // 3 options → tally length must be 4
 
-    await expect(
-      election.connect(organizer).publishResults("cid", [1n, 2n, 3n, 0n]),
-    ).to.be.revertedWithCustomError(election, "VotingNotEnded");
+    await expect(publishCall(election, [0n, 0n, 0n, 0n])).to.be.revertedWithCustomError(
+      election,
+      "VotingNotEnded",
+    );
 
     await networkHelpers.time.increaseTo((await election.voteEnd()) + 1n);
+    await expect(publishCall(election, [0n, 0n, 0n])).to.be.revertedWithCustomError(
+      election,
+      "InvalidTally",
+    );
+  });
+
+  it("requires the counters and the excluded ballots to account for every voter", async () => {
+    const election = await freshElection();
+    await networkHelpers.time.increaseTo((await election.voteEnd()) + 1n);
+    await (await election.forceDistinctVoters(5n)).wait();
+
+    // An invented ballot, and a dropped one.
+    await expect(publishCall(election, [3n, 2n, 1n, 0n])).to.be.revertedWithCustomError(
+      election,
+      "InvalidTally",
+    );
+    await expect(publishCall(election, [2n, 1n, 1n, 0n])).to.be.revertedWithCustomError(
+      election,
+      "InvalidTally",
+    );
+    // One ballot excluded as invalid, openly: four counted plus one excluded.
+    await expect(publishCall(election, [2n, 1n, 1n, 0n], 1n))
+      .to.emit(election, "TallyProofPublished")
+      .withArgs(1n, PLACEHOLDER_TALLY_PROOF);
+  });
+
+  it("refuses a result published without its proof", async () => {
+    const election = await freshElection();
+    await networkHelpers.time.increaseTo((await election.voteEnd()) + 1n);
     await expect(
-      election.connect(organizer).publishResults("cid", [1n, 2n, 3n]),
-    ).to.be.revertedWithCustomError(election, "InvalidTally");
+      election.connect(organizer).publishResults("cid", [0n, 0n, 0n, 0n], 0n, "0x"),
+    ).to.be.revertedWithCustomError(election, "MissingTallyProof");
   });
 
   it("SIMPLE_PLURALITY: highest vote count wins; equal top is a tie", async () => {
@@ -628,9 +748,10 @@ describe("ElectionV4, publishResults & outcomes", () => {
   it("publishing twice is impossible", async () => {
     const election = await freshElection();
     await publish(election, [1n, 2n, 3n, 0n]);
-    await expect(
-      election.connect(organizer).publishResults("cid2", [9n, 9n, 9n, 9n]),
-    ).to.be.revertedWithCustomError(election, "AlreadyDecided");
+    await expect(publishCall(election, [1n, 2n, 3n, 0n])).to.be.revertedWithCustomError(
+      election,
+      "AlreadyDecided",
+    );
   });
 
   it("exposes the stored tally", async () => {

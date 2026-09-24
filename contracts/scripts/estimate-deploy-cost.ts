@@ -146,7 +146,6 @@ async function main(): Promise<void> {
   });
   const factory = await Factory.deploy(
     await paymaster.getAddress(),
-    deployer.address,
     await verifier.getAddress(),
     await registry.getAddress(),
     // The platform attester, which costs the same to store whoever it is.

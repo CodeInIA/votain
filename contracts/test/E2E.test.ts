@@ -11,7 +11,9 @@
  * So this suite deploys SemaphoreVerifierV4, generates real proofs with the
  * official JS libraries, encrypts real Paillier ballots, routes everything
  * through ElectionPaymaster exactly as the relayer does, and decrypts the
- * homomorphic tally at the end.
+ * homomorphic tally at the end, proving it with the same `tallyProof.ts` the
+ * browser and the auditor's CLI use, and checking that proof as any reader
+ * of the result would.
  */
 import { expect } from "chai";
 import { network } from "hardhat";
@@ -29,16 +31,26 @@ import {
   Outcome,
   Phase,
 } from "./fixtures.js";
+import {
+  decodeTallyProof,
+  encodeTallyProof,
+  finalBallots,
+  proveTally,
+  verifyTally,
+} from "../../frontend/src/lib/tallyProof.js";
 
 const { ethers, networkHelpers } = await network.create();
 
-const FORWARDER = "0x000000000000000000000000000000000000dEaD";
 const COUNTER_BASE = 1_000_000n;
 
 // A 1024-bit Paillier key keeps the suite fast; production uses 2048.
 const PAILLIER_BITS = 1024;
 
 const toHex = (x: bigint): string => "0x" + x.toString(16);
+const toBytes = (x: bigint): string => {
+  const digits = x.toString(16);
+  return "0x" + (digits.length % 2 === 0 ? digits : "0" + digits);
+};
 
 /**
  * Mirrors frontend/src/lib/paillier.ts encryptBallot, padding included: the
@@ -116,7 +128,6 @@ describe("E2E, real Groth16 proofs, real Paillier, relayed like production", () 
     });
     const factory = await Factory.deploy(
       await paymaster.getAddress(),
-      FORWARDER,
       await verifier.getAddress(),
       await registry.getAddress(),
       platform.address,
@@ -182,7 +193,7 @@ describe("E2E, real Groth16 proofs, real Paillier, relayed like production", () 
     await (
       await stack.paymaster
         .connect(relayer)
-        .relayEnrollPrivate(address, identity.commitment, tag, deadline, signature, "0x")
+        .relayEnrollPrivate(address, identity.commitment, tag, 0n, deadline, signature, "0x")
     ).wait();
 
     return identity;
@@ -192,6 +203,8 @@ describe("E2E, real Groth16 proofs, real Paillier, relayed like production", () 
     const now = await networkHelpers.time.latest();
     const cfg = baseConfig(now, {
       numOptions: 3n,
+      // Long enough for a sponsored re-vote after ElectionPaymaster.REVOTE_COOLDOWN.
+      voteEnd: now + 4 * 3600,
       paillierPublicKey: JSON.stringify({
         n: toHex(paillier.publicKey.n),
         g: toHex(paillier.publicKey.g),
@@ -205,19 +218,48 @@ describe("E2E, real Groth16 proofs, real Paillier, relayed like production", () 
     return ethers.getContractAt("ElectionV4", await stack.factory.elections(count - 1n));
   }
 
+  /** Tallies an ended election from its events, proves it and publishes it. */
+  async function proveAndPublish(election: any, slots: number, cid: string): Promise<bigint[]> {
+    const events = await election.queryFilter(election.filters.VoteCast());
+    const ballots = finalBallots(
+      events.map((e: any) => ({
+        nullifier: e.args.nullifier,
+        nonce: e.args.nonce,
+        ciphertext: e.args.voteCiphertext,
+      })),
+    );
+    const tally = proveTally({
+      publicKey: { n: paillier.publicKey.n, g: paillier.publicKey.g },
+      lambda: paillier.privateKey.lambda,
+      decrypt: c => paillier.privateKey.decrypt(c),
+      ballots,
+      slots,
+      base: COUNTER_BASE,
+    });
+    await (
+      await election
+        .connect(organizer)
+        .publishResults(cid, tally.counts, BigInt(tally.invalidBallots), encodeTallyProof(tally.proof))
+    ).wait();
+    return tally.counts;
+  }
+
   /** Full relayed vote: encrypt, prove, submit through the paymaster. */
   async function relayedVote(
     election: any,
     identity: Identity,
     group: Group,
     optionIndex: number,
+    /** Overrides the honest plaintext, to cast a malformed or stuffed ballot. */
+    plaintext?: bigint,
   ): Promise<{ ciphertext: string; nullifier: bigint }> {
     const scope: bigint = await election.scope();
     const pkJson: string = await election.paillierPublicKey();
     const parsed = JSON.parse(pkJson) as { n: string; g: string };
     const pk = new PublicKey(BigInt(parsed.n), BigInt(parsed.g));
 
-    const ciphertext = encryptBallot(pk, optionIndex);
+    const ciphertext =
+      plaintext === undefined ? encryptBallot(pk, optionIndex) : toBytes(pk.encrypt(plaintext));
 
     // The nonce must be read BEFORE proving: it is bound into the message.
     const nonce: bigint = await election.nullifierNonces(voteNullifier(identity, scope));
@@ -255,82 +297,109 @@ describe("E2E, real Groth16 proofs, real Paillier, relayed like production", () 
     const alice = await newVoter("alice");
     const bob = await newVoter("bob");
     const carol = await newVoter("carol");
+    const mallory = await newVoter("mallory");
 
     const voting = new Map<string, Identity>();
-    for (const v of [alice, bob, carol]) {
+    for (const v of [alice, bob, carol, mallory]) {
       voting.set(v.seed, await enrolPrivately(election, v));
     }
-    expect(await election.memberCount()).to.equal(3n);
+    expect(await election.memberCount()).to.equal(4n);
 
     // NONE of these are the commitments the registry knows. That is the point:
-    // the tree says three verified humans joined, and nothing on chain says
-    // which three, nor what else they have joined.
-    for (const v of [alice, bob, carol]) {
+    // the tree says four verified humans joined, and nothing on chain says
+    // which four, nor what else they have joined.
+    for (const v of [alice, bob, carol, mallory]) {
       expect(await election.hasMember(v.identity.commitment)).to.equal(false);
       expect(await election.hasMember(voting.get(v.seed)!.commitment)).to.equal(true);
     }
 
-    const group = new Group([
-      voting.get("alice")!.commitment,
-      voting.get("bob")!.commitment,
-      voting.get("carol")!.commitment,
-    ]);
+    const group = new Group([...voting.values()].map(identity => identity.commitment));
     expect(BigInt(group.root)).to.equal(await election.merkleTreeRoot());
 
     // ── Voting ──
     await networkHelpers.time.increaseTo((await election.voteStart()) + 1n);
 
-    const ballots: string[] = [];
-    ballots.push((await relayedVote(election, voting.get("alice")!, group, 0)).ciphertext);
-    ballots.push((await relayedVote(election, voting.get("bob")!, group, 0)).ciphertext);
+    await relayedVote(election, voting.get("alice")!, group, 0);
+    await relayedVote(election, voting.get("bob")!, group, 0);
+    // Mallory stuffs the box: five votes for option 2 in one ciphertext. The
+    // proof of membership is valid; only the tally proof can catch this.
+    await relayedVote(election, voting.get("mallory")!, group, 0, 5n * COUNTER_BASE ** 2n);
 
     // Carol votes for option 2, then changes her mind: coercion resistance means
-    // only her highest-nonce ballot may count.
+    // only her highest-nonce ballot may count. The paymaster sponsors the
+    // re-vote once its cooldown has passed.
     const carolIdentity = voting.get("carol")!;
     const coerced = await relayedVote(election, carolIdentity, group, 2);
+    await networkHelpers.time.increase(Number(await stack.paymaster.REVOTE_COOLDOWN()));
     const real = await relayedVote(election, carolIdentity, group, 1);
     expect(real.nullifier).to.equal(coerced.nullifier);
     expect(await election.nullifierNonces(real.nullifier)).to.equal(2n);
-    ballots.push(real.ciphertext);
 
-    expect(await election.voteCount()).to.equal(4n); // 3 voters, 4 emitted ballots
+    expect(await election.voteCount()).to.equal(5n); // 4 voters, 5 emitted ballots
+    expect(await election.distinctVoters()).to.equal(4n);
 
-    // ── Tally: dedup by max nonce, homomorphic sum, decrypt ──
+    // ── Tally: last ballot per voter, classified, proved ──
     const events = await election.queryFilter(election.filters.VoteCast());
-    const latest = new Map<string, { ciphertext: string; nonce: bigint }>();
-    for (const e of events) {
-      const a = (e as any).args;
-      const key = a.nullifier.toString();
-      const seen = latest.get(key);
-      if (!seen || a.nonce > seen.nonce) latest.set(key, { ciphertext: a.voteCiphertext, nonce: a.nonce });
-    }
-    expect(latest.size).to.equal(3);
+    const ballots = finalBallots(
+      events.map((e: unknown) => {
+        const a = (e as any).args;
+        return { nullifier: a.nullifier, nonce: a.nonce, ciphertext: a.voteCiphertext };
+      }),
+    );
+    expect(ballots.length).to.equal(4);
 
-    const aggregated = [...latest.values()]
-      .map(v => BigInt(v.ciphertext))
-      .reduce((acc, c) => paillier.publicKey.addition(acc, c));
-
-    let remaining = paillier.privateKey.decrypt(aggregated);
-    const counts: bigint[] = [];
-    for (let i = 0; i < 4; i++) {
-      counts.push(remaining % COUNTER_BASE);
-      remaining /= COUNTER_BASE;
-    }
-    expect(remaining).to.equal(0n);
+    const publicKey = { n: paillier.publicKey.n, g: paillier.publicKey.g };
+    const tally = proveTally({
+      publicKey,
+      lambda: paillier.privateKey.lambda,
+      decrypt: c => paillier.privateKey.decrypt(c),
+      ballots,
+      slots: 4,
+      base: COUNTER_BASE,
+    });
 
     // Alice + Bob on option 0, Carol's REPLACEMENT on option 1, nothing on the
-    // coerced option 2. The overridden ballot is invisible in the total.
-    expect(counts.slice(0, 3)).to.deep.equal([2n, 1n, 0n]);
+    // coerced option 2, and Mallory's five votes excluded in the open.
+    expect(tally.counts).to.deep.equal([2n, 1n, 0n, 0n]);
+    expect(tally.invalidBallots).to.equal(1);
 
-    // ── Publish ──
+    // ── Publish, with the proof ──
     await networkHelpers.time.increaseTo((await election.voteEnd()) + 1n);
-    // publishResults expects numOptions + 1 entries: the blank slot counts too.
-    await (await election.connect(organizer).publishResults("QmAuditTrail", counts)).wait();
+    const proofBytes = encodeTallyProof(tally.proof);
+    await (
+      await election
+        .connect(organizer)
+        .publishResults("QmAuditTrail", tally.counts, BigInt(tally.invalidBallots), proofBytes)
+    ).wait();
 
     expect(await election.resultsPublished()).to.equal(true);
     expect(await election.outcome()).to.equal(Outcome.WINNER);
     expect(await election.winnerIndex()).to.equal(0n);
     expect(await election.phase()).to.equal(Phase.CLOSED);
+
+    // ── Audit, as any reader: from the chain alone, with no key ──
+    const [published] = await election.queryFilter(election.filters.TallyProofPublished());
+    const args = (published as any).args;
+    const verdict = verifyTally({
+      publicKey,
+      ballots,
+      counts: [...(await election.tally())],
+      invalidBallots: args.invalidBallots,
+      proof: decodeTallyProof(args.proof),
+      base: COUNTER_BASE,
+    });
+    expect(verdict).to.deep.equal({ ok: true, validBallots: 3, invalidBallots: 1 });
+
+    // And the stuffed tally an organizer might have preferred does not verify.
+    const stuffed = verifyTally({
+      publicKey,
+      ballots,
+      counts: [2n, 1n, 5n, 0n],
+      invalidBallots: 0,
+      proof: tally.proof,
+      base: COUNTER_BASE,
+    });
+    expect(stuffed.ok).to.equal(false);
   });
 
   it("rejects a proof from someone outside the group", async function () {
@@ -439,7 +508,13 @@ describe("E2E, real Groth16 proofs, real Paillier, relayed like production", () 
     await (await stack.paymaster.connect(relayer).relayVote(...args)).wait();
 
     // The nonce has moved on, so the same proof no longer binds the message.
-    await expect(stack.paymaster.connect(relayer).relayVote(...args)).to.be.revert(ethers);
+    // Submitted straight to the election, past the paymaster's cooldown, so it
+    // is the proof that is refused and not the sponsorship.
+    const [, ...castArgs] = args;
+    await expect(election.connect(relayer).castVote(...castArgs)).to.be.revertedWithCustomError(
+      election,
+      "InvalidProof",
+    );
     expect(await election.voteCount()).to.equal(1n);
   });
 
@@ -467,7 +542,7 @@ describe("E2E, real Groth16 proofs, real Paillier, relayed like production", () 
     await relayedVote(election, voting[2], group, 1);
 
     await networkHelpers.time.increaseTo((await election.voteEnd()) + 1n);
-    await (await election.connect(organizer).publishResults("QmTwoThirds", [2n, 1n, 0n])).wait();
+    expect(await proveAndPublish(election, 3, "QmTwoThirds")).to.deep.equal([2n, 1n, 0n]);
 
     expect(await election.outcome()).to.equal(Outcome.APPROVED);
   });
