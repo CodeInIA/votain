@@ -508,7 +508,7 @@ async function main(): Promise<void> {
     // seconds to make, so a window sized for instant ballots closed before the
     // last of them landed. A minute per ballot is generous on any machine.
     if (spec.finish) {
-      const ballots = spec.ballots.length + (spec.revote ? 1 : 0);
+      const ballots = (spec.ballots?.length ?? 0) + (spec.revote ? 1 : 0);
       spec = { ...spec, enrollFrom: -30, enrollTo: 60, voteFrom: 60, voteTo: 120 + 60 * ballots };
     }
 
