@@ -44,7 +44,14 @@ async function witness(wasm: string, inputs: object): Promise<void> {
 const accepts = (wasm: string, inputs: object) => assert.doesNotReject(witness(wasm, inputs));
 const refuses = (wasm: string, inputs: object) => assert.rejects(witness(wasm, inputs));
 
-describe("ballot and tally circuits", { skip: !existsSync(BALLOT_WASM) || !existsSync(TALLY_WASM) }, () => {
+// Never a silent skip: a suite that tests nothing and passes is worse than a
+// red one. `npm test` compiles first (`build.mjs --compile`), so this only
+// fires when the test file is run on its own.
+for (const wasm of [BALLOT_WASM, TALLY_WASM]) {
+  if (!existsSync(wasm)) throw new Error(`${wasm} is missing: run \`npm test\`, which compiles the circuits first`);
+}
+
+describe("ballot and tally circuits", () => {
   const scope = 777n;
   const epoch = 5n;
   let keys: Point[];

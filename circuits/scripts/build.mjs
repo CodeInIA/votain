@@ -190,6 +190,13 @@ function wrapVerifier(circuit, source, slots, publicCount) {
   return renamed.replace(/\}\s*$/, wrapper);
 }
 
+// `--compile`: only the witness calculators of the smallest size, which is all
+// the witness tests need. Seconds rather than a trusted setup.
+if (process.argv.includes("--compile")) {
+  for (const kind of Object.keys(CIRCUITS)) compile(kind, DEFAULT_SIZES[0]);
+  process.exit(0);
+}
+
 const built = [];
 for (const slots of sizes) {
   built.push(await setup("ballot", slots));
