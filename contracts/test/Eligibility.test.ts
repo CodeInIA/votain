@@ -12,7 +12,6 @@ import {
 
 const { ethers, networkHelpers } = await network.create();
 
-const FORWARDER = ethers.Wallet.createRandom().address;
 const POLICY_HASH = ethers.keccak256(
   ethers.toUtf8Bytes('{"minAge":18,"allowedCountries":["ESP"]}'),
 );
@@ -25,7 +24,7 @@ let chainId: bigint;
 
 before(async () => {
   [, organizer, attester, outsider] = await ethers.getSigners();
-  stack = await deployStack(ethers, FORWARDER);
+  stack = await deployStack(ethers);
   chainId = (await ethers.provider.getNetwork()).chainId;
 });
 
@@ -56,7 +55,6 @@ async function gatedElection(overrides = {}): Promise<any> {
   return deployElection(
     ethers,
     stack,
-    FORWARDER,
     organizer,
     baseConfig(now, {
       eligibilityAttester: attester.address,
@@ -71,7 +69,7 @@ async function gatedElection(overrides = {}): Promise<any> {
 
 async function openElection(): Promise<any> {
   const now = await networkHelpers.time.latest();
-  return deployElection(ethers, stack, FORWARDER, organizer, baseConfig(now));
+  return deployElection(ethers, stack, organizer, baseConfig(now));
 }
 
 async function futureDeadline(): Promise<number> {
@@ -81,14 +79,12 @@ async function futureDeadline(): Promise<number> {
 describe("ElectionV4, eligibility config", () => {
   it("rejects an attester without a policy hash, and a policy hash without an attester", async () => {
     const now = await networkHelpers.time.latest();
-    const Election = await ethers.getContractFactory("ElectionV4", {
-      libraries: { PoseidonT3: stack.poseidonAddress },
-    });
+    const Election = await ethers.getContractFactory("ElectionV4", { libraries: stack.libraries });
 
     const deployWith = (cfg: ReturnType<typeof baseConfig>) =>
       Election.deploy(
-        FORWARDER,
-        stack.verifier.getAddress(),
+        stack.ballotVerifiers[0].getAddress(),
+        stack.tallyVerifiers[0].getAddress(),
         stack.registry.getAddress(),
         ZERO_ADDRESS,
         organizer.address,
@@ -108,12 +104,10 @@ describe("ElectionV4, eligibility config", () => {
 
   /** The raw constructor, for the configurations the factory would never build. */
   async function deployRaw(cfg: ReturnType<typeof baseConfig>) {
-    const Election = await ethers.getContractFactory("ElectionV4", {
-      libraries: { PoseidonT3: stack.poseidonAddress },
-    });
+    const Election = await ethers.getContractFactory("ElectionV4", { libraries: stack.libraries });
     return Election.deploy(
-      FORWARDER,
-      stack.verifier.getAddress(),
+      stack.ballotVerifiers[0].getAddress(),
+      stack.tallyVerifiers[0].getAddress(),
       stack.registry.getAddress(),
       ZERO_ADDRESS,
       organizer.address,
@@ -140,9 +134,7 @@ describe("ElectionV4, eligibility config", () => {
         }),
       ),
     ).to.be.revertedWithCustomError(
-      await ethers.getContractFactory("ElectionV4", {
-        libraries: { PoseidonT3: stack.poseidonAddress },
-      }),
+      await ethers.getContractFactory("ElectionV4", { libraries: stack.libraries }),
       "InvalidConfig",
     );
   });
@@ -152,9 +144,7 @@ describe("ElectionV4, eligibility config", () => {
     // attestation, so a level above DEVICE with nobody to sign one is a
     // configuration whose voters could never enroll.
     const now = await networkHelpers.time.latest();
-    const Election = await ethers.getContractFactory("ElectionV4", {
-      libraries: { PoseidonT3: stack.poseidonAddress },
-    });
+    const Election = await ethers.getContractFactory("ElectionV4", { libraries: stack.libraries });
     for (const level of [1, 2]) {
       await expect(
         deployRaw(baseConfig(now, { personhood: level })),
@@ -219,7 +209,8 @@ describe("ElectionV4, attested enrollment", () => {
     expect(await election.memberCount()).to.equal(1n);
     // The root the event announced is the one the tree now reports, so a voter
     // building a proof from the event lands on a root the contract accepts.
-    expect(await election.rootTimestamps(await election.merkleTreeRoot())).to.be.greaterThan(0n);
+    const [event] = await election.queryFilter(election.filters.MemberEnrolled());
+    expect((event as any).args.merkleTreeRoot).to.equal(await election.merkleTreeRoot());
   });
 
   it("closes the bypass: plain enroll is refused once a policy is declared", async () => {

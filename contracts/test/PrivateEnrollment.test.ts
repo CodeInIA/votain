@@ -30,7 +30,6 @@ import {
 
 const { ethers, networkHelpers } = await network.create();
 
-const FORWARDER = ethers.Wallet.createRandom().address;
 const POLICY_HASH = ethers.keccak256(
   ethers.toUtf8Bytes('{"minAge":18,"allowedCountries":["ESP"]}'),
 );
@@ -45,8 +44,8 @@ let chainId: bigint;
 
 before(async () => {
   [, organizer, platform, eligibility, outsider] = await ethers.getSigners();
-  stack = await deployStack(ethers, FORWARDER, platform.address);
-  legacyStack = await deployStack(ethers, FORWARDER);
+  stack = await deployStack(ethers, platform.address);
+  legacyStack = await deployStack(ethers);
   chainId = (await ethers.provider.getNetwork()).chainId;
 });
 
@@ -73,7 +72,6 @@ async function privateElection(overrides = {}): Promise<any> {
   return deployElection(
     ethers,
     stack,
-    FORWARDER,
     organizer,
     baseConfig(await now(), overrides),
     platform.address,
@@ -102,7 +100,7 @@ describe("private enrollment", () => {
     );
 
     await expect(
-      election.enrollPrivate(commitment, tag, deadline, signature, "0x"),
+      election.enrollPrivate(commitment, tag, 0n, deadline, signature, "0x"),
     ).to.emit(election, "MemberEnrolled");
 
     expect(await election.hasMember(commitment)).to.equal(true);
@@ -121,6 +119,7 @@ describe("private enrollment", () => {
       await election.enrollPrivate(
         first,
         tag,
+        0n,
         deadline,
         await signPrivateEnrollment(platform, address, chainId, first, tag, deadline),
         "0x",
@@ -134,6 +133,7 @@ describe("private enrollment", () => {
       election.enrollPrivate(
         second,
         tag,
+        0n,
         deadline,
         await signPrivateEnrollment(platform, address, chainId, second, tag, deadline),
         "0x",
@@ -170,7 +170,7 @@ describe("private enrollment", () => {
     );
 
     await expect(
-      election.enrollPrivate(commitment, tag, deadline, forged, "0x"),
+      election.enrollPrivate(commitment, tag, 0n, deadline, forged, "0x"),
     ).to.be.revertedWithCustomError(election, "BadAttestation");
   });
 
@@ -191,7 +191,7 @@ describe("private enrollment", () => {
     );
 
     await expect(
-      two.enrollPrivate(commitment, tag, deadline, forOne, "0x"),
+      two.enrollPrivate(commitment, tag, 0n, deadline, forOne, "0x"),
     ).to.be.revertedWithCustomError(two, "BadAttestation");
   });
 
@@ -206,6 +206,7 @@ describe("private enrollment", () => {
       election.enrollPrivate(
         commitment,
         tag,
+        0n,
         stale,
         await signPrivateEnrollment(platform, address, chainId, commitment, tag, stale),
         "0x",
@@ -216,6 +217,7 @@ describe("private enrollment", () => {
     await expect(
       election.enrollPrivate(
         commitment,
+        0n,
         0n,
         deadline,
         await signPrivateEnrollment(platform, address, chainId, commitment, 0n, deadline),
@@ -252,7 +254,6 @@ describe("private enrollment", () => {
     const election = await deployElection(
       ethers,
       legacyStack,
-      FORWARDER,
       organizer,
       baseConfig(await now()),
     );
@@ -265,6 +266,7 @@ describe("private enrollment", () => {
       election.enrollPrivate(
         commitment,
         tag,
+        0n,
         deadline,
         await signPrivateEnrollment(platform, address, chainId, commitment, tag, deadline),
         "0x",
@@ -281,42 +283,96 @@ describe("private enrollment", () => {
     const address = await election.getAddress();
     const commitment = derivedCommitment();
     const tag = humanTagFor(15n, address);
+    const doc = 9_001n;
     const deadline = (await now()) + 600;
-    const platformSig = await signPrivateEnrollment(
-      platform,
-      address,
-      chainId,
-      commitment,
-      tag,
-      deadline,
-    );
+    const sign = (who: any) =>
+      signPrivateEnrollment(who, address, chainId, commitment, tag, deadline, doc);
+    const platformSig = await sign(platform);
 
     // The platform says "a verified human, not yet enrolled here". It does not
     // say "over eighteen and Spanish", and on this election that is a second
     // question with a second answer.
     await expect(
-      election.enrollPrivate(commitment, tag, deadline, platformSig, "0x"),
+      election.enrollPrivate(commitment, tag, doc, deadline, platformSig, "0x"),
     ).to.be.revertedWithCustomError(election, "BadAttestation");
 
     await expect(
-      election.enrollPrivate(
-        commitment,
-        tag,
-        deadline,
-        platformSig,
-        await signPrivateEnrollment(outsider, address, chainId, commitment, tag, deadline),
-      ),
+      election.enrollPrivate(commitment, tag, doc, deadline, platformSig, await sign(outsider)),
     ).to.be.revertedWithCustomError(election, "BadAttestation");
 
     await expect(
-      election.enrollPrivate(
-        commitment,
-        tag,
-        deadline,
-        platformSig,
-        await signPrivateEnrollment(eligibility, address, chainId, commitment, tag, deadline),
-      ),
+      election.enrollPrivate(commitment, tag, doc, deadline, platformSig, await sign(eligibility)),
     ).to.emit(election, "MemberEnrolled");
+    expect(await election.usedPersonhoodNullifiers(doc)).to.equal(true);
+  });
+
+  it("refuses one document behind two accounts on a gated election", async () => {
+    const election = await privateElection({
+      eligibilityAttester: eligibility.address,
+      eligibilityPolicyHash: POLICY_HASH,
+      personhood: 1,
+    });
+    const address = await election.getAddress();
+    const doc = 4_242n;
+    const deadline = (await now()) + 600;
+
+    // Two World ID accounts, so two different human tags, one passport.
+    const enrol = async (account: bigint) => {
+      const commitment = derivedCommitment();
+      const tag = humanTagFor(account, address);
+      const sign = (who: any) =>
+        signPrivateEnrollment(who, address, chainId, commitment, tag, deadline, doc);
+      return election.enrollPrivate(
+        commitment,
+        tag,
+        doc,
+        deadline,
+        await sign(platform),
+        await sign(eligibility),
+      );
+    };
+
+    await (await enrol(1_001n)).wait();
+    await expect(enrol(1_002n)).to.be.revertedWithCustomError(
+      election,
+      "PersonhoodNullifierUsed",
+    );
+  });
+
+  it("insists on the document tag exactly where a document is required", async () => {
+    const gated = await privateElection({
+      eligibilityAttester: eligibility.address,
+      eligibilityPolicyHash: POLICY_HASH,
+      personhood: 1,
+    });
+    const gatedAddress = await gated.getAddress();
+    const commitment = derivedCommitment();
+    const deadline = (await now()) + 600;
+    const tag = humanTagFor(31n, gatedAddress);
+    await expect(
+      gated.enrollPrivate(
+        commitment,
+        tag,
+        0n,
+        deadline,
+        await signPrivateEnrollment(platform, gatedAddress, chainId, commitment, tag, deadline),
+        await signPrivateEnrollment(eligibility, gatedAddress, chainId, commitment, tag, deadline),
+      ),
+    ).to.be.revertedWithCustomError(gated, "MissingDocumentTag");
+
+    const open = await privateElection();
+    const openAddress = await open.getAddress();
+    const openTag = humanTagFor(31n, openAddress);
+    await expect(
+      open.enrollPrivate(
+        commitment,
+        openTag,
+        7n,
+        deadline,
+        await signPrivateEnrollment(platform, openAddress, chainId, commitment, openTag, deadline, 7n),
+        "0x",
+      ),
+    ).to.be.revertedWithCustomError(open, "UnexpectedDocumentTag");
   });
 
   it("refuses outside the enrollment window", async () => {
@@ -336,6 +392,7 @@ describe("private enrollment", () => {
       election.enrollPrivate(
         commitment,
         tag,
+        0n,
         deadline,
         await signPrivateEnrollment(platform, address, chainId, commitment, tag, deadline),
         "0x",
@@ -372,7 +429,7 @@ describe("private enrollment", () => {
     await (
       await stack.paymaster
         .connect(outsider)
-        .relayEnrollPrivate(address, commitment, tag, deadline, signature, "0x")
+        .relayEnrollPrivate(address, commitment, tag, 0n, deadline, signature, "0x")
     ).wait();
 
     expect(await election.hasMember(commitment)).to.equal(true);

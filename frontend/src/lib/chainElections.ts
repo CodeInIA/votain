@@ -14,7 +14,7 @@ import { withDistinctNames } from "./ballotNames";
 // retranslate an already-fetched election until it is refetched, which every
 // navigation does.
 import i18n from "../i18n/config";
-import { getStoredCommitment, getStoredIdentity, getStoredVoteNullifier } from "./semaphore";
+import { getStoredCommitment, getStoredIdentity, getStoredBallotTag } from "./semaphore";
 import type { Identity } from "@semaphore-protocol/identity";
 import {
   commitmentsForElections,
@@ -24,6 +24,10 @@ import {
 } from "./electionIdentity";
 import type { Candidate, Election, ElectionPhase, VotingType } from "../data/seed";
 import { getVoterPersonhood } from "./voterSession";
+import { mapWithConcurrency } from "./utils";
+
+/** Addresses asked of the factory per call. */
+const ADDRESS_PAGE = 500;
 import {
   asPersonhoodLevel,
   effectivePersonhood,
@@ -99,7 +103,7 @@ export async function fetchElection(address: string): Promise<Election> {
     phase,
     memberCount,
     voteCount,
-    distinctVoters,
+    provenVoters,
     resultsPublished,
     metadataJson,
     policyHashOnChain,
@@ -107,6 +111,7 @@ export async function fetchElection(address: string): Promise<Election> {
     cancellable,
     createdAt,
     platformAttester,
+    privacyQuorumOnChain,
   ] = await Promise.all([
     c.name(),
     c.organizer(),
@@ -120,7 +125,7 @@ export async function fetchElection(address: string): Promise<Election> {
     c.phase(),
     c.memberCount(),
     c.voteCount(),
-    c.distinctVoters(),
+    c.voters() as Promise<bigint>,
     c.resultsPublished(),
     c.metadataJson(),
     c.eligibilityPolicyHash() as Promise<string>,
@@ -131,6 +136,9 @@ export async function fetchElection(address: string): Promise<Election> {
     // of ours its tree would hold. Elections from before private enrolment have
     // no such function and revert rather than answering zero.
     (c.platformAttester() as Promise<string>).catch(() => ZERO_ADDRESS),
+    // The floor `publishResults` enforces. The metadata keeps a copy for
+    // display, but only the contract's own value is binding.
+    (c.privacyQuorum() as Promise<bigint>).catch(() => null),
   ]);
 
   const meta = parseMetadata(metadataJson);
@@ -176,7 +184,6 @@ export async function fetchElection(address: string): Promise<Election> {
   candidates.push({ id: `option-${Number(numOptions)}`, name: i18n.t("election.blank_vote") });
 
   let ipfsCid: string | undefined;
-  let tallyCheck: Election["tallyCheck"];
   if (resultsPublished) {
     const [cid, tally, outcome, winnerIndex] = await Promise.all([
       c.resultsCid(),
@@ -189,26 +196,8 @@ export async function fetchElection(address: string): Promise<Election> {
     candidates.forEach((cand, i) => {
       cand.votes = counts[i] ?? 0;
     });
-    /**
-     * The half of the result anyone can check without the decryption key.
-     *
-     * Each voter's surviving ballot contributes exactly one to exactly one
-     * counter, so a published tally has to add up to the number of people the
-     * chain recorded as having voted. Comparing the two needs nothing secret,
-     * which is the point: until now the only party who could tell whether the
-     * published numbers were the real ones was the organizer who produced them.
-     *
-     * What it does NOT prove is that the counters were split correctly. An
-     * organizer who moves votes between options keeps the total intact and this
-     * still agrees. Closing that needs a proof of correct decryption, which is
-     * written up as future work.
-     */
-    const declared = counts.reduce((sum, n) => sum + n, 0);
-    tallyCheck = {
-      declared,
-      voters: Number(distinctVoters),
-      matches: declared === Number(distinctVoters),
-    };
+    // Whether these counters are what the ballots hold is checked on the
+    // results screen, against the proof published with them: see `TallyCheck`.
 
     // Outcome: 1=WINNER, 2=TIE
     if (Number(outcome) === 1) candidates[Number(winnerIndex)].isWinner = true;
@@ -260,11 +249,11 @@ export async function fetchElection(address: string): Promise<Election> {
     isEnrolled = await c.hasMember(commitment);
   }
 
-  // "Already voted": verify the device's remembered vote nullifier on-chain.
+  // "Already voted": verify the device's remembered ballot tag on chain.
   let hasVoted: boolean | undefined;
-  const votedNullifier = getStoredVoteNullifier(address);
-  if (votedNullifier !== null) {
-    hasVoted = (await c.nullifierNonces(votedNullifier)) > 0n;
+  const votedTag = getStoredBallotTag(address);
+  if (votedTag !== null) {
+    hasVoted = (await c.usedTags(votedTag)) as boolean;
   }
 
   const basePhase = PHASE_MAP[Number(phase)] ?? "upcoming";
@@ -310,22 +299,24 @@ export async function fetchElection(address: string): Promise<Election> {
     requiresOrb: personhood === "orb",
     totalEnrolled: Number(memberCount),
     castVotes: Number(voteCount),
-    distinctVoters: Number(distinctVoters),
-    tallyCheck,
+    // Known only once the tally proves it: before that, nothing public says
+    // how many of the ballots are re-votes, which is the point.
+    distinctVoters: resultsPublished || provenVoters > 0n ? Number(provenVoters) : undefined,
     ipfsCid,
     eligibilityPolicy,
     votingType: VOTING_TYPE_MAP[Number(votingType)] ?? "simple_plurality",
     thresholdValue: Number(thresholdValue),
-    privacyQuorum: meta.privacyQuorum ?? (Number(thresholdValue) || 0),
+    privacyQuorum:
+      privacyQuorumOnChain !== null ? Number(privacyQuorumOnChain) : (meta.privacyQuorum ?? 0),
     fixedSchedule: Boolean(fixedSchedule),
     cancellable: Boolean(cancellable),
     createdAt: new Date(Number(createdAt) * 1000),
     keyNonce: meta.keyNonce,
     isEnrolled,
     hasVoted,
-    // The vote's anonymous on-chain identifier, shown to the voter as their own
-    // receipt. Distinct from the transaction hash the history calls a reference.
-    voteNullifier: hasVoted && votedNullifier !== null ? "0x" + votedNullifier.toString(16) : undefined,
+    // The ballot's anonymous on-chain identifier, shown to the voter as their
+    // own receipt. Distinct from the transaction hash the history calls a reference.
+    ballotTag: hasVoted && votedTag !== null ? "0x" + votedTag.toString(16) : undefined,
     tags: meta.tags,
   };
 }
@@ -351,8 +342,14 @@ export async function fetchElectionAddresses(): Promise<string[]> {
   const factory = getFactory();
   const total = Number(await factory.electionsCount());
   if (total === 0) return [];
-  const list = (await factory.getElections(0, total)) as string[];
-  return [...list].reverse();
+  // In pages, because one call returning every address grows without bound
+  // and an RPC endpoint caps the size of a response long before the chain
+  // caps the number of elections.
+  const offsets = Array.from({ length: Math.ceil(total / ADDRESS_PAGE) }, (_, i) => i * ADDRESS_PAGE);
+  const pages = await mapWithConcurrency(offsets, 4, offset =>
+    factory.getElections(offset, ADDRESS_PAGE) as Promise<string[]>,
+  );
+  return pages.flat().reverse();
 }
 
 /** Hydrates the given addresses, preserving the order they were given in. */

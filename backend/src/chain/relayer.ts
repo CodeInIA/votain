@@ -8,33 +8,33 @@
  * ElectionPaymaster, which reimburses the gas from the organizer's tank inside
  * the same transaction. The relayer only fronts a small float.
  *
- * Neither relayed call trusts the caller: `enroll` is gated on PlatformRegistry
- * and `castVote` on a zero-knowledge proof, both verified on chain. A malicious
- * relayer can withhold or delay a transaction, never forge one, and since
- * relaying is permissionless on the contract a censored voter can always submit
- * their own.
+ * Neither relayed call trusts the caller: enrolment is gated on a registry
+ * entry or a platform signature, and `castVote` on a zero-knowledge proof, all
+ * verified on chain. A malicious relayer can withhold or delay a transaction,
+ * never forge one, and since relaying is permissionless on the contract a
+ * censored voter can always submit their own.
  *
  * Env:
  *   CHAIN_RPC_URL          RPC endpoint
  *   PAYMASTER_ADDRESS      ElectionPaymaster deployment address
  *   RELAYER_PRIVATE_KEY    hot wallet with a small POL float
  */
-import { Contract, JsonRpcProvider, Wallet, isAddress } from 'ethers';
+import { Contract, isAddress } from 'ethers';
 
 import { contractAddress } from './deployments.js';
+import { submitInTurn } from './signer.js';
+import { chainFailure, errorMessage } from '../utils/errors.js';
 
 const PAYMASTER_ABI = [
   'function relayEnroll(address election, uint256 identityCommitment)',
   'function relayEnrollAttested(address election, uint256 identityCommitment, uint256 personhoodNullifier, uint256 deadline, bytes signature)',
-  'function relayEnrollPrivate(address election, uint256 identityCommitment, uint256 humanTag, uint256 deadline, bytes platformSignature, bytes eligibilitySignature)',
-  'function relayVote(address election, bytes voteCiphertext, uint256 nullifier, uint256 merkleRoot, uint256 merkleDepth, uint256[2] pA, uint256[2][2] pB, uint256[2] pC)',
+  'function relayEnrollPrivate(address election, uint256 identityCommitment, uint256 humanTag, uint256 documentTag, uint256 deadline, bytes platformSignature, bytes eligibilitySignature)',
+  'function relayVote(address election, (uint256 votersRoot, uint256 ballotsRoot, uint256 epoch, uint256 tag, uint256 epochTag, uint256 leaf, uint256[2] voteA, uint256[] voteB, uint256[2] cancelA, uint256[] cancelB) ballot, (uint256[2] a, uint256[2][2] b, uint256[2] c) proof)',
   // Declared so a revert this contract interface decodes arrives with a NAME
-  // rather than a bare four-byte selector, since the message built from it is
-  // what this server hands the browser. It does not cover every case: a failure
-  // during gas estimation is raised by the provider, which has no ABI, and
-  // reaches the caller as `unknown custom error` with the selector in `data`.
-  // The browser reads that selector itself; see `revertNameOf` in
-  // frontend/src/lib/relay.ts.
+  // rather than a bare four-byte selector. It does not cover every case: a
+  // failure during gas estimation is raised by the provider, which has no ABI,
+  // and reaches the caller with the selector only. The browser reads that
+  // selector itself; see `revertNameOf` in frontend/src/lib/relay.ts.
   'error InsufficientBalance()',
   'error EnrollmentNotOpen()',
   'error AlreadyEnrolled()',
@@ -50,6 +50,12 @@ const PAYMASTER_ABI = [
   'error UnknownOrExpiredRoot()',
   'error InvalidProof()',
   'error WrongPhase()',
+  'error TagAlreadyCast()',
+  'error EpochAlreadyCast()',
+  'error WrongEpoch()',
+  'error TreeFull()',
+  'error MissingDocumentTag()',
+  'error UnexpectedDocumentTag()',
   'function organizerOf(address election) view returns (address)',
   'function gasBalance(address organizer) view returns (uint256)',
 ];
@@ -65,52 +71,106 @@ export function isRelayerConfigured(): boolean {
   );
 }
 
-function getPaymaster(): Contract {
-  const provider = new JsonRpcProvider(process.env.CHAIN_RPC_URL);
-  const wallet = new Wallet(process.env.RELAYER_PRIVATE_KEY as string, provider);
-  return new Contract(paymasterAddress() as string, PAYMASTER_ABI, wallet);
-}
-
 export interface RelayResult {
   relayed: boolean;
   txHash?: string;
   error?: string;
 }
 
+/** A ballot and its proof as the browser sends them: every number a decimal string. */
 export interface VoteCall {
   election: string;
-  voteCiphertext: string;
-  nullifier: string;
-  merkleRoot: string;
-  merkleDepth: string;
-  pA: [string, string];
-  pB: [[string, string], [string, string]];
-  pC: [string, string];
+  ballot: {
+    votersRoot: string;
+    ballotsRoot: string;
+    epoch: string;
+    tag: string;
+    epochTag: string;
+    leaf: string;
+    voteA: string[];
+    voteB: string[];
+    cancelA: string[];
+    cancelB: string[];
+  };
+  proof: { a: string[]; b: string[][]; c: string[] };
 }
 
-/** Rejects anything that is not a well-formed address before spending gas. */
-function requireElection(election: string): void {
-  if (!isAddress(election)) throw new Error('election must be a valid address');
+/**
+ * Points in one of a ballot's B lists: two numbers per slot, and the largest
+ * circuit has 51 slots (50 options and the blank vote; ElectionV4.MAX_OPTIONS).
+ */
+const MAX_POINT_VALUES = 2 * 51;
+
+const isDecimal = (v: unknown): v is string => typeof v === 'string' && /^\d{1,78}$/.test(v);
+const decimals = (v: unknown, length: number | [number, number]): boolean => {
+  if (!Array.isArray(v)) return false;
+  const [min, max] = typeof length === 'number' ? [length, length] : length;
+  return v.length >= min && v.length <= max && v.every(isDecimal);
+};
+
+/**
+ * Whether a body is shaped like a ballot and its proof, before anything is
+ * simulated. The chain is the judge of whether it is a VALID one; this only
+ * keeps an oversized or malformed body from reaching the simulation at all.
+ */
+export function isVoteCall(body: unknown): body is VoteCall {
+  const { election, ballot, proof } = (body ?? {}) as Partial<VoteCall>;
+  if (typeof election !== 'string' || !ballot || !proof) return false;
+  const scalars = ['votersRoot', 'ballotsRoot', 'epoch', 'tag', 'epochTag', 'leaf'] as const;
+  return (
+    scalars.every(key => isDecimal(ballot[key])) &&
+    decimals(ballot.voteA, 2) &&
+    decimals(ballot.cancelA, 2) &&
+    decimals(ballot.voteB, [2, MAX_POINT_VALUES]) &&
+    decimals(ballot.cancelB, [2, MAX_POINT_VALUES]) &&
+    decimals(proof.a, 2) &&
+    decimals(proof.c, 2) &&
+    Array.isArray(proof.b) &&
+    proof.b.length === 2 &&
+    proof.b.every(pair => decimals(pair, 2))
+  );
 }
 
-export async function relayEnroll(election: string, commitment: string): Promise<RelayResult> {
+type PaymasterMethod = 'relayEnroll' | 'relayEnrollAttested' | 'relayEnrollPrivate' | 'relayVote';
+
+/**
+ * Simulates, submits in turn and waits for one relayed call.
+ *
+ * Simulated first because a reverting call still costs the relayer its gas,
+ * and `/relay/vote` is public: submitting blind would let anyone drain the
+ * float with junk. A local `staticCall` fails for free.
+ */
+async function relay(
+  method: PaymasterMethod,
+  election: string,
+  buildArgs: () => readonly unknown[],
+): Promise<RelayResult> {
   if (!isRelayerConfigured()) return { relayed: false, error: 'relayer not configured' };
+  if (!isAddress(election)) return { relayed: false, error: 'election must be a valid address' };
+
+  let args: readonly unknown[];
+  try {
+    args = buildArgs();
+  } catch {
+    return { relayed: false, error: 'malformed arguments' };
+  }
 
   try {
-    requireElection(election);
-    const paymaster = getPaymaster();
-    // Simulate first: `/relay/vote` is public and a reverting call still costs
-    // the relayer its gas, so submitting blind lets anyone drain the float with
-    // junk. staticCall reverts locally and costs nothing.
-    await paymaster.relayEnroll.staticCall(election, BigInt(commitment));
-    const tx = await paymaster.relayEnroll(election, BigInt(commitment));
+    const tx = await submitInTurn('RELAYER_PRIVATE_KEY', async signer => {
+      const paymaster = new Contract(paymasterAddress() as string, PAYMASTER_ABI, signer);
+      await paymaster[method].staticCall(...args);
+      return paymaster[method](...args);
+    });
     const receipt = await tx.wait();
     return { relayed: true, txHash: receipt?.hash };
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error('relayEnroll failed:', message);
-    return { relayed: false, error: message };
+    console.error(`${method} failed:`, errorMessage(error));
+    return { relayed: false, error: chainFailure(error) };
   }
+}
+
+export function relayEnroll(election: string, commitment: string): Promise<RelayResult> {
+  return relay('relayEnroll', election, () => [election, BigInt(commitment)]);
 }
 
 /**
@@ -120,36 +180,20 @@ export async function relayEnroll(election: string, commitment: string): Promise
  * a gated election refuses the plain one, so that a voter the attester turned
  * down cannot simply submit the transaction themselves.
  */
-export async function relayEnrollAttested(
+export function relayEnrollAttested(
   election: string,
   commitment: string,
   personhoodNullifier: string,
   deadline: number,
   signature: string,
 ): Promise<RelayResult> {
-  if (!isRelayerConfigured()) return { relayed: false, error: 'relayer not configured' };
-
-  try {
-    requireElection(election);
-    const paymaster = getPaymaster();
-    const args = [
-      election,
-      BigInt(commitment),
-      BigInt(personhoodNullifier),
-      BigInt(deadline),
-      signature,
-    ] as const;
-    // Same reason as relayEnroll: a reverting call still costs the relayer its
-    // gas, and an expired or malformed attestation reverts.
-    await paymaster.relayEnrollAttested.staticCall(...args);
-    const tx = await paymaster.relayEnrollAttested(...args);
-    const receipt = await tx.wait();
-    return { relayed: true, txHash: receipt?.hash };
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error('relayEnrollAttested failed:', message);
-    return { relayed: false, error: message };
-  }
+  return relay('relayEnrollAttested', election, () => [
+    election,
+    BigInt(commitment),
+    BigInt(personhoodNullifier),
+    BigInt(deadline),
+    signature,
+  ]);
 }
 
 /**
@@ -157,71 +201,45 @@ export async function relayEnrollAttested(
  *
  * The commitment was derived by the voter for this election alone and appears
  * in no registry, so the contract has nothing to look it up in: the platform's
- * signature is what says a verified human is behind it, and the tag is what
- * says they have not already enrolled here. Neither is recognisable in any
- * other election.
+ * signature is what says a verified human is behind it, and the tags are what
+ * say neither that human nor their document has already enrolled here.
  */
-export async function relayEnrollPrivate(
+export function relayEnrollPrivate(
   election: string,
   commitment: string,
   humanTag: string,
+  documentTag: string,
   deadline: number,
   platformSignature: string,
   eligibilitySignature: string,
 ): Promise<RelayResult> {
-  if (!isRelayerConfigured()) return { relayed: false, error: 'relayer not configured' };
-
-  try {
-    requireElection(election);
-    const paymaster = getPaymaster();
-    const args = [
-      election,
-      BigInt(commitment),
-      BigInt(humanTag),
-      BigInt(deadline),
-      platformSignature,
-      eligibilitySignature,
-    ] as const;
-    // Same reason as the other two: a revert still costs the relayer its gas.
-    await paymaster.relayEnrollPrivate.staticCall(...args);
-    const tx = await paymaster.relayEnrollPrivate(...args);
-    const receipt = await tx.wait();
-    return { relayed: true, txHash: receipt?.hash };
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error('relayEnrollPrivate failed:', message);
-    return { relayed: false, error: message };
-  }
+  return relay('relayEnrollPrivate', election, () => [
+    election,
+    BigInt(commitment),
+    BigInt(humanTag),
+    BigInt(documentTag),
+    BigInt(deadline),
+    platformSignature,
+    eligibilitySignature,
+  ]);
 }
 
-export async function relayVote(call: VoteCall): Promise<RelayResult> {
-  if (!isRelayerConfigured()) return { relayed: false, error: 'relayer not configured' };
-
-  try {
-    requireElection(call.election);
-    const paymaster = getPaymaster();
-    const args = [
-      call.election,
-      call.voteCiphertext,
-      BigInt(call.nullifier),
-      BigInt(call.merkleRoot),
-      BigInt(call.merkleDepth),
-      call.pA.map(BigInt),
-      call.pB.map(pair => pair.map(BigInt)),
-      call.pC.map(BigInt),
-    ] as const;
-
-    // An invalid proof reverts on chain but the relayer still pays the gas, and
-    // this endpoint is unauthenticated by design. Simulating first turns that
-    // drain vector into a free local failure.
-    await paymaster.relayVote.staticCall(...args);
-
-    const tx = await paymaster.relayVote(...args);
-    const receipt = await tx.wait();
-    return { relayed: true, txHash: receipt?.hash };
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error('relayVote failed:', message);
-    return { relayed: false, error: message };
-  }
+export function relayVote(call: VoteCall): Promise<RelayResult> {
+  const { ballot, proof } = call;
+  return relay('relayVote', call.election, () => [
+    call.election,
+    {
+      votersRoot: BigInt(ballot.votersRoot),
+      ballotsRoot: BigInt(ballot.ballotsRoot),
+      epoch: BigInt(ballot.epoch),
+      tag: BigInt(ballot.tag),
+      epochTag: BigInt(ballot.epochTag),
+      leaf: BigInt(ballot.leaf),
+      voteA: ballot.voteA.map(BigInt),
+      voteB: ballot.voteB.map(BigInt),
+      cancelA: ballot.cancelA.map(BigInt),
+      cancelB: ballot.cancelB.map(BigInt),
+    },
+    { a: proof.a.map(BigInt), b: proof.b.map(pair => pair.map(BigInt)), c: proof.c.map(BigInt) },
+  ]);
 }

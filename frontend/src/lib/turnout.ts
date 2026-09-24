@@ -20,9 +20,10 @@ type Counted = Pick<Election, 'distinctVoters' | 'castVotes' | 'totalEnrolled'>;
 /**
  * People who have voted at least once.
  *
- * `distinctVoters` is read off the contract for every real election. The
- * fallback is for seed elections, which carry no such count: there, ballots
- * are all there is, capped at the roll so the number stays sayable.
+ * `distinctVoters` is the tally's own count, known once a result is published.
+ * Before that nobody can know it, by design: re-votes are indistinguishable
+ * from first votes. Ballots are then all there is, an UPPER bound on voters,
+ * capped at the roll so the number stays sayable.
  */
 export function votersOf(election: Counted): number {
   return election.distinctVoters ?? Math.min(election.castVotes, election.totalEnrolled);
@@ -38,6 +39,8 @@ export function replacedBallots(election: Counted): number {
  *
  * Still capped, but only for the fallback above: an exact `distinctVoters`
  * can never exceed `totalEnrolled`, since nobody votes without enrolling.
+ * Before the tally it is the upper bound `votersOf` gives, and says so no more
+ * precisely than that.
  */
 export function turnoutPct(election: Counted): number {
   if (election.totalEnrolled <= 0) return 0;

@@ -24,10 +24,10 @@ import { usePageMeta } from '../../seo/usePageMeta';
  * is a strange thing for a project whose claim is end-to-end verifiability.
  *
  * It stays deliberately unauthenticated and reachable without a session. The
- * whole value of publishing a nullifier is that a third party can check a
+ * whole value of a public ballot tag is that a third party can check a
  * receipt somebody shows them; behind a login it would only ever tell voters
  * what their own history already tells them. Signed-in voters do get their own
- * receipts listed below as a shortcut, because nobody memorises a nullifier,
+ * receipts listed below as a shortcut, because nobody memorises a tag,
  * but that is a convenience layered on top and never a requirement.
  */
 
@@ -67,7 +67,7 @@ export default function VerifyReceipt() {
       const trimmed = query.trim();
       // Nothing to search until the election list is in: the lookup reads a
       // transaction against the elections it knows and scans their events for a
-      // nullifier, so running it against an empty list answers "not found" to
+      // tag, so running it against an empty list answers "not found" to
       // every receipt, including the valid ones.
       if (!trimmed || elections.length === 0) return;
       setState('searching');
@@ -79,7 +79,7 @@ export default function VerifyReceipt() {
   );
 
   // A link from the history arrives with the receipt already in it, so the
-  // voter does not have to carry a nullifier from one screen to the other by
+  // voter does not have to carry a tag from one screen to the other by
   // hand. It waits for the election list, which is what the lookup searches,
   // and runs once: the search rewrites the query string, which would otherwise
   // bring it straight back round.
@@ -103,7 +103,7 @@ export default function VerifyReceipt() {
     if (!voterLoggedIn || !live || elections.length === 0) return;
     let cancelled = false;
     void (async () => {
-      // The device's own record needs no passkey, because a nullifier is a
+      // The device's own record needs no passkey, because a ballot tag is a
       // public value this browser wrote down when it voted. Unlocking widens
       // the answer to ballots cast anywhere; it does not enable it.
       const targets = elections.map(e => ({
@@ -235,20 +235,11 @@ export default function VerifyReceipt() {
                 </span>
               </div>
               {row(t('verify_receipt.reference'), match.txHash, true)}
-              {row(t('verify_receipt.nullifier'), match.nullifier, true)}
+              {row(t('verify_receipt.nullifier'), match.tag, true)}
               <div className="flex justify-between">
                 <span className="text-on-surface-meta">{t('verify_receipt.date')}</span>
                 <span className="text-on-surface">{match.timestamp.toLocaleString()}</span>
               </div>
-              {/* Only worth a line when there was more than one. A re-vote
-                  replaces the earlier ballot, so seeing two here and one tally
-                  entry is the system working, not a discrepancy. */}
-              {match.voteCount > 1 && (
-                <div className="flex justify-between">
-                  <span className="text-on-surface-meta">{t('verify_receipt.ballots')}</span>
-                  <span className="text-on-surface">{match.voteCount}</span>
-                </div>
-              )}
               <div className="flex justify-between items-center">
                 <span className="text-on-surface-meta">{t('verify_receipt.status')}</span>
                 <Badge variant={match.phase as Parameters<typeof Badge>[0]['variant']}>

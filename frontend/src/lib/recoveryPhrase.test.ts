@@ -29,11 +29,23 @@ describe('recovery phrase', () => {
     expect(seen.size).toBe(50);
   });
 
-  it('has a word list that is a power of two, so the draw is uniform', () => {
-    // The generator masks a random byte with 0x7f. Any other length would make
-    // some words likelier than others and quietly cost entropy.
-    expect(phraseWordList()).toHaveLength(128);
-    expect(new Set(phraseWordList()).size).toBe(128);
+  it('draws from 1295 distinct words, about 124 bits over twelve', () => {
+    expect(phraseWordList()).toHaveLength(1295);
+    expect(new Set(phraseWordList()).size).toBe(1295);
+    expect(12 * Math.log2(phraseWordList().length)).toBeGreaterThan(124);
+  });
+
+  it('draws every word evenly, with no modulo bias toward the start of the list', () => {
+    // 60k words: each of 1295 expected ~46 times. A modulo draw over 16 bits
+    // would skew the first 776 words by 1/50; rejection sampling does not.
+    const counts = new Map<string, number>();
+    for (let i = 0; i < 5000; i++) {
+      for (const w of generateRecoveryPhrase().split(' ')) counts.set(w, (counts.get(w) ?? 0) + 1);
+    }
+    const list = phraseWordList();
+    const firstHalf = list.slice(0, 647).reduce((a, w) => a + (counts.get(w) ?? 0), 0);
+    const secondHalf = list.slice(647, 1294).reduce((a, w) => a + (counts.get(w) ?? 0), 0);
+    expect(Math.abs(firstHalf - secondHalf) / (firstHalf + secondHalf)).toBeLessThan(0.02);
   });
 });
 

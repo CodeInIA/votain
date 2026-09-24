@@ -8,16 +8,17 @@ Votain is an **end-to-end verifiable, anonymous, coercion-resistant voting dApp*
 - `docs/dev/state.md`. Current milestone, pinned versions, technical debt.
 - `docs/dev/conventions.md`. Binding development conventions.
 - `docs/dev/architecture.md`. On-chain / off-chain / frontend / tally diagram.
-- `docs/dev/glossary.md`. Semaphore, nullifier, SD-JWT, ERC-4337, Paillier, TEE, etc.
+- `docs/dev/glossary.md`. Semaphore, nullifier, SD-JWT, ElGamal, Groth16, TEE, etc.
 
 ## Monorepo structure
 
 ```
 votain/
-├── contracts/        # Solidity 0.8.37 + Hardhat 3 + Semaphore V4
+├── contracts/        # Solidity 0.8.37 + Hardhat 3
 ├── backend/          # Node.js Express SD-JWT issuer + World ID v4
 ├── frontend/         # React 19 + Vite + Tailwind 4 + ethers v6
-├── scripts-tally/    # off-chain tally with paillier-bigint (to create)
+├── circuits/         # ballot + tally circuits, trusted setup, generated verifiers
+├── scripts-tally/    # off-chain tally, proof and --verify (auditor CLI)
 ├── docs/
 │   ├── PLAN.md       # iterative plan (source of truth for progress)
 │   ├── dev/          # developer documentation

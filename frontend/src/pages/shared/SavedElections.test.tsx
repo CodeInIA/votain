@@ -129,7 +129,7 @@ describe('the saved list', () => {
       // see the filter that decides whether the row survives at all. This asks
       // the filter itself, which is the half that actually fixes the bug.
       const pedirFiltro = () =>
-        (paginas.mock.calls.at(-1)?.[0] as { keep: (e: { id: string }) => boolean }).keep;
+        (paginas.mock.calls.at(-1)![0] as { keep: (e: { id: string }) => boolean }).keep;
 
       guardadas.mockReturnValue({ ids: ['0xabc'], isSaved: () => true, toggle: vi.fn() });
       paginas.mockReturnValue({ all: [UNA], loading: false, error: null, refresh: vi.fn() });

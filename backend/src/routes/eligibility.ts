@@ -30,12 +30,9 @@ import {
   isChainConfigured,
 } from '../chain/election.js';
 import {
-  effectivePersonhood,
   isEmptyPolicy,
   meetsPersonhood,
-  type EligibilityPolicy,
 } from '../eligibility/policy.js';
-import type { CredentialLevel } from '../auth/worldId.js';
 import {
   isSelfConfigured,
   isMockMode,
@@ -58,6 +55,7 @@ import {
   markSession,
   consumeSession,
 } from '../eligibility/sessions.js';
+import { clientMessage } from '../utils/errors.js';
 
 const router = Router();
 
@@ -125,8 +123,7 @@ router.get('/eligibility/:election', async (req: Request, res: Response) => {
       policyHash,
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-    return res.status(400).json({ error: message });
+    return res.status(400).json({ error: clientMessage(error) });
   }
 });
 
@@ -141,8 +138,7 @@ router.post('/eligibility/:election/session', eligibilityLimiter, async (req: Re
   try {
     eligibility = await readElectionEligibility(election);
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-    return res.status(400).json({ error: message });
+    return res.status(400).json({ error: clientMessage(error) });
   }
 
   if (isEmptyPolicy(eligibility.policy)) {

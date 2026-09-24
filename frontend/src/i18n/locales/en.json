@@ -220,11 +220,11 @@
     "export_json": "Export audit trail",
     "view_ipfs": "View on IPFS",
     "not_available": "Results not yet available.",
-    "check_ok_title": "Checked against the public record",
-    "check_ok_body": "The published counts add up to {{declared}}, and the contract recorded {{voters}} voters. No ballot was invented or dropped.",
-    "check_bad_title": "Does not match the public record",
-    "check_bad_body": "The published counts add up to {{declared}}, but the contract recorded {{voters}} voters. These should be the same number.",
-    "check_limit": "This needs no key and no trust: anyone can repeat it. It cannot tell whether votes were moved between options, which keeps the total unchanged."
+    "check_pending": "Checking the published result against the ballots on chain…",
+    "check_verified_title": "Verified against the ballots on chain",
+    "check_verified_body": "The election accepted these counts only with a zero-knowledge proof that they decrypt the sum of every ballot, and the {{ballots}} ballots on chain were added up again here to that same sum: {{voters}} voters. Anyone can repeat this check with no key and no trust.",
+    "check_failed_title": "Does not match the ballots on chain",
+    "check_failed_body": "The published counts could not be verified against the ballots recorded on chain. Do not rely on this result."
   },
   "verify_receipt": {
     "title": "Verify a vote",
@@ -240,7 +240,6 @@
     "reference": "Reference",
     "nullifier": "Vote identifier",
     "date": "Date",
-    "ballots": "Ballots cast",
     "choice_never_shown": "The public record shows that a vote was cast and when, never what it said. Nobody can read a choice from a receipt, including us.",
     "your_receipts": "Your receipts",
     "unlock_hint": "This browser knows of no ballot yet. If you voted from another device, one passkey tap will find those and remember them here."
@@ -279,7 +278,8 @@
     "reference": "Reference number",
     "view_tx": "See the public record",
     "back_elections": "Back to elections",
-    "check_receipt": "Check my receipt"
+    "check_receipt": "Check my receipt",
+    "demo_reference": "Demo data: no ballot was recorded, so there is no reference to check."
   },
   "change_vote": {
     "title": "Change your vote",
@@ -466,7 +466,9 @@
     "open_voting_early": "Open voting now",
     "open_voting_title": "Start voting ahead of schedule?",
     "open_voting_desc": "Enrolment is already closed and voting is not due yet. Everyone enrolled will be able to vote from this moment. The closing date does not change.",
-    "voting_opened_done": "Voting is open"
+    "voting_opened_done": "Voting is open",
+    "void_refused": "This election promised it would not be called off, and enough people voted for its result to be published, so it cannot be voided. Import the decryption key to publish the result.",
+    "key_device_only": "This election's decryption key could not be derived from your wallet, so it exists only on this device. Export it now and keep it safe: without it the election cannot be counted."
   },
   "gas": {
     "title": "Gas Management",
@@ -600,7 +602,10 @@
     "wallet_request_rejected": "You cancelled the request in your wallet. Nothing was done.",
     "passkey_cancelled": "You dismissed the passkey prompt. Nothing was created: you can try again.",
     "list_unreadable": "This list could not be read from the chain, which is not the same as it being empty. Check your connection and try again.",
-    "passkey_unproven": "The passkey was created, but we could not confirm yet that it can decrypt. Press again: the same one is asked, and no new passkey is created."
+    "passkey_unproven": "The passkey was created, but we could not confirm yet that it can decrypt. Press again: the same one is asked, and no new passkey is created.",
+    "epoch_already_cast": "You already cast a ballot in the last hour. Your latest ballot is the one that counts; you can change it again once the hour is up.",
+    "ballot_already_cast": "This ballot was already recorded. There is nothing else to do: your vote is in.",
+    "ballot_expired": "This ballot was prepared too long ago to be accepted. Please vote again; a fresh ballot takes a few seconds."
   },
   "demo": {
     "banner": "Demo data: no contracts deployed. Nothing here is on-chain."
@@ -673,7 +678,7 @@
     "title": "Privacy",
     "updated": "Last updated: 16 September 2026",
     "summary_title": "In short",
-    "summary_1": "We never learn your name, your face or your biometrics. We do not know how you voted, and neither does the organizer, because ballots are encrypted before they leave your device and only the final total is ever decrypted.",
+    "summary_1": "We never learn your name, your face or your biometrics. We do not know how you voted. Ballots are encrypted before they leave your device and only the final total is ever decrypted; the organizer's key could open a single ballot, but nothing on it says whose it is.",
     "summary_2": "This page describes what actually happens in the software rather than what is merely permitted, including the places where the design does not protect you.",
     "worldid_title": "What World ID gives us",
     "worldid_1": "When you verify, World ID sends us a proof and a nullifier: a number derived from you and from this application. It is the same every time you return, which is how one account is stopped from enrolling twice in the same election, and it is different for every application you use World ID with. It does not prove you are one person: an election that needs that asks for a document check as well, which yields a second number, scoped to that election alone.",
@@ -682,8 +687,8 @@
     "identity_1": "Your voting secret is a phrase generated on your device and shown to you once, so you can keep it. Where a passkey can hold it, a sealed copy is stored for each passkey you register, so you can vote from several devices without typing anything. Those copies are written to the blockchain rather than to our server, so losing us cannot lock you out, and what opens them never leaves your authenticator. We never see the phrase and cannot recover it for you.",
     "identity_2": "This is not a formality. If we could decrypt it, we could compute the identifier your ballot carries and match every vote to the person who cast it. The encryption is what makes that impossible for us, not just forbidden.",
     "ballot_title": "Your ballot",
-    "ballot_1": "Your choice is encrypted in your browser before it is submitted, using a key held by the organizer. Ballots are added together while still encrypted, and only the sum is decrypted, so no individual vote is ever revealed to anyone, including the organizer.",
-    "ballot_2": "You may vote again as many times as you like; only your last ballot counts. Earlier ones remain stored but are indistinguishable from it, which is what allows you to quietly replace a vote you were pressured into casting.",
+    "ballot_1": "Your choice is encrypted in your browser before it is submitted, using keys held by the organizer. The election adds every ballot together while still encrypted, and only that sum is ever decrypted, with a proof the contract checks. Those keys could open any one ballot, which is why nothing on a ballot says who cast it or which of your ballots came before it.",
+    "ballot_2": "You may vote again as many times as you like, once an hour; only your last ballot counts. Each new ballot silently cancels your previous one, and a first vote and a changed one look exactly alike on chain, so nobody watching can tell that you voted again. That is what lets you quietly replace a vote you were pressured into casting.",
     "onchain_title": "What is public on the blockchain",
     "onchain_1": "Public and permanent: which elections exist, that a given identity is registered on the platform, that somebody the platform verified enrolled in each election, the encrypted ballots with their published totals, and the sealed copies of each voting identity, one per registered passkey. What enrols is a commitment derived for that election alone, so the chain does not say which elections any one person joined. Anyone can read all of it. The sealed copies are ciphertext and open only with the passkey that made them, but their existence and their number are visible.",
     "onchain_2": "Not public: the link between an enrolled identity and any particular ballot, nor the link between the same person's enrolments in different elections. Breaking the first is what the zero-knowledge proof exists for, and it is why every vote is submitted through one shared contract rather than from an address of your own. The second is why what enrols is derived for each election instead of being reused.",

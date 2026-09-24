@@ -1,5 +1,5 @@
 import './env.js';
-import express from 'express';
+import express, { type NextFunction, type Request, type Response } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
@@ -13,6 +13,7 @@ import enrolmentRouter from './routes/enrolment.js';
 import preferencesRouter from './routes/preferences.js';
 
 const app = express();
+app.disable('x-powered-by');
 const port = process.env.PORT || 3000;
 const isDev = process.env.NODE_ENV !== 'production';
 
@@ -71,13 +72,33 @@ if (corsOrigins.length > 0) {
   app.use(cors({ origin: corsOrigins, credentials: true }));
 }
 
-app.use(express.json());
+/**
+ * Headers every response carries. This server answers JSON to scripts, never
+ * pages to people, so the policy is the strictest there is: nothing may be
+ * framed, sniffed, embedded or loaded from it.
+ */
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'");
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
+  next();
+});
+
+app.use(express.json({ limit: '64kb' }));
 app.use(cookieParser());
 
 // Global API rate limit + a stricter one for the expensive verification path
 app.use('/api', rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: true, legacyHeaders: false }));
 app.use(
   '/api/verify-human',
+  rateLimit({ windowMs: 60_000, limit: 10, standardHeaders: true, legacyHeaders: false }),
+);
+// Opening a World ID request holds a slot in a bounded in-memory store for
+// five minutes, so one address must not be able to fill it for everybody.
+app.post(
+  '/api/worldid/request',
   rateLimit({ windowMs: 60_000, limit: 10, standardHeaders: true, legacyHeaders: false }),
 );
 
@@ -90,8 +111,29 @@ app.use('/api', eligibilityRouter);
 app.use('/api', enrolmentRouter);
 app.use('/api', preferencesRouter);
 
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.json({ status: 'OK', message: 'Votain VC Issuer Backend is running' });
+});
+
+app.use('/api', (_req, res) => {
+  res.status(404).json({ error: 'Not found' });
+});
+
+/**
+ * The last word on anything a route threw and did not answer.
+ *
+ * Express's own handler writes an HTML page with the stack trace outside
+ * production. This one logs the detail here and tells the caller only that
+ * something failed, in the JSON every other answer uses.
+ */
+app.use((error: unknown, _req: Request, res: Response, next: NextFunction) => {
+  if (res.headersSent) return next(error);
+  const status = (error as { status?: number; type?: string })?.status;
+  if (status && status >= 400 && status < 500) {
+    return res.status(status).json({ error: 'Bad request' });
+  }
+  console.error('Unhandled error:', error);
+  return res.status(500).json({ error: 'Internal server error' });
 });
 
 /**

@@ -338,7 +338,7 @@ User → POST /api/worldid/request { returnTo? }   → Set-Cookie: voter_pending
      → GET  /api/worldid/request?wait=1   (held open; a reload may ask again)
      → POST /api/verify-human { ...worldIdProof }
         ├── verify World ID proof
-        └── issue SD-JWT VC (sub=nullifier; _sd: country/ageOver18/region;
+        └── issue SD-JWT VC (sub=nullifier; no identity attributes: none is verified here;
               credentialStatus → Status List 2021 entry) → httpOnly cookie (7d)
      → GET  /api/identity/vault   (unlock the existing identity, or find none)
      → POST /api/identity/vault { credentialId, blob, commitment }

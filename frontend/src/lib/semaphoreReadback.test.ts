@@ -123,7 +123,7 @@ describe('a device that can seal but not read back', () => {
     localStorage.setItem(READBACK_KEY, 'failed');
     localStorage.setItem(
       PHRASE_KEY,
-      'shelter drift canvas rosemary marble linen emerald eagle lilac glacier mineral hollow',
+      'salad acorn radar bagel tulip vapor wafer yeast zebra blimp cider dwarf',
     );
 
     const sem = await freshSemaphore();
@@ -167,7 +167,7 @@ describe('a device that can seal but not read back', () => {
 
   it('hands the phrase straight back when it is held locally', async () => {
     const words =
-      'shelter drift canvas rosemary marble linen emerald eagle lilac glacier mineral hollow';
+      'salad acorn radar bagel tulip vapor wafer yeast zebra blimp cider dwarf';
     localStorage.setItem(MODE_KEY, 'prf');
     localStorage.setItem(READBACK_KEY, 'failed');
     localStorage.setItem(PHRASE_KEY, words);

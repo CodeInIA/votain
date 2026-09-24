@@ -25,12 +25,13 @@ import {
   relayEnrollPrivate,
   relayVote,
   isRelayerConfigured,
-  type VoteCall,
+  isVoteCall,
 } from '../chain/relayer.js';
 import { verifySession } from '../auth/session.js';
 import { readSessionCookie } from '../auth/cookie.js';
 import { authorisePrivateEnrolment, isRefusal } from '../eligibility/enrolment.js';
 import { readEnrolmentMode } from '../chain/election.js';
+import { consumeSession } from '../eligibility/sessions.js';
 
 const router = Router();
 
@@ -96,11 +97,14 @@ router.post('/relay/enroll', relayLimiter, async (req: Request, res: Response) =
       election,
       identityCommitment,
       authorisation.humanTag,
+      authorisation.documentTag,
       authorisation.deadline,
       authorisation.signature,
       authorisation.eligibilitySignature,
     );
     if (!relayed.relayed) return res.status(400).json({ error: relayed.error });
+    // Only now: a failed relay leaves the passport check usable for a retry.
+    if (sessionId) consumeSession(sessionId);
     return res.status(200).json({ txHash: relayed.txHash });
   }
 
@@ -110,6 +114,9 @@ router.post('/relay/enroll', relayLimiter, async (req: Request, res: Response) =
   const attested = deadline !== undefined && signature;
   if (attested && !/^\d+$/.test(personhoodNullifier ?? '')) {
     return res.status(400).json({ error: 'personhoodNullifier must be a decimal string' });
+  }
+  if (attested && (!Number.isSafeInteger(deadline) || typeof signature !== 'string')) {
+    return res.status(400).json({ error: 'deadline must be an integer and signature a string' });
   }
 
   const result = attested
@@ -131,15 +138,13 @@ router.post('/relay/vote', relayLimiter, async (req: Request, res: Response) => 
     return res.status(503).json({ error: 'Relayer not configured' });
   }
 
-  const body = req.body as Partial<VoteCall>;
-  const missing = (
-    ['election', 'voteCiphertext', 'nullifier', 'merkleRoot', 'merkleDepth', 'pA', 'pB', 'pC'] as const
-  ).filter(field => body[field] === undefined);
-  if (missing.length > 0) {
-    return res.status(400).json({ error: `missing fields: ${missing.join(', ')}` });
+  // Refused here as well as on chain, so a malformed or oversized body never
+  // reaches the simulation, let alone the relayer's float.
+  if (!isVoteCall(req.body)) {
+    return res.status(400).json({ error: 'not a ballot: expected { election, ballot, proof } of decimal strings' });
   }
 
-  const result = await relayVote(body as VoteCall);
+  const result = await relayVote(req.body);
   if (!result.relayed) return res.status(400).json({ error: result.error });
   return res.status(200).json({ txHash: result.txHash });
 });

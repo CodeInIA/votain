@@ -27,9 +27,6 @@ import {
 import { getRegistry } from "./contracts";
 import { isChainConfigured } from "./deployments";
 import { Group } from "@semaphore-protocol/group";
-import { generateProof, type SemaphoreProof } from "@semaphore-protocol/proof";
-import { poseidon2 } from "poseidon-lite/poseidon2";
-import { solidityPackedKeccak256, keccak256, zeroPadValue, toBeHex } from "ethers";
 import { getElection } from "./contracts";
 import { eventArgs, queryLogsFrom } from "./logs";
 import {
@@ -213,6 +210,11 @@ let cachedIdentity: Identity | null = null;
 
 /** Caches the identity and remembers its public commitment for read-only checks. */
 function remember(id: Identity): Identity {
+  // A DIFFERENT identity (a recovery, another phrase) makes every per-election
+  // commitment stored for the previous one wrong: they would answer "enrolled"
+  // for elections this identity never joined.
+  const previous = localStorage.getItem(IDENTITY_COMMITMENT_KEY);
+  if (previous !== null && previous !== id.commitment.toString()) forgetElectionIdentities();
   cachedIdentity = id;
   localStorage.setItem(IDENTITY_COMMITMENT_KEY, id.commitment.toString());
   return id;
@@ -956,17 +958,24 @@ export function getStoredCommitment(): bigint | null {
   return c ? BigInt(c) : null;
 }
 
-// Per-election vote nullifier (PUBLIC, emitted in VoteCast). Remembered on this
-// device after voting so "already voted" shows without a passkey prompt; the
-// truth is still verified on-chain via nullifierNonces.
-const VOTE_NULLIFIER_PREFIX = "votain_vote_";
+/**
+ * The tag of this device's latest ballot per election (PUBLIC, the `BallotCast`
+ * event is indexed by it). Remembered after voting so "already voted" shows
+ * without a passkey prompt; the truth is still read from the chain.
+ *
+ * A tag links to no other ballot, so this records only what this device did,
+ * which it already knows. Ballots under the old scheme were remembered by
+ * nullifier under `votain_vote_`, cleared with the rest on sign-out.
+ */
+const BALLOT_TAG_PREFIX = "votain_ballot_";
+const LEGACY_VOTE_PREFIX = "votain_vote_";
 
-export function rememberVote(electionAddress: string, nullifier: bigint): void {
-  localStorage.setItem(VOTE_NULLIFIER_PREFIX + electionAddress.toLowerCase(), nullifier.toString());
+export function rememberVote(electionAddress: string, tag: bigint): void {
+  localStorage.setItem(BALLOT_TAG_PREFIX + electionAddress.toLowerCase(), tag.toString());
 }
 
-export function getStoredVoteNullifier(electionAddress: string): bigint | null {
-  const v = localStorage.getItem(VOTE_NULLIFIER_PREFIX + electionAddress.toLowerCase());
+export function getStoredBallotTag(electionAddress: string): bigint | null {
+  const v = localStorage.getItem(BALLOT_TAG_PREFIX + electionAddress.toLowerCase());
   return v ? BigInt(v) : null;
 }
 
@@ -1006,7 +1015,7 @@ export function clearIdentity(): void {
   localStorage.removeItem(AVATAR_SEED_KEY);
   // Drop this device's per-election vote records too.
   for (const k of Object.keys(localStorage)) {
-    if (k.startsWith(VOTE_NULLIFIER_PREFIX)) localStorage.removeItem(k);
+    if (k.startsWith(BALLOT_TAG_PREFIX) || k.startsWith(LEGACY_VOTE_PREFIX)) localStorage.removeItem(k);
   }
   if (hasPrfCredential()) clearPrfCredential();
 }
@@ -1024,67 +1033,4 @@ export async function fetchElectionGroup(electionAddress: string): Promise<Group
     BigInt(eventArgs<{ identityCommitment: bigint }>(e).identityCommitment),
   );
   return new Group(members);
-}
-
-// ────────────────────────────────────────────────
-// Vote proof
-// ────────────────────────────────────────────────
-
-/** keccak256(ciphertext ‖ nonce): must mirror ElectionV4.castVote exactly. */
-export function voteMessage(voteCiphertext: string, nonce: bigint): bigint {
-  return BigInt(solidityPackedKeccak256(["bytes", "uint256"], [voteCiphertext, nonce]));
-}
-
-/** Semaphore's hash-to-field (keccak256 of a uint256, truncated to the field). */
-function hashToField(value: bigint): bigint {
-  return BigInt(keccak256(zeroPadValue(toBeHex(value), 32))) >> 8n;
-}
-
-/**
- * Computes the Semaphore nullifier for a voter+scope WITHOUT generating a proof.
- * nullifier = Poseidon2(hash(scope), identity.secretScalar). Lets us read the
- * on-chain nonce before doing the expensive proof generation.
- */
-export function computeNullifier(identity: Identity, scope: bigint): bigint {
-  return poseidon2([hashToField(scope), identity.secretScalar]);
-}
-
-export interface VoteProof {
-  merkleTreeDepth: bigint;
-  merkleTreeRoot: bigint;
-  nullifier: bigint;
-  pA: [bigint, bigint];
-  pB: [[bigint, bigint], [bigint, bigint]];
-  pC: [bigint, bigint];
-}
-
-/**
- * Generates the Semaphore membership proof for a vote.
- * @param voteCiphertext 0x-hex Paillier ciphertext of the encoded ballot.
- * @param nonce Current nullifierNonce for this voter (re-vote support).
- * @param scope Election scope (external nullifier).
- */
-export async function generateVoteProof(
-  identity: Identity,
-  group: Group,
-  voteCiphertext: string,
-  nonce: bigint,
-  scope: bigint,
-): Promise<VoteProof> {
-  const message = voteMessage(voteCiphertext, nonce);
-  const proof: SemaphoreProof = await generateProof(identity, group, message, scope);
-
-  // points order (packGroth16Proof) is already Solidity calldata order.
-  const p = proof.points.map(BigInt);
-  return {
-    merkleTreeDepth: BigInt(proof.merkleTreeDepth),
-    merkleTreeRoot: BigInt(proof.merkleTreeRoot),
-    nullifier: BigInt(proof.nullifier),
-    pA: [p[0], p[1]],
-    pB: [
-      [p[2], p[3]],
-      [p[4], p[5]],
-    ],
-    pC: [p[6], p[7]],
-  };
 }

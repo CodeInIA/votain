@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.37;
 
+import {TwoStepOwnable} from "./TwoStepOwnable.sol";
+
 /// @title PlatformRegistry
 /// @notice Binds a World ID nullifier (one per human, per app+action) to the
 /// Semaphore identity commitment that human votes with. Elections gate
@@ -18,7 +20,7 @@ pragma solidity ^0.8.37;
 /// only for recovery, when that secret is genuinely lost: it revokes the old
 /// commitment in the same transaction that activates the new one, so the count
 /// of active identities per human never exceeds one.
-contract PlatformRegistry {
+contract PlatformRegistry is TwoStepOwnable {
     /// @notice One passkey's copy of the voter's sealed Semaphore secret.
     struct VaultEntry {
         /// @dev WebAuthn credential id. Public by nature, and the key a voter's
@@ -29,9 +31,6 @@ contract PlatformRegistry {
         bytes blob;
         uint64 addedAt;
     }
-
-    address public owner;
-    address public pendingOwner;
 
     /// @dev World ID nullifier => registered at all.
     mapping(uint256 => bool) public registeredNullifiers;
@@ -108,6 +107,19 @@ contract PlatformRegistry {
     uint256 public constant MAX_PREFERENCES_BYTES = 4096;
 
     /**
+     * @dev Ceilings on the vault, for the same reason as the one above: every
+     * write is paid for by the platform's relayer on the voter's behalf, so
+     * nothing a client sends may grow without bound.
+     *
+     * Eight passkeys is more devices than anyone keeps. A WebAuthn credential
+     * id is at most 1023 bytes by specification, and a sealed secret is an IV,
+     * a recovery phrase and a tag, which fits comfortably in 512.
+     */
+    uint256 public constant MAX_VAULT_ENTRIES = 8;
+    uint256 public constant MAX_CREDENTIAL_ID_BYTES = 1023;
+    uint256 public constant MAX_VAULT_BLOB_BYTES = 512;
+
+    /**
      * @dev World ID nullifier => this human's slot in the credential status
      * list, 1 based so that zero still means "not registered".
      *
@@ -133,8 +145,6 @@ contract PlatformRegistry {
      */
     mapping(uint256 => bool) public revokedStatus;
 
-    event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event MemberVerified(uint256 indexed nullifier, uint256 indexed identityCommitment);
     event MemberRotated(
         uint256 indexed nullifier,
@@ -151,8 +161,6 @@ contract PlatformRegistry {
     event StatusRevoked(uint256 indexed statusIndex);
     event StatusRestored(uint256 indexed statusIndex);
 
-    error NotOwner();
-    error NotPendingOwner();
     error NullifierAlreadyRegistered();
     error IdentityAlreadyVerified();
     error NullifierNotRegistered();
@@ -162,16 +170,8 @@ contract PlatformRegistry {
     error CredentialNotFound();
     error UnknownStatusIndex();
     error PreferencesTooLarge();
-    error ZeroAddress();
-
-    constructor() {
-        owner = msg.sender;
-    }
-
-    modifier onlyOwner() {
-        if (msg.sender != owner) revert NotOwner();
-        _;
-    }
+    error TooManyVaultEntries();
+    error VaultEntryTooLarge();
 
     /// @notice First registration of a human. Reverts if either side is taken.
     function registerMember(uint256 nullifier, uint256 identityCommitment) external onlyOwner {
@@ -250,11 +250,10 @@ contract PlatformRegistry {
         bytes calldata credentialId,
         bytes calldata blob
     ) external onlyOwner {
-        if (nullifier == 0) revert ZeroValue();
-        if (credentialId.length == 0 || blob.length == 0) revert EmptyVaultEntry();
-        if (!registeredNullifiers[nullifier]) revert NullifierNotRegistered();
+        _checkVaultEntry(nullifier, credentialId, blob);
 
         VaultEntry[] storage entries = vaults[nullifier];
+        if (entries.length >= MAX_VAULT_ENTRIES) revert TooManyVaultEntries();
         for (uint256 i = 0; i < entries.length; i++) {
             // Same passkey twice would leave the browser two blobs to choose
             // between with nothing to choose on, since both open equally well.
@@ -301,15 +300,27 @@ contract PlatformRegistry {
         bytes calldata credentialId,
         bytes calldata blob
     ) external onlyOwner {
-        if (nullifier == 0) revert ZeroValue();
-        if (credentialId.length == 0 || blob.length == 0) revert EmptyVaultEntry();
-        if (!registeredNullifiers[nullifier]) revert NullifierNotRegistered();
+        _checkVaultEntry(nullifier, credentialId, blob);
 
         delete vaults[nullifier];
         vaults[nullifier].push(
             VaultEntry({credentialId: credentialId, blob: blob, addedAt: uint64(block.timestamp)})
         );
         emit VaultReset(nullifier, credentialId);
+    }
+
+    /// @dev The checks both vault writes share.
+    function _checkVaultEntry(
+        uint256 nullifier,
+        bytes calldata credentialId,
+        bytes calldata blob
+    ) private view {
+        if (nullifier == 0) revert ZeroValue();
+        if (credentialId.length == 0 || blob.length == 0) revert EmptyVaultEntry();
+        if (credentialId.length > MAX_CREDENTIAL_ID_BYTES || blob.length > MAX_VAULT_BLOB_BYTES) {
+            revert VaultEntryTooLarge();
+        }
+        if (!registeredNullifiers[nullifier]) revert NullifierNotRegistered();
     }
 
     /// @notice Every sealed copy this human has, for the browser to try.
@@ -352,25 +363,5 @@ contract PlatformRegistry {
     /// @dev Public, and nothing is lost by that: see the note on `preferences`.
     function preferencesOf(uint256 nullifier) external view returns (bytes memory) {
         return preferences[nullifier];
-    }
-
-    /// @notice Hand control to another address.
-    /// @dev Lets the deployer key stay offline while a separate hot wallet does
-    /// the day-to-day work. Without it the deployer key has to live wherever the
-    /// operational calls are made, which for a registry means the issuer server.
-    /// Two-step on purpose: a typo here would brick the contract permanently.
-    function transferOwnership(address newOwner) external onlyOwner {
-        if (newOwner == address(0)) revert ZeroAddress();
-        pendingOwner = newOwner;
-        emit OwnershipTransferStarted(owner, newOwner);
-    }
-
-    /// @notice Called by the incoming owner to prove the address is usable.
-    function acceptOwnership() external {
-        if (msg.sender != pendingOwner) revert NotPendingOwner();
-        address previous = owner;
-        owner = pendingOwner;
-        pendingOwner = address(0);
-        emit OwnershipTransferred(previous, owner);
     }
 }

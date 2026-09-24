@@ -90,3 +90,13 @@ describe('identityForElection', () => {
     expect(storedElectionCommitment(ELECTION)).toBeNull();
   });
 });
+
+describe('identityForElection, across identities in one tab', () => {
+  it("never hands one identity's derivation to another", async () => {
+    // The cache used to be keyed by election alone, so after a recovery the old
+    // identity's commitment kept coming back for elections already visited.
+    const before = await identityForElection(new Identity('before-recovery'), ELECTION);
+    const after = await identityForElection(new Identity('after-recovery'), ELECTION);
+    expect(after.commitment).not.toBe(before.commitment);
+  });
+});

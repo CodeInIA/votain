@@ -2,17 +2,24 @@
  * Organizer actions: create elections and drive their lifecycle.
  *
  * Uses the organizer's injected EOA signer (MetaMask). Election deployment
- * generates a fresh Paillier keypair: the public key is stored on-chain (voters
- * encrypt with it), the private key is kept in localStorage so the organizer can
- * run the tally later. In production the private key would be sealed to a
- * passkey: see docs/dev/architecture.md.
+ * fixes the tally keys: the public keys are stored on chain (voters encrypt
+ * with them), the secrets are re-derived from the organizer's wallet whenever a
+ * tally is run (`tallyKey.ts`), or kept here when the wallet cannot derive.
  */
 import { type EventLog, type Log, type Signer } from "ethers";
 import { getFactory, getElection, getPaymaster, getReadProvider } from "./contracts";
 import { eventArgs, queryLogsFrom } from "./logs";
 import { fetchOrganizerElectionAddresses } from "./chainElections";
-import { COUNTER_BASE, generateElectionKeys, type SerializedKeyPair } from "./paillier";
-import { deriveElectionKeys, newKeyNonce } from "./tallyKey";
+import { flattenPoints, type SolidityProof } from "./ballotCrypto";
+import {
+  deriveElectionKeys,
+  newKeyNonce,
+  parseTallyKeys,
+  randomTallyKeys,
+  serializeTallyKeys,
+  type TallyKeys,
+} from "./tallyKey";
+import { signsDeterministically } from "./organizerKey";
 import {
   effectivePersonhood,
   isCoherentPolicy,
@@ -28,7 +35,8 @@ import { splitFunding } from "./gasNeeds";
 /** Mirrors `ElectionV4.PersonhoodLevel`. */
 const PERSONHOOD_ENUM: Record<PersonhoodLevel, number> = { device: 0, document: 1, orb: 2 };
 
-const PRIVKEY_STORAGE_PREFIX = "votain_paillier_sk_";
+/** Tally key files kept on this device. Keys of the old Paillier scheme lived under `votain_paillier_sk_`. */
+const PRIVKEY_STORAGE_PREFIX = "votain_tally_keys_";
 const ORGANIZER_NAME_KEY = "votain_organizer_name";
 
 /** Default label until the organizer sets a display name in their profile. */
@@ -138,25 +146,31 @@ export interface CreateElectionInput {
 const toUnix = (d: Date): number => Math.floor(d.getTime() / 1000);
 
 /**
- * Persists a Paillier private key locally, keyed by election address.
+ * Persists an election's tally keys locally, keyed by election address.
  *
- * Only used as a fallback for devices with no PRF passkey: the preferred path
- * derives the key on demand from the passkey and stores nothing at rest.
+ * Only for keys that cannot be re-derived (a wallet without deterministic
+ * signatures) or were imported: the preferred path derives them on demand from
+ * the wallet and stores nothing at rest.
  */
-export function storeElectionPrivateKey(electionAddress: string, keys: SerializedKeyPair): void {
-  localStorage.setItem(PRIVKEY_STORAGE_PREFIX + electionAddress.toLowerCase(), JSON.stringify(keys));
+export function storeElectionPrivateKey(electionAddress: string, keys: TallyKeys): void {
+  localStorage.setItem(PRIVKEY_STORAGE_PREFIX + electionAddress.toLowerCase(), serializeTallyKeys(keys));
 }
 
-export function loadElectionPrivateKey(electionAddress: string): SerializedKeyPair | null {
+export function loadElectionPrivateKey(electionAddress: string): TallyKeys | null {
   const raw = localStorage.getItem(PRIVKEY_STORAGE_PREFIX + electionAddress.toLowerCase());
-  return raw ? (JSON.parse(raw) as SerializedKeyPair) : null;
+  if (!raw) return null;
+  try {
+    return parseTallyKeys(raw);
+  } catch {
+    return null;
+  }
 }
 
 export interface CreatedElection {
   address: string;
   txHash: string;
-  paillierKeys: SerializedKeyPair;
-  /** True when the key is re-derivable from the passkey (nothing stored at rest). */
+  tallyKeys: TallyKeys;
+  /** True when the keys are re-derivable from the wallet (nothing stored at rest). */
   keyDerivable: boolean;
 }
 
@@ -172,10 +186,11 @@ export async function createElection(
   const { ethers } = await import("ethers");
 
   // 1. Tally keypair. Preferred: derive deterministically from the organizer's
-  //    passkey PRF, keyed by a public per-election nonce. Nothing is stored at
-  //    rest and the key can be re-derived on any device the passkey syncs to.
-  //    Fallback (no PRF passkey): a random key that must be stored/exported,
-  //    since it could never be reproduced.
+  //    wallet signature (`organizerKey.ts`), keyed by a public per-election
+  //    nonce. Nothing is stored at rest and the key can be re-derived on any
+  //    device the wallet reaches. Fallback (a wallet whose signatures are not
+  //    deterministic): a random key that must be stored/exported, since a
+  //    derived one could never be reproduced.
   // Refused here and not only in the wizard, because this is the last code the
   // app runs before a transaction exists and the wizard is one caller of it.
   // It is NOT a defence against a transaction built by hand, which never comes
@@ -184,10 +199,14 @@ export async function createElection(
     throw new Error("two candidates would appear on the ballot as the same option");
   }
 
+  // One key per option and one for the blank vote.
+  const slots = input.candidates.length + 1;
   const keyNonce = newKeyNonce();
-  const derived = await deriveElectionKeys(keyNonce, signer);
+  const derived = (await signsDeterministically(signer))
+    ? await deriveElectionKeys(keyNonce, slots, signer)
+    : null;
   const keyDerivable = derived !== null;
-  const paillierKeys = derived ?? (await generateElectionKeys());
+  const tallyKeys = derived ?? (await randomTallyKeys(slots));
 
   // 2. Metadata bundle stored on-chain (kept small; IPFS on mainnet).
   //    keyNonce is public (a salt), included only when the key is derivable.
@@ -201,11 +220,6 @@ export async function createElection(
     ...(input.organizerDomain ? { organizerDomain: input.organizerDomain } : {}),
     candidates: input.candidates,
     privacyQuorum: input.privacyQuorum,
-    // Recorded, not assumed. The base is fixed into every ballot at encryption
-    // time, so an election tallied against a different one decodes to nonsense.
-    // Writing it here is what lets the constant be raised later without
-    // stranding the elections already running under the old value.
-    counterBase: COUNTER_BASE.toString(),
     ...(keyDerivable ? { keyNonce } : {}),
     // The personhood level travels inside `eligibility`, where the on-chain
     // policy hash covers it. The old top-level `requireOrb` flag sat outside
@@ -230,9 +244,6 @@ export async function createElection(
     );
   }
 
-  // 3. Random scope (external nullifier): unique per election
-  const scope = BigInt(ethers.hexlify(ethers.randomBytes(31)));
-
   const cfg = {
     name: input.name,
     votingType: VOTING_TYPE_ENUM[input.votingType],
@@ -242,8 +253,9 @@ export async function createElection(
     enrollEnd: toUnix(input.enrollEnd),
     voteStart: toUnix(input.voteStart),
     voteEnd: toUnix(input.voteEnd),
-    scope,
-    paillierPublicKey: JSON.stringify(paillierKeys.publicKey),
+    // The election derives its own tag scope from its address, so there is
+    // nothing to choose here that two elections could end up sharing.
+    tallyKeys: flattenPoints(tallyKeys.keys),
     metadataJson: JSON.stringify(metadata),
     eligibilityAttester: gated ? (input.eligibilityAttester as string) : ZERO_ADDRESS,
     eligibilityPolicyHash: gated ? await policyHash(input.eligibility as EligibilityPolicy) : ZERO_HASH,
@@ -292,8 +304,8 @@ export async function createElection(
   if (!address) throw new Error("ElectionCreated event not found in receipt");
 
   // Only persist when the key cannot be re-derived: otherwise store nothing.
-  if (!keyDerivable) storeElectionPrivateKey(address, paillierKeys);
-  return { address, txHash: receipt.hash, paillierKeys, keyDerivable };
+  if (!keyDerivable) storeElectionPrivateKey(address, tallyKeys);
+  return { address, txHash: receipt.hash, tallyKeys, keyDerivable };
 }
 
 // ────────────────────────────────────────────────
@@ -362,18 +374,32 @@ export async function markVoided(signer: Signer, address: string): Promise<strin
 }
 
 /**
- * Publishes the decrypted tally. The contract derives the outcome from these
- * counts, so it must carry one entry per option plus the blank vote, in order.
- * `ipfsCid` is the audit-trail CID: empty when the tally was run in-app, which
- * does not pin (the CLI path does).
+ * Publishes the decrypted tally with its proof. The contract derives the
+ * outcome from these counts, so it must carry one entry per option plus the
+ * blank vote, in order, and it verifies the proof that they are what the
+ * ballots add up to. `ipfsCid` is the audit-trail CID: empty when the tally was
+ * run in-app, which does not pin (the CLI path does).
  */
 export async function publishResults(
   signer: Signer,
   address: string,
-  counts: number[],
+  tally: { counts: number[]; proof: SolidityProof },
   ipfsCid = "",
 ): Promise<string> {
-  const tx = await getElection(address, signer).publishResults(ipfsCid, counts.map(BigInt));
+  const tx = await getElection(address, signer).publishResults(ipfsCid, tally.counts.map(BigInt), tally.proof);
+  return waitForLifecycleTx(tx);
+}
+
+/**
+ * Voids an election that fewer voted in than its privacy quorum, with the proof
+ * of it. Reveals how many voted and nothing about how.
+ */
+export async function voidBelowQuorum(
+  signer: Signer,
+  address: string,
+  tally: { voters: number; proof: SolidityProof },
+): Promise<string> {
+  const tx = await getElection(address, signer).voidBelowQuorum(BigInt(tally.voters), tally.proof);
   return waitForLifecycleTx(tx);
 }
 

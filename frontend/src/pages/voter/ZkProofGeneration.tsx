@@ -76,7 +76,7 @@ export default function ZkProofGeneration() {
             electionId: id,
             referenceNumber: result.referenceNumber,
             txHash: result.txHash,
-            nullifier: result.nullifier.toString(),
+            tag: result.tag.toString(),
           },
           replace: true,
         });

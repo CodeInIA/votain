@@ -11,9 +11,11 @@
  *   REGISTRY_ADDRESS        PlatformRegistry deployment address
  *   REGISTRAR_PRIVATE_KEY   key owning PlatformRegistry
  */
-import { Contract, JsonRpcProvider, Wallet } from 'ethers';
+import { Contract, type TransactionReceipt, type TransactionResponse } from 'ethers';
 
 import { contractAddress } from './deployments.js';
+import { chainProvider, submitInTurn } from './signer.js';
+import { chainFailure, errorMessage } from '../utils/errors.js';
 
 const REGISTRY_ABI = [
   'function registerMember(uint256 nullifier, uint256 identityCommitment)',
@@ -21,6 +23,7 @@ const REGISTRY_ABI = [
   'function commitmentOf(uint256 nullifier) view returns (uint256)',
   'function registeredNullifiers(uint256 nullifier) view returns (bool)',
   'function verifiedMembers(uint256 identityCommitment) view returns (bool)',
+  'function nullifierOf(uint256 identityCommitment) view returns (uint256)',
   // The identity vault. See `identity/vault.ts` for why the ciphertext lives on
   // chain rather than on this server's disk.
   'function addVaultEntry(uint256 nullifier, bytes credentialId, bytes blob)',
@@ -52,33 +55,24 @@ export function isRegistrarConfigured(): boolean {
   );
 }
 
-function getRegistry(): Contract {
-  return getRegistryWriter();
-}
-
-/**
- * The registry, signed by the registrar. Every write goes through this.
- *
- * The owner is a WRITER and never a reader: a voter has no wallet, by design,
- * because a per-voter sending address would publicly link their enrollment to
- * their ballot, so somebody has to submit on their behalf.
- */
-export function getRegistryWriter(): Contract {
-  const provider = new JsonRpcProvider(process.env.CHAIN_RPC_URL);
-  const wallet = new Wallet(process.env.REGISTRAR_PRIVATE_KEY as string, provider);
-  return new Contract(registryAddress() as string, REGISTRY_ABI, wallet);
-}
-
-/**
- * The registry, read-only and unsigned.
- *
- * Reads need no key, and using the signing wallet for them would make the
- * registrar look load-bearing where it is not: anyone with an RPC endpoint can
- * read a voter's vault back, which is the entire point of moving it here.
- */
+/** A read-only handle on the registry, over the shared provider. */
 export function getRegistryReader(): Contract {
-  const provider = new JsonRpcProvider(process.env.CHAIN_RPC_URL);
-  return new Contract(registryAddress() as string, REGISTRY_ABI, provider);
+  return new Contract(registryAddress() as string, REGISTRY_ABI, chainProvider());
+}
+
+/**
+ * Sends one registry write and waits for it to land.
+ *
+ * Every write goes through the registrar's queue, so concurrent requests
+ * (a vault entry here, a preferences change there) never race for a nonce.
+ */
+export async function writeRegistry(
+  send: (registry: Contract) => Promise<TransactionResponse>,
+): Promise<TransactionReceipt | null> {
+  const tx = await submitInTurn('REGISTRAR_PRIVATE_KEY', signer =>
+    send(new Contract(registryAddress() as string, REGISTRY_ABI, signer)),
+  );
+  return tx.wait();
 }
 
 export interface RegistrationResult {
@@ -110,14 +104,19 @@ export async function registerOnChain(
   }
 
   try {
-    const registry = getRegistry();
+    const registry = getRegistryReader();
     const nullifier = BigInt(nullifierHex);
     const commitment = BigInt(identityCommitment);
 
     // Idempotent re-verification: the same human presenting the same identity
-    // again is a success, nothing to write.
+    // again is a success, nothing to write. THE SAME HUMAN, checked, and not
+    // merely "somebody's active commitment": commitments are public, and
+    // reporting another voter's as this one's registration would tell the
+    // caller they were set up when they were not.
     if (await registry.verifiedMembers(commitment)) {
-      return { registered: true, alreadyRegistered: true };
+      const owner: bigint = await registry.nullifierOf(commitment);
+      if (owner === nullifier) return { registered: true, alreadyRegistered: true };
+      return { registered: false, error: 'that identity commitment belongs to another voter' };
     }
 
     // The human is known but the commitment is new. Reporting success here (as
@@ -132,13 +131,11 @@ export async function registerOnChain(
       };
     }
 
-    const tx = await registry.registerMember(nullifier, commitment);
-    const receipt = await tx.wait();
+    const receipt = await writeRegistry(r => r.registerMember(nullifier, commitment));
     return { registered: true, txHash: receipt?.hash };
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error('On-chain registration failed:', message);
-    return { registered: false, error: message };
+    console.error('On-chain registration failed:', errorMessage(error));
+    return { registered: false, error: chainFailure(error) };
   }
 }
 
@@ -163,7 +160,7 @@ export async function rotateOnChain(
   }
 
   try {
-    const registry = getRegistry();
+    const registry = getRegistryReader();
     const nullifier = BigInt(nullifierHex);
     const commitment = BigInt(newCommitment);
 
@@ -179,12 +176,10 @@ export async function rotateOnChain(
       return { registered: false, error: 'that identity commitment is already in use' };
     }
 
-    const tx = await registry.rotateMember(nullifier, commitment);
-    const receipt = await tx.wait();
+    const receipt = await writeRegistry(r => r.rotateMember(nullifier, commitment));
     return { registered: true, txHash: receipt?.hash };
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error('rotateOnChain failed:', message);
-    return { registered: false, error: message };
+    console.error('rotateOnChain failed:', errorMessage(error));
+    return { registered: false, error: chainFailure(error) };
   }
 }

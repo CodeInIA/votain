@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { Navigate, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { ShieldCheck, ExternalLink, Copy, Check, SearchCheck } from 'lucide-react';
@@ -9,8 +9,6 @@ import { BlockchainBadge } from '../../components/ui/BlockchainBadge';
 import { getElection as getSeedElection } from '../../data/seed';
 import { shortenReference } from '../../lib/utils';
 import { explorerTxUrl } from '../../lib/deployments';
-
-const FALLBACK_REF = 'VTN-2025-' + String(Math.floor(Math.random() * 90000) + 10000);
 
 interface ConfirmationState {
   referenceNumber?: string;
@@ -28,9 +26,17 @@ export default function VoteConfirmation() {
   const seedElection = id && !id.startsWith('0x') ? getSeedElection(id) : undefined;
   const title = seedElection?.title;
 
-  const reference = state.referenceNumber ?? FALLBACK_REF;
+  /**
+   * NEVER INVENTED. This screen used to fall back to a random "VTN-2025-12345"
+   * whenever it had no reference, which is every reload: a voting app showing a
+   * receipt number for a ballot it cannot vouch for. Now a real vote shows its
+   * transaction hash, the demo data says plainly that nothing was recorded, and
+   * a reload goes back to the election, where the vote can be checked for real.
+   */
+  const reference = state.referenceNumber ?? null;
+  const isDemo = Boolean(seedElection);
   // Copy the FULL reference; only shorten it for display.
-  const referenceDisplay = shortenReference(reference);
+  const referenceDisplay = reference ? shortenReference(reference) : '';
   const txHash = state.txHash;
   // Null on a chain with no explorer, and then the button is not rendered at
   // all. It used to fall back to the Amoy homepage, so a voter on any other
@@ -46,10 +52,15 @@ export default function VoteConfirmation() {
   }, []);
 
   const handleCopy = async () => {
+    if (!reference) return;
     await navigator.clipboard.writeText(reference);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
+
+  if (!reference && !isDemo) {
+    return <Navigate to={id ? `/election/${id}` : '/voter/history'} replace />;
+  }
 
   return (
     <PageLayout role="voter" showNav={false}>
@@ -74,13 +85,17 @@ export default function VoteConfirmation() {
           {/* Reference number */}
           <div className="w-full mb-4 p-4 rounded-2xl bg-surface-lowest/40 border border-white/5">
             <p className="text-xs text-on-surface-meta mb-1">{t('confirmation.reference')}</p>
-            <div className="flex items-center justify-between gap-2">
-              <span className="font-mono text-sm text-on-surface font-semibold truncate" title={reference}>{referenceDisplay}</span>
-              <button type="button" onClick={handleCopy}
-                className="text-on-surface-meta hover:text-on-surface transition-colors cursor-pointer shrink-0">
-                {copied ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
-              </button>
-            </div>
+            {reference ? (
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-mono text-sm text-on-surface font-semibold truncate" title={reference}>{referenceDisplay}</span>
+                <button type="button" onClick={handleCopy}
+                  className="text-on-surface-meta hover:text-on-surface transition-colors cursor-pointer shrink-0">
+                  {copied ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
+                </button>
+              </div>
+            ) : (
+              <p className="text-xs text-on-surface-variant">{t('confirmation.demo_reference')}</p>
+            )}
           </div>
 
           {/* Election name */}
@@ -114,11 +129,13 @@ export default function VoteConfirmation() {
                 this is the one moment the voter holds that reference, and the
                 page it opens is the tool anyone else would use to check the
                 same thing. */}
-            <Button variant="ghost" className="w-full rounded-full gap-2"
-              onClick={() => navigate(`/verify-receipt?ref=${encodeURIComponent(reference)}`)}>
-              <SearchCheck className="w-4 h-4" />
-              {t('confirmation.check_receipt')}
-            </Button>
+            {reference && (
+              <Button variant="ghost" className="w-full rounded-full gap-2"
+                onClick={() => navigate(`/verify-receipt?ref=${encodeURIComponent(reference)}`)}>
+                <SearchCheck className="w-4 h-4" />
+                {t('confirmation.check_receipt')}
+              </Button>
+            )}
             <Button variant="ghost" className="w-full rounded-full"
               onClick={() => navigate('/voter/elections')}>
               {t('confirmation.back_elections')}

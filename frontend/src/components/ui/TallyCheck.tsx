@@ -1,52 +1,79 @@
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ShieldAlert, ShieldCheck } from 'lucide-react';
+import { isAddress } from 'ethers';
+import { Loader2, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { Card } from './Card';
 import { cn } from '../../lib/utils';
-import type { Election } from '../../data/seed';
+import { hasPublishedResults, type Election } from '../../data/seed';
+import { isChainConfigured } from '../../lib/deployments';
+import { auditPublishedTally, type TallyAudit } from '../../lib/tallyAudit';
 
 /**
- * The half of a published result that anyone can check with no key.
+ * A published result, checked against the ballots on chain with no key.
  *
- * Each voter's surviving ballot contributes exactly one to exactly one
- * counter, so the counters have to add up to the number of voters the contract
- * itself counted. Both numbers are public, so this catches invented or dropped
- * ballots without anybody being trusted. It does NOT catch votes moved between
- * options, which keeps the total intact and needs a proof of correct
- * decryption.
+ * The contract accepted the counts only with a proof that they decrypt its
+ * aggregate; this re-adds every ballot in the reader's own browser and checks
+ * the aggregate is their sum (see `tallyAudit`). Anyone can repeat it and reach
+ * the same answer, so nobody has to take the organizer's word for the result.
  *
- * WHY IT IS A COMPONENT. It lived inline on the public results page, which
- * meant the organizer, the one person who produced the numbers, was the only
- * reader who never saw the check applied to them. Publishing your own result
- * and being shown that it verifies is worth more to an honest organizer than
- * to anyone else.
+ * WHY IT IS A COMPONENT. The organizer, the one person who produced the
+ * numbers, is also a reader: publishing your own result and being shown that
+ * it verifies is worth more to an honest organizer than to anyone else.
  *
- * Renders nothing until results are published, since there is nothing to
- * check before that.
+ * Renders nothing until results are published, or on the demo data, which has
+ * no chain to check against.
  */
 export function TallyCheck({ election, className }: { election: Election; className?: string }) {
   const { t } = useTranslation();
-  const check = election.tallyCheck;
-  if (!check) return null;
+  const address = election.contractAddress;
+  const checkable = hasPublishedResults(election) && isChainConfigured() && isAddress(address);
+  // Keyed by the address it answers for, so a result never outlives the
+  // election it was about and "pending" needs no state of its own.
+  const [settled, setSettled] = useState<{ address: string; audit: TallyAudit | null } | null>(null);
+
+  useEffect(() => {
+    if (!checkable) return;
+    let cancelled = false;
+    auditPublishedTally(address)
+      .then(result => { if (!cancelled) setSettled({ address, audit: result }); })
+      .catch(() => { if (!cancelled) setSettled({ address, audit: null }); });
+    return () => { cancelled = true; };
+  }, [checkable, address]);
+
+  const audit: TallyAudit | 'pending' | null =
+    settled?.address === address ? settled.audit : 'pending';
+  if (!checkable || audit === null) return null;
+
+  if (audit === 'pending') {
+    return (
+      <Card className={cn('p-5 mb-5', className)}>
+        <p className="flex items-center gap-2 text-xs text-on-surface-variant">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          {t('results.check_pending')}
+        </p>
+      </Card>
+    );
+  }
+
+  const Icon = audit.status === 'verified' ? ShieldCheck : ShieldAlert;
+  const tone = audit.status === 'verified' ? 'text-success' : 'text-error';
 
   return (
     <Card className={cn('p-5 mb-5', className)}>
       <div className="flex items-start gap-3">
-        {check.matches ? (
-          <ShieldCheck className="w-5 h-5 text-success shrink-0 mt-0.5" />
-        ) : (
-          <ShieldAlert className="w-5 h-5 text-error shrink-0 mt-0.5" />
-        )}
+        <Icon className={cn('w-5 h-5 shrink-0 mt-0.5', tone)} />
         <div className="min-w-0">
           <h2 className="text-sm font-semibold text-on-surface mb-1">
-            {t(check.matches ? 'results.check_ok_title' : 'results.check_bad_title')}
+            {t(`results.check_${audit.status}_title`)}
           </h2>
           <p className="text-xs text-on-surface-variant">
-            {t(check.matches ? 'results.check_ok_body' : 'results.check_bad_body', {
-              declared: check.declared,
-              voters: check.voters,
-            })}
+            {audit.status === 'verified'
+              ? t('results.check_verified_body', { ballots: audit.ballots, voters: audit.voters })
+              : t(`results.check_${audit.status}_body`)}
           </p>
-          <p className="text-xs text-on-surface-meta mt-2">{t('results.check_limit')}</p>
+          {audit.status === 'failed' && (
+            <p className="text-xs text-on-surface-meta mt-2 font-mono break-words">{audit.reason}</p>
+          )}
         </div>
       </div>
     </Card>

@@ -11,7 +11,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 
-const PHRASE = 'harbor pewter pepper pine denim prairie meadow arrow crystal lagoon cinder anchor';
+const PHRASE = 'habit nacho koala panda gecko quilt jelly bagel fable igloo daisy acorn';
 const WORDS = PHRASE.split(' ');
 
 const { PhraseCheck } = await import('./PhraseCheck');

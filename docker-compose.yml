@@ -136,8 +136,6 @@ services:
       # design, so it has to be this deployment's public address.
       SELF_ENDPOINT: ${SELF_ENDPOINT}
       SELF_MOCK: ${SELF_MOCK}
-      DEMO_VC_COUNTRY: ${DEMO_VC_COUNTRY}
-      DEMO_VC_REGION: ${DEMO_VC_REGION}
 
     # Cheap and honest: /health touches nothing and allocates nothing, so a
     # pass means the process is up, not that the chain or World ID are.

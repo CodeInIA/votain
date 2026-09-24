@@ -24,6 +24,14 @@ contracts/coverage/
 # Local deploy manifests are throwaway; amoy.json IS committed (frontend reads it)
 contracts/deployments/local.json
 
+# ------------- Circuits -------------
+# Build outputs of circuits/scripts/build.mjs: the trusted setup, and the
+# verifiers and proving files generated from it. Never committed, because they
+# belong to ONE ceremony: a deployment generates its own and publishes them.
+circuits/build/
+contracts/contracts/verifiers/
+frontend/public/circuits/
+
 # ------------- React Frontend -------------
 frontend/build/
 frontend/dist/

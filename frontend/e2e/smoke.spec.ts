@@ -36,20 +36,38 @@ const ORGANIZER_ROUTES = [
 
 const ALL_ROUTES = [...PUBLIC_ROUTES, ...VOTER_ROUTES, ...ORGANIZER_ROUTES];
 
+/**
+ * No backend: every API call answers as a server with no session would. The
+ * smoke test is about the screens rendering, and a real issuer would make it
+ * depend on World ID and a chain it has no business needing.
+ */
+test.beforeEach(async ({ page }) => {
+  await page.route('**/api/**', route =>
+    route.fulfill({ status: 401, contentType: 'application/json', body: '{"authenticated":false}' }),
+  );
+});
+
+/** Console errors that are the stub above doing its job, not the app failing. */
+const expected = (message: string) =>
+  message.includes('Warning:') ||
+  message.includes('React DevTools') ||
+  message.includes('status of 401');
+
 for (const { path, label } of ALL_ROUTES) {
   test(`[smoke] ${label} — ${path}`, async ({ page }) => {
-    await page.goto(path);
-    // No JS errors in console during navigation
+    // Listening before navigating, or the errors of the first paint are missed.
     const errors: string[] = [];
     page.on('console', msg => {
       if (msg.type() === 'error') errors.push(msg.text());
     });
+    page.on('pageerror', error => errors.push(error.message));
+    await page.goto(path);
     // Wait for app to hydrate
     await page.waitForLoadState('networkidle');
     // Page should not show an unhandled crash (React error boundary)
     await expect(page.locator('body')).not.toContainText('Something went wrong');
     // No uncaught JS errors that would block render
-    expect(errors.filter(e => !e.includes('Warning:') && !e.includes('React DevTools'))).toHaveLength(0);
+    expect(errors.filter(e => !expected(e))).toHaveLength(0);
   });
 }
 
@@ -59,18 +77,18 @@ test('[smoke] 404 page', async ({ page }) => {
   await expect(page.locator('body')).toContainText('not found');
 });
 
-test('[smoke] Discover — search and filter', async ({ page }) => {
+test('[smoke] Discover — lists the demo elections', async ({ page }) => {
   await page.goto('/discover');
   await page.waitForLoadState('networkidle');
-  // Election cards should be visible
-  await expect(page.locator('[data-testid="election-card"]').or(page.locator('.election-card'))).toHaveCount(0).or(
-    expect(page.locator('h2, h3')).not.toHaveCount(0)
-  );
+  // The demo catalogue renders a heading per election card.
+  await expect(page.locator('h2, h3').first()).toBeVisible();
 });
 
-test('[smoke] Organizer Create Election — wizard navigation', async ({ page }) => {
+test('[smoke] Organizer Create Election — not offered without a session', async ({ page }) => {
   await page.goto('/organizer/elections/new');
   await page.waitForLoadState('networkidle');
-  // Should show stepper with first step
-  await expect(page.locator('body')).toContainText('Info');
+  // Without an organizer session the wizard is not offered: the visitor is
+  // sent back out (to the landing page today) rather than shown a broken form.
+  await expect(page).not.toHaveURL(/\/organizer\/elections\/new$/);
+  await expect(page.locator('body')).not.toContainText('Something went wrong');
 });

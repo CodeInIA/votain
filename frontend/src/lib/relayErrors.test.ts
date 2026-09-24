@@ -36,6 +36,9 @@ describe("relayErrorMessage", () => {
       ["NotPlatformVerified()", "errors.not_platform_verified"],
       ["AttestationRequired()", "errors.attestation_required"],
       ["AttestationExpired()", "errors.attestation_expired"],
+      ["EpochAlreadyCast()", "errors.epoch_already_cast"],
+      ["TagAlreadyCast()", "errors.ballot_already_cast"],
+      ["WrongEpoch()", "errors.ballot_expired"],
     ];
     for (const [raw, key] of cases) {
       expect(relayErrorMessage(new Error(raw))).toBe(i18n.t(key));
@@ -105,10 +108,21 @@ describe("relayErrorMessage", () => {
       "UnexpectedAttestation",
       "AttestationExpired",
       "BadAttestation",
+      "MissingDocumentTag",
+      "UnexpectedDocumentTag",
+      "TagAlreadyCast",
+      "EpochAlreadyCast",
+      "WrongEpoch",
+      "TreeFull",
     ];
     for (const name of names) {
       expect(revertNameOf({ data: id(`${name}()`).slice(0, 10) })).toBe(name);
     }
+  });
+
+  it("explains a second ballot within the hour, caught before any proving", async () => {
+    const { EpochAlreadyUsedError } = await import("./ballot");
+    expect(relayErrorMessage(new EpochAlreadyUsedError(new Date()))).toBe(i18n.t("errors.epoch_already_cast"));
   });
 
   it("passes an unrecognised failure through verbatim", () => {

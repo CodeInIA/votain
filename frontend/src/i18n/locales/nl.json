@@ -220,11 +220,11 @@
     "export_json": "Audittrail exporteren",
     "view_ipfs": "Bekijk op IPFS",
     "not_available": "Resultaten nog niet beschikbaar.",
-    "check_ok_title": "Gecontroleerd met het openbare register",
-    "check_ok_body": "De gepubliceerde tellingen komen op {{declared}}, en het contract registreerde {{voters}} stemmers. Geen stem is verzonnen of weggelaten.",
-    "check_bad_title": "Komt niet overeen met het openbare register",
-    "check_bad_body": "De gepubliceerde tellingen komen op {{declared}}, maar het contract registreerde {{voters}} stemmers. Dat horen dezelfde getallen te zijn.",
-    "check_limit": "Hier is geen sleutel of vertrouwen voor nodig: iedereen kan het herhalen. Het ziet niet of stemmen tussen opties zijn verschoven, want dat laat het totaal gelijk."
+    "check_pending": "De gepubliceerde uitslag wordt gecontroleerd tegen de stembiljetten op de chain…",
+    "check_verified_title": "Geverifieerd tegen de stembiljetten op de chain",
+    "check_verified_body": "De verkiezing heeft deze aantallen alleen aanvaard met een zero-knowledge-bewijs dat ze de som van alle stembiljetten ontsleutelen, en de {{ballots}} stembiljetten op de chain zijn hier opnieuw opgeteld tot diezelfde som: {{voters}} kiezers. Iedereen kan deze controle herhalen, zonder sleutel en zonder vertrouwen.",
+    "check_failed_title": "Klopt niet met de stembiljetten op de chain",
+    "check_failed_body": "De gepubliceerde aantallen konden niet worden geverifieerd tegen de stembiljetten op de chain. Vertrouw niet op deze uitslag."
   },
   "verify_receipt": {
     "title": "Een stem verifiëren",
@@ -240,7 +240,6 @@
     "reference": "Referentie",
     "nullifier": "Stemkenmerk",
     "date": "Datum",
-    "ballots": "Uitgebrachte stemmen",
     "choice_never_shown": "Het openbare register houdt bij dat er een stem is uitgebracht en wanneer, nooit wat erin stond. Niemand kan uit een bewijs een keuze aflezen, wij ook niet.",
     "your_receipts": "Jouw bewijzen",
     "unlock_hint": "Deze browser kent nog geen stem. Als je vanaf een ander apparaat hebt gestemd, vindt één passkey-tik ze en onthoudt ze hier."
@@ -279,7 +278,8 @@
     "reference": "Referentienummer",
     "view_tx": "Bekijk het openbare register",
     "back_elections": "Terug naar verkiezingen",
-    "check_receipt": "Mijn bewijs controleren"
+    "check_receipt": "Mijn bewijs controleren",
+    "demo_reference": "Demogegevens: er is geen stembiljet vastgelegd, dus er is geen referentie om te controleren."
   },
   "change_vote": {
     "title": "Je stem wijzigen",
@@ -466,7 +466,9 @@
     "open_voting_early": "Stemming nu openen",
     "open_voting_title": "Stemming eerder beginnen?",
     "open_voting_desc": "De inschrijving is gesloten en de stemming is nog niet aan de beurt. Alle ingeschrevenen kunnen vanaf nu stemmen. De sluitingsdatum verandert niet.",
-    "voting_opened_done": "De stemming is open"
+    "voting_opened_done": "De stemming is open",
+    "void_refused": "Deze verkiezing heeft beloofd niet te worden afgeblazen, en er hebben genoeg mensen gestemd om de uitslag te publiceren. Ze kan dus niet ongeldig worden verklaard. Importeer de ontsleutelingssleutel om de uitslag te publiceren.",
+    "key_device_only": "De ontsleutelingssleutel van deze verkiezing kon niet uit je wallet worden afgeleid en bestaat alleen op dit apparaat. Exporteer hem nu en bewaar hem goed: zonder hem kan de verkiezing niet worden geteld."
   },
   "gas": {
     "title": "Gasbeheer",
@@ -600,7 +602,10 @@
     "wallet_request_rejected": "Je hebt het verzoek in je wallet geannuleerd. Er is niets gebeurd.",
     "passkey_cancelled": "Je hebt het passkey-verzoek gesloten. Er is niets aangemaakt: je kunt het opnieuw proberen.",
     "list_unreadable": "Deze lijst kon niet van de chain gelezen worden, wat niet hetzelfde is als leeg zijn. Controleer de verbinding en probeer het opnieuw.",
-    "passkey_unproven": "De passkey is aangemaakt, maar we konden nog niet bevestigen dat hij kan ontsleutelen. Druk nogmaals: dezelfde wordt gevraagd, er wordt geen nieuwe aangemaakt."
+    "passkey_unproven": "De passkey is aangemaakt, maar we konden nog niet bevestigen dat hij kan ontsleutelen. Druk nogmaals: dezelfde wordt gevraagd, er wordt geen nieuwe aangemaakt.",
+    "epoch_already_cast": "Je hebt het afgelopen uur al een stembiljet uitgebracht. Je laatste stembiljet telt; je kunt het opnieuw wijzigen zodra het uur voorbij is.",
+    "ballot_already_cast": "Dit stembiljet was al geregistreerd. Je hoeft niets meer te doen: je stem is binnen.",
+    "ballot_expired": "Dit stembiljet is te lang geleden voorbereid om nog te worden aanvaard. Stem opnieuw; een nieuw stembiljet duurt een paar seconden."
   },
   "demo": {
     "banner": "Demogegevens: geen contracten uitgerold. Niets hiervan staat on-chain."
@@ -673,7 +678,7 @@
     "title": "Privacy",
     "updated": "Laatst bijgewerkt: 16 september 2026",
     "summary_title": "Kort gezegd",
-    "summary_1": "Wij kennen nooit uw naam, uw gezicht of uw biometrische gegevens. Wij weten niet wat u hebt gestemd, en de organisator evenmin, want stemmen worden versleuteld voordat ze uw apparaat verlaten en alleen het eindtotaal wordt ontsleuteld.",
+    "summary_1": "We komen nooit je naam, je gezicht of je biometrische gegevens te weten. We weten niet hoe je hebt gestemd. Stembiljetten worden versleuteld voordat ze je apparaat verlaten en alleen het eindtotaal wordt ooit ontsleuteld; de sleutel van de organisator zou één stembiljet kunnen openen, maar niets erop zegt van wie het is.",
     "summary_2": "Deze pagina beschrijft wat de software werkelijk doet, niet wat zij zou mogen doen, inclusief de plekken waar het ontwerp u niet beschermt.",
     "worldid_title": "Wat World ID aan ons doorgeeft",
     "worldid_1": "Bij het verifiëren stuurt World ID ons een bewijs en een nullifier: een getal afgeleid van jou en van deze applicatie. Het is elke keer hetzelfde, en zo wordt voorkomen dat één account zich twee keer inschrijft voor dezelfde verkiezing; het verschilt bovendien per applicatie. Het bewijst niet dat je één persoon bent: een verkiezing die dat eist vraagt ook een documentcontrole, die een tweede getal oplevert dat alleen voor die verkiezing geldt.",
@@ -682,8 +687,8 @@
     "identity_1": "Je stemgeheim is een zin die op je apparaat wordt gemaakt en je één keer wordt getoond, zodat je hem kunt bewaren. Waar een passkey hem kan bewaren, wordt voor elke passkey die je registreert een verzegelde kopie opgeslagen, zodat je vanaf meerdere apparaten kunt stemmen zonder iets te typen. Die kopieën komen op de blockchain te staan en niet op onze server, dus ons kwijtraken sluit je niet buiten, en wat ze opent verlaat je authenticator nooit. Wij zien de zin nooit en kunnen hem niet voor je terughalen.",
     "identity_2": "Dat is geen formaliteit. Konden wij het wel ontsleutelen, dan konden wij de identificator berekenen die uw stem meedraagt en elke stem koppelen aan wie hem uitbracht. De versleuteling maakt ons dat onmogelijk, zij verbiedt het ons niet alleen.",
     "ballot_title": "Uw stem",
-    "ballot_1": "Uw keuze wordt in uw browser versleuteld voordat zij wordt verzonden, met een sleutel die de organisator beheert. Stemmen worden versleuteld bij elkaar opgeteld en alleen de som wordt ontsleuteld, zodat geen enkele afzonderlijke stem ooit aan iemand wordt onthuld, ook niet aan de organisator.",
-    "ballot_2": "U mag zo vaak opnieuw stemmen als u wilt; alleen de laatste stem telt. Eerdere stemmen blijven opgeslagen maar zijn niet van die laatste te onderscheiden, en juist daardoor kunt u een onder druk uitgebrachte stem ongemerkt vervangen.",
+    "ballot_1": "Je keuze wordt in je browser versleuteld voordat die wordt verstuurd, met sleutels die de organisator bewaart. De verkiezing telt alle stembiljetten versleuteld bij elkaar op en alleen die som wordt ooit ontsleuteld, met een bewijs dat het contract controleert. Die sleutels zouden elk afzonderlijk stembiljet kunnen openen, en daarom staat er op een stembiljet niets over wie het uitbracht of welk van jouw stembiljetten eraan voorafging.",
+    "ballot_2": "Je mag zo vaak opnieuw stemmen als je wilt, één keer per uur; alleen je laatste stembiljet telt. Elk nieuw stembiljet trekt je vorige stilletjes in, en een eerste stem en een gewijzigde zien er op de chain precies hetzelfde uit, zodat niemand kan zien dat je opnieuw hebt gestemd. Daardoor kun je ongemerkt een stem vervangen die je onder druk hebt uitgebracht.",
     "onchain_title": "Wat openbaar is op de blockchain",
     "onchain_1": "Openbaar en permanent: welke verkiezingen bestaan, dat een identiteit op het platform geregistreerd is, dat iemand die het platform verifieerde zich per verkiezing inschreef, de versleutelde stemmen met hun gepubliceerde totalen, en de verzegelde kopieën van elke stemidentiteit, één per geregistreerde passkey. Wat zich inschrijft is een commitment dat alleen voor die verkiezing is afgeleid, dus de keten zegt niet aan welke verkiezingen één persoon deelnam. Iedereen kan alles lezen. Die kopieën zijn cijfertekst en gaan alleen open met de passkey die ze maakte, maar hun bestaan en hun aantal zijn zichtbaar.",
     "onchain_2": "Niet openbaar: het verband tussen een ingeschreven identiteit en een specifieke stem, en evenmin het verband tussen de inschrijvingen van dezelfde persoon in verschillende verkiezingen. Het eerste verbreken is precies waar het zero-knowledge-bewijs voor dient, en daarom wordt elke stem ingediend via één gedeeld contract in plaats van vanaf een eigen adres. Het tweede is waarom wat zich inschrijft per verkiezing wordt afgeleid in plaats van hergebruikt.",

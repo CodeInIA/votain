@@ -19,7 +19,8 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    # `dev` too: that is where work is reviewed before it reaches `main`.
+    branches: [main, dev]
   workflow_dispatch:
 
 permissions:
@@ -44,6 +45,11 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
         working-directory: frontend
+      # oxlint rather than ESLint: typescript-eslint does not support the
+      # TypeScript 7 compiler this project builds with, and oxlint needs no
+      # compiler at all. Correctness rules only, including react-hooks.
+      - run: npm run lint
+        working-directory: frontend
       # `npm run build` is `tsc -b && vite build`, so this covers types as well
       # as the bundle. It is also what 4EVERLAND runs, which is the point: if
       # this passes and that fails, the difference is configuration, not code.
@@ -63,6 +69,13 @@ jobs:
       # The file that keeps deep links working on IPFS. Cheap to lose in a
       # refactor of `public/`, and its absence only shows up as a 404 on a
       # reloaded route in production.
+      # Every screen, rendered in a real browser at three sizes, against the
+      # demo data with the API answering as a server with no session. Catches
+      # what unit tests cannot: a render loop, a route that crashes on load.
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - run: npm run test:e2e
+        working-directory: frontend
       - name: The SPA rewrite survived the build
         working-directory: frontend
         run: |
@@ -82,6 +95,8 @@ jobs:
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
         working-directory: backend
+      - run: npm run lint
+        working-directory: backend
       - run: npm run build
         working-directory: backend
       - run: npm test
@@ -100,8 +115,76 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  # ── the ballot and tally circuits ──────────────────────────────────────────
+  #
+  # The witness tests say the circuits accept what they should and refuse what
+  # they should; the build produces the verifiers the contracts compile against
+  # and the proving files the contracts' E2E suite proves with.
+  #
+  # CACHED IN TWO LAYERS, because the trusted setup is slow. The phase 1 of
+  # 2^17 takes nearly forty minutes to generate on a runner and depends on
+  # nothing in the repository, so it has a cache of its own, SAVED THE MOMENT
+  # IT EXISTS: a later step failing must not throw that work away. The rest
+  # (phase 2, verifiers, proving files) is cached on the circuit sources.
+  # The phase 2 here is the public DEVELOPMENT one, fine for CI and never
+  # deployable (deploy.ts refuses it off the local chain).
+  circuits:
+    name: circuits
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: circuits/package-lock.json
+      - run: npm ci
+        working-directory: circuits
+      - run: npm test
+        working-directory: circuits
+      - uses: actions/cache@v4
+        id: build
+        with:
+          path: |
+            circuits/build
+            contracts/contracts/verifiers
+            frontend/public/circuits
+          key: circuits-${{ hashFiles('circuits/src/**', 'circuits/scripts/build.mjs', 'circuits/package-lock.json') }}
+      - uses: actions/cache/restore@v4
+        id: ptau
+        if: steps.build.outputs.cache-hit != 'true'
+        with:
+          path: circuits/build/pot17_dev.ptau
+          key: ptau-dev-17-v1
+      - name: Phase 1 (generated once, then cached)
+        if: steps.build.outputs.cache-hit != 'true' && steps.ptau.outputs.cache-hit != 'true'
+        run: node scripts/build.mjs --ptau 17
+        working-directory: circuits
+        timeout-minutes: 75
+      - uses: actions/cache/save@v4
+        if: steps.build.outputs.cache-hit != 'true' && steps.ptau.outputs.cache-hit != 'true'
+        with:
+          path: circuits/build/pot17_dev.ptau
+          key: ptau-dev-17-v1
+      - if: steps.build.outputs.cache-hit != 'true'
+        run: npm run build
+        working-directory: circuits
+        timeout-minutes: 30
+      - uses: actions/upload-artifact@v4
+        with:
+          name: circuits
+          # The verifiers and what proving needs; not the phase 1 files.
+          path: |
+            circuits/build/*.zkey
+            circuits/build/*_js/*.wasm
+            circuits/build/*.vkey.json
+            circuits/build/manifest.json
+            contracts/contracts/verifiers
+          retention-days: 3
+
   contracts:
     name: contracts
+    needs: circuits
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -110,14 +193,21 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: contracts/package-lock.json
+      - uses: actions/download-artifact@v4
+        with:
+          name: circuits
+          path: .
       - run: npm ci
         working-directory: contracts
       - run: npm run build
         working-directory: contracts
       # The slowest of the three by a wide margin: it proves Groth16 end to
-      # end rather than mocking it.
+      # end rather than mocking it. REQUIRE_CIRCUITS turns a missing build
+      # into a failure rather than a quietly skipped suite.
       - run: npm test
         working-directory: contracts
+        env:
+          REQUIRE_CIRCUITS: "1"
 
       # THE SCRIPTS ARE NOT CHECKED BY EITHER OF THE TWO ABOVE, which is easy
       # to miss: `hardhat compile` builds Solidity and `hardhat test` only
@@ -156,8 +246,8 @@ jobs:
   # Those stay manual, in `deploy-heroku.yml` and `deploy-phala.yml`, because
   # deciding what the world talks to should be somebody's decision.
   # THE TALLY CLI WAS IN NO JOB AT ALL, which is a strange thing to leave out:
-  # it is the auditor's path, the one that reads the encrypted ballots, adds
-  # them up and publishes the result with an IPFS receipt. Nothing here builds
+  # it is the auditor's path, the one that decrypts and proves the tally,
+  # publishes it with an IPFS receipt and checks a published one. Nothing here builds
   # or runs it, so a dependency bump could break the official count and every
   # tick would stay green.
   #
@@ -175,6 +265,8 @@ jobs:
           cache-dependency-path: scripts-tally/package-lock.json
       - run: npm ci
         working-directory: scripts-tally
+      # Type-checks `ballotCrypto.ts` too, which this CLI shares with the
+      # frontend: a change there that breaks the auditor's path fails here.
       - run: npm run typecheck
         working-directory: scripts-tally
 

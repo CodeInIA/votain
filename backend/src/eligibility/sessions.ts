@@ -25,6 +25,9 @@ export const SESSION_TTL_MS = 15 * 60 * 1000;
 /** Bound so a flood of unfinished sessions cannot grow the heap without limit. */
 const MAX_SESSIONS = 5_000;
 
+/** Checks one voter may have open at once, across all elections. */
+const MAX_SESSIONS_PER_VOTER = 5;
+
 export type SessionStatus = 'pending' | 'passed' | 'failed';
 
 export interface EligibilitySession {
@@ -55,8 +58,15 @@ export function createSession(election: string, voter: string): EligibilitySessi
   const now = Date.now();
   sweep(now);
 
-  // Oldest first, because Map preserves insertion order and every entry is
-  // inserted with the timestamp it carries.
+  // A voter's own sessions are bounded first, so one account opening checks in
+  // a loop evicts only its own and never anybody else's in-flight passport scan.
+  const own = [...sessions.values()].filter(existing => existing.voter === voter);
+  for (const stale of own.slice(0, Math.max(0, own.length - (MAX_SESSIONS_PER_VOTER - 1)))) {
+    sessions.delete(stale.id);
+  }
+
+  // Then the global ceiling, oldest first, because Map preserves insertion
+  // order and every entry is inserted with the timestamp it carries.
   while (sessions.size >= MAX_SESSIONS) {
     const oldest = sessions.keys().next();
     if (oldest.done) break;

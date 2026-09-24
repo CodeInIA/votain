@@ -14,7 +14,6 @@
  */
 import { Router, Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
-import { verifyMessage } from 'ethers';
 import {
   checkDomain,
   expectedRecord,
