@@ -115,8 +115,68 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  # ── the ballot and tally circuits ──────────────────────────────────────────
+  #
+  # The witness tests say the circuits accept what they should and refuse what
+  # they should; the build produces the verifiers the contracts compile against
+  # and the proving files the contracts' E2E suite proves with.
+  #
+  # CACHED ON THE SOURCES, because the trusted setup is slow: a phase 1 of 2^17
+  # takes a quarter of an hour when generated. On a cache miss it is fetched
+  # from the Hermez ceremony instead, which is also what a real deployment
+  # should start from, and only generated if that download fails. Either way
+  # the phase 2 here is the public DEVELOPMENT one, which is fine for CI and
+  # never deployable (deploy.ts refuses it off the local chain).
+  circuits:
+    name: circuits
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: circuits/package-lock.json
+      - run: npm ci
+        working-directory: circuits
+      - run: npm test
+        working-directory: circuits
+      - uses: actions/cache@v4
+        id: build
+        with:
+          path: |
+            circuits/build
+            contracts/contracts/verifiers
+            frontend/public/circuits
+          key: circuits-${{ hashFiles('circuits/src/**', 'circuits/scripts/build.mjs', 'circuits/package-lock.json') }}
+      - name: Phase 1 from the Hermez ceremony
+        if: steps.build.outputs.cache-hit != 'true'
+        working-directory: circuits
+        run: |
+          mkdir -p build
+          curl -fsSL --retry 3 -o build/hermez17.ptau \
+            https://storage.googleapis.com/zkevm/ptau/powersOfTau28_hez_final_17.ptau \
+            && echo "PTAU=$PWD/build/hermez17.ptau" >> "$GITHUB_ENV" \
+            || echo "download failed: the build generates its own phase 1"
+      - if: steps.build.outputs.cache-hit != 'true'
+        run: npm run build
+        working-directory: circuits
+        timeout-minutes: 40
+      - uses: actions/upload-artifact@v4
+        with:
+          name: circuits
+          # The verifiers and what proving needs; not the phase 1 files.
+          path: |
+            circuits/build/*.zkey
+            circuits/build/*_js/*.wasm
+            circuits/build/*.vkey.json
+            circuits/build/manifest.json
+            contracts/contracts/verifiers
+          retention-days: 3
+
   contracts:
     name: contracts
+    needs: circuits
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -125,14 +185,21 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: contracts/package-lock.json
+      - uses: actions/download-artifact@v4
+        with:
+          name: circuits
+          path: .
       - run: npm ci
         working-directory: contracts
       - run: npm run build
         working-directory: contracts
       # The slowest of the three by a wide margin: it proves Groth16 end to
-      # end rather than mocking it.
+      # end rather than mocking it. REQUIRE_CIRCUITS turns a missing build
+      # into a failure rather than a quietly skipped suite.
       - run: npm test
         working-directory: contracts
+        env:
+          REQUIRE_CIRCUITS: "1"
 
       # THE SCRIPTS ARE NOT CHECKED BY EITHER OF THE TWO ABOVE, which is easy
       # to miss: `hardhat compile` builds Solidity and `hardhat test` only
@@ -171,8 +238,8 @@ jobs:
   # Those stay manual, in `deploy-heroku.yml` and `deploy-phala.yml`, because
   # deciding what the world talks to should be somebody's decision.
   # THE TALLY CLI WAS IN NO JOB AT ALL, which is a strange thing to leave out:
-  # it is the auditor's path, the one that reads the encrypted ballots, adds
-  # them up and publishes the result with an IPFS receipt. Nothing here builds
+  # it is the auditor's path, the one that decrypts and proves the tally,
+  # publishes it with an IPFS receipt and checks a published one. Nothing here builds
   # or runs it, so a dependency bump could break the official count and every
   # tick would stay green.
   #
@@ -190,7 +257,7 @@ jobs:
           cache-dependency-path: scripts-tally/package-lock.json
       - run: npm ci
         working-directory: scripts-tally
-      # Type-checks `tallyProof.ts` too, which this CLI shares with the
+      # Type-checks `ballotCrypto.ts` too, which this CLI shares with the
       # frontend: a change there that breaks the auditor's path fails here.
       - run: npm run typecheck
         working-directory: scripts-tally

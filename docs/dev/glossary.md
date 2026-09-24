@@ -16,7 +16,13 @@
 
 **Merkle Tree**: data structure used by Semaphore for the set of enrolled voters. The root is public; each voter proves membership without revealing their leaf.
 
-**Paillier Homomorphic Encryption**: partially homomorphic (additive) encryption scheme. Allows summing ciphertexts without decrypting: Enc(a) · Enc(b) = Enc(a+b). Votain encrypts each vote; the tally decrypts the sum.
+**Exponential ElGamal**: additively homomorphic encryption: a message m is encrypted as (r·G, m·G + r·H), so adding ciphertexts adds messages, and decryption ends in a small discrete log. Votain encrypts each vote this way on the Baby Jubjub curve, one key per option, and the election adds every ballot into one aggregate that the tally decrypts. Chosen over Paillier, which Votain used until 2026-09-24, because a circuit can compute on it (so a ballot can prove it cancels the voter's previous one) and because distributed key generation for it is almost free.
+
+**Ballot tag**: the public identifier of one ballot, Poseidon(TAG, secret, scope, k) for the k-th ballot of a voter. Only the voter can compute their tags, so only they can tell which ballots are theirs; a re-vote carries a new tag that links to nothing.
+
+**Groth16 / trusted setup**: the zero-knowledge proof system of the ballot and tally circuits. Each circuit needs a one-off setup whose randomness must be destroyed; whoever keeps it can forge proofs.
+
+**Paillier Homomorphic Encryption**: the additive scheme Votain used before ElGamal. Its keys are hard to generate among several parties, which is part of why it was replaced.
 
 ## Blockchain and Smart Contracts
 

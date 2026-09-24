@@ -8,9 +8,9 @@ Votain is a Bachelor's thesis project (TFG) demonstrating how modern cryptograph
 
 | Property | How it is achieved |
 |----------|--------------------|
-| **End-to-end verifiable** | Every vote is a Paillier ciphertext stored on-chain, and every result is published with a proof of correct decryption: the randomness that opens the sum of the valid ballots to exactly the published counts, plus a public opening of each ballot excluded as invalid. Anyone can check it against the chain with no key, in the results screen or with `npm run tally -- <election> --verify`, and a stuffed or malformed ballot is excluded in the open rather than counted. The auditor CLI additionally pins a result JSON to IPFS; the in-app tally does not pin yet |
+| **End-to-end verifiable** | Every ballot is an ElGamal ciphertext on chain with a zero-knowledge proof that it is exactly one valid option, so a stuffed or malformed ballot never gets in. The election adds every ballot into an aggregate itself, and publishes a result only with a proof that the counts are that aggregate's decryption. Anyone can re-add the ballots and re-check the proof with no key, in the results screen or with `npm run tally -- <election> --verify`. The auditor CLI additionally pins a result JSON to IPFS; the in-app tally does not pin yet |
 | **Anonymous** | Semaphore V4 zero-knowledge proofs hide voter identity inside the eligible-voters group |
-| **Coercion resistant** | Per-nullifier nonce lets a coerced voter override a prior ballot later, and only the highest-nonce vote counts. The limit, stated plainly: re-votes are public per nullifier, so a coercer who learns a voter's nullifier can see THAT they re-voted, though not how. Hiding that needs a MACI-style key change and is future work. Sponsored re-votes are spaced by a one-hour cooldown, so no voter can drain the organizer's gas tank |
+| **Coercion resistant** | A coerced voter can vote again, and nobody watching can tell they did. Every ballot silently cancels the voter's previous one, proved in zero knowledge without saying which, and a first vote and a re-vote look the same on chain. One ballot per voter per hour bounds how fast anyone can spend the organizer's gas, through tags that link nothing. The limit, stated plainly: the organizer's key could open a single ballot and see that it replaced one, though never whose it is (see [Known limits](#known-limits)) |
 | **Sybil resistant** | World ID v4 proof of personhood under one action fixed by the server, so one person holds one platform identity. Elections that require a document also refuse the same passport or ID card twice, whatever World ID account it arrives with |
 | **Eligible without identifying** | Age and nationality come from the chip in a passport or national identity card, read over NFC by the [Self](https://self.xyz) app and proved in zero knowledge. The document never leaves the phone, and age is asked as a predicate: the answer is "over 18", never a date of birth |
 | **Gasless for voters** | Ballots are relayed through `ElectionPaymaster`, reimbursed from the organizer's own gas tank; voters never hold tokens |
@@ -72,13 +72,14 @@ User (recovery phrase + World ID)
     └── relayed tx ─────── Polygon Amoy
                            ElectionFactory · ElectionV4
                            ElectionPaymaster · PlatformRegistry
-                           Semaphore V4 Verifier
+                           Ballot + tally Groth16 verifiers
+                           ElectionV4 keeps the ElGamal aggregate
                                                   │
                                                   ▼
-                           Tally (Paillier homomorphic sum): in-app in the
-                           browser, or the off-chain CLI (auditor path)
+                           Tally (decrypt the aggregate, prove it): in-app
+                           in the browser, or the off-chain CLI
                            → Result JSON pinned on IPFS (Pinata, CLI)
-                           → publishResults(cid, tally, proof) on-chain
+                           → publishResults(cid, counts, proof), verified on chain
 ```
 
 Full diagram in [`docs/dev/architecture.md`](docs/dev/architecture.md).
@@ -87,10 +88,11 @@ Full diagram in [`docs/dev/architecture.md`](docs/dev/architecture.md).
 
 ```
 votain/
-├── contracts/         # Solidity 0.8.37 + Hardhat 3 + Semaphore V4
+├── circuits/          # ballot + tally circuits (circom), trusted setup, verifier generation
+├── contracts/         # Solidity 0.8.37 + Hardhat 3
 ├── backend/           # Node.js Express SD-JWT issuer (target: Phala TEE)
 ├── frontend/          # React 19 + Vite (deployed: IPFS / 4EVERLAND)
-├── scripts-tally/     # off-chain Paillier tally + IPFS publication (auditor CLI)
+├── scripts-tally/     # off-chain tally, proof, IPFS publication and --verify (auditor CLI)
 ├── docs/
 │   ├── PLAN.md        # iterative milestone plan (source of truth)
 │   ├── dev/           # developer documentation
@@ -104,20 +106,30 @@ votain/
 
 ## Tech stack
 
-**Contracts**: Solidity 0.8.37, Hardhat 3, ethers v6, OpenZeppelin 5, [`@semaphore-protocol/contracts`](https://semaphore.pse.dev/) 4.x.
+**Circuits**: circom 2 (WASM build), circomlib, Groth16 via [`snarkjs`](https://github.com/iden3/snarkjs); Semaphore V4 identities and LeanIMT trees.
+
+**Contracts**: Solidity 0.8.37, Hardhat 3, ethers v6, OpenZeppelin 5, LeanIMT and Poseidon from [zk-kit](https://github.com/privacy-scaling-explorations/zk-kit).
 
 **Backend**: Node.js 24, Express 5, [`@sd-jwt/core`](https://github.com/openwallet-foundation-labs/sd-jwt-js) (EdDSA / Ed25519), [`@worldcoin/idkit-core`](https://docs.world.org/) v4, [`@selfxyz/core`](https://self.xyz) for document-backed eligibility, tsx.
 
 **Two identity sources, two different jobs.** World ID answers *are you a distinct human*, once per election scope. Self answers *do you meet this election's rules* (a minimum age, a nationality inside or outside a named set) from a real document, without disclosing the values behind the answers. Only `backend/src/eligibility/self.ts` knows Self exists: the rest of `eligibility/` speaks in policies and attestations, so an EUDI Wallet connector can be added beside it without touching them.
 
-**Frontend**: React 19, Vite (Rolldown), Tailwind CSS 4, [`@semaphore-protocol/{identity,group,proof}`](https://semaphore.pse.dev/), [`paillier-bigint`](https://github.com/juanelas/paillier-bigint), [`@worldcoin/idkit`](https://docs.world.org/), i18next (13 languages), framer-motion.
+**Frontend**: React 19, Vite (Rolldown), Tailwind CSS 4, [`@semaphore-protocol/{identity,group}`](https://semaphore.pse.dev/), `snarkjs` (proving in the browser), [`@worldcoin/idkit`](https://docs.world.org/), i18next (13 languages), framer-motion.
 
 Pinned versions live in [`docs/dev/state.md`](docs/dev/state.md).
 
 ## Quick start
 
 ```bash
-# Contracts (185 tests, Hardhat 3)
+# Circuits: witness tests, then the trusted setup and the generated verifiers.
+# The first build spends ~15 minutes on a local phase 1 (cached afterwards);
+# PTAU=<path to a public powers-of-tau file> skips it.
+cd circuits
+npm install
+npm test
+npm run build
+
+# Contracts (Hardhat 3; the E2E suite proves for real, so build circuits first)
 cd contracts
 npm install
 npx hardhat test
@@ -162,6 +174,25 @@ auditor CLI. See [`docs/PLAN.md`](docs/PLAN.md) for the plan and
 
 **891 tests pass**: 185 on the contracts, 144 on the backend, 562 on the frontend.
 
+## Known limits
+
+Stated here so that nobody reads their absence as a guarantee; the full list is
+in [`docs/dev/architecture.md`](docs/dev/architecture.md#known-limits-stated-plainly).
+
+- **The organizer's key could open a single ballot.** The app only ever decrypts
+  the aggregate, but the keys could open any one ballot, and its cancellation
+  shows whether it replaced an earlier vote. Never whose ballot it is, nor which
+  it replaced. Splitting the key among trustees (threshold decryption) would
+  remove the power; on ElGamal that is now a protocol to add, not a primitive to
+  change.
+- **The trusted setup is the deployment's to run.** The default circuit build
+  uses a public development ceremony, which `deploy.ts` refuses off the local
+  chain.
+- **One backend instance, no indexer.** Rate limits and sessions live in process
+  memory, and browsers read events straight from the RPC in windows. Fine at
+  thesis scale; a public platform needs a shared store and an indexer.
+- **The issuer sees network metadata** of the requests it relays.
+
 ## Documentation
 
 - [`CONTRIBUTING.md`](CONTRIBUTING.md). Developer guide, monorepo conventions.
@@ -171,7 +202,7 @@ auditor CLI. See [`docs/PLAN.md`](docs/PLAN.md) for the plan and
 - [`docs/dev/conventions.md`](docs/dev/conventions.md). Coding conventions, color tokens, i18n keys.
 - [`docs/dev/deployment.md`](docs/dev/deployment.md). CI pipeline, the two backend hosts, and how to verify either from outside.
 - [`docs/dev/world-id-listing.md`](docs/dev/world-id-listing.md). App store text for the World ID Developer Portal, in all thirteen languages.
-- [`docs/dev/glossary.md`](docs/dev/glossary.md). Semaphore, nullifier, SD-JWT, relaying, Paillier, TEE.
+- [`docs/dev/glossary.md`](docs/dev/glossary.md). Semaphore, nullifier, SD-JWT, relaying, ElGamal, TEE.
 - [`docs/dev/state.md`](docs/dev/state.md). Current state, pinned versions, technical debt.
 - Per-module guides: [`contracts/DEVELOPMENT.md`](contracts/DEVELOPMENT.md), [`backend/DEVELOPMENT.md`](backend/DEVELOPMENT.md), [`frontend/DEVELOPMENT.md`](frontend/DEVELOPMENT.md).
 

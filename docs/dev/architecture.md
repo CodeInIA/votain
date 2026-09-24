@@ -6,7 +6,7 @@
 ┌─────────────────────────────────────────────────────────────────┐
 │                            USER                                 │
 │  Browser (IPFS gateway / 4EVERLAND CDN)                        │
-│  React 19 + Vite + Tailwind 4 + Semaphore v4 + Paillier        │
+│  React 19 + Vite + Tailwind 4 + Semaphore v4 + ElGamal/Groth16 │
 └─────────────────┬───────────────────────────┬───────────────────┘
                   │ World ID QR + relayed tx   │ RPC (read only)
                   ▼                            ▼
@@ -22,21 +22,25 @@
 │  POST /relay/vote       │───▶│  relayed through                  │
 │  (unauthenticated)      │    │  ElectionPaymaster                │
 │  /attestation           │    │                                   │
-│  → Intel TDX report     │    │  Semaphore V4 Verifier           │
-└─────────────────────────┘    └──────────────────────────────────┘
+│  → Intel TDX report     │    │  Ballot + Tally Groth16 verifiers │
+└─────────────────────────┘    │  (one pair per circuit size)      │
+                               │  ElectionV4 keeps the running     │
+                               │  ElGamal aggregate of all ballots │
+                               └──────────────────────────────────┘
                                               │
-                                              │ queryFilter(VoteCast)
+                                              │ aggregate()
                                               ▼
                                ┌──────────────────────────────────┐
                                │   TALLY (in-app or off-chain CLI) │
                                │   in browser · scripts-tally/     │
                                │                                   │
-                               │  1. Filter VoteCast by nonce     │
-                               │  2. Sum ciphertexts (Paillier)   │
-                               │  3. Decrypt w/ passkey-derived key│
+                               │  1. Read the on-chain aggregate  │
+                               │  2. Decrypt w/ wallet-derived keys│
+                               │  3. Prove it (tally circuit)     │
                                │  4. Generate auditable JSON      │
                                │  5. Pin to IPFS (CLI only)       │
-                               │  6. publishResults(+ proof)     │
+                               │  6. publishResults(+ proof),     │
+                               │     verified by the contract     │
                                └──────────────────────────────────┘
 ```
 
@@ -78,29 +82,38 @@
 
 4. VOTING
    Frontend: user selects candidate
-   → Paillier encrypt(candidate_index, publicKey)
-   → ZK Proof: Semaphore V4 circuit
-     input: identity, group, scope (electionId), signal (encrypted_vote)
-     output: proof, nullifier, merkleRoot
-   → UserOp: ElectionV4.castVote(nullifier, nonce, proof, voteCiphertext)
-   -> ElectionPaymaster relays the call and reimburses the relayer from the
-     organizer gas tank, in the same transaction
-   → Tx on Amoy
+   → find the voter's place in their own chain of ballots: tags
+     Poseidon(TAG, secret, scope, k) for k = 0, 1, ... until one is missing;
+     only the voter's secret can compute them
+   → exponential ElGamal on Baby Jubjub, one key per option:
+     vote   A = r·G, B_i = v_i·G + r·H_i
+     cancel A' = -A_prev + s·G, B'_i = -B_prev_i + s·H_i  (of nothing, on a first ballot)
+   → ZK proof, ballot circuit (circuits/src/ballot.circom), in the browser:
+     on the roll, exactly one option, cancels the voter's OWN previous ballot
+     (by membership in the ballots tree, not by pointing at it), tags are theirs
+   → ElectionPaymaster.relayVote(election, ballot, proof): the relayer is
+     reimbursed from the organizer's gas tank in the same transaction
+   → ElectionV4 checks roots, tag, epoch tag and proof, files the ballot as a
+     leaf of the ballots tree and adds vote AND cancellation to its aggregate
 
 5. COERCION RESISTANCE (vote change)
-   Same nullifier, nonce+1
-   → Contract only counts the vote with the highest nonce per nullifier
-   → Coerced user can vote again "under pressure" without revealing the previous vote
+   The same pipeline: the next tag, a cancellation of the last ballot.
+   → The aggregate telescopes each voter's chain to their LAST vote
+   → A first ballot and a re-vote look the same on chain and share no public
+     value, so nobody watching can tell that a voter changed their mind
+   → One ballot per voter per epoch (an hour) bounds the gas one voter can
+     spend, through an epoch tag that links nothing across epochs
 
 6. TALLY (two interchangeable paths, same pipeline)
    a) In-app (default): organizer opens the election → Compute tally → Publish.
-      Decryption runs in the browser; the Paillier key is DERIVED on demand from
-      the organizer's passkey PRF (public per-election keyNonce in metadata),
+      Decryption and proving run in the browser; the tally keys are DERIVED on
+      demand from a wallet signature (public per-election keyNonce in metadata),
       never stored at rest. Publishing is a wallet-signed publishResults tx.
-   b) Offline CLI (auditor path): scripts-tally/tally-votes.ts recomputes the
-      same result independently and pins the audit JSON to IPFS (Pinata).
-   Both: keep max nonce per nullifier → homomorphic sum → decrypt → if
-   votes < Privacy Quorum → Voided; else publishResults(cid, tally, invalid, proof).
+   b) Offline CLI (auditor path): scripts-tally/tally-votes.ts does the same
+      from a key file and pins the audit JSON to IPFS (Pinata).
+   Both: aggregate() → decrypt → prove (tally circuit) → if voters < Privacy
+   Quorum → voidBelowQuorum(voters, proof), counts never revealed; else
+   publishResults(cid, counts, proof). The contract verifies the proof.
 ```
 
 ## Module breakdown
@@ -109,8 +122,11 @@
 
 | Contract | Purpose |
 |----------|---------|
-| `ElectionV4.sol` | Single election: Semaphore V4, Paillier, coercion resistance |
-| `ElectionFactory.sol` | ElectionV4 deployment, paymaster fund management |
+| `ElectionV4.sol` | Single election: members tree, ballots tree, ElGamal aggregate, tags and epoch tags, tally proof checked on publish |
+| `ElectionFactory.sol` | Election creation through `ElectionDeployer`, picks the verifier pair for the option count, paymaster fund management |
+| `ElectionDeployer.sol` | Holds ElectionV4's creation code, which no longer fits inside the factory |
+| `BabyJubJub.sol` | Point addition in extended coordinates, for the on-chain aggregate |
+| `verifiers/*.sol` | GENERATED by `circuits/scripts/build.mjs`: one ballot and one tally Groth16 verifier per circuit size |
 | `ElectionPaymaster.sol` | Relay hub and gas tank: sponsors every enrolment and ballot, with gas reserved per election so it cannot be withdrawn from under the voters |
 | `PlatformRegistry.sol` | Identity commitment registry with owner access control, plus two sealed stores it cannot read: the identity vault and each voter's preferences |
 
@@ -261,7 +277,7 @@ they are being offered.
 
 Closing enrolment or voting early reads as an ordinary convenience until you
 notice what the organizer can see while doing it. `memberCount` and
-`distinctVoters` are public and rise in real time, so the roll can be cut off at
+`voteCount` are public and rise in real time, so the roll can be cut off at
 the moment it suits and the vote ended at the moment the result does, and neither
 leaves any trace of why. Ballot secrecy does not help here: nobody needs to know
 who voted, only how many.
@@ -391,7 +407,7 @@ Upcoming → Enrolling → PendingVote → Active → Tallying → Closed (Appro
 
 ## Voting types
 
-Each election declares one of four winner-determination rules. The cryptographic primitive (Paillier homomorphic sum of Semaphore-proof-anchored ciphertexts) is identical across all four; only the post-decryption check differs.
+Each election declares one of four winner-determination rules. The cryptographic pipeline (a proved ElGamal aggregate of every ballot, decrypted with a proof) is identical across all four; only the post-decryption check differs.
 
 | `VotingType` | Approval rule | Example |
 |--------------|---------------|---------|
@@ -416,52 +432,47 @@ The frontend onboarding flow lets the user pick the source. The backend SD-JWT i
 
 ### What the tally guarantees, and what it does not
 
-Three separate things protect a published result. They are worth keeping apart,
-because each stops a different attack and none of them stops all three.
+> Rewritten on 2026-09-24, when ballots moved from Paillier to exponential
+> ElGamal with proofs. The earlier version described a result that could be
+> posted and then contradicted; this one describes a result that cannot be
+> posted wrong at all.
 
-**The counters have to account for every ballot.** A ballot for option i is the
-Paillier plaintext B^i, so summing ciphertexts sums per-option counters in base
-B, and every ballot adds exactly one to exactly one counter. `decryptTally`
-therefore checks that the unpacked counters total the ballots that went in. The
-check it replaces only looked for a leftover past the LAST counter, which an
-overflow from option 0 into option 1 never produces: the tally came out quietly
-wrong with nothing to show for it. B is a trillion, and `MAX_OPTIONS` in the
-contract is 50 because 51 counters of 12 digits is as much as a 2048-bit modulus
-can carry. The base is recorded per election in `metadataJson.counterBase`,
-since it is fixed into each ballot when it is encrypted and cannot be changed
-underneath an election already running.
+**Every ballot is proved well formed before it is accepted.** The ballot
+circuit shows each ballot encrypts exactly one of the election's options, and
+that its cancellation undoes this voter's own previous ballot and nothing else.
+A stuffed or malformed ballot is not excluded at tally time any more: it never
+reaches the chain.
 
-**A result may not rest on too few voters.** `publishResults` reverts below
-`privacyQuorum`, leaving `markVoided` as the only way the election can end.
-This bounds PUBLICATION, not knowledge: the organizer holds the decryption key
-and the ciphertexts are public, so they can always compute the result privately
-and no contract can prevent it. Only threshold decryption, splitting the key so
-no single party can decrypt alone, would. Note also that a small tally leaks by
-itself, whoever decrypts it: three voters and a 3-0 result identifies everyone.
+**The contract keeps the aggregate itself.** Every vote and every cancellation
+is added, as Baby Jubjub points, into a running sum in `ElectionV4`. Because
+each re-vote cancels the one before, the sum encrypts each voter's LAST vote,
+and nothing needs deduplicating. Anyone can re-add the `BallotCast` events and
+land on the same point, which is what the results screen and `--verify` do.
 
-**Anyone can check the totals without a key.** The results screen compares the
-published counters against `distinctVoters`, which the contract counts and
-anyone can read, so invented or dropped ballots are visible to every reader
-rather than only to someone who runs the CLI.
+**A result is published only with a proof of its decryption.** The tally circuit
+proves the counts are the decryption of that aggregate under the election's
+keys, and `publishResults` verifies it. There is no step left where a wrong
+count could be posted and merely contradicted afterwards.
+
+**A result may not rest on too few voters, and the counts of one that does stay
+secret.** The number of voters is the sum of the counts, so it too is proved.
+Below `privacyQuorum` the organizer calls `voidBelowQuorum` with the tally
+circuit in its other mode, which proves only that fewer voted than the quorum.
+This bounds PUBLICATION, not knowledge: the organizer holds the keys and can
+always decrypt privately. Note also that a small tally leaks by itself, whoever
+decrypts it: three voters and a 3-0 result identifies everyone.
 
 #### Not guaranteed
 
-The contract does NOT require the published counters to sum to
-`distinctVoters`, though every honest tally does. It never validates a
-ciphertext, only the membership proof around one, so an enrolled voter can cast
-arbitrary bytes as their ballot; with that rule in place, one voter could make
-any election permanently unpublishable. It would also buy little, since an
-organizer inclined to falsify moves votes BETWEEN options and leaves the total
-alone.
-
-Closing that needs two pieces this project does not have. A **ballot validity
-proof**, so a ciphertext is provably one of the allowed plaintexts, which is
-what would make the sum rule safe to enforce. And a **proof of correct
-decryption**, so the organizer must show the published numbers really are the
-decryption of the aggregate anyone can recompute from chain. With both, a false
-tally could not be posted at all. Without them it can be posted and then
-contradicted, which is weaker, and saying so is more useful than implying
-otherwise.
+- **What the key holder could do.** The app decrypts the aggregate only, but
+  every ballot is encrypted under the same keys, so whoever holds them could
+  open a single ballot: its choice and, from its cancellation, whether it
+  replaced an earlier vote and for which option. Not whose it is, nor which
+  earlier ballot it cancels. Threshold decryption, below, is what removes it.
+- **The trusted setup.** Groth16 needs one per circuit, and whoever knows its
+  randomness can forge proofs. The build's default is a public DEVELOPMENT
+  ceremony that `deploy.ts` refuses off the local chain; a deployment runs its
+  own phase 2 over a public phase 1 (`circuits/scripts/build.mjs`).
 
 #### Threshold decryption, and why it is not here
 
@@ -473,21 +484,16 @@ partials combine into the result, so the complete key never exists anywhere.
 That is what would make "not even the organizer can see the result early" a
 property rather than a promise.
 
-It is not here, and the reason is the primitive. With Paillier the hard part is
-not decrypting, it is GENERATING: the trustees would have to jointly produce an
-RSA modulus n = p*q without any of them learning p or q, which is a serious
-multi-party protocol. The usual shortcut is a trusted dealer who generates the
-key, splits it and deletes the original, but then that party held the whole key
-for a moment, which is precisely the assumption threshold decryption exists to
-remove.
-
-Comparable systems avoid this by not choosing Paillier. Helios and Belenios use
-exponential ElGamal, where distributed key generation is almost free: each
-trustee picks x_i and publishes g^x_i, and the public key is the product. No
-factoring, no dealer. The cost is that decryption ends in a discrete log, which
-is fine because the result is bounded by the number of voters and can simply be
-searched. The honest summary is that the clean route to a threshold ran through
-choosing ElGamal at the start.
+It is not here yet, but the primitive is no longer what stops it. With Paillier
+the hard part was GENERATING the key: the trustees would have had to jointly
+produce an RSA modulus without any of them learning its factors. Votain now
+uses exponential ElGamal, like Helios and Belenios, where distributed key
+generation is almost free: each trustee picks x_i and publishes x_i·G, and the
+key is the sum. Decryption already ends in a bounded discrete log. What is left
+is the protocol around it: trustees posting partial decryptions of the
+aggregate with a proof each (a Chaum-Pedersen equality, or one small circuit),
+and the contract combining them. See the proposal in the pull request that
+introduced this scheme.
 
 There is also a product cost, separate from the cryptography. Trustees are
 people who hold shares and have to turn up to decrypt. An organizer creating an
@@ -516,13 +522,11 @@ it anyone decrypts INDIVIDUAL ballots rather than just the total. That is
 strictly worse than what we have.
 
 The homomorphic sum is a different matter: adding ciphertexts needs only the
-public key, so the contract could maintain the aggregate itself. With a 2048-bit
-key the modulus n^2 is 4096 bits and the EVM can only do that through the MODEXP
-precompile, at real cost per ballot. It would also buy very little. That sum is
-already deterministic and public: anyone can read the VoteCast events and
-recompute the identical aggregate on their own machine. Putting it on chain
-moves where a public computation happens without adding any assurance. The trust
-gap is not in the addition. It is entirely in the decryption.
+public keys, and since ballots moved to ElGamal on Baby Jubjub the contract does
+maintain the aggregate itself, at a few mulmods per point. That is what lets the
+tally proof be checked against a value the contract computed rather than one the
+organizer supplied. The decryption is still the organizer's, and the trust gap
+left is in who holds the keys, not in the arithmetic.
 
 Timelock encryption (encrypting the key to a future drand round, say) looks like
 it closes this: nobody could decrypt before the deadline, everybody could after.
@@ -653,6 +657,10 @@ leaves it.
 
 The shape that follows:
 
+> Written when ballots were Paillier ciphertexts. With ElGamal the shape is the
+> same and cheaper: the enclave would hold the x_i, read the on-chain aggregate
+> and produce the tally proof itself.
+
 - At election creation a Lit Action generates the Paillier keypair INSIDE the
   enclave, returns only the public `n` and `g`, and stores the private key
   sealed under an access condition that reads this election's `phase()` on
@@ -736,11 +744,12 @@ the mechanism, the authorisation that replaced the registry lookup, and the
 measurement: eight commitments across thirty-eight elections became sixty-nine,
 each in one.
 
-The ballot was never linkable and still is not. The nullifier in `VoteCast` is
-`poseidon2(scope, secret)`, and every election is created with its own random
-scope (31 random bytes, `lib/organizer.ts`), so two ballots cast by the same
-voter in two elections share nothing, and no ballot can be tied back to the
-commitment that enrolled.
+The ballot was never linkable and still is not, and since 2026-09-24 not even
+to the same voter's other ballots. Each ballot is filed under a tag,
+`Poseidon(TAG, secret, scope, k)`, different for every step k of the voter's
+chain, and the scope is derived from the election's own address and chain, so
+two ballots cast by the same voter, in one election or in two, share nothing,
+and no ballot can be tied back to the commitment that enrolled.
 
 The honest summary, which is now shorter than it was: the chain shows that
 someone took part in a given election, never what they said, never that two
@@ -1560,18 +1569,29 @@ member, and takes it off the public record.
 The pre-Amoy review closed what could be closed in code. These remain, and are
 written down so that nobody reads their absence as a guarantee.
 
-- **Re-votes are visible per nullifier.** Only the last ballot counts, and a
-  coerced voter can always override later, but `VoteCast` carries the
-  nullifier and nonce, so someone who learns a voter's nullifier can see that
-  they re-voted (never how). Hiding it needs a MACI-style design where ballots
-  are encrypted to a coordinator and keys can be changed silently.
-- **Sponsored re-votes wait an hour.** `ElectionPaymaster.REVOTE_COOLDOWN`
-  bounds how fast one enrolled voter can spend the organizer's tank. The honest
-  override is delayed, never refused, and a voter can still submit a re-vote
-  themselves, unsponsored, at any time.
-- **The organizer can read individual ballots.** Whoever holds the Paillier key
-  can decrypt any ciphertext on chain; the tally proof reveals nothing new, but
-  it does not take that away. Threshold decryption would.
+- **The key holder could open single ballots.** The app only ever decrypts the
+  aggregate, but the tally keys could open any one ballot, showing its choice
+  and, from its cancellation, whether it replaced an earlier vote. Never whose
+  ballot it is or which one it replaced: nothing on chain says either. Threshold
+  decryption, now cheap on ElGamal, would take the power away.
+- **Re-votes are hidden from everyone else.** A first ballot and a re-vote look
+  the same and share no public value. A coercer who watches the chain, or holds
+  the voter's receipt, cannot tell that the voter voted again. One who holds
+  the voter's SECRET can, since they can compute the voter's tags; that is the
+  same as holding the voter's identity.
+- **Two ballots an hour at most.** Epoch tags bound how fast one voter can spend
+  the organizer's tank: a proof may name this epoch or the last, so two in any
+  hour, and the app uses one. A coerced voter's override is delayed, never
+  refused.
+- **The trusted setup is the deployment's to run.** The default build uses a
+  public development ceremony, refused off the local chain. A deployment runs
+  its own phase 2 (`CEREMONY_ENTROPY`, better a multi-party contribution) over
+  a public phase 1 (`PTAU`), and publishes the verifiers and proving files.
+- **The proving files are large.** Around 50 MB per zkey at the default sizes,
+  fetched once per device and served from `VITE_CIRCUITS_URL`. Proving takes
+  seconds on a laptop and longer on an old phone.
+- **An election holds at most 2^20 members and 2^20 ballots**, the depth the
+  circuits are compiled for (`TreeFull` past that).
 - **The issuer sees network metadata.** `/relay/vote` carries no session, but a
   voter reaching it from the same address as their authenticated requests can be
   correlated by an operator who logs addresses. The server does not log them;
