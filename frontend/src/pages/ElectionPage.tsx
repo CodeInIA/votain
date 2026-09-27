@@ -8,6 +8,7 @@ import { PageLayout } from '../components/layout/PageLayout';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { BackButton } from '../components/ui/BackButton';
+import { ElectionUnreadable } from '../components/ui/ElectionUnreadable';
 import { useAuth } from '../contexts/AuthContext';
 import { useSavedElections } from '../hooks/useSavedElections';
 import { usePageMeta } from '../seo/usePageMeta';
@@ -69,7 +70,7 @@ export default function ElectionPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { election, loading, live, refresh } = useElection(id);
+  const { election, loading, unreachable, live, refresh } = useElection(id);
   /**
    * The schedule can move under a reader who is already here: an organizer who
    * kept the power can close enrolment or open voting early, and the contract
@@ -133,7 +134,7 @@ export default function ElectionPage() {
    */
   const funding = useElectionFunding(election?.contractAddress);
   // Above the early returns with every other hook, for the reason written there.
-  const voteCost = useVoteCost();
+  const voteCost = useVoteCost(election?.candidates.length);
   // A slow read must never look like an empty tank, so nothing is blocked while
   // it is loading, or if the chain refused to answer.
   const canPayForAVote =
@@ -154,6 +155,10 @@ export default function ElectionPage() {
         <div className="flex items-center justify-center min-h-[60vh]"><Spinner /></div>
       </PageLayout>
     );
+  }
+
+  if (!election && unreachable) {
+    return <ElectionUnreadable role={layoutRole} onRetry={() => void refresh()} onBack={() => navigate(-1)} />;
   }
 
   if (!election) {
@@ -570,10 +575,13 @@ export default function ElectionPage() {
             {/* Shortened for display and copied in full, the same treatment the
                 confirmation screen gives it. A reference is one unbroken hex
                 token, so at full length it does not wrap and simply leaves the
-                card on a phone. */}
+                card on a phone.
+                Labelled as the ballot's identifier, as the receipt page labels
+                it: "reference" everywhere else is the transaction hash, and two
+                different numbers under one name read as two different ballots. */}
             <div className="flex items-center gap-2 mb-3">
               <p className="text-xs text-on-surface-meta min-w-0">
-                {t('election.reference')}:{' '}
+                {t('verify_receipt.nullifier')}:{' '}
                 <span className="font-mono">{shortenReference(election.ballotTag ?? '')}</span>
               </p>
               <button

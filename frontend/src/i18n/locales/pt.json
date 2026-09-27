@@ -65,6 +65,8 @@
     "retry": "Tentar novamente",
     "close": "Fechar",
     "confirm": "Confirmar",
+    "hour": "Hora",
+    "minute": "Minuto",
     "integration_pending": "Esta funcionalidade será conectada na fase de integração.",
     "all": "Tudo",
     "yes": "Sim",
@@ -224,7 +226,10 @@
     "not_available": "Resultados ainda não disponíveis.",
     "check_pending": "A verificar o resultado publicado com os boletins na blockchain…",
     "check_verified_title": "Verificado com os boletins na blockchain",
-    "check_verified_body": "A eleição aceitou estas contagens apenas com uma prova de conhecimento zero de que decifram a soma de todos os boletins, e os {{ballots}} boletins na cadeia foram somados de novo aqui até essa mesma soma: {{voters}} votantes. Qualquer pessoa pode repetir esta verificação sem chave e sem confiança.",
+    "check_verified_body": "A eleição aceitou estas contagens apenas com uma prova de conhecimento zero de que decifram a soma de todos os boletins, e os {{ballots}} boletins na cadeia foram somados de novo aqui até essa mesma soma: {{voters}}. Qualquer pessoa pode repetir esta verificação sem chave e sem confiança.",
+    "voters_count_one": "{{count}} votante",
+    "voters_count_other": "{{count}} votantes",
+    "voters_count_many": "{{count}} votantes",
     "check_failed_title": "Não corresponde aos boletins na blockchain",
     "check_failed_body": "Não foi possível verificar as contagens publicadas com os boletins registados na blockchain. Não confie neste resultado."
   },
@@ -607,8 +612,11 @@
     "wallet_request_rejected": "Cancelou o pedido na sua carteira. Não foi feito nada.",
     "passkey_cancelled": "Fechou o pedido da passkey. Não foi criado nada: pode tentar de novo.",
     "list_unreadable": "Não foi possível ler esta lista a partir da cadeia, o que não é o mesmo que estar vazia. Verifica a ligação e tenta de novo.",
+    "election_unreadable": "Não foi possível ler esta eleição a partir da cadeia, o que não quer dizer que não exista. Verifica a ligação e tenta de novo.",
     "passkey_unproven": "A passkey foi criada, mas ainda não conseguimos confirmar que consegue decifrar. Prima outra vez: é a mesma que será consultada, sem criar nenhuma nova.",
     "epoch_already_cast": "Já emitiu um boletim na última hora. Conta o seu último boletim; poderá alterá-lo novamente quando passar a hora.",
+    "epoch_already_cast_until": "Já emitiu um boletim nesta hora. Conta o seu último boletim; poderá alterá-lo novamente a partir das {{time}}.",
+    "epoch_wait_title": "O seu último voto já conta",
     "ballot_already_cast": "Este boletim já estava registado. Não precisa de fazer mais nada: o seu voto está lá.",
     "ballot_expired": "Este boletim foi preparado há demasiado tempo para ser aceite. Vote novamente; um boletim novo demora poucos segundos."
   },
@@ -878,21 +886,21 @@
     "reserved_votes": "Há cerca de {{votes}} votos reservados para esta eleição."
   },
   "timeline": {
-    "title": "Calendario",
+    "title": "Calendário",
     "created": "Criada",
-    "enrollment": "Inscricao",
-    "gap": "Entre a inscricao e a votacao",
-    "voting": "Votacao",
+    "enrollment": "Inscrição",
+    "gap": "Entre a inscrição e a votação",
+    "voting": "Votação",
     "results": "Apuramento e resultados",
     "from_date": "A partir de {{date}}",
     "ended_early": "Encerrada mais cedo",
-    "abandoned": "Esta eleicao foi interrompida, por isso este calendario nao foi cumprido ate ao fim."
+    "abandoned": "Esta eleição foi interrompida, por isso este calendário não foi cumprido até ao fim."
   },
   "sort": {
     "newest": "Mais recentes primeiro",
     "oldest": "Mais antigas primeiro",
     "closing": "A fechar mais cedo",
     "enrolled": "Mais inscritos",
-    "partial_notice": "ordenadas sobre o que foi lido ate agora"
+    "partial_notice": "ordenadas sobre o que foi lido até agora"
   }
 }

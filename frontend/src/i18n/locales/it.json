@@ -65,6 +65,8 @@
     "retry": "Riprova",
     "close": "Chiudi",
     "confirm": "Conferma",
+    "hour": "Ora",
+    "minute": "Minuto",
     "integration_pending": "Questa funzione sarà collegata nella fase di integrazione.",
     "all": "Tutti",
     "yes": "Sì",
@@ -224,7 +226,10 @@
     "not_available": "Risultati non ancora disponibili.",
     "check_pending": "Verifica del risultato pubblicato con le schede sulla chain…",
     "check_verified_title": "Verificato con le schede sulla chain",
-    "check_verified_body": "L'elezione ha accettato questi conteggi solo con una prova a conoscenza zero che decifrano la somma di tutte le schede, e le {{ballots}} schede sulla catena sono state risommate qui fino alla stessa somma: {{voters}} votanti. Chiunque può ripetere questa verifica senza chiavi e senza fiducia.",
+    "check_verified_body": "L'elezione ha accettato questi conteggi solo con una prova a conoscenza zero che decifrano la somma di tutte le schede, e le {{ballots}} schede sulla catena sono state risommate qui fino alla stessa somma: {{voters}}. Chiunque può ripetere questa verifica senza chiavi e senza fiducia.",
+    "voters_count_other": "{{count}} votanti",
+    "voters_count_one": "{{count}} votante",
+    "voters_count_many": "{{count}} votanti",
     "check_failed_title": "Non corrisponde alle schede sulla chain",
     "check_failed_body": "Non è stato possibile verificare i conteggi pubblicati con le schede registrate sulla chain. Non fare affidamento su questo risultato."
   },
@@ -607,8 +612,11 @@
     "wallet_request_rejected": "Hai annullato la richiesta nel tuo wallet. Non è stato fatto nulla.",
     "passkey_cancelled": "Hai chiuso la richiesta della passkey. Non è stato creato nulla: puoi riprovare.",
     "list_unreadable": "Non è stato possibile leggere questa lista dalla catena, che non è lo stesso che sia vuota. Controlla la connessione e riprova.",
+    "election_unreadable": "Non è stato possibile leggere questa elezione dalla catena, che non vuol dire che non esista. Controlla la connessione e riprova.",
     "passkey_unproven": "La passkey è stata creata, ma non abbiamo ancora potuto confermare che sappia decifrare. Premi di nuovo: viene interrogata la stessa, senza crearne una nuova.",
     "epoch_already_cast": "Hai già espresso una scheda nell'ultima ora. Conta la tua ultima scheda; potrai cambiarla di nuovo allo scadere dell'ora.",
+    "epoch_already_cast_until": "Hai già espresso una scheda in quest’ora. Conta la tua ultima scheda; potrai cambiarla di nuovo dalle {{time}}.",
+    "epoch_wait_title": "Il tuo ultimo voto conta già",
     "ballot_already_cast": "Questa scheda era già stata registrata. Non devi fare altro: il tuo voto è dentro.",
     "ballot_expired": "Questa scheda è stata preparata troppo tempo fa per essere accettata. Vota di nuovo; una nuova scheda richiede pochi secondi."
   },
@@ -886,13 +894,13 @@
     "results": "Spoglio e risultati",
     "from_date": "Dal {{date}}",
     "ended_early": "Chiusa in anticipo",
-    "abandoned": "Questa elezione e stata interrotta, quindi questo calendario non e stato rispettato fino alla fine."
+    "abandoned": "Questa elezione è stata interrotta, quindi questo calendario non è stato rispettato fino alla fine."
   },
   "sort": {
-    "newest": "Piu recenti prima",
-    "oldest": "Piu vecchie prima",
+    "newest": "Più recenti prima",
+    "oldest": "Più vecchie prima",
     "closing": "In chiusura prima",
-    "enrolled": "Piu iscritti",
+    "enrolled": "Più iscritti",
     "partial_notice": "ordinate su quanto letto finora"
   }
 }

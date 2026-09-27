@@ -6,6 +6,7 @@ import { PageLayout } from '../../components/layout/PageLayout';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { BackButton } from '../../components/ui/BackButton';
+import { ElectionUnreadable } from '../../components/ui/ElectionUnreadable';
 import { RadioGroup } from '../../components/ui/RadioCard';
 import { Modal } from '../../components/ui/Modal';
 import { Spinner } from '../../components/ui/Spinner';
@@ -15,7 +16,7 @@ export default function ChangeVote() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { election, loading, live } = useElection(id);
+  const { election, loading, unreachable, live, refresh } = useElection(id);
 
   const [selected, setSelected] = useState(election?.userVote ?? '');
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -26,6 +27,10 @@ export default function ChangeVote() {
         <div className="flex items-center justify-center min-h-[60vh]"><Spinner /></div>
       </PageLayout>
     );
+  }
+
+  if (!election && unreachable) {
+    return <ElectionUnreadable role="voter" onRetry={() => void refresh()} onBack={() => navigate(-1)} />;
   }
 
   if (!election) return null;

@@ -65,6 +65,8 @@
     "retry": "Intentar de nuevo",
     "close": "Cerrar",
     "confirm": "Confirmar",
+    "hour": "Hora",
+    "minute": "Minuto",
     "integration_pending": "Esta función se conectará en la fase de integración.",
     "all": "Todo",
     "yes": "Sí",
@@ -224,7 +226,10 @@
     "not_available": "Los resultados aún no están disponibles.",
     "check_pending": "Comprobando el resultado publicado con las papeletas de la cadena…",
     "check_verified_title": "Verificado con las papeletas de la cadena",
-    "check_verified_body": "La elección aceptó estos recuentos solo con una prueba de conocimiento cero de que descifran la suma de todas las papeletas, y las {{ballots}} papeletas de la cadena se han vuelto a sumar aquí hasta esa misma suma: {{voters}} votantes. Cualquiera puede repetir esta comprobación sin clave y sin confiar en nadie.",
+    "check_verified_body": "La elección aceptó estos recuentos solo con una prueba de conocimiento cero de que descifran la suma de todas las papeletas, y las {{ballots}} papeletas de la cadena se han vuelto a sumar aquí hasta esa misma suma: {{voters}}. Cualquiera puede repetir esta comprobación sin clave y sin confiar en nadie.",
+    "voters_count_other": "{{count}} votantes",
+    "voters_count_one": "{{count}} votante",
+    "voters_count_many": "{{count}} votantes",
     "check_failed_title": "No cuadra con las papeletas de la cadena",
     "check_failed_body": "Los recuentos publicados no se han podido verificar con las papeletas registradas en la cadena. No te fíes de este resultado."
   },
@@ -607,8 +612,11 @@
     "wallet_request_rejected": "Cancelaste la petición en tu cartera. No se ha hecho nada.",
     "passkey_cancelled": "Cancelaste el diálogo de la passkey. No se ha creado nada: puedes intentarlo otra vez.",
     "list_unreadable": "Esta lista no se ha podido leer de la cadena, que no es lo mismo que esté vacía. Revisa la conexión e inténtalo otra vez.",
+    "election_unreadable": "Esta elección no se ha podido leer de la cadena, que no es lo mismo que no exista. Revisa la conexión e inténtalo otra vez.",
     "passkey_unproven": "La passkey se creó, pero aún no hemos podido confirmar que sirva para descifrar. Pulsa otra vez: se le preguntará a esa misma, sin crear ninguna nueva.",
     "epoch_already_cast": "Ya emitiste una papeleta en la última hora. Cuenta tu última papeleta; podrás cambiarla otra vez cuando pase la hora.",
+    "epoch_already_cast_until": "Ya emitiste una papeleta en esta hora. Cuenta tu última papeleta; podrás cambiarla otra vez a partir de las {{time}}.",
+    "epoch_wait_title": "Tu último voto ya cuenta",
     "ballot_already_cast": "Esta papeleta ya estaba registrada. No tienes que hacer nada más: tu voto está dentro.",
     "ballot_expired": "Esta papeleta se preparó hace demasiado tiempo para ser aceptada. Vuelve a votar; una papeleta nueva tarda unos segundos."
   },
@@ -880,19 +888,19 @@
   "timeline": {
     "title": "Calendario",
     "created": "Creada",
-    "enrollment": "Inscripcion",
-    "gap": "Entre la inscripcion y la votacion",
-    "voting": "Votacion",
+    "enrollment": "Inscripción",
+    "gap": "Entre la inscripción y la votación",
+    "voting": "Votación",
     "results": "Recuento y resultados",
     "from_date": "Desde el {{date}}",
-    "ended_early": "Se acorto",
-    "abandoned": "Esta eleccion se detuvo, asi que este calendario no se cumplio hasta el final."
+    "ended_early": "Se acortó",
+    "abandoned": "Esta elección se detuvo, así que este calendario no se cumplió hasta el final."
   },
   "sort": {
-    "newest": "Mas recientes primero",
-    "oldest": "Mas antiguas primero",
+    "newest": "Más recientes primero",
+    "oldest": "Más antiguas primero",
     "closing": "Las que cierran antes",
-    "enrolled": "Con mas inscritos",
-    "partial_notice": "ordenadas sobre lo leido hasta ahora"
+    "enrolled": "Con más inscritos",
+    "partial_notice": "ordenadas sobre lo leído hasta ahora"
   }
 }

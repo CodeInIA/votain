@@ -65,6 +65,8 @@
     "retry": "Réessayer",
     "close": "Fermer",
     "confirm": "Confirmer",
+    "hour": "Heure",
+    "minute": "Minute",
     "integration_pending": "Cette fonctionnalité sera connectée lors de la phase d'intégration.",
     "all": "Tout",
     "yes": "Oui",
@@ -224,7 +226,10 @@
     "not_available": "Résultats pas encore disponibles.",
     "check_pending": "Vérification du résultat publié avec les bulletins enregistrés sur la chaîne…",
     "check_verified_title": "Vérifié avec les bulletins sur la chaîne",
-    "check_verified_body": "L'élection n'a accepté ces décomptes qu'avec une preuve à divulgation nulle de connaissance qu'ils déchiffrent la somme de tous les bulletins, et les {{ballots}} bulletins présents sur la chaîne ont été additionnés à nouveau ici jusqu'à cette même somme : {{voters}} votants. Chacun peut refaire cette vérification sans clé et sans confiance.",
+    "check_verified_body": "L'élection n'a accepté ces décomptes qu'avec une preuve à divulgation nulle de connaissance qu'ils déchiffrent la somme de tous les bulletins, et les {{ballots}} bulletins présents sur la chaîne ont été additionnés à nouveau ici jusqu'à cette même somme : {{voters}}. Chacun peut refaire cette vérification sans clé et sans confiance.",
+    "voters_count_one": "{{count}} votant",
+    "voters_count_other": "{{count}} votants",
+    "voters_count_many": "{{count}} votants",
     "check_failed_title": "Ne correspond pas aux bulletins sur la chaîne",
     "check_failed_body": "Les décomptes publiés n'ont pas pu être vérifiés avec les bulletins enregistrés sur la chaîne. Ne vous fiez pas à ce résultat."
   },
@@ -607,8 +612,11 @@
     "wallet_request_rejected": "Vous avez annulé la demande dans votre portefeuille. Rien n’a été fait.",
     "passkey_cancelled": "Vous avez fermé la demande de passkey. Rien n’a été créé : vous pouvez réessayer.",
     "list_unreadable": "Cette liste n’a pas pu être lue depuis la chaîne, ce qui n’est pas la même chose qu’une liste vide. Vérifiez la connexion et réessayez.",
+    "election_unreadable": "Cette élection n’a pas pu être lue depuis la chaîne, ce qui ne veut pas dire qu’elle n’existe pas. Vérifiez la connexion et réessayez.",
     "passkey_unproven": "La passkey a été créée, mais nous n’avons pas encore pu confirmer qu’elle peut déchiffrer. Appuyez à nouveau : c’est la même qui sera interrogée, sans en créer de nouvelle.",
     "epoch_already_cast": "Vous avez déjà déposé un bulletin au cours de la dernière heure. Votre dernier bulletin est celui qui compte ; vous pourrez le modifier à nouveau une fois l'heure écoulée.",
+    "epoch_already_cast_until": "Vous avez déjà déposé un bulletin cette heure-ci. Votre dernier bulletin est celui qui compte ; vous pourrez le modifier à nouveau à partir de {{time}}.",
+    "epoch_wait_title": "Votre dernier vote compte déjà",
     "ballot_already_cast": "Ce bulletin était déjà enregistré. Vous n'avez rien d'autre à faire : votre vote est pris en compte.",
     "ballot_expired": "Ce bulletin a été préparé il y a trop longtemps pour être accepté. Votez à nouveau ; un nouveau bulletin prend quelques secondes."
   },
@@ -879,20 +887,20 @@
   },
   "timeline": {
     "title": "Calendrier",
-    "created": "Creee",
+    "created": "Créée",
     "enrollment": "Inscription",
     "gap": "Entre l'inscription et le vote",
     "voting": "Vote",
-    "results": "Depouillement et resultats",
-    "from_date": "A partir du {{date}}",
-    "ended_early": "Ecourte",
-    "abandoned": "Cette election a ete interrompue, ce calendrier n'a donc pas ete suivi jusqu'au bout."
+    "results": "Dépouillement et résultats",
+    "from_date": "À partir du {{date}}",
+    "ended_early": "Écourté",
+    "abandoned": "Cette élection a été interrompue, ce calendrier n’a donc pas été suivi jusqu’au bout."
   },
   "sort": {
-    "newest": "Les plus recentes d'abord",
-    "oldest": "Les plus anciennes d'abord",
-    "closing": "Cloture la plus proche",
+    "newest": "Les plus récentes d’abord",
+    "oldest": "Les plus anciennes d’abord",
+    "closing": "Clôture la plus proche",
     "enrolled": "Le plus d'inscrits",
-    "partial_notice": "triees sur ce qui a ete lu jusqu'ici"
+    "partial_notice": "triées sur ce qui a été lu jusqu’ici"
   }
 }

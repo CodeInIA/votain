@@ -1,12 +1,13 @@
 import { test, expect } from '@playwright/test';
 
-// Smoke test: verifies all 24 screens render without crashing and have basic content.
+// Smoke test: verifies every screen renders without crashing and has basic content.
 // Run after: npx playwright install chromium
 
 const PUBLIC_ROUTES = [
   { path: '/',                        label: 'Landing' },
   { path: '/discover',                label: 'Discover' },
   { path: '/election/e1',             label: 'Election Preview (active)' },
+  { path: '/election/e2',             label: 'Election Preview (enrolling)' },
   { path: '/election/e4/results',     label: 'Election Results (closed)' },
   { path: '/how-it-works',            label: 'How It Works' },
   { path: '/verify-receipt',          label: 'Verify Receipt' },
@@ -16,8 +17,6 @@ const VOTER_ROUTES = [
   { path: '/voter/onboarding',                        label: 'Onboarding' },
   { path: '/voter/re-verify',                         label: 'Re-verification' },
   { path: '/voter/elections',                         label: 'Voter Elections' },
-  { path: '/voter/election/e1',                       label: 'Election Detail (active)' },
-  { path: '/voter/election/e2',                       label: 'Election Detail (enrolling)' },
   { path: '/voter/election/e1/zk-proof',              label: 'ZK Proof Generation' },
   { path: '/voter/election/e4/confirmation',          label: 'Vote Confirmation' },
   { path: '/voter/election/e1/change-vote',           label: 'Change Vote' },

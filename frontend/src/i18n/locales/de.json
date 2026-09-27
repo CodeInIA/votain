@@ -65,6 +65,8 @@
     "retry": "Erneut versuchen",
     "close": "Schließen",
     "confirm": "Bestätigen",
+    "hour": "Stunde",
+    "minute": "Minute",
     "integration_pending": "Diese Funktion wird in der Integrationsphase verbunden.",
     "all": "Alle",
     "yes": "Ja",
@@ -222,7 +224,9 @@
     "not_available": "Ergebnisse noch nicht verfügbar.",
     "check_pending": "Das veröffentlichte Ergebnis wird mit den Stimmzetteln auf der Chain abgeglichen…",
     "check_verified_title": "Mit den Stimmzetteln auf der Chain verifiziert",
-    "check_verified_body": "Die Wahl hat diese Ergebnisse nur mit einem Zero-Knowledge-Beweis angenommen, dass sie die Summe aller Stimmzettel entschlüsseln, und die {{ballots}} Stimmzettel auf der Chain wurden hier erneut zu genau dieser Summe addiert: {{voters}} Wählende. Jeder kann diese Prüfung ohne Schlüssel und ohne Vertrauen wiederholen.",
+    "check_verified_body": "Die Wahl hat diese Ergebnisse nur mit einem Zero-Knowledge-Beweis angenommen, dass sie die Summe aller Stimmzettel entschlüsseln, und die {{ballots}} Stimmzettel auf der Chain wurden hier erneut zu genau dieser Summe addiert: {{voters}}. Jeder kann diese Prüfung ohne Schlüssel und ohne Vertrauen wiederholen.",
+    "voters_count_other": "{{count}} Wählende",
+    "voters_count_one": "{{count}} wählende Person",
     "check_failed_title": "Stimmt nicht mit den Stimmzetteln auf der Chain überein",
     "check_failed_body": "Die veröffentlichten Zahlen ließen sich nicht mit den auf der Chain erfassten Stimmzetteln verifizieren. Verlassen Sie sich nicht auf dieses Ergebnis."
   },
@@ -602,8 +606,11 @@
     "wallet_request_rejected": "Du hast die Anfrage in deiner Wallet abgebrochen. Es wurde nichts ausgeführt.",
     "passkey_cancelled": "Du hast den Passkey-Dialog abgebrochen. Es wurde nichts erstellt: du kannst es erneut versuchen.",
     "list_unreadable": "Diese Liste konnte nicht von der Chain gelesen werden, was nicht dasselbe ist wie leer zu sein. Prüfen Sie die Verbindung und versuchen Sie es erneut.",
+    "election_unreadable": "Diese Wahl konnte nicht von der Chain gelesen werden, was nicht heißt, dass es sie nicht gibt. Prüfen Sie die Verbindung und versuchen Sie es erneut.",
     "passkey_unproven": "Der Passkey wurde erstellt, aber wir konnten noch nicht bestätigen, dass er entschlüsseln kann. Drück noch einmal: es wird derselbe gefragt, ohne einen neuen zu erstellen.",
     "epoch_already_cast": "Sie haben in der letzten Stunde bereits einen Stimmzettel abgegeben. Es zählt Ihr letzter Stimmzettel; nach Ablauf der Stunde können Sie ihn erneut ändern.",
+    "epoch_already_cast_until": "Sie haben in dieser Stunde bereits einen Stimmzettel abgegeben. Es zählt Ihr letzter Stimmzettel; ab {{time}} können Sie ihn erneut ändern.",
+    "epoch_wait_title": "Ihre letzte Stimme zählt bereits",
     "ballot_already_cast": "Dieser Stimmzettel wurde bereits erfasst. Sie müssen nichts weiter tun: Ihre Stimme ist abgegeben.",
     "ballot_expired": "Dieser Stimmzettel wurde vor zu langer Zeit vorbereitet, um noch angenommen zu werden. Bitte stimmen Sie erneut ab; ein neuer Stimmzettel dauert nur wenige Sekunden."
   },
@@ -877,16 +884,16 @@
     "enrollment": "Anmeldung",
     "gap": "Zwischen Anmeldung und Abstimmung",
     "voting": "Abstimmung",
-    "results": "Auszahlung und Ergebnisse",
+    "results": "Auszählung und Ergebnisse",
     "from_date": "Ab {{date}}",
     "ended_early": "Vorzeitig beendet",
     "abandoned": "Diese Wahl wurde gestoppt, dieser Zeitplan wurde daher nicht bis zum Ende eingehalten."
   },
   "sort": {
     "newest": "Neueste zuerst",
-    "oldest": "Alteste zuerst",
-    "closing": "Endet am fruhesten",
+    "oldest": "Älteste zuerst",
+    "closing": "Endet am frühesten",
     "enrolled": "Meiste Anmeldungen",
-    "partial_notice": "sortiert uber das bisher Gelesene"
+    "partial_notice": "sortiert über das bisher Gelesene"
   }
 }

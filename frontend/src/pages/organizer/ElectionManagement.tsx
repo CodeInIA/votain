@@ -7,6 +7,7 @@ import { Badge } from '../../components/ui/Badge';
 import { EligibilityChips } from '../../components/ui/EligibilityChips';
 import { Button } from '../../components/ui/Button';
 import { BackButton } from '../../components/ui/BackButton';
+import { ElectionUnreadable } from '../../components/ui/ElectionUnreadable';
 import { ViewAsSwitch } from '../../components/ui/ViewAsSwitch';
 import { voterViewHref } from '../../lib/electionViews';
 import { PERSONHOOD_LABEL_KEY } from '../../lib/chainElections';
@@ -52,7 +53,7 @@ export default function ElectionManagement() {
   const { t } = useTranslation();
   const { toast } = useToast();
   const wallet = useOrganizerWallet();
-  const { election, loading, live, refresh } = useElection(id);
+  const { election, loading, unreachable, live, refresh } = useElection(id);
 
   // Above the early returns: hooks must run in the same order on every render.
   const policyRequirements = usePolicyRequirements(election?.eligibilityPolicy);
@@ -113,6 +114,16 @@ export default function ElectionManagement() {
       <PageLayout role="organizer" showNav>
         <div className="flex items-center justify-center min-h-[60vh]"><Spinner /></div>
       </PageLayout>
+    );
+  }
+
+  if (!election && unreachable) {
+    return (
+      <ElectionUnreadable
+        role="organizer"
+        onRetry={() => void refresh()}
+        onBack={() => navigate('/organizer/dashboard')}
+      />
     );
   }
 

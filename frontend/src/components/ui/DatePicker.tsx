@@ -336,7 +336,7 @@ export function DatePicker({
                   type="number"
                   min={minHour}
                   max={23}
-                  aria-label="Hour"
+                  aria-label={t('common.hour')}
                   disabled={!selected}
                   value={selected ? pad(selected.getHours()) : ''}
                   onChange={e => setTimePart('h', e.target.value)}
@@ -347,7 +347,7 @@ export function DatePicker({
                   type="number"
                   min={minMinute}
                   max={59}
-                  aria-label="Minute"
+                  aria-label={t('common.minute')}
                   disabled={!selected}
                   value={selected ? pad(selected.getMinutes()) : ''}
                   onChange={e => setTimePart('m', e.target.value)}

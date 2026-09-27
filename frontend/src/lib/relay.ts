@@ -280,6 +280,13 @@ export function relayErrorMessage(error: unknown): string {
   // chain as a revert. Matched by name: importing the class here would close an
   // import cycle through `semaphore.ts`.
   if ((error as { name?: string } | null)?.name === "EpochAlreadyUsedError") {
+    // The browser knows exactly when the next hour starts, so it says so
+    // rather than leaving the voter to guess and try again too early.
+    const nextAt = (error as { nextAt?: unknown }).nextAt;
+    if (nextAt instanceof Date && !Number.isNaN(nextAt.getTime())) {
+      const time = new Intl.DateTimeFormat(i18n.language, { hour: "2-digit", minute: "2-digit" }).format(nextAt);
+      return i18n.t("errors.epoch_already_cast_until", { time });
+    }
     return i18n.t("errors.epoch_already_cast");
   }
 

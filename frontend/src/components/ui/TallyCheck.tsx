@@ -68,7 +68,10 @@ export function TallyCheck({ election, className }: { election: Election; classN
           </h2>
           <p className="text-xs text-on-surface-variant">
             {audit.status === 'verified'
-              ? t('results.check_verified_body', { ballots: audit.ballots, voters: audit.voters })
+              ? t('results.check_verified_body', {
+                  ballots: audit.ballots,
+                  voters: t('results.voters_count', { count: audit.voters }),
+                })
               : t(`results.check_${audit.status}_body`)}
           </p>
           {audit.status === 'failed' && (

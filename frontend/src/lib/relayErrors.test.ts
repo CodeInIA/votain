@@ -120,9 +120,17 @@ describe("relayErrorMessage", () => {
     }
   });
 
-  it("explains a second ballot within the hour, caught before any proving", async () => {
+  it("explains a second ballot within the hour, and says when the next one is allowed", async () => {
     const { EpochAlreadyUsedError } = await import("./ballot");
-    expect(relayErrorMessage(new EpochAlreadyUsedError(new Date()))).toBe(i18n.t("errors.epoch_already_cast"));
+    const nextAt = new Date("2026-09-27T20:00:00Z");
+    const time = new Intl.DateTimeFormat(i18n.language, { hour: "2-digit", minute: "2-digit" }).format(nextAt);
+    expect(relayErrorMessage(new EpochAlreadyUsedError(nextAt))).toBe(
+      i18n.t("errors.epoch_already_cast_until", { time }),
+    );
+  });
+
+  it("still explains the hour when the chain refused it and the time is unknown", () => {
+    expect(relayErrorMessage({ name: "EpochAlreadyUsedError" })).toBe(i18n.t("errors.epoch_already_cast"));
   });
 
   it("passes an unrecognised failure through verbatim", () => {
