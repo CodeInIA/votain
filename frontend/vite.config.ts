@@ -1,3 +1,4 @@
+import { Agent } from 'node:http'
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -25,6 +26,11 @@ const TUNNEL_HOSTS = ['.ngrok-free.dev', '.ngrok.io', '.ngrok.app', '.trycloudfl
  *
  * `ws: true` on the RPC because a provider may upgrade to a subscription, and a
  * proxy that drops the upgrade fails in a way that looks like a hung page.
+ *
+ * NO KEEP-ALIVE TO THE NODE. The proxy reused a socket the Hardhat node had
+ * just closed as idle, and the read on it came back as ECONNRESET: a page that
+ * failed, or waited for good, about one load in three under a test run. A
+ * fresh connection per request costs nothing on localhost.
  */
 const LOCAL_SERVICES = {
   '/api': { target: 'http://127.0.0.1:3000', changeOrigin: false },
@@ -32,6 +38,7 @@ const LOCAL_SERVICES = {
     target: 'http://127.0.0.1:8545',
     changeOrigin: false,
     ws: true,
+    agent: new Agent({ keepAlive: false }),
     rewrite: (path: string) => path.replace(/^\/rpc/, '') || '/',
   },
 }
