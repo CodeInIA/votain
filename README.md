@@ -151,6 +151,8 @@ npm run build
 
 > **Windows / corporate network**: prepend `NODE_OPTIONS="--use-system-ca"` to any `npm install` or `npm-check-updates` command to avoid SSL chain errors.
 
+> **Windows / circuits**: circom2, the WebAssembly compiler `npm install` brings, cannot compile these circuits on Windows. Download the native `circom-windows-amd64.exe` (v2.2.3, the same version) from the [circom releases](https://github.com/iden3/circom/releases) and put it on the PATH as `circom`, or set `CIRCOM` to its path. It builds byte-identical artefacts. WSL works too.
+
 ## Project status
 
 Contracts, backend issuer and both user flows are written, wired together and green.

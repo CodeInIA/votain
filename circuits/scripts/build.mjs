@@ -87,6 +87,42 @@ const CIRCUITS = {
   },
 };
 
+/**
+ * The compiler to run: a native `circom` when there is one, else circom2.
+ *
+ * circom2 is the same compiler built to WebAssembly, which is what lets `npm
+ * install` alone build the circuits on Linux and macOS. ON WINDOWS IT CANNOT:
+ * its WASI filesystem layer does not see two includes of one file as the same
+ * file (circomlib's poseidon, reached from here and from the Merkle library,
+ * fails as "Duplicated callable symbol") and then cannot write its output.
+ * The native release of the same version compiles byte-identical artefacts.
+ *
+ * `CIRCOM` names a binary explicitly; otherwise `circom` on the PATH is used
+ * if it answers. Both are spawned directly, and circom2 through node rather
+ * than its `.bin` shim, which on Windows is a `.cmd` that execFileSync cannot
+ * run without a shell.
+ */
+function compiler() {
+  const candidates = [process.env.CIRCOM, "circom"].filter(Boolean);
+  for (const bin of candidates) {
+    try {
+      execFileSync(bin, ["--version"], { stdio: "ignore" });
+      return { command: bin, prefix: [] };
+    } catch {
+      if (bin === process.env.CIRCOM) throw new Error(`CIRCOM=${bin} does not run.`);
+    }
+  }
+  if (process.platform === "win32") {
+    throw new Error(
+      "Compiling the circuits on Windows needs the native circom compiler: circom2, the WebAssembly " +
+        "build, cannot resolve includes or write its output there. Download circom-windows-amd64.exe " +
+        "(v2.2.3) from https://github.com/iden3/circom/releases and put it on the PATH as circom, or " +
+        "point CIRCOM at it. WSL works too.",
+    );
+  }
+  return { command: process.execPath, prefix: [join(ROOT, "node_modules", "circom2", "cli.js")] };
+}
+
 function compile(kind, slots) {
   const circuit = CIRCUITS[kind];
   const name = `${kind}_s${slots}`;
@@ -95,9 +131,10 @@ function compile(kind, slots) {
   const r1cs = join(BUILD, `${name}.r1cs`);
   if (!existsSync(r1cs) || FORCE) {
     console.log(`compiling ${name}`);
+    const { command, prefix } = compiler();
     execFileSync(
-      join(ROOT, "node_modules", ".bin", "circom2"),
-      [main, "--r1cs", "--wasm", "-l", join(ROOT, "node_modules"), "-l", join(ROOT, "node_modules", "circomlib", "circuits"), "-l", join(ROOT, "src"), "-o", BUILD],
+      command,
+      [...prefix, main, "--r1cs", "--wasm", "-l", join(ROOT, "node_modules"), "-l", join(ROOT, "node_modules", "circomlib", "circuits"), "-l", join(ROOT, "src"), "-o", BUILD],
       { stdio: "inherit" },
     );
   }
