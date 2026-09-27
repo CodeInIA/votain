@@ -55,9 +55,18 @@ async function ensurePoseidon(deployer: any, name: PoseidonName): Promise<string
  * testnet deployment is genuinely intended. Without a build at all, the local
  * chain gets mock verifiers, which accept any proof.
  */
-async function deployVerifiers(isLocal: boolean): Promise<{ ballot: string[]; tally: string[]; kind: string }> {
+type CircuitManifest = { ceremony: string; sizes: { kind: string; slots: number }[] };
+
+/**
+ * Reads the circuits' manifest and refuses a build this network must not use.
+ *
+ * CALLED BEFORE THE FIRST TRANSACTION. It used to run halfway through the
+ * deployment, so a refused ceremony on Amoy had already paid for the registry,
+ * the domains and the paymaster, and left them orphaned on chain.
+ */
+function readCircuitManifest(isLocal: boolean): CircuitManifest | null {
   const manifestPath = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "circuits", "build", "manifest.json");
-  let manifest: { ceremony: string; sizes: { kind: string; slots: number }[] } | null = null;
+  let manifest: CircuitManifest | null = null;
   try {
     manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
   } catch {
@@ -66,14 +75,7 @@ async function deployVerifiers(isLocal: boolean): Promise<{ ballot: string[]; ta
 
   if (!manifest) {
     if (!isLocal) throw new Error(`No circuits built (${manifestPath}): run \`npm run build\` in circuits/ first.`);
-    console.warn("No circuits built: deploying MOCK verifiers, which accept any proof. Local only.");
-    const ballot: string[] = [];
-    const tally: string[] = [];
-    for (const size of [5, 9, 17, 33, 51]) {
-      ballot.push(await (await (await ethers.getContractFactory("MockBallotVerifier")).deploy(size)).getAddress());
-      tally.push(await (await (await ethers.getContractFactory("MockTallyVerifier")).deploy(size)).getAddress());
-    }
-    return { ballot, tally, kind: "mock" };
+    return null;
   }
 
   if (manifest.ceremony !== "custom" && !isLocal && process.env.ALLOW_INSECURE_CEREMONY !== "1") {
@@ -82,6 +84,22 @@ async function deployVerifiers(isLocal: boolean): Promise<{ ballot: string[]; ta
         "these verifiers. Rebuild with CEREMONY_ENTROPY set (and PTAU pointing at a public phase 1), or " +
         "set ALLOW_INSECURE_CEREMONY=1 for a throwaway testnet deployment.",
     );
+  }
+  return manifest;
+}
+
+async function deployVerifiers(
+  manifest: CircuitManifest | null,
+): Promise<{ ballot: string[]; tally: string[]; kind: string }> {
+  if (!manifest) {
+    console.warn("No circuits built: deploying MOCK verifiers, which accept any proof. Local only.");
+    const ballot: string[] = [];
+    const tally: string[] = [];
+    for (const size of [5, 9, 17, 33, 51]) {
+      ballot.push(await (await (await ethers.getContractFactory("MockBallotVerifier")).deploy(size)).getAddress());
+      tally.push(await (await (await ethers.getContractFactory("MockTallyVerifier")).deploy(size)).getAddress());
+    }
+    return { ballot, tally, kind: "mock" };
   }
 
   const sizes = [...new Set(manifest.sizes.map(s => s.slots))].sort((a, b) => a - b);
@@ -134,36 +152,9 @@ async function main() {
 
   console.log(`Deploying to ${networkName} (chainId ${chainId}) with account: ${deployer.address}`);
 
-  const libraries = {
-    PoseidonT3: await ensurePoseidon(deployer, "PoseidonT3"),
-    PoseidonT4: await ensurePoseidon(deployer, "PoseidonT4"),
-  };
-
-  const Registry = await ethers.getContractFactory("PlatformRegistry");
-  const registry = await Registry.deploy();
-  await registry.waitForDeployment();
-  console.log("PlatformRegistry:", await registry.getAddress());
-
-  // Self-service and owned by nobody: a domain claim proves nothing on its own,
-  // since a reader resolves the TXT record and checks it names the organizer.
-  const Domains = await ethers.getContractFactory("OrganizerDomains");
-  const domains = await Domains.deploy();
-  await domains.waitForDeployment();
-  console.log("OrganizerDomains:", await domains.getAddress());
-
-  const Paymaster = await ethers.getContractFactory("ElectionPaymaster");
-  const paymaster = await Paymaster.deploy();
-  await paymaster.waitForDeployment();
-  console.log("ElectionPaymaster:", await paymaster.getAddress());
-
-  const verifiers = await deployVerifiers(isLocal);
-
-  // Holds ElectionV4's creation code, which no longer fits inside the factory.
-  const Deployer = await ethers.getContractFactory("ElectionDeployer", { libraries });
-  const electionDeployer = await Deployer.deploy();
-  await electionDeployer.waitForDeployment();
-  console.log("ElectionDeployer:", await electionDeployer.getAddress());
-
+  // Before anything is sent: a deployment this network refuses must cost
+  // nothing, rather than stop halfway with contracts already paid for.
+  const circuits = readCircuitManifest(isLocal);
   const platformAttester = resolvePlatformAttester();
   if (platformAttester === ZERO_ADDRESS) {
     const complaint =
@@ -188,7 +179,39 @@ async function main() {
       throw new Error(complaint + " Set ALLOW_PUBLIC_ENROLMENT=1 if that is genuinely intended.");
     }
     console.warn(complaint);
-  } else {
+  }
+
+  const libraries = {
+    PoseidonT3: await ensurePoseidon(deployer, "PoseidonT3"),
+    PoseidonT4: await ensurePoseidon(deployer, "PoseidonT4"),
+  };
+
+  const Registry = await ethers.getContractFactory("PlatformRegistry");
+  const registry = await Registry.deploy();
+  await registry.waitForDeployment();
+  console.log("PlatformRegistry:", await registry.getAddress());
+
+  // Self-service and owned by nobody: a domain claim proves nothing on its own,
+  // since a reader resolves the TXT record and checks it names the organizer.
+  const Domains = await ethers.getContractFactory("OrganizerDomains");
+  const domains = await Domains.deploy();
+  await domains.waitForDeployment();
+  console.log("OrganizerDomains:", await domains.getAddress());
+
+  const Paymaster = await ethers.getContractFactory("ElectionPaymaster");
+  const paymaster = await Paymaster.deploy();
+  await paymaster.waitForDeployment();
+  console.log("ElectionPaymaster:", await paymaster.getAddress());
+
+  const verifiers = await deployVerifiers(circuits);
+
+  // Holds ElectionV4's creation code, which no longer fits inside the factory.
+  const Deployer = await ethers.getContractFactory("ElectionDeployer", { libraries });
+  const electionDeployer = await Deployer.deploy();
+  await electionDeployer.waitForDeployment();
+  console.log("ElectionDeployer:", await electionDeployer.getAddress());
+
+  if (platformAttester !== ZERO_ADDRESS) {
     console.log("Platform attester (private enrolment):", platformAttester);
   }
 
