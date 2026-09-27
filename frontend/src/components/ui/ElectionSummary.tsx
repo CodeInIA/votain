@@ -242,7 +242,7 @@ export function ElectionSchedule({
   const [lastHint, setLastHint] = useState<string | null>(null);
   if (openHint && openHint !== lastHint) setLastHint(openHint);
   const funding = useElectionFunding(election.contractAddress);
-  const voteCost = useVoteCost();
+  const voteCost = useVoteCost(election.candidates.length);
   const reservedBallots = Math.floor(funding.reserved / voteCost.matic);
 
   const voters = votersOf(election);

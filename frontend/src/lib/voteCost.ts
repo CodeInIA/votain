@@ -37,12 +37,21 @@ export const VOTE_COST_FALLBACK = 0.03;
 const RELAY_VOTE = "0x";
 
 export interface VoteCost {
-  /** Native token per ballot, at today's gas price. */
+  /** Native token per ballot, at today's gas price, across every circuit size. */
   matic: number;
   /** False when nothing on chain could be measured and the fallback is in use. */
   measured: boolean;
   /** How many past ballots the figure rests on. */
   samples: number;
+  /**
+   * The same figure per circuit size (slots), where that size was measured.
+   *
+   * A ballot's cost grows with its circuit: a nine-slot ballot verifies half as
+   * many public signals again as a five-slot one and adds twice the points to
+   * the aggregate. One median across sizes quoted a six-option election about
+   * fifty per cent more ballots than its reserve could pay for.
+   */
+  bySlots?: Record<number, number>;
 }
 
 export const ASSUMED: VoteCost = {
@@ -50,6 +59,23 @@ export const ASSUMED: VoteCost = {
   measured: false,
   samples: 0,
 };
+
+/**
+ * What one ballot costs in an election with `options` choices, blank included.
+ *
+ * The factory gives an election the smallest circuit it fits in, so the
+ * smallest measured size that fits is the one its ballots use. A size nobody
+ * has voted in yet is scaled from the nearest measured one, and only ever
+ * upwards: a figure shown as "ballots paid for" errs towards enough.
+ */
+export function voteCostFor(cost: VoteCost, options: number | undefined): number {
+  const sizes = Object.keys(cost.bySlots ?? {}).map(Number).sort((a, b) => a - b);
+  if (!options || sizes.length === 0) return cost.matic;
+  const fits = sizes.find(size => size >= options);
+  if (fits !== undefined) return cost.bySlots![fits];
+  const largest = sizes[sizes.length - 1];
+  return cost.bySlots![largest] * (options / largest);
+}
 
 /** Most recent relays to look at. Enough to be steady, few enough to be cheap. */
 const SAMPLE_SIZE = 12;
@@ -80,6 +106,7 @@ export async function fetchVoteCost(): Promise<VoteCost> {
   const voteSelector = paymaster.interface.getFunction("relayVote")?.selector ?? RELAY_VOTE;
 
   const units: bigint[] = [];
+  const unitsBySlots = new Map<number, bigint[]>();
   await Promise.all(
     recent.map(async log => {
       try {
@@ -88,7 +115,12 @@ export async function fetchVoteCost(): Promise<VoteCost> {
         const price = tx.gasPrice ?? 0n;
         if (price === 0n) return;
         const cost = eventArgs<{ cost?: bigint }>(log).cost ?? 0n;
-        if (cost > 0n) units.push(cost / price);
+        if (cost <= 0n) return;
+        units.push(cost / price);
+        // The ballot carries two coordinates per slot, so its own calldata
+        // says which circuit it was proved with.
+        const slots = ballotSlots(paymaster.interface.parseTransaction({ data: tx.data })?.args[1]);
+        if (slots) unitsBySlots.set(slots, [...(unitsBySlots.get(slots) ?? []), cost / price]);
       } catch {
         // One unreadable transaction is a smaller sample, not a failure.
       }
@@ -105,15 +137,25 @@ export async function fetchVoteCost(): Promise<VoteCost> {
 
   // The same two ceilings the contract applies when it pays, so the estimate
   // cannot promise more than a relay would ever be reimbursed.
-  const gasUnits = median(units);
-  const capped = gasUnits > maxRelayGas ? maxRelayGas : gasUnits;
   const now = feeData.gasPrice ?? feeData.maxFeePerGas ?? 0n;
   const price = now > maxGasPrice ? maxGasPrice : now;
   if (price === 0n) return ASSUMED;
+  const toMatic = (samples: bigint[]): number => {
+    const gasUnits = median(samples);
+    const capped = gasUnits > maxRelayGas ? maxRelayGas : gasUnits;
+    return Number(capped * price) / 1e18;
+  };
 
   return {
-    matic: Number(capped * price) / 1e18,
+    matic: toMatic(units),
     measured: true,
     samples: units.length,
+    bySlots: Object.fromEntries([...unitsBySlots].map(([slots, samples]) => [slots, toMatic(samples)])),
   };
+}
+
+/** Circuit slots of a decoded `relayVote` ballot, or 0 when it cannot tell. */
+function ballotSlots(ballot: unknown): number {
+  const voteB = (ballot as { voteB?: ArrayLike<unknown> } | undefined)?.voteB;
+  return voteB && voteB.length > 0 ? voteB.length / 2 : 0;
 }

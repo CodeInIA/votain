@@ -124,9 +124,11 @@ export function electionNeed(
 export function openNeeds(
   elections: Election[],
   reservedFor: (election: Election) => number,
-  voteCost: number,
+  /** One figure for all, or each election's own, since a ballot's cost grows with its circuit. */
+  voteCost: number | ((election: Election) => number),
 ): ElectionNeed[] {
-  return elections.filter(stillOpen).map(e => electionNeed(e, reservedFor(e), voteCost));
+  const costOf = typeof voteCost === 'number' ? () => voteCost : voteCost;
+  return elections.filter(stillOpen).map(e => electionNeed(e, reservedFor(e), costOf(e)));
 }
 
 export function totalShortfall(needs: ElectionNeed[]): number {
