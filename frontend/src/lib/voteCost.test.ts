@@ -185,6 +185,19 @@ describe('the cost per circuit size', () => {
     expect(voteCostFor(cost, 3)).toBeCloseTo(0.001);
   });
 
+  it('scales to the circuit the election proves with, not to its option count', async () => {
+    // Only five-slot ballots so far. Six options prove with the nine-slot
+    // circuit, so the quote is nine fifths of the measured cost: scaling by the
+    // option count (six fifths) promised ballots the reserve could not pay.
+    relay('0x1', 1_000_000n, 1_000_000_000n, VOTE, 5);
+
+    const { fetchVoteCost, voteCostFor, circuitSizeFor } = await import('./voteCost');
+    const cost = await fetchVoteCost();
+
+    expect(circuitSizeFor(6)).toBe(9);
+    expect(voteCostFor(cost, 6)).toBeCloseTo(0.001 * (9 / 5));
+  });
+
   it('keeps the platform-wide figure when no election is named', async () => {
     const { voteCostFor, ASSUMED } = await import('./voteCost');
     expect(voteCostFor(ASSUMED, 6)).toBe(ASSUMED.matic);

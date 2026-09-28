@@ -61,20 +61,34 @@ export const ASSUMED: VoteCost = {
 };
 
 /**
+ * The circuit sizes a deployment can have, in slots. Mirrors `ALL_SIZES` in
+ * circuits/scripts/build.mjs: a deployment ships a subset of these, and the
+ * factory gives an election the smallest one it fits in.
+ */
+export const CIRCUIT_SIZES = [5, 9, 17, 33, 51] as const;
+
+/** The circuit an election with `options` choices, blank included, proves with. */
+export function circuitSizeFor(options: number): number {
+  return CIRCUIT_SIZES.find(size => size >= options) ?? CIRCUIT_SIZES[CIRCUIT_SIZES.length - 1];
+}
+
+/**
  * What one ballot costs in an election with `options` choices, blank included.
  *
- * The factory gives an election the smallest circuit it fits in, so the
- * smallest measured size that fits is the one its ballots use. A size nobody
- * has voted in yet is scaled from the nearest measured one, and only ever
- * upwards: a figure shown as "ballots paid for" errs towards enough.
+ * Its own circuit size when that was measured. Otherwise the next larger
+ * measured size, or the largest one scaled up to this circuit's slots: a size
+ * nobody has voted in yet is only ever quoted high, because a figure shown as
+ * "ballots paid for" has to err towards enough.
  */
 export function voteCostFor(cost: VoteCost, options: number | undefined): number {
-  const sizes = Object.keys(cost.bySlots ?? {}).map(Number).sort((a, b) => a - b);
+  const measured = cost.bySlots ?? {};
+  const sizes = Object.keys(measured).map(Number).sort((a, b) => a - b);
   if (!options || sizes.length === 0) return cost.matic;
-  const fits = sizes.find(size => size >= options);
-  if (fits !== undefined) return cost.bySlots![fits];
+  const circuit = circuitSizeFor(options);
+  const fits = sizes.find(size => size >= circuit);
+  if (fits !== undefined) return measured[fits];
   const largest = sizes[sizes.length - 1];
-  return cost.bySlots![largest] * (options / largest);
+  return measured[largest] * (circuit / largest);
 }
 
 /** Most recent relays to look at. Enough to be steady, few enough to be cheap. */
