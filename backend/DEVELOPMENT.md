@@ -357,7 +357,7 @@ Source layout: `sd/issuer.ts` (shared SD-JWT instance + disclosure frame),
 
 ```bash
 npm run dev    # tsx watch src/index.ts (hot-reload)
-npm test       # node --test (session, identity vault, SD-JWT, Status List): 17 tests
+npm test       # node --test (session, identity vault, SD-JWT, Status List, relay, chain): 160 tests
 ```
 
 ## Required environment variables
@@ -386,10 +386,12 @@ PUBLIC_URL=http://localhost:3000  # base for credentialStatus URLs
 
 ## Technical debt (see `docs/dev/state.md`)
 
-- Wire World ID Credentials selective disclosure (passport NFC) to replace the demo attribute
-  values (`DEMO_VC_*`). Schema is already source-agnostic.
-- Deployment on Phala Network TEE (H11): private key generated inside the enclave, `/attestation`
-  endpoint, image hash referenced from PlatformRegistry.
+- The credential carries no identity attributes: the demo country, region and `ageOver18` it
+  used to assert for everybody were removed, since nothing had verified them. Age and nationality
+  are proved per election from the voter's document (Self, `eligibility/`); the SD-JWT frame stays
+  for when a verified source can fill it.
+- Phala (H11) is live, image pinned by digest (see `docs/dev/deployment.md`). Still owed: the
+  signing keys generated inside the enclave rather than supplied through `PHALA_ENV`.
 
 ## Target deployment
 

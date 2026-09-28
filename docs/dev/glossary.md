@@ -4,13 +4,13 @@
 
 **ZKP (Zero-Knowledge Proof)**: cryptographic proof that demonstrates knowledge of a secret without revealing it. In Votain: the voter proves they belong to the election group without revealing their identity.
 
-**Groth16**: ZK proof system used by Semaphore V4. Generates small proofs (~288 bytes) with cheap on-chain verification.
+**Groth16**: the ZK proof system of Votain's ballot and tally circuits. Small proofs (~288 bytes) with cheap on-chain verification, at the price of a trusted setup (see below).
 
-**Identity Commitment**: Poseidon hash of the user's nullifier and secret. This is what gets registered publicly in the Merkle tree of the group; reveals nothing about the user.
+**Identity Commitment**: in Semaphore V4, the Poseidon hash of the identity's public key. This is what gets registered publicly in the Merkle tree of the group; reveals nothing about the user.
 
-**Nullifier**: value derived from the identity secret and the election scope. Detects double voting without revealing identity. In Votain, extended with `nonce` to implement coercion resistance.
+**Nullifier**: in Semaphore, a value derived from the identity secret and a scope that detects double signalling. Votain ballots no longer publish one: a public nullifier shows that the same voter cast two ballots, which is what a coercer needs to see a re-vote. The ballot tag and the epoch tag replace it (below). The word survives for World ID, whose nullifier identifies a human to the platform.
 
-**Nonce (coercion resistance)**: per-nullifier counter. Only the vote with the highest `nonce` per nullifier counts in the tally. Allows a coerced user to cast a new vote (nonce+1) that overrides the previous one.
+**Re-vote (coercion resistance)**: a voter may cast again, and the later ballot replaces the earlier. Each ballot carries a proved cancellation of that voter's previous one, so the sum of all ballots holds only each voter's last vote, and nothing public says a ballot is a re-vote. It replaced the earlier per-nullifier `nonce`, which made re-votes visible. One ballot per voter per hour (the epoch tag) bounds how fast the organizer's gas can be spent.
 
 **Scope**: election identifier within Semaphore. Nullifiers are scope-specific. The same user has different nullifiers in different elections.
 
@@ -19,6 +19,8 @@
 **Exponential ElGamal**: additively homomorphic encryption: a message m is encrypted as (r·G, m·G + r·H), so adding ciphertexts adds messages, and decryption ends in a small discrete log. Votain encrypts each vote this way on the Baby Jubjub curve, one key per option, and the election adds every ballot into one aggregate that the tally decrypts. Chosen over Paillier, which Votain used until 2026-09-24, because a circuit can compute on it (so a ballot can prove it cancels the voter's previous one) and because distributed key generation for it is almost free.
 
 **Ballot tag**: the public identifier of one ballot, Poseidon(TAG, secret, scope, k) for the k-th ballot of a voter. Only the voter can compute their tags, so only they can tell which ballots are theirs; a re-vote carries a new tag that links to nothing.
+
+**Epoch tag**: Poseidon(EPOCH, secret, scope, epoch), one per voter per hour. The contract accepts each once, which limits a voter to one ballot an hour without linking their ballots across hours.
 
 **Groth16 / trusted setup**: the zero-knowledge proof system of the ballot and tally circuits. Each circuit needs a one-off setup whose randomness must be destroyed; whoever keeps it can forge proofs.
 
@@ -36,7 +38,7 @@
 
 **Domain claim (`OrganizerDomains`)**: the badge a voter sees on an election is a DOMAIN, not a checkmark, because a checkmark only means something if you trust whoever granted it while a domain carries its own evidence. Proof runs in two directions and needs both: DNS says the domain names the wallet (a TXT record at `_votain.<domain>` with the value `v=votain1; address=0x...`), and the chain says the wallet claims the domain (`claim`, a transaction from the organizer's own address). Verifying costs no signature; the signature records the claim, and only once DNS already agrees. The contract stores a claim and not a credential, since domain control is whatever DNS answers right now. See `docs/dev/architecture.md`.
 
-**Semaphore V4**: ZK-based anonymity protocol (PSE/Ethereum Foundation). Allows a group of users to make anonymous signals (votes) without revealing who voted. V4 introduces circuit efficiency improvements.
+**Semaphore V4**: ZK-based anonymity protocol (PSE/Ethereum Foundation). Votain uses its identities and its LeanIMT membership trees; the ballot itself is proved by Votain's own circuit, which checks the same membership and adds the vote, the cancellation and the tags.
 
 **PolygonScan (Amoy)**: block explorer for Polygon Amoy testnet. Used to verify contracts and transactions publicly.
 

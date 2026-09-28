@@ -9,7 +9,7 @@ Votain is a Bachelor's thesis project (TFG) demonstrating how modern cryptograph
 | Property | How it is achieved |
 |----------|--------------------|
 | **End-to-end verifiable** | Every ballot is an ElGamal ciphertext on chain with a zero-knowledge proof that it is exactly one valid option, so a stuffed or malformed ballot never gets in. The election adds every ballot into an aggregate itself, and publishes a result only with a proof that the counts are that aggregate's decryption. Anyone can re-add the ballots and re-check the proof with no key, in the results screen or with `npm run tally -- <election> --verify`. The auditor CLI additionally pins a result JSON to IPFS; the in-app tally does not pin yet |
-| **Anonymous** | Semaphore V4 zero-knowledge proofs hide voter identity inside the eligible-voters group |
+| **Anonymous** | Each ballot carries a zero-knowledge proof that its voter is on the election's roll, over Semaphore V4 identities and a per-election tree, without saying which member cast it |
 | **Coercion resistant** | A coerced voter can vote again, and nobody watching can tell they did. Every ballot silently cancels the voter's previous one, proved in zero knowledge without saying which, and a first vote and a re-vote look the same on chain. One ballot per voter per hour bounds how fast anyone can spend the organizer's gas, through tags that link nothing. The limit, stated plainly: the organizer's key could open a single ballot and see that it replaced one, though never whose it is (see [Known limits](#known-limits)) |
 | **Sybil resistant** | World ID v4 proof of personhood under one action fixed by the server, so one person holds one platform identity. Elections that require a document also refuse the same passport or ID card twice, whatever World ID account it arrives with |
 | **Eligible without identifying** | Age and nationality come from the chip in a passport or national identity card, read over NFC by the [Self](https://self.xyz) app and proved in zero knowledge. The document never leaves the phone, and age is asked as a predicate: the answer is "over 18", never a date of birth |
@@ -138,13 +138,13 @@ npx hardhat compile
 # Backend (requires .env with ISSUER_PRIVATE_KEY, see backend/.env.example)
 cd backend
 npm install
-npm test                             # 144 tests, node:test
+npm test                             # 160 tests, node:test
 npm run dev                          # http://localhost:3000
 
 # Frontend
 cd frontend
 npm install
-npm test                             # 562 tests, vitest
+npm test                             # 597 tests, vitest
 npm run dev                          # http://localhost:5173
 npm run build
 ```
@@ -174,7 +174,7 @@ auditor CLI. See [`docs/PLAN.md`](docs/PLAN.md) for the plan and
 | H11 | Backend in a TEE | ✅ verified on Phala (Intel TDX): image pinned by digest, signed provenance, attestation reports that digest. Served from Heroku between sessions, since Phala is $42/month; one workflow switches either way |
 | H12, H13 | Thesis and defense | ⏳ |
 
-**891 tests pass**: 185 on the contracts, 144 on the backend, 562 on the frontend.
+**987 tests pass**: 8 on the circuits, 222 on the contracts (the end-to-end suite with real Groth16 proofs), 160 on the backend, 597 on the frontend. The Playwright smoke suite renders every screen on desktop, tablet and phone (72).
 
 ## Known limits
 
@@ -187,6 +187,11 @@ in [`docs/dev/architecture.md`](docs/dev/architecture.md#known-limits-stated-pla
   it replaced. Splitting the key among trustees (threshold decryption) would
   remove the power; on ElGamal that is now a protocol to add, not a primitive to
   change.
+- **Two votes forced in a row in the last hour stand.** One voter can cast at
+  most two ballots within an hour, the limit that keeps them from draining the
+  organizer's gas without linking their ballots. A vote forced on a voter can
+  always be replaced once, straight away; two forced in a row after the last
+  hour boundary before voting closes cannot be.
 - **The trusted setup is the deployment's to run.** The default circuit build
   uses a public development ceremony, which `deploy.ts` refuses off the local
   chain.

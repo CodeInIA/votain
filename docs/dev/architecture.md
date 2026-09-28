@@ -1580,9 +1580,23 @@ written down so that nobody reads their absence as a guarantee.
   the voter's SECRET can, since they can compute the voter's tags; that is the
   same as holding the voter's identity.
 - **Two ballots an hour at most.** Epoch tags bound how fast one voter can spend
-  the organizer's tank: a proof may name this epoch or the last, so two in any
-  hour, and the app uses one. A coerced voter's override is delayed, never
-  refused.
+  the organizer's tank: a proof may name this epoch or the last, each tag once,
+  so two in any hour. Epochs are clock hours (`block.timestamp / 1 hours`), not
+  an hour from the last ballot. The app (`chooseEpoch` in `lib/ballot.ts`) uses
+  both: a voter who has just cast can replace that ballot straight away by
+  naming the previous epoch, unless the hour is under two minutes from turning,
+  when the proof would arrive stale.
+- **Which of the two epochs is drawn at random.** The epoch is public calldata.
+  Were the previous epoch named only once the current one was spent, a ballot
+  naming it would say "this voter already cast this hour": a visible re-vote,
+  in the last hour, where a coercer watches. Drawn at random when both are free,
+  a first ballot names either half the time and a re-vote names whichever is
+  left, so no single ballot says which it is.
+- **Two votes forced in a row in the last hour stand.** A coercer who forces two
+  ballots after the last hour boundary before `voteEnd` spends both tags, and
+  no next hour comes. A sponsored-quota proof ("at most K sponsored ballots",
+  the voter paying beyond it) would remove the window at the cost of a new
+  circuit and ceremony.
 - **The trusted setup is the deployment's to run.** The default build uses a
   public development ceremony, refused off the local chain. A deployment runs
   its own phase 2 (`CEREMONY_ENTROPY`, better a multi-party contribution) over

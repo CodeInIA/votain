@@ -148,7 +148,7 @@ will ever run.
 ## Commands
 
 ```bash
-npx hardhat test                    # 127 tests, including the E2E suite
+npx hardhat test                    # 222 tests, including the E2E suite
 
 # Restricted-election walkthrough against a running local node. Covers every leg
 # of the eligibility flow except the Self app reading a passport, which needs a
@@ -161,7 +161,7 @@ npx hardhat test --coverage         # line coverage report -> coverage/
 npx hardhat test test/E2E.test.ts   # full election with REAL Groth16 proofs
 npx hardhat compile
 npm run deploy:local                # in-process network
-npm run deploy:amoy                 # Polygon Amoy (needs .env PRIVATE_KEY)
+npm run deploy:amoy                 # Polygon Amoy: needs .env PRIVATE_KEY and a real ceremony (docs/dev/deployment.md)
 npm run node:local                  # standalone node on 127.0.0.1:8545
 npm run seed:local                  # demo data against that node
 npm run tunnel:local                # expose that node at rpc.votain.app
