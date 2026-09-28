@@ -21,5 +21,26 @@
   "tallyVerifiers": [
     "0xc8cE44a917f324ECcdF26F4Dc23EDb6Ceb8e017d",
     "0xCf999e8aE8B6fe14A227CF4A6123C7D238B49cF8"
-  ]
+  ],
+  "circuits": {
+    "url": "https://votain-circuits.4everbucket.com/ceremony-a6710f0df5affbbd",
+    "sizes": [
+      5,
+      9
+    ],
+    "files": {
+      "ballot_s5.wasm": "f0b33f9158e2509d3c4b1aa4e5b1a7258a3118b1fb6b214ebc75c215ec9e2dad",
+      "ballot_s5.zkey": "3b580672fbf7e70d91e9e87587e67fe0a7ab2ce105f91de7573d64d841eadc0f",
+      "ballot_s5.vkey.json": "4a26d5abedb7e89c7f017b7477c394cca4acdb8da6e8c435c1a6e4c3cf7d3a39",
+      "tally_s5.wasm": "0c39d3149ec8a86564b5e2cc2b25490e4d6d90461f9d79d86a2f2abb7ffc597a",
+      "tally_s5.zkey": "49973abf0ff9c7132f5b5c9b5c850181ed4ba8ac344ecec5788512796f386155",
+      "tally_s5.vkey.json": "4d3dbeeb00645b948fc5e4912e070566d7c72db94bba39cdd4f488b023b11f47",
+      "ballot_s9.wasm": "b6b5542eee30fa2ffb6bdbafca574f3e4337979b1352fe51ce810d86dfe1e76a",
+      "ballot_s9.zkey": "6384ddc975833445de50c280ef44c761df5c94932525714112635dd9bb994dcb",
+      "ballot_s9.vkey.json": "7cbf143d5e4ca4105bcfeb4c4560deef4a46bd6c55c55fc47a1181772d6f67da",
+      "tally_s9.wasm": "999114c81eba960cee48d579928f4db2a790d518d549cd93ff31c7ec8430dc61",
+      "tally_s9.zkey": "e55ddb12b41983c9464e3b5a5acd4319f8934e792104aaa8638e27272ee7c1f5",
+      "tally_s9.vkey.json": "c28882fba2cae79a8b7956e689abe1310a39db96cf44ffd3bd02d90b56e351b7"
+    }
+  }
 }

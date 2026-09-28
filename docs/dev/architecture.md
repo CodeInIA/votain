@@ -1655,7 +1655,7 @@ written down so that nobody reads their absence as a guarantee.
   its own phase 2 (`CEREMONY_ENTROPY`, better a multi-party contribution) over
   a public phase 1 (`PTAU`), and publishes the verifiers and proving files.
 - **The proving files are large.** Around 50 MB per zkey at the default sizes,
-  fetched once per device and served from `VITE_CIRCUITS_URL`. Proving takes
+  fetched once per device and served from the bucket the deployment manifest names. Proving takes
   seconds on a laptop and longer on an old phone.
 - **An election holds at most 2^20 members and 2^20 ballots**, the depth the
   circuits are compiled for (`TreeFull` past that).

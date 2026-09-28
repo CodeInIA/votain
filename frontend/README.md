@@ -39,7 +39,7 @@ flowchart TB
   end
 
   snark["snarkjs<br/>Groth16 in the browser"]
-  files[("public/circuits or VITE_CIRCUITS_URL<br/>ballot_s*, tally_s*")]
+  files[("public/circuits, or the URL<br/>the manifest names<br/>ballot_s*, tally_s*")]
   api["Issuer backend<br/>/api"]
   rpc["Polygon RPC<br/>/rpc locally"]
   wallet["Organizer wallet<br/>WalletConnect / injected"]

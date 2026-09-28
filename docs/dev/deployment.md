@@ -262,9 +262,17 @@ the ceremony it rests on. In order, because each step needs the one before:
    built from the repository and only `local.json` is ignored.
 4. **Publish the proving files.** `frontend/public/circuits/` holds the wasm,
    zkey and vkey of THIS ceremony, tens of megabytes per zkey and too large for
-   the repository. Pin them (IPFS, say) and set `VITE_CIRCUITS_URL` in the
-   4EVERLAND build environment, with `VITE_CHAIN_NETWORK=amoy`. A wrong file does
-   no harm beyond wasting a voter's time: the chain refuses the proofs it makes.
+   the repository, and CI cannot make them (it would have to see the ceremony's
+   entropy). `deploy:amoy` ends by running `npm run publish:circuits -- amoy` in
+   `circuits/`, which needs a public 4EVERLAND bucket and its key in
+   `circuits/.env`. It refuses unless every verification key is the one the
+   deployed verifier holds, uploads to a folder named after the ceremony, reads
+   every file back cross-origin, and only then writes `circuits.url` into both
+   manifests. The site reads it from there: no build variable to remember.
+   Rerun it alone if the deploy got that far without the bucket configured;
+   it skips what is already uploaded. CI's `published circuits` job repeats the
+   download and the key check on every push and holds the frontend deploy if
+   they fail. `VITE_CIRCUITS_URL` still overrides, for a preview build.
 5. **Point the backend at it.** Production reads addresses from its environment
    and ships no manifest: `REGISTRY_ADDRESS` and `PAYMASTER_ADDRESS` in
    `PHALA_ENV` (and on Heroku), with the relayer and registrar wallets funded

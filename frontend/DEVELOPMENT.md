@@ -632,7 +632,7 @@ phone, which is why this section used to be long.
 
 The cost that matters now is PROVING. A ballot proof over the 5-slot circuit is
 around 73k constraints, and the tally proof around 40k; the browser downloads
-each circuit's proving key once (tens of megabytes, from `VITE_CIRCUITS_URL`) and
+each circuit's proving key once (tens of megabytes, from the URL in the deployment manifest) and
 proves in a few seconds on a laptop, longer on an old phone. The progress screen
 exists for that wait. Both run in snarkjs's worker threads, so the page stays
 responsive.

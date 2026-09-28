@@ -24,6 +24,14 @@ export interface Deployment {
   config?: {
     entryPoint?: string;
   };
+  /// Where this deployment's proving files are served, written by
+  /// `circuits/scripts/publish.mjs` once it has checked them against the
+  /// deployed verifiers. Absent on the local chain, which serves /circuits/.
+  circuits?: {
+    url: string;
+    sizes: number[];
+    files: Record<string, string>;
+  };
 }
 
 // Vite resolves JSON imports at build time; the manifest is committed for Amoy.
@@ -88,6 +96,18 @@ const CHAIN_ID = Number(import.meta.env.VITE_CHAIN_ID ?? manifest?.chainId ?? 80
  * magnitude cheaper than scanning from block 0 (~45M blocks on Amoy).
  */
 export const deploymentBlock: number = manifest?.deployedAtBlock ?? 0;
+
+/**
+ * Where the ballot and tally proving files are fetched from, with no trailing
+ * slash. VITE_CIRCUITS_URL overrides; otherwise the manifest's, which travels
+ * with the contract addresses and so cannot name another ceremony's files;
+ * otherwise this site's own /circuits/, which the local build fills.
+ */
+export const circuitsBaseUrl: string = (
+  envOverride(import.meta.env.VITE_CIRCUITS_URL) ??
+  manifest?.circuits?.url ??
+  `${import.meta.env.BASE_URL ?? "/"}circuits`
+).replace(/\/$/, "");
 
 /**
  * Human-readable chain metadata, used when asking a wallet to add/switch network
