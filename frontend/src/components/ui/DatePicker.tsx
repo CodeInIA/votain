@@ -108,9 +108,15 @@ export function DatePicker({
   const maxDate = max ? parseValue(max) : null;
 
   const [viewDate, setViewDate] = React.useState(() => selected ?? minDate ?? new Date());
+  // The day to mark as today, read when the popover opens rather than on every
+  // render: a clock read during render is a different value each time.
+  const [today, setToday] = React.useState(() => new Date());
   // Re-sync the visible month to the current value each time the popover opens.
   const handleOpenChange = (next: boolean) => {
-    if (next) setViewDate(selected ?? minDate ?? new Date());
+    if (next) {
+      setViewDate(selected ?? minDate ?? new Date());
+      setToday(new Date());
+    }
     setOpen(next);
   };
 
@@ -307,7 +313,7 @@ export function DatePicker({
               {cells.map(({ date, outside }, i) => {
                 const disabled = isDisabled(date);
                 const isSelected = isSameDay(date, selected);
-                const isToday = isSameDay(date, new Date());
+                const isToday = isSameDay(date, today);
                 return (
                   <button
                     key={i}
