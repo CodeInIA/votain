@@ -61,28 +61,97 @@ Votain is a Bachelor's thesis project (TFG) demonstrating how modern cryptograph
 
 ## Architecture overview
 
-```
-User (recovery phrase + World ID)
-    ├── React 19 + Vite + Tailwind 4             ◄──── IPFS (4EVERLAND)
-    │
-    ├── SD-JWT issuance ── Backend (Node + Express)  ◄──── Phala TEE
-    │                      Verifies World ID (personhood) and
-    │                      Self proofs (age, nationality), issues VC
-    │
-    └── relayed tx ─────── Polygon Amoy
-                           ElectionFactory · ElectionV4
-                           ElectionPaymaster · PlatformRegistry
-                           Ballot + tally Groth16 verifiers
-                           ElectionV4 keeps the ElGamal aggregate
-                                                  │
-                                                  ▼
-                           Tally (decrypt the aggregate, prove it): in-app
-                           in the browser, or the off-chain CLI
-                           → Result JSON pinned on IPFS (Pinata, CLI)
-                           → publishResults(cid, counts, proof), verified on chain
+Who talks to whom. Voters and organizers only ever run the frontend; the
+issuer vouches for people and relays their calls; the contracts hold the
+ballots and decide what counts.
+
+```mermaid
+flowchart TB
+  subgraph phone["Voter's phone"]
+    worldapp["World App<br/>proof of personhood"]
+    selfapp["Self app<br/>passport / ID chip over NFC"]
+  end
+
+  subgraph browser["Browser: frontend on IPFS (4EVERLAND)"]
+    voter["Voter screens<br/>identity from a 12-word phrase,<br/>sealed under a passkey"]
+    organizer["Organizer screens<br/>wallet-signed actions,<br/>tally key from a signature"]
+    prover["snarkjs<br/>ballot and tally proofs"]
+  end
+
+  circuitfiles[("Proving files<br/>wasm + zkey, VITE_CIRCUITS_URL")]
+
+  subgraph tee["Issuer backend in a TEE (Phala, Intel TDX)"]
+    api["Express API<br/>World ID and Self checks,<br/>SD-JWT session, attestations"]
+    relayer["Relayer and registrar<br/>one signer queue per key"]
+  end
+
+  subgraph chain["Polygon Amoy"]
+    factory["ElectionFactory"]
+    election["ElectionV4<br/>members tree, ballots tree,<br/>ElGamal aggregate"]
+    paymaster["ElectionPaymaster<br/>organizer gas, relay hub"]
+    registry["PlatformRegistry<br/>platform members, sealed vault"]
+    verifiers["Ballot + tally<br/>Groth16 verifiers"]
+  end
+
+  cli["Tally CLI<br/>tally, or --verify with no key"]
+
+  worldapp -- "proof" --> api
+  selfapp -- "document proof" --> api
+  voter -- "session, enrolment, ballots" --> api
+  voter --> prover
+  organizer --> prover
+  prover -. "fetch once" .-> circuitfiles
+  api --> relayer
+  relayer -- "registerMember, vault writes" --> registry
+  relayer -- "relayEnroll / relayVote" --> paymaster
+  paymaster -- "enroll, castVote" --> election
+  organizer -- "createElection, reserve gas" --> factory
+  organizer -- "close early, publishResults" --> election
+  organizer -- "fund the gas tank" --> paymaster
+  factory -- "deploys" --> election
+  election -- "verifyBallot, verifyTally" --> verifiers
+  election -- "verifiedMembers" --> registry
+  voter -. "reads events" .-> election
+  cli -. "reads aggregate and ballots" .-> election
+  cli -- "publishResults" --> election
 ```
 
-Full diagram in [`docs/dev/architecture.md`](docs/dev/architecture.md).
+A vote, end to end. Every ballot is a vote plus the cancellation of the voter's
+previous one, so the aggregate the contract keeps always decrypts to each
+voter's LAST vote, and nothing public says which ballots are re-votes.
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor V as Voter
+  participant F as Frontend
+  participant B as Issuer backend
+  participant P as ElectionPaymaster
+  participant E as ElectionV4
+  actor O as Organizer
+
+  V->>F: sign in with World ID
+  F->>B: World ID proof
+  B-->>F: SD-JWT session cookie
+  V->>F: enrol
+  F->>B: commitment derived for THIS election
+  B->>P: relayEnrollPrivate, signed by the platform
+  P->>E: enrollPrivate, one per human
+  V->>F: choose an option
+  F->>F: encrypt vote + cancel previous ballot,<br/>prove it (Groth16, in the browser)
+  F->>B: ballot + proof, no session attached
+  B->>P: relayVote
+  P->>E: castVote: verify, add to aggregate,<br/>reimburse the relayer
+  Note over V,E: a re-vote is the same call and looks the same on chain
+  O->>F: close and tally
+  F->>F: decrypt the aggregate, prove the decryption
+  F->>E: publishResults(counts, proof)
+  E->>E: verify the tally proof, then publish
+  Note over F,E: anyone re-adds the ballots and re-checks<br/>the proof: results screen or tally --verify
+```
+
+The full design, with its threat model and known limits, is in
+[`docs/dev/architecture.md`](docs/dev/architecture.md).
 
 ## Monorepo layout
 
