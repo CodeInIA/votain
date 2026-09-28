@@ -95,6 +95,7 @@ async function main(): Promise<void> {
   const conn = await network.getOrCreate();
   const { ethers } = conn;
   const [deployer, organizer] = await ethers.getSigners();
+  const platformAttester = ethers.Wallet.createRandom();
 
   const steps: Step[] = [];
 
@@ -160,8 +161,9 @@ async function main(): Promise<void> {
       ballotVerifiers,
       tallyVerifiers,
       await registry.getAddress(),
-      // The platform attester, which costs the same to store whoever it is.
-      deployer.address,
+      // The platform attester, which costs the same to store whoever it is. A
+      // wallet whose key is at hand, so step 8 can sign a private enrolment.
+      platformAttester.address,
     ),
   )) as any;
 
@@ -207,11 +209,17 @@ async function main(): Promise<void> {
     gas: await gasOf(registry.registerMember(1234n, 5678n)),
     organizerPays: true,
   });
+  // A factory with a platform attester deploys elections that only enrol
+  // privately: `enroll` reverts with PrivateEnrollmentRequired, so the step
+  // measured is the one production takes, signed as the backend signs it.
+  const deadline = BigInt(now + 3600);
+  const digest = await election.privateEnrollmentDigest(5678n, 91011n, 0n, deadline);
+  const platformSignature = platformAttester.signingKey.sign(digest).serialized;
   steps.push({
     // Relayed through ElectionPaymaster and reimbursed from the organizer's
     // tank, so it comes out of their deposit rather than the deployer's balance.
-    label: "election.enroll (per voter)",
-    gas: await gasOf(election.enroll(5678n)),
+    label: "election.enrollPrivate (per voter)",
+    gas: await gasOf(election.enrollPrivate(5678n, 91011n, 0n, deadline, platformSignature, "0x")),
     sponsored: true,
   });
 
