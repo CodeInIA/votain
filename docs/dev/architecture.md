@@ -1675,3 +1675,41 @@ written down so that nobody reads their absence as a guarantee.
   an organizer to sign the same typed data obtains it, since EIP-712 cannot
   bind a signature to an origin. Wallets whose signatures are not deterministic
   are detected and given a random, exportable key instead.
+- **Nothing makes the organizer tally.** There is no deadline for publishing:
+  an organizer who never decrypts leaves the election in TALLYING for good,
+  and once voting has ended they can release its gas reserve back to their
+  balance. Voters lose nothing they cast, but no result appears. A tally
+  deadline, after which the election voids itself, would bound it; the auto-
+  tally and threshold designs below would remove the dependence altogether.
+
+## Future work
+
+Deliberately left for after the thesis. Each item is designed in the sections
+linked; none needs the ballots or the circuits of this version to change.
+
+- **Threshold decryption of the tally keys.** Trustees run a distributed key
+  generation (Pedersen/Feldman), so each option's key is `H_i = Σ_j x_ij·G`
+  and no party ever holds a whole `x_i`. At the close each trustee publishes a
+  partial decryption `x_ij·A` of the contract's aggregate with a proof of
+  correctness (Chaum-Pedersen, or a small circuit), the contract combines any
+  `t` of them, and the tally circuit takes the combined value in place of
+  `x_i`. It removes the organizer's power to open a single ballot or to sit on
+  the result. On ElGamal this is a protocol to add, not a primitive to change.
+  See *Threshold decryption, and why it is not here* and *Who would hold the
+  shares*.
+- **Auto-tally.** A result with nobody acting: keys generated and sealed inside
+  a TEE that decrypts and proves only the aggregate, and only once `phase()`
+  reads TALLYING, checked through its attestation; or a threshold network
+  (Lit Actions) doing the same. See *Why the contract does not tally by itself*
+  and *An auto-tally that gives nothing up*, written for Paillier and to be
+  reworked for ElGamal, where the decryption is a scalar multiplication and a
+  small discrete log.
+- **A tally deadline.** A fixed time after `voteEnd` past which anyone can void
+  an election nobody tallied, so a result can no longer be withheld forever.
+- **Last-hour coercion.** A proof of "at most K sponsored ballots" per voter,
+  with the voter paying beyond it, would replace the hourly limit and its
+  last-hour window (see *Two votes forced in a row in the last hour stand*).
+- **Scale.** An indexer (a subgraph, or the issuer) serving lists, receipts and
+  Merkle paths, with the browser's own reads kept as the audit path; the
+  backend's in-memory state moved to a shared store so it can run as more than
+  one instance.

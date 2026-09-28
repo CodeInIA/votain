@@ -268,6 +268,11 @@ in [`docs/dev/architecture.md`](docs/dev/architecture.md#known-limits-stated-pla
   memory, and browsers read events straight from the RPC in windows. Fine at
   thesis scale; a public platform needs a shared store and an indexer.
 - **The issuer sees network metadata** of the requests it relays.
+- **Nothing makes the organizer tally.** There is no publishing deadline, so an
+  organizer who never decrypts leaves the election without a result.
+
+Threshold decryption, an auto-tally and a tally deadline are designed but left
+for after the thesis: see [Future work](docs/dev/architecture.md#future-work).
 
 ## Documentation
 
