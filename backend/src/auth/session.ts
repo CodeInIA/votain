@@ -14,7 +14,7 @@
  * enrol arbitrary identities and break Sybil resistance outright.
  */
 import { sdJwt, type VotainCredentialPayload } from '../sd/issuer.js';
-import { isRevoked } from '../status/statusList.js';
+import { isRevoked, statusSlotOfHuman } from '../status/statusList.js';
 import type { CredentialLevel } from './worldId.js';
 
 export interface Session {
@@ -51,9 +51,12 @@ export async function verifySession(vc: string | undefined): Promise<Session | n
   const now = Math.floor(Date.now() / 1000);
   if (typeof payload.exp !== 'number' || payload.exp < now) return null;
 
-  // A revoked credential must not keep an active session alive.
-  const index = payload.credentialStatus?.statusListIndex;
-  if (index !== undefined && (await isRevoked(Number(index)))) return null;
+  // A revoked credential must not keep an active session alive. A credential
+  // issued before its holder was registered names no slot, and is checked
+  // against the slot the human has now, so it is revocable like any other.
+  const listed = Number(payload.credentialStatus?.statusListIndex ?? 0);
+  const slot = Number.isSafeInteger(listed) && listed > 0 ? listed : await statusSlotOfHuman(payload.sub);
+  if (slot > 0 && (await isRevoked(slot))) return null;
 
   return { nullifier: payload.sub, personhood: payload.personhood, payload };
 }

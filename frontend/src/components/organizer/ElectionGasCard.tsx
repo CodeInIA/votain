@@ -36,7 +36,7 @@ export function ElectionGasCard({ election }: ElectionGasCardProps) {
   const [amount, setAmount] = useState('0.5');
   const [busy, setBusy] = useState(false);
 
-  const voteCost = useVoteCost();
+  const voteCost = useVoteCost(election.candidates.length);
   const open = stillOpen(election);
   const remaining = remainingVoters(election);
   const covered = Math.floor(funding.reserved / voteCost.matic);

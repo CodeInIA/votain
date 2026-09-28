@@ -14,7 +14,7 @@
  * looked for into one this server hands out on request.
  */
 import { Router, Request, Response } from 'express';
-import rateLimit from 'express-rate-limit';
+import { perVoterLimit, requireSession, sessionOf } from '../auth/voterLimit.js';
 import { verifySession } from '../auth/session.js';
 import { readSessionCookie } from '../auth/cookie.js';
 import {
@@ -30,19 +30,15 @@ import { VaultUnavailableError } from '../identity/vault.js';
 const router = Router();
 
 /**
- * Writes are a transaction each, so they are limited more tightly than reads.
+ * Writes are a transaction each, paid for by the platform, so they are
+ * limited per VOTER (see `auth/voterLimit`), not per address.
  *
  * The browser already batches: saving an election is instant and local, and the
  * blob is pushed once the voter stops clicking. This is the backstop for a
  * client that does not, and 20 an hour is far above what the debounce produces
  * and far below what would cost the relayer anything.
  */
-const writeLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  limit: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+const writeQuota = perVoterLimit(60 * 60 * 1000, 20);
 
 /** Reads the voter's World ID nullifier from their verified session cookie. */
 async function sessionNullifier(req: Request): Promise<string | null> {
@@ -73,9 +69,8 @@ router.get('/preferences', async (req: Request, res: Response) => {
 // ────────────────────────────────────────────────
 // PUT /preferences: replace them
 // ────────────────────────────────────────────────
-router.put('/preferences', writeLimiter, async (req: Request, res: Response) => {
-  const nullifier = await sessionNullifier(req);
-  if (!nullifier) return res.status(401).json({ error: 'Not authenticated' });
+router.put('/preferences', requireSession, writeQuota, async (req: Request, res: Response) => {
+  const nullifier = sessionOf(res).nullifier;
 
   const { blob } = req.body as { blob?: unknown };
   // An empty string is valid and means "clear": a voter who unsaves their last

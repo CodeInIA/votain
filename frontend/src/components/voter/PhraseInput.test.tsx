@@ -15,7 +15,7 @@ import { useState } from 'react';
 
 import { PhraseInput } from './PhraseInput';
 
-const FRASE = 'harbor pewter pepper pine denim prairie meadow arrow crystal lagoon cinder anchor';
+const FRASE = 'habit nacho koala panda gecko quilt jelly bagel fable igloo daisy acorn';
 
 /** Controlled the way the screen controls it: one string, in and out. */
 function Anfitrion({ inicial = '' }: { inicial?: string }) {
@@ -64,12 +64,12 @@ describe('typing the phrase back in', () => {
   it('pastes into the boxes from where it lands, not always the first', () => {
     render(<Anfitrion />);
 
-    pegar(cajas()[4], 'denim prairie meadow');
+    pegar(cajas()[4], 'gecko quilt jelly');
 
     const puestas = cajas().map(c => c.value);
-    expect(puestas[4]).toBe('denim');
-    expect(puestas[5]).toBe('prairie');
-    expect(puestas[6]).toBe('meadow');
+    expect(puestas[4]).toBe('gecko');
+    expect(puestas[5]).toBe('quilt');
+    expect(puestas[6]).toBe('jelly');
     expect(puestas[0]).toBe('');
   });
 
@@ -86,29 +86,29 @@ describe('typing the phrase back in', () => {
 
     // Not intercepted: one word is a normal edit, and preventing it would stop
     // somebody fixing a single box from their clipboard.
-    const evento = fireEvent.paste(cajas()[3], { clipboardData: { getData: () => 'pine' } });
+    const evento = fireEvent.paste(cajas()[3], { clipboardData: { getData: () => 'panda' } });
     expect(evento).toBe(true);
   });
 
   it('moves on when a word is finished with a space', () => {
     render(<Anfitrion />);
 
-    fireEvent.change(cajas()[0], { target: { value: 'harbor ' } });
+    fireEvent.change(cajas()[0], { target: { value: 'habit ' } });
 
-    expect(cajas()[0].value).toBe('harbor');
+    expect(cajas()[0].value).toBe('habit');
     expect(document.activeElement).toBe(cajas()[1]);
   });
 
   it('lowercases what is typed, because the words are', () => {
     render(<Anfitrion />);
 
-    fireEvent.change(cajas()[0], { target: { value: 'HARBOR' } });
+    fireEvent.change(cajas()[0], { target: { value: 'HABIT' } });
 
-    expect(valor()?.startsWith('harbor')).toBe(true);
+    expect(valor()?.startsWith('habit')).toBe(true);
   });
 
   it('walks back when backspace is pressed in an empty box', () => {
-    render(<Anfitrion inicial="harbor pewter" />);
+    render(<Anfitrion inicial="habit nacho" />);
 
     cajas()[2].focus();
     fireEvent.keyDown(cajas()[2], { key: 'Backspace' });
@@ -119,12 +119,12 @@ describe('typing the phrase back in', () => {
   it('keeps a half-filled grid down to the words it holds', () => {
     render(<Anfitrion />);
 
-    fireEvent.change(cajas()[0], { target: { value: 'harbor' } });
-    fireEvent.change(cajas()[2], { target: { value: 'pepper' } });
+    fireEvent.change(cajas()[0], { target: { value: 'habit' } });
+    fireEvent.change(cajas()[2], { target: { value: 'koala' } });
 
     // The gap is an empty box, not a word: the screen normalises before sealing, and
     // this is the string it gets.
-    expect(valor()?.split(' ').filter(Boolean)).toEqual(['harbor', 'pepper']);
+    expect(valor()?.split(' ').filter(Boolean)).toEqual(['habit', 'koala']);
   });
 
 
@@ -143,12 +143,12 @@ describe('typing the phrase back in', () => {
     render(<Anfitrion />);
     expect(screen.queryByText('recover.clear')).toBeNull();
 
-    fireEvent.change(cajas()[0], { target: { value: 'harbor' } });
+    fireEvent.change(cajas()[0], { target: { value: 'habit' } });
     expect(screen.getByText('recover.clear')).toBeInTheDocument();
   });
 
   it('marks the box holding a word that is not on the list', () => {
-    render(<PhraseInput value="harbor zzzz" onChange={vi.fn()} invalid={['zzzz']} />);
+    render(<PhraseInput value="habit zzzz" onChange={vi.fn()} invalid={['zzzz']} />);
 
     const marcadas = (screen.getAllByRole('textbox') as HTMLInputElement[])
       .filter(c => c.getAttribute('aria-invalid') === 'true');

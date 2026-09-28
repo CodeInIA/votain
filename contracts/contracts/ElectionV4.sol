@@ -2,9 +2,11 @@
 pragma solidity ^0.8.37;
 
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
-import {ISemaphoreVerifier} from "@semaphore-protocol/contracts/interfaces/ISemaphoreVerifier.sol";
 import {InternalLeanIMT, LeanIMTData} from "@zk-kit/lean-imt.sol/InternalLeanIMT.sol";
+import {PoseidonT4} from "poseidon-solidity/PoseidonT4.sol";
+import {BabyJubJub} from "./BabyJubJub.sol";
+import {IBallotVerifier} from "./IBallotVerifier.sol";
+import {ITallyVerifier} from "./ITallyVerifier.sol";
 
 interface IPlatformRegistry {
     function verifiedMembers(uint256 identityCommitment) external view returns (bool);
@@ -16,10 +18,22 @@ interface IPlatformRegistry {
 /// @title ElectionV4
 /// @notice A single anonymous, coercion-resistant election. Members enroll their
 /// Semaphore identity commitment into an on-chain Lean Incremental Merkle Tree and
-/// later cast Paillier-encrypted votes proving group membership with a Semaphore V4
-/// zero-knowledge proof. Re-voting is allowed: only the highest nonce per nullifier
-/// counts at tally time (coercion resistance).
-contract ElectionV4 is ERC2771Context {
+/// later cast ElGamal-encrypted ballots (Baby Jubjub, one key per option) with a
+/// zero-knowledge proof that the ballot is well formed and cast by a member.
+///
+/// Re-voting is the coercion defence, and nobody can see it happen. Every ballot
+/// carries a vote AND an encrypted cancellation of the voter's previous ballot
+/// (of nothing, on a first ballot), so first votes and re-votes look alike, and
+/// each ballot is filed under a tag that links it to no other. The contract adds
+/// every ballot into one running aggregate, in which each voter's chain
+/// telescopes to their last vote, and a result is published only with a proof
+/// that it is the decryption of that aggregate (see circuits/src).
+///
+/// No meta-transaction forwarder, and deliberately: voters reach this contract
+/// through ElectionPaymaster and nothing they call reads the sender, while the
+/// organizer signs their own transactions. A trusted forwarder would only add
+/// a party able to speak as the organizer.
+contract ElectionV4 {
     using InternalLeanIMT for LeanIMTData;
 
     // ────────────────────────────────────────────────
@@ -65,8 +79,9 @@ contract ElectionV4 is ERC2771Context {
         uint256 enrollEnd;
         uint256 voteStart;
         uint256 voteEnd;
-        uint256 scope;          // Semaphore V4 scope (external nullifier)
-        string paillierPublicKey; // JSON {"n": "0x…", "g": "0x…"} voters encrypt with
+        /// One tally key per slot in use (options, then the blank vote), as
+        /// affine Baby Jubjub points flattened to [x0, y0, x1, y1, ...].
+        uint256[] tallyKeys;
         string metadataJson;    // description, candidates, organizer name, tags (IPFS on mainnet)
         address eligibilityAttester;   // address(0) = open election, no attribute policy
         bytes32 eligibilityPolicyHash; // keccak256 of the policy declared in metadataJson
@@ -80,29 +95,58 @@ contract ElectionV4 is ERC2771Context {
     // Constants / immutables
     // ────────────────────────────────────────────────
 
-    /// @dev Old merkle roots stay valid this long after being superseded, so proofs
-    /// generated just before another member enrolls do not become unusable.
+    /// @dev Old merkle roots stay valid this long after being SUPERSEDED, so a proof
+    /// generated just before another member enrolls, or another ballot lands,
+    /// does not become unusable. Measured from when a root stopped being current,
+    /// as Semaphore does: measured from when it was created, a root that had been
+    /// current for longer than this expired the moment it was replaced, and a
+    /// voter in a quiet election lost their proof to whoever voted first.
     uint256 public constant MERKLE_ROOT_VALIDITY = 1 hours;
 
-    uint256 public constant MIN_TREE_DEPTH = 1;
-    uint256 public constant MAX_TREE_DEPTH = 32;
+    /// @dev The depth the circuits were compiled for: both trees hold at most
+    /// 2^20 leaves, which bounds an election to that many members and ballots.
+    uint256 public constant MAX_TREE_DEPTH = 20;
 
     /**
-     * @dev Ceiling on ballot options, and it is the ENCODING that sets it.
+     * @notice One ballot per voter per epoch.
      *
-     * A ballot for option i is the Paillier plaintext B^i with B = 10^12, so a
-     * tally packs one counter per option into a single plaintext, base B. That
-     * plaintext must stay below the 2048-bit modulus, which is about 616
-     * decimal digits: 12 digits per counter leaves room for 51 of them, and the
-     * blank vote takes one. Above that the top counter wraps and the decrypted
-     * tally is silently wrong, so the bound belongs here, where an election is
-     * refused before anyone votes in it, rather than in the client that happens
-     * to do the arithmetic.
+     * Ballots are relayed at the organizer's expense, so something has to bound
+     * how fast one voter can spend it. The old bound was a cooldown per
+     * nullifier, which is exactly the public link between a voter's ballots
+     * this design removes. An epoch tag, derived from the voter's secret and
+     * the epoch number, is different in every epoch: it limits the rate without
+     * saying which ballots share an author.
+     *
+     * A proof may name the current epoch or the one before (see `castVote`),
+     * so the bound is two ballots in any window of this length, not one.
+     */
+    uint256 public constant EPOCH_LENGTH = 1 hours;
+
+    /**
+     * @dev Ceiling on ballot options, set by the largest circuit built: 50
+     * options and the blank vote. Each slot costs the ballot proof two public
+     * signals and the aggregate one point, so the bound also keeps a ballot's
+     * gas within reach of any block.
      */
     uint256 public constant MAX_OPTIONS = 50;
 
     address public immutable organizer;
-    ISemaphoreVerifier public immutable verifier;
+    IBallotVerifier public immutable ballotVerifier;
+    ITallyVerifier public immutable tallyVerifier;
+    /// @notice Slots the circuits were compiled for: at least numOptions + 1,
+    /// the rest padded with the identity point.
+    uint256 public immutable circuitSlots;
+    /// @notice Poseidon chain over the tally keys padded to `circuitSlots`,
+    /// exactly as the circuits hash them. Computed here, never supplied.
+    uint256 public immutable keysHash;
+    /**
+     * @notice The scope every tag of this election is derived under.
+     *
+     * Derived from this contract's own address and chain, never chosen: two
+     * elections sharing a scope would give a voter who holds one secret in both
+     * the same tags in both, and tags are what must not link anything.
+     */
+    uint256 public immutable scope;
     IPlatformRegistry public immutable registry;
 
     /**
@@ -181,7 +225,7 @@ contract ElectionV4 is ERC2771Context {
     /// nullifier is the same number in every election, the tag is not.
     bytes32 private constant PRIVATE_ENROLL_TYPEHASH =
         keccak256(
-            "PrivateEnrollment(uint256 identityCommitment,uint256 humanTag,uint256 deadline)"
+            "PrivateEnrollment(uint256 identityCommitment,uint256 humanTag,uint256 documentTag,uint256 deadline)"
         );
 
     /**
@@ -211,8 +255,6 @@ contract ElectionV4 is ERC2771Context {
     uint256 public enrollEnd;
     uint256 public voteStart;
     uint256 public voteEnd;
-    uint256 public scope;
-    string public paillierPublicKey;
     string public metadataJson;
 
     // ────────────────────────────────────────────────
@@ -226,7 +268,7 @@ contract ElectionV4 is ERC2771Context {
      *
      * WHAT IT IS FOR. `closeEnrollmentEarly` and `closeVotingEarly` are ordinary
      * conveniences until you notice what the organizer can see while using
-     * them: `memberCount` and `distinctVoters` are public and rise in real time.
+     * them: `memberCount` and `voteCount` are public and rise in real time.
      * So an organizer can watch the electorate assemble and cut enrolment off at
      * the moment the roll suits them, or watch turnout and end the vote at the
      * moment the result does. Neither leaves a trace that says what it was for,
@@ -292,11 +334,31 @@ contract ElectionV4 is ERC2771Context {
 
     LeanIMTData internal membersTree;
 
-    /// @dev merkle root => timestamp of its creation (0 = never existed)
+    /// @dev members root => when it stopped being the current root (0 = still current, or never existed)
     mapping(uint256 => uint256) public rootTimestamps;
 
-    /// @dev nullifier => next expected nonce (number of votes cast by that member)
-    mapping(uint256 => uint256) public nullifierNonces;
+    /// @dev Flattened affine tally keys, one point per slot in use.
+    uint256[] internal _tallyKeys;
+
+    /// @dev Every ballot's leaf, so a voter can prove which ballot they cancel
+    /// without pointing at it.
+    LeanIMTData internal ballotsTree;
+
+    /// @dev ballots root => when it stopped being the current root (0 = still current, or never existed).
+    /// The empty tree's root, zero, is recorded like any other, so a first ballot
+    /// proved before any other landed stays valid through the window.
+    mapping(uint256 => uint256) public ballotRootTimestamps;
+
+    /// @dev Tags already cast. A tag is one step of one voter's chain.
+    mapping(uint256 => bool) public usedTags;
+
+    /// @dev Epoch tags already cast: one ballot per voter per epoch.
+    mapping(uint256 => bool) public usedEpochTags;
+
+    /// @dev The running sum of every ballot, votes and cancellations, in
+    /// extended coordinates: A, then one B per slot in use.
+    uint256[4] internal _aggA;
+    uint256[4][] internal _aggB;
 
     /**
      * @dev Personhood nullifier => already used in THIS election.
@@ -319,18 +381,17 @@ contract ElectionV4 is ERC2771Context {
     /// identity cannot buy a second leaf, and therefore a second ballot.
     mapping(uint256 => bool) public enrolledHumans;
 
-    /// @dev Total VoteCast events emitted (re-votes included).
+    /// @dev Ballots cast, first votes and re-votes alike: nothing tells them apart.
     uint256 public voteCount;
 
     /**
-     * @dev How many distinct nullifiers have voted at least once.
+     * @notice How many voters the published (or voided) result rests on.
      *
-     * Not the same number as `voteCount`: re-voting is the coercion defence, so
-     * one person can appear in that total many times while the tally counts
-     * them once. This is the figure a published result has to agree with, and
-     * the figure the privacy quorum is measured against.
+     * Unknowable until the tally: each voter's chain telescopes to one vote in
+     * the aggregate, so this is the sum of the decrypted counts, proved with
+     * them. Zero until a result is published or voided below the quorum.
      */
-    uint256 public distinctVoters;
+    uint256 public voters;
 
     string public resultsCid;
     uint256[] internal _tally;
@@ -342,13 +403,29 @@ contract ElectionV4 is ERC2771Context {
     // ────────────────────────────────────────────────
 
     event MemberEnrolled(uint256 indexed identityCommitment, uint256 index, uint256 merkleTreeRoot);
-    event VoteCast(uint256 indexed nullifier, bytes voteCiphertext, uint256 nonce, uint256 timestamp);
+    /**
+     * @notice One ballot, with everything anyone needs to recompute the
+     * aggregate and the ballots tree from events alone. Points are affine and
+     * flattened; each B list has one point per slot in use.
+     */
+    event BallotCast(
+        uint256 indexed tag,
+        uint256 index,
+        uint256 leaf,
+        uint256[2] voteA,
+        uint256[] voteB,
+        uint256[2] cancelA,
+        uint256[] cancelB,
+        uint256 timestamp
+    );
     event EnrollmentOpenedEarly(uint256 newEnrollStart);
     event VotingOpenedEarly(uint256 newVoteStart);
     event EnrollmentClosedEarly(uint256 newEnrollEnd, uint256 newVoteStart);
     event VotingClosedEarly(uint256 newVoteEnd);
     event ElectionCancelled(address indexed by);
     event ElectionVoided(address indexed by);
+    /// @notice Voided with a proof that fewer than the quorum voted. The counts stay secret.
+    event VoidedBelowQuorum(uint256 voters);
     event ResultsPublished(string ipfsCid, uint256[] tally, Outcome outcome, uint256 winnerIndex);
 
     /**
@@ -376,7 +453,16 @@ contract ElectionV4 is ERC2771Context {
     error NotPlatformVerified();
     error AlreadyEnrolled();
     error UnknownOrExpiredRoot();
-    error InvalidTreeDepth();
+    /// @dev A tree reached the 2^20 leaves the circuits can prove membership in.
+    error TreeFull();
+    /// @dev This step of some voter's chain was already cast.
+    error TagAlreadyCast();
+    /// @dev This voter already cast a ballot in this epoch.
+    error EpochAlreadyCast();
+    /// @dev The proof was built for an epoch that is neither this one nor the last.
+    error WrongEpoch();
+    /// @dev The verifiers disagree with each other or with the options.
+    error VerifierMismatch();
     error InvalidProof();
     error InvalidTally();
     error WrongPhase();
@@ -398,13 +484,19 @@ contract ElectionV4 is ERC2771Context {
     error PersonhoodNullifierUsed();
     error TooManyOptions();
     error PrivacyQuorumNotMet();
+    /// @dev A non-cancellable election whose result can be published cannot be voided.
+    error ResultPublishable();
+    /// @dev A gated private enrolment arrived without the document tag.
+    error MissingDocumentTag();
+    /// @dev A document tag on an election with no document requirement.
+    error UnexpectedDocumentTag();
 
     // ────────────────────────────────────────────────
     // Modifiers
     // ────────────────────────────────────────────────
 
     modifier onlyOrganizer() {
-        if (_msgSender() != organizer) revert NotOrganizer();
+        if (msg.sender != organizer) revert NotOrganizer();
         _;
     }
 
@@ -420,15 +512,16 @@ contract ElectionV4 is ERC2771Context {
     // ────────────────────────────────────────────────
 
     constructor(
-        address trustedForwarder,
-        address _verifier,
+        address _ballotVerifier,
+        address _tallyVerifier,
         address _registry,
         address _platformAttester,
         address _organizer,
         Config memory cfg
-    ) ERC2771Context(trustedForwarder) {
+    ) {
         if (
-            _verifier == address(0) ||
+            _ballotVerifier == address(0) ||
+            _tallyVerifier == address(0) ||
             _registry == address(0) ||
             _organizer == address(0) ||
             cfg.numOptions == 0 ||
@@ -451,6 +544,9 @@ contract ElectionV4 is ERC2771Context {
         if (cfg.votingType == VotingType.WITNESS_THRESHOLD && cfg.thresholdValue == 0) {
             revert InvalidConfig();
         }
+
+        // The tally circuit compares the voter count with the quorum over 32 bits.
+        if (cfg.privacyQuorum >= 1 << 32) revert InvalidConfig();
 
         // An attester without a policy hash would gate enrollment on rules
         // nobody can read, and a policy hash without an attester would publish
@@ -475,7 +571,27 @@ contract ElectionV4 is ERC2771Context {
             revert InvalidConfig();
         }
 
-        verifier = ISemaphoreVerifier(_verifier);
+        // The two circuits must be the same size, and big enough for every
+        // option and the blank vote. A mismatch would deploy an election nobody
+        // can vote in or nobody can count.
+        uint256 slotCount = IBallotVerifier(_ballotVerifier).slots();
+        if (slotCount != ITallyVerifier(_tallyVerifier).slots() || slotCount < cfg.numOptions + 1) {
+            revert VerifierMismatch();
+        }
+        if (cfg.tallyKeys.length != 2 * (cfg.numOptions + 1)) revert InvalidConfig();
+
+        ballotVerifier = IBallotVerifier(_ballotVerifier);
+        tallyVerifier = ITallyVerifier(_tallyVerifier);
+        circuitSlots = slotCount;
+        keysHash = _hashKeys(cfg.tallyKeys, slotCount);
+        _tallyKeys = cfg.tallyKeys;
+
+        // The aggregate starts at the identity: the sum of no ballots.
+        _aggA = BabyJubJub.identity();
+        for (uint256 i = 0; i <= cfg.numOptions; i++) {
+            _aggB.push(BabyJubJub.identity());
+        }
+
         registry = IPlatformRegistry(_registry);
         platformAttester = _platformAttester;
         organizer = _organizer;
@@ -491,8 +607,7 @@ contract ElectionV4 is ERC2771Context {
         enrollEnd = cfg.enrollEnd;
         voteStart = cfg.voteStart;
         voteEnd = cfg.voteEnd;
-        scope = cfg.scope;
-        paillierPublicKey = cfg.paillierPublicKey;
+        scope = uint256(keccak256(abi.encode(block.chainid, address(this)))) >> 8;
         metadataJson = cfg.metadataJson;
         eligibilityAttester = cfg.eligibilityAttester;
         eligibilityPolicyHash = cfg.eligibilityPolicyHash;
@@ -505,6 +620,27 @@ contract ElectionV4 is ERC2771Context {
 
         _cachedChainId = block.chainid;
         _cachedDomainSeparator = _buildDomainSeparator();
+    }
+
+    /**
+     * @dev The circuits' hash of the keys: a Poseidon chain over every point,
+     * padded to the circuit's size with the identity. Each key is checked to be
+     * on the curve and not the identity, which would encrypt its option in the
+     * clear. Whether the organizer knows the keys' secrets is not checked here:
+     * the tally proof demonstrates it, and an organizer who does not has only
+     * made an election they cannot count.
+     */
+    function _hashKeys(uint256[] memory keys, uint256 slotCount) private pure returns (uint256 h) {
+        for (uint256 i = 0; i < slotCount; i++) {
+            uint256 x = 0;
+            uint256 y = 1;
+            if (2 * i < keys.length) {
+                x = keys[2 * i];
+                y = keys[2 * i + 1];
+                if (!BabyJubJub.isOnCurve(x, y) || x == 0) revert InvalidConfig();
+            }
+            h = PoseidonT4.hash([h, x, y]);
+        }
     }
 
     /// @dev Rebuilt when the chain id moved under us, so attestations signed for
@@ -563,6 +699,35 @@ contract ElectionV4 is ERC2771Context {
 
     function tally() external view returns (uint256[] memory) {
         return _tally;
+    }
+
+    /// @notice The tally keys voters encrypt with, flattened affine points.
+    function tallyKeys() external view returns (uint256[] memory) {
+        return _tallyKeys;
+    }
+
+    function ballotsRoot() external view returns (uint256) {
+        return ballotsTree._root();
+    }
+
+    function ballotsDepth() external view returns (uint256) {
+        return ballotsTree.depth;
+    }
+
+    function currentEpoch() public view returns (uint256) {
+        return block.timestamp / EPOCH_LENGTH;
+    }
+
+    /**
+     * @notice The running sum of every ballot, as affine points: A, then one B
+     * per slot in use. What the tally proof decrypts.
+     */
+    function aggregate() public view returns (uint256[2] memory a, uint256[] memory b) {
+        (a[0], a[1]) = BabyJubJub.toAffine(_aggA);
+        b = new uint256[](2 * _aggB.length);
+        for (uint256 i = 0; i < _aggB.length; i++) {
+            (b[2 * i], b[2 * i + 1]) = BabyJubJub.toAffine(_aggB[i]);
+        }
     }
 
     // ────────────────────────────────────────────────
@@ -650,6 +815,7 @@ contract ElectionV4 is ERC2771Context {
     function enrollPrivate(
         uint256 identityCommitment,
         uint256 humanTag,
+        uint256 documentTag,
         uint256 deadline,
         bytes calldata platformSignature,
         bytes calldata eligibilitySignature
@@ -658,7 +824,23 @@ contract ElectionV4 is ERC2771Context {
         if (block.timestamp > deadline) revert AttestationExpired();
         if (humanTag == 0) revert MissingHumanTag();
 
-        bytes32 digest = privateEnrollmentDigest(identityCommitment, humanTag, deadline);
+        /**
+         * ONE DOCUMENT, ONE LEAF, which `humanTag` alone cannot promise. The
+         * tag is derived from the World ID account, and below Orb an account
+         * is not a person: somebody holding several could pass the same
+         * passport check once per account and enrol once per account. A gated
+         * election therefore carries a second tag derived from the document
+         * the voter proved, and refuses it the second time, exactly as the
+         * public path refuses a reused personhood nullifier.
+         */
+        if (eligibilityAttester != address(0)) {
+            if (documentTag == 0) revert MissingDocumentTag();
+            if (usedPersonhoodNullifiers[documentTag]) revert PersonhoodNullifierUsed();
+        } else if (documentTag != 0) {
+            revert UnexpectedDocumentTag();
+        }
+
+        bytes32 digest = privateEnrollmentDigest(identityCommitment, humanTag, documentTag, deadline);
         _requireSignature(digest, platformSignature, platformAttester);
 
         // The organizer's own gatekeeper, where they named one. It signs the
@@ -667,6 +849,7 @@ contract ElectionV4 is ERC2771Context {
         // only add a second thing to keep in step.
         if (eligibilityAttester != address(0)) {
             _requireSignature(digest, eligibilitySignature, eligibilityAttester);
+            usedPersonhoodNullifiers[documentTag] = true;
         }
 
         _insertMember(identityCommitment, humanTag);
@@ -676,10 +859,11 @@ contract ElectionV4 is ERC2771Context {
     function privateEnrollmentDigest(
         uint256 identityCommitment,
         uint256 humanTag,
+        uint256 documentTag,
         uint256 deadline
     ) public view returns (bytes32) {
         bytes32 structHash = keccak256(
-            abi.encode(PRIVATE_ENROLL_TYPEHASH, identityCommitment, humanTag, deadline)
+            abi.encode(PRIVATE_ENROLL_TYPEHASH, identityCommitment, humanTag, documentTag, deadline)
         );
         return keccak256(abi.encodePacked(hex"1901", _domainSeparator(), structHash));
     }
@@ -736,10 +920,11 @@ contract ElectionV4 is ERC2771Context {
         _requireEnrollmentOpen();
         if (membersTree._has(identityCommitment)) revert AlreadyEnrolled();
         if (enrolledHumans[humanKey]) revert AlreadyEnrolled();
+        if (membersTree.size >= 1 << MAX_TREE_DEPTH) revert TreeFull();
 
         uint256 index = membersTree.size;
+        rootTimestamps[membersTree._root()] = block.timestamp;
         uint256 newRoot = membersTree._insert(identityCommitment);
-        rootTimestamps[newRoot] = block.timestamp;
         enrolledHumans[humanKey] = true;
 
         emit MemberEnrolled(identityCommitment, index, newRoot);
@@ -749,56 +934,157 @@ contract ElectionV4 is ERC2771Context {
     // Voting
     // ────────────────────────────────────────────────
 
-    /// @notice Cast (or re-cast) an encrypted vote with a Semaphore membership proof.
-    /// @dev The ZK message binds the ciphertext to the voter's current nonce, so a
-    /// coerced vote can always be silently replaced by a later one.
-    /// @param voteCiphertext Paillier ciphertext of the encoded ballot (arbitrary length).
-    function castVote(
-        bytes calldata voteCiphertext,
-        uint256 nullifier,
-        uint256 merkleRoot,
-        uint256 merkleDepth,
-        uint256[2] calldata _pA,
-        uint256[2][2] calldata _pB,
-        uint256[2] calldata _pC
-    ) external notDecided {
-        if (block.timestamp < voteStart || block.timestamp > voteEnd) revert VotingNotOpen();
-        if (merkleDepth < MIN_TREE_DEPTH || merkleDepth > MAX_TREE_DEPTH) revert InvalidTreeDepth();
-
-        // The proof must be built against the current tree root, or a recent root
-        // still inside its validity window.
-        if (merkleRoot != membersTree._root()) {
-            uint256 createdAt = rootTimestamps[merkleRoot];
-            if (createdAt == 0 || block.timestamp > createdAt + MERKLE_ROOT_VALIDITY) {
-                revert UnknownOrExpiredRoot();
-            }
-        }
-
-        uint256 currentNonce = nullifierNonces[nullifier];
-
-        // The ZK message is the ciphertext+nonce digest. The prover passes the same
-        // value as the Semaphore `message` input when generating the proof.
-        uint256 message = uint256(keccak256(abi.encodePacked(voteCiphertext, currentNonce)));
-
-        // Semaphore V4 public signals: [merkleTreeRoot, nullifier, hash(message), hash(scope)]
-        // (hash-to-field exactly as Semaphore.sol does it).
-        uint256[4] memory pubSignals = [merkleRoot, nullifier, _hashToField(message), _hashToField(scope)];
-        if (!verifier.verifyProof(_pA, _pB, _pC, pubSignals, merkleDepth)) revert InvalidProof();
-
-        emit VoteCast(nullifier, voteCiphertext, currentNonce, block.timestamp);
-
-        // Nonce zero is this nullifier's first ballot, so this is where a
-        // PERSON joins the count. Every later ballot from them replaces it.
-        if (currentNonce == 0) distinctVoters += 1;
-
-        nullifierNonces[nullifier] = currentNonce + 1;
-        voteCount += 1;
+    /// @notice The public half of a ballot. Points are affine; each B list is
+    /// flattened and holds one point per circuit slot.
+    struct BallotInput {
+        uint256 votersRoot;
+        uint256 ballotsRoot;
+        uint256 epoch;
+        uint256 tag;
+        uint256 epochTag;
+        uint256 leaf;
+        uint256[2] voteA;
+        uint256[] voteB;
+        uint256[2] cancelA;
+        uint256[] cancelB;
     }
 
-    /// @dev Semaphore's hash-to-field: keccak256 truncated to fit the SNARK scalar field.
-    /// Mirrors `Semaphore.sol#_hash` so proofs generated with the official JS libraries verify.
-    function _hashToField(uint256 value) private pure returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(value))) >> 8;
+    /// @notice A Groth16 proof.
+    struct Proof {
+        uint256[2] a;
+        uint256[2][2] b;
+        uint256[2] c;
+    }
+
+    /**
+     * @notice Cast a ballot: a first vote or a re-vote, and nobody can tell which.
+     *
+     * The proof says the voter is on the roll, the vote is exactly one option,
+     * the cancellation undoes this voter's previous ballot (or nothing), and
+     * the tags are this voter's for this step and this epoch. Everything else
+     * follows: a tag cast twice would fork a chain, so it is refused; an epoch
+     * tag cast twice would let one voter spend the organizer's gas without
+     * bound, so it is refused too.
+     *
+     * @dev Callable by anyone. The proof is the authorisation, so the voter can
+     * pay their own gas or hand the ballot to the relay.
+     */
+    function castVote(BallotInput calldata ballot, Proof calldata proof) external notDecided {
+        // `voteEnd` is exclusive, matching `phase()`: the second it reads
+        // TALLYING, no ballot lands.
+        if (block.timestamp < voteStart || block.timestamp >= voteEnd) revert VotingNotOpen();
+        if (ballot.voteB.length != 2 * circuitSlots || ballot.cancelB.length != 2 * circuitSlots) {
+            revert InvalidProof();
+        }
+
+        // The epoch the proof was built for: this one, or the one that just
+        // ended, so a proof made at the boundary is not wasted.
+        uint256 epochNow = currentEpoch();
+        if (ballot.epoch != epochNow && ballot.epoch + 1 != epochNow) revert WrongEpoch();
+
+        _requireKnownRoot(ballot.votersRoot, membersTree._root(), rootTimestamps);
+        _requireKnownRoot(ballot.ballotsRoot, ballotsTree._root(), ballotRootTimestamps);
+
+        if (usedTags[ballot.tag]) revert TagAlreadyCast();
+        if (usedEpochTags[ballot.epochTag]) revert EpochAlreadyCast();
+
+        if (!ballotVerifier.verifyBallot(proof.a, proof.b, proof.c, _ballotSignals(ballot))) {
+            revert InvalidProof();
+        }
+
+        usedTags[ballot.tag] = true;
+        usedEpochTags[ballot.epochTag] = true;
+
+        if (ballotsTree.size >= 1 << MAX_TREE_DEPTH) revert TreeFull();
+        uint256 index = ballotsTree.size;
+        ballotRootTimestamps[ballotsTree._root()] = block.timestamp;
+        ballotsTree._insert(ballot.leaf);
+
+        _accumulate(ballot);
+        voteCount += 1;
+
+        emit BallotCast(
+            ballot.tag,
+            index,
+            ballot.leaf,
+            ballot.voteA,
+            ballot.voteB,
+            ballot.cancelA,
+            ballot.cancelB,
+            block.timestamp
+        );
+    }
+
+    /// @dev A proof must be built against the current root, or one superseded
+    /// less than MERKLE_ROOT_VALIDITY ago.
+    function _requireKnownRoot(
+        uint256 root,
+        uint256 current,
+        mapping(uint256 => uint256) storage supersededAt
+    ) private view {
+        if (root == current) return;
+        uint256 since = supersededAt[root];
+        if (since == 0 || block.timestamp > since + MERKLE_ROOT_VALIDITY) {
+            revert UnknownOrExpiredRoot();
+        }
+    }
+
+    /// @dev The ballot circuit's public signals, in its order: outputs first
+    /// (tag, epochTag, leaf), then the public inputs as declared.
+    function _ballotSignals(BallotInput calldata ballot) private view returns (uint256[] memory pub) {
+        uint256 n = circuitSlots;
+        pub = new uint256[](13 + 4 * n);
+        pub[0] = ballot.tag;
+        pub[1] = ballot.epochTag;
+        pub[2] = ballot.leaf;
+        pub[3] = ballot.votersRoot;
+        pub[4] = ballot.ballotsRoot;
+        pub[5] = scope;
+        pub[6] = keysHash;
+        pub[7] = numOptions + 1;
+        pub[8] = ballot.epoch;
+        pub[9] = ballot.voteA[0];
+        pub[10] = ballot.voteA[1];
+        uint256 pos = 11;
+        for (uint256 i = 0; i < 2 * n; i++) pub[pos + i] = ballot.voteB[i];
+        pos += 2 * n;
+        pub[pos] = ballot.cancelA[0];
+        pub[pos + 1] = ballot.cancelA[1];
+        pos += 2;
+        for (uint256 i = 0; i < 2 * n; i++) pub[pos + i] = ballot.cancelB[i];
+    }
+
+    /**
+     * @dev Adds the ballot, vote and cancellation, into the aggregate. The
+     * points are on the curve because the proof computed them; only the slots
+     * in use are kept, the rest being the identity by construction.
+     */
+    function _accumulate(BallotInput calldata ballot) private {
+        _aggA = BabyJubJub.add(
+            _aggA,
+            BabyJubJub.add(
+                _lift(ballot.voteA[0], ballot.voteA[1]),
+                _lift(ballot.cancelA[0], ballot.cancelA[1])
+            )
+        );
+        uint256 used = _aggB.length;
+        for (uint256 i = 0; i < used; i++) {
+            _aggB[i] = BabyJubJub.add(
+                _aggB[i],
+                BabyJubJub.add(
+                    _lift(ballot.voteB[2 * i], ballot.voteB[2 * i + 1]),
+                    _lift(ballot.cancelB[2 * i], ballot.cancelB[2 * i + 1])
+                )
+            );
+        }
+    }
+
+    /// @dev An affine point the proof vouches for, in extended coordinates.
+    function _lift(uint256 x, uint256 y) private pure returns (uint256[4] memory p) {
+        p[0] = x;
+        p[1] = y;
+        p[2] = 1;
+        p[3] = mulmod(x, y, BabyJubJub.Q);
     }
 
     // ────────────────────────────────────────────────
@@ -808,9 +1094,9 @@ contract ElectionV4 is ERC2771Context {
     /// @notice Cancel the election before it ends. Terminal.
     function cancelElection() external onlyOrganizer notDecided {
         if (!cancellable) revert NotCancellable();
-        if (block.timestamp > voteEnd) revert WrongPhase();
+        if (block.timestamp >= voteEnd) revert WrongPhase();
         cancelled = true;
-        emit ElectionCancelled(_msgSender());
+        emit ElectionCancelled(msg.sender);
     }
 
     /**
@@ -876,57 +1162,86 @@ contract ElectionV4 is ERC2771Context {
     /// @notice End the voting period now, moving the election into tallying.
     function closeVotingEarly() external onlyOrganizer notDecided {
         if (fixedSchedule) revert ScheduleIsFixed();
-        if (block.timestamp < voteStart || block.timestamp > voteEnd) revert WrongPhase();
+        if (block.timestamp < voteStart || block.timestamp >= voteEnd) revert WrongPhase();
         voteEnd = block.timestamp;
         emit VotingClosedEarly(voteEnd);
     }
 
-    /// @notice Void the election during tallying (e.g. privacy quorum not met). Terminal.
+    /**
+     * @notice Void the election during tallying. Terminal.
+     *
+     * Open without a proof when fewer ballots were cast than the privacy quorum
+     * asks for voters: each voter casts at least one, so no publishable result
+     * can exist. Otherwise only on an election that kept the power to be called
+     * off: the organizer holds the key and can read the result before deciding,
+     * so voiding a publishable result is a veto, and an election that promised
+     * no veto (`cancellable == false`) must not keep this one. Such an election
+     * that turns out to be below its quorum proves it with `voidBelowQuorum`.
+     */
     function markVoided() external onlyOrganizer notDecided {
-        if (block.timestamp <= voteEnd) revert VotingNotEnded();
+        if (block.timestamp < voteEnd) revert VotingNotEnded();
+        if (!cancellable && voteCount >= privacyQuorum) revert ResultPublishable();
         voided = true;
-        emit ElectionVoided(_msgSender());
+        emit ElectionVoided(msg.sender);
     }
 
-    /// @notice Publish the decrypted tally and its IPFS audit trail. Terminal.
-    /// @param ipfsCid CID of the auditable tally JSON pinned on IPFS.
-    /// @param tallyResults Vote counts per option; the LAST entry is the blank vote.
+    /**
+     * @notice Void the election with a proof that fewer voters than the privacy
+     * quorum took part. Terminal. The proof reveals how many voted and nothing
+     * about how: an election too small to publish ends without its handful of
+     * ballots ever being opened.
+     *
+     * @dev Callable by anyone holding the proof; only the organizer can make
+     * one, since it needs the tally keys' secrets.
+     */
+    function voidBelowQuorum(uint256 votersBelow, Proof calldata proof) external notDecided {
+        if (block.timestamp < voteEnd) revert VotingNotEnded();
+        uint256[] memory zeros = new uint256[](circuitSlots);
+        if (!tallyVerifier.verifyTally(proof.a, proof.b, proof.c, _tallySignals(zeros, votersBelow, false))) {
+            revert InvalidProof();
+        }
+        voters = votersBelow;
+        voided = true;
+        emit ElectionVoided(msg.sender);
+        emit VoidedBelowQuorum(votersBelow);
+    }
+
+    /**
+     * @notice Publish the decrypted tally with the proof that it is correct. Terminal.
+     * @param ipfsCid CID of the auditable tally JSON pinned on IPFS, or empty.
+     * @param tallyResults Vote counts per option; the LAST entry is the blank vote.
+     * @param proof The tally circuit's proof that these counts are the
+     * decryption of `aggregate()` under the election's keys.
+     *
+     * CHECKED HERE, not by the reader. The aggregate encrypts each voter's
+     * last vote, so its decryption is the result, and the proof makes that a
+     * condition of publishing rather than something every reader must redo.
+     * The counts also say how many voted, which is what the privacy quorum is
+     * measured against.
+     */
     function publishResults(
         string calldata ipfsCid,
-        uint256[] calldata tallyResults
+        uint256[] calldata tallyResults,
+        Proof calldata proof
     ) external onlyOrganizer notDecided {
-        if (block.timestamp <= voteEnd) revert VotingNotEnded();
+        if (block.timestamp < voteEnd) revert VotingNotEnded();
         if (tallyResults.length != numOptions + 1) revert InvalidTally();
 
-        // Below the quorum there is no publishable result, only `markVoided`.
+        uint256 counted = 0;
+        uint256[] memory counts = new uint256[](circuitSlots);
+        for (uint256 i = 0; i < tallyResults.length; i++) {
+            counts[i] = tallyResults[i];
+            counted += tallyResults[i];
+        }
+
+        // Below the quorum there is no publishable result, only voiding.
         // Enforced here rather than in the client that draws the button,
         // because a rule a wallet can step around is not a rule.
-        if (distinctVoters < privacyQuorum) revert PrivacyQuorumNotMet();
+        if (counted < privacyQuorum) revert PrivacyQuorumNotMet();
 
-        // NOT CHECKED HERE: that the counters sum to `distinctVoters`.
-        //
-        // It is true of every honest tally, and refusing anything else looks
-        // like the obvious way to make ballot stuffing impossible. It is not,
-        // for two reasons that only show up together.
-        //
-        // This contract never validates a ciphertext; it validates the proof of
-        // membership around one. So an enrolled voter can cast arbitrary bytes
-        // as their ballot, and no tally over that election will ever sum to the
-        // voter count again. The rule would hand any single voter the power to
-        // make any election permanently unpublishable.
-        //
-        // And it would buy little: an organizer inclined to falsify moves votes
-        // BETWEEN options and keeps the total right, which the sum cannot see.
-        // It would stop the crude attack at the price of a denial of service,
-        // and leave the careful one untouched.
-        //
-        // The equality is checked where it is safe and useful instead: in the
-        // client, as `decryptTally`'s `expectedBallots`, where it turns a
-        // corrupted or overflowed tally into a visible error rather than a
-        // wrong number; and on the results screen, where `distinctVoters` is
-        // public and anyone can compare it against the published counters. What
-        // would make stuffing genuinely impossible is a ballot validity proof,
-        // and that is a different piece of work.
+        if (!tallyVerifier.verifyTally(proof.a, proof.b, proof.c, _tallySignals(counts, counted, true))) {
+            revert InvalidProof();
+        }
 
         (Outcome computed, uint256 winIdx) = _computeOutcome(tallyResults);
 
@@ -934,9 +1249,43 @@ contract ElectionV4 is ERC2771Context {
         _tally = tallyResults;
         outcome = computed;
         winnerIndex = winIdx;
+        voters = counted;
         resultsPublished = true;
 
         emit ResultsPublished(ipfsCid, tallyResults, computed, winIdx);
+    }
+
+    /**
+     * @dev The tally circuit's public signals, in its order: outputs (counts,
+     * voters), then keysHash, slots, the aggregate padded to the circuit's
+     * size with the identity, the quorum and the mode.
+     */
+    function _tallySignals(
+        uint256[] memory counts,
+        uint256 voterCount,
+        bool publish
+    ) private view returns (uint256[] memory pub) {
+        uint256 n = circuitSlots;
+        (uint256[2] memory a, uint256[] memory b) = aggregate();
+        pub = new uint256[](3 * n + 7);
+        for (uint256 i = 0; i < n; i++) pub[i] = counts[i];
+        pub[n] = voterCount;
+        pub[n + 1] = keysHash;
+        pub[n + 2] = numOptions + 1;
+        pub[n + 3] = a[0];
+        pub[n + 4] = a[1];
+        uint256 pos = n + 5;
+        for (uint256 i = 0; i < n; i++) {
+            if (2 * i < b.length) {
+                pub[pos + 2 * i] = b[2 * i];
+                pub[pos + 2 * i + 1] = b[2 * i + 1];
+            } else {
+                pub[pos + 2 * i + 1] = 1; // the identity, (0, 1)
+            }
+        }
+        pos += 2 * n;
+        pub[pos] = privacyQuorum;
+        pub[pos + 1] = publish ? 1 : 0;
     }
 
     // ────────────────────────────────────────────────

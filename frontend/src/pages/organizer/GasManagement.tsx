@@ -29,6 +29,7 @@ import { useElectionPages } from '../../hooks/useElectionPages';
 import { getPaymaster } from '../../lib/contracts';
 import { openNeeds, totalShortfall } from '../../lib/gasNeeds';
 import { useVoteCost } from '../../hooks/useVoteCost';
+import { voteCostFor } from '../../lib/voteCost';
 import { DatePicker } from '../../components/ui/DatePicker';
 import { usePageLimit } from '../../hooks/usePageLimit';
 import { shortenReference } from '../../lib/utils';
@@ -288,7 +289,11 @@ export default function GasManagement() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [live, mineKey, reloadToken]);
 
-  const needs = openNeeds(mine.all, e => reserves[e.contractAddress] ?? 0, voteCost.matic);
+  const needs = openNeeds(
+    mine.all,
+    e => reserves[e.contractAddress] ?? 0,
+    e => voteCostFor(voteCost, e.candidates.length),
+  );
   const owed = totalShortfall(needs);
   const waitingVoters = needs.reduce((sum, need) => sum + need.remainingVoters, 0);
   const leftAfterWithdrawal = balance - (Number(withdrawAmount) || 0);

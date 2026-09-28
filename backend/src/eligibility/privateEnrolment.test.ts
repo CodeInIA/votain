@@ -2,7 +2,7 @@ import { test, describe, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { Wallet, verifyTypedData } from 'ethers';
 
-import { humanTagFor, signPrivateEnrollment, ATTESTATION_TTL_SECONDS } from './attester.js';
+import { documentTagFor, humanTagFor, signPrivateEnrollment, ATTESTATION_TTL_SECONDS } from './attester.js';
 
 /**
  * The tag that lets an election refuse the same person twice without anyone
@@ -105,6 +105,22 @@ describe('the human tag', () => {
   });
 });
 
+const DOC_TAG = '424242';
+
+describe('the document tag', () => {
+  test('is stable for one document in one election, and differs everywhere else', () => {
+    const tag = documentTagFor('987654321', ELECTION, CREATED);
+    assert.equal(documentTagFor('987654321', ELECTION, CREATED), tag);
+    assert.notEqual(documentTagFor('987654321', OTHER_ELECTION, CREATED), tag);
+    assert.notEqual(documentTagFor('987654322', ELECTION, CREATED), tag);
+  });
+
+  test('never equals the human tag of the same number', () => {
+    // A domain label separates them, so one cannot stand in for the other.
+    assert.notEqual(documentTagFor(WORLD_ID, ELECTION, CREATED), humanTagFor(WORLD_ID, ELECTION, CREATED));
+  });
+});
+
 describe('signing a private enrolment', () => {
   test('recovers to the attester, over the values the contract will hash', async () => {
     const tag = humanTagFor(WORLD_ID, ELECTION, CREATED);
@@ -114,6 +130,7 @@ describe('signing a private enrolment', () => {
       CHAIN_ID,
       COMMITMENT,
       tag,
+      DOC_TAG,
       now,
     );
 
@@ -126,10 +143,11 @@ describe('signing a private enrolment', () => {
         PrivateEnrollment: [
           { name: 'identityCommitment', type: 'uint256' },
           { name: 'humanTag', type: 'uint256' },
+          { name: 'documentTag', type: 'uint256' },
           { name: 'deadline', type: 'uint256' },
         ],
       },
-      { identityCommitment: BigInt(COMMITMENT), humanTag: BigInt(tag), deadline },
+      { identityCommitment: BigInt(COMMITMENT), humanTag: BigInt(tag), documentTag: BigInt(DOC_TAG), deadline },
       signature,
     );
 
@@ -144,6 +162,7 @@ describe('signing a private enrolment', () => {
       CHAIN_ID,
       COMMITMENT,
       tag,
+      DOC_TAG,
       now,
     );
 
@@ -154,10 +173,11 @@ describe('signing a private enrolment', () => {
         PrivateEnrollment: [
           { name: 'identityCommitment', type: 'uint256' },
           { name: 'humanTag', type: 'uint256' },
+          { name: 'documentTag', type: 'uint256' },
           { name: 'deadline', type: 'uint256' },
         ],
       },
-      { identityCommitment: BigInt(COMMITMENT), humanTag: BigInt(tag), deadline },
+      { identityCommitment: BigInt(COMMITMENT), humanTag: BigInt(tag), documentTag: BigInt(DOC_TAG), deadline },
       signature,
     );
 

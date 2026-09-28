@@ -27,6 +27,19 @@
  */
 
 /**
+ * The one World ID action this platform signs requests for and accepts proofs of.
+ *
+ * FIXED BY THE SERVER, never by the caller. A World ID nullifier is derived
+ * per (human, app, action), so a caller free to name the action could ask for
+ * "a", then "b", then "c", and get a fresh nullifier, and therefore a fresh
+ * platform identity and a fresh vote, from one World ID each time. The
+ * nullifier is only a Sybil boundary while the action is a constant.
+ */
+export function worldIdAction(): string {
+  return process.env.WORLD_ID_ACTION || 'vote-registration';
+}
+
+/**
  * Identifiers that mean "verified at an Orb", across protocol versions.
  * World ID 3.0 proofs report `orb`; 4.0 reports `proof_of_human`; the
  * authenticator uses `poh`. All three are the same credential.
@@ -72,6 +85,7 @@ interface WorldIdResponseEntry {
 export type WorldIdPayload = {
   responses?: WorldIdResponseEntry[];
   nullifier_hash?: string;
+  action?: unknown;
 } & Record<string, unknown>;
 
 interface VerifyResultEntry {
@@ -212,6 +226,11 @@ export async function verifyWorldIdProof(
 ): Promise<WorldIdResult> {
   const rpId = process.env.WORLD_ID_RP_ID;
   if (!rpId) throw new Error('WORLD_ID_RP_ID not configured');
+
+  // Where the payload names its action it must be ours; see `worldIdAction`.
+  if (payload.action !== undefined && payload.action !== worldIdAction()) {
+    return { ok: false, error: 'proof is for a different action' };
+  }
 
   const declared = payload.responses ?? [];
   if (declared.length === 0) return { ok: false, error: 'proof carried no responses' };

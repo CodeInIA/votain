@@ -32,7 +32,7 @@
  *   REGISTRY_ADDRESS        PlatformRegistry deployment address
  *   REGISTRAR_PRIVATE_KEY   key owning PlatformRegistry
  */
-import { getRegistryReader, getRegistryWriter, isRegistrarConfigured } from '../chain/registrar.js';
+import { getRegistryReader, isRegistrarConfigured, writeRegistry } from '../chain/registrar.js';
 
 export interface VaultEntry {
   /** Base64url WebAuthn credential id. Public. */
@@ -138,13 +138,11 @@ export async function putVaultEntry(
     await removeVaultEntry(nullifier, entry.credentialId);
   }
 
-  const registry = getRegistryWriter();
-  const tx = await registry.addVaultEntry(
+  await writeRegistry(r => r.addVaultEntry(
     nullifier,
     toHex(entry.credentialId),
     toHex(entry.blob),
-  );
-  await tx.wait();
+  ));
 
   return (await getVault(nullifier)) as VaultRecord;
 }
@@ -173,10 +171,8 @@ export async function clearVault(nullifier: string): Promise<void> {
   requireChain();
   const current = await getVault(nullifier);
   if (!current) return;
-  const registry = getRegistryWriter();
   for (const entry of current.entries) {
-    const tx = await registry.removeVaultEntry(nullifier, toHex(entry.credentialId));
-    await tx.wait();
+    await writeRegistry(r => r.removeVaultEntry(nullifier, toHex(entry.credentialId)));
   }
 }
 
@@ -185,9 +181,7 @@ export async function removeVaultEntry(
   credentialId: string,
 ): Promise<VaultRecord | null> {
   requireChain();
-  const registry = getRegistryWriter();
-  const tx = await registry.removeVaultEntry(nullifier, toHex(credentialId));
-  await tx.wait();
+  await writeRegistry(r => r.removeVaultEntry(nullifier, toHex(credentialId)));
   return getVault(nullifier);
 }
 
@@ -205,9 +199,7 @@ export async function resetVault(
 ): Promise<VaultRecord> {
   requireChain();
 
-  const registry = getRegistryWriter();
-  const tx = await registry.resetVault(nullifier, toHex(entry.credentialId), toHex(entry.blob));
-  await tx.wait();
+  await writeRegistry(r => r.resetVault(nullifier, toHex(entry.credentialId), toHex(entry.blob)));
 
   const record = (await getVault(nullifier)) as VaultRecord;
   if (record.commitment !== commitment) throw new CommitmentMismatchError();

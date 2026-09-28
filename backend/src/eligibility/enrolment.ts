@@ -28,13 +28,16 @@ import type { CredentialLevel } from '../auth/worldId.js';
 import {
   attesterAddress,
   isAttesterConfigured,
+  documentTagFor,
   humanTagFor,
   signPrivateEnrollment,
 } from './attester.js';
-import { getSession, consumeSession } from './sessions.js';
+import { getSession } from './sessions.js';
 
 export interface EnrolmentAuthorisation {
   humanTag: string;
+  /** "0" unless the election requires a document. */
+  documentTag: string;
   deadline: number;
   signature: string;
   /** The organizer's gatekeeper's signature over the same digest, or "0x". */
@@ -90,9 +93,8 @@ export async function authorisePrivateEnrolment(
   }
 
   let eligibilitySignature = '0x';
-  let gated = false;
+  let documentNullifier: string | null = null;
   if (mode.eligibilityAttester !== ZERO) {
-    gated = true;
     if (mode.eligibilityAttester.toLowerCase() !== ours) {
       return {
         status: 400,
@@ -100,19 +102,27 @@ export async function authorisePrivateEnrolment(
       };
     }
 
-    const refusal = await consumePassedAttributeCheck(request);
-    if (refusal) return refusal;
+    const passed = await passedAttributeCheck(request);
+    if ('error' in passed) return passed;
+    documentNullifier = passed.documentNullifier;
   }
 
   const [chainId, now] = await Promise.all([getChainId(), attestationBaseTime()]);
   // `mode.createdAt` and not the clock: the tag key is chosen by the epoch the
   // election was DEPLOYED in, which is the one date about it that cannot move.
   const humanTag = humanTagFor(request.voter.nullifier, request.election, mode.createdAt);
+  // One document, one leaf: carried to the contract, which refuses a document
+  // tag it has already seen here. See `documentTagFor`.
+  const documentTag =
+    documentNullifier === null
+      ? '0'
+      : documentTagFor(documentNullifier, request.election, mode.createdAt);
   const signed = await signPrivateEnrollment(
     request.election,
     chainId,
     request.identityCommitment,
     humanTag,
+    documentTag,
     now,
   );
 
@@ -120,22 +130,25 @@ export async function authorisePrivateEnrolment(
   // its own field anyway, because the contract asks two separate questions and
   // a deployment where the two keys differ has to be able to answer them
   // separately.
-  if (gated) eligibilitySignature = signed.signature;
+  if (documentNullifier !== null) eligibilitySignature = signed.signature;
 
   return { ...signed, eligibilitySignature };
 }
 
 /**
- * The attribute half, for an election that asks for one.
+ * The passport check this voter passed for this election, and the document
+ * nullifier it carried.
  *
- * Consumed before anything is signed and re-read from the chain at the last
- * moment, exactly as the older attestation endpoint does it: the check that ran
- * when the session opened was against a policy read minutes ago and a cookie
- * the voter has had every chance to swap since.
+ * NOT CONSUMED HERE. It used to be deleted before signing, so a relay that
+ * failed afterwards (an RPC hiccup, an empty gas tank) sent the voter back to
+ * scan their passport again. Nothing is lost by leaving it: the contract
+ * refuses the same human tag and the same document tag a second time, which is
+ * the guarantee consuming it was standing in for. The route consumes it once
+ * the enrolment has actually landed, and otherwise it expires on its own.
  */
-async function consumePassedAttributeCheck(
+async function passedAttributeCheck(
   request: EnrolmentRequest,
-): Promise<EnrolmentRefusal | null> {
+): Promise<{ documentNullifier: string } | EnrolmentRefusal> {
   if (!request.sessionId) {
     return { status: 400, error: 'sessionId is required for a gated election' };
   }
@@ -151,12 +164,13 @@ async function consumePassedAttributeCheck(
   if (session.status !== 'passed') {
     return { status: 409, error: 'session has not passed verification' };
   }
-
-  consumeSession(request.sessionId);
+  if (!session.personhoodNullifier) {
+    return { status: 500, error: 'passed session carried no document nullifier' };
+  }
 
   const { policy } = await readElectionEligibility(request.election);
   if (!meetsPersonhood(policy, request.voter)) {
     return { status: 403, error: 'orb_required' };
   }
-  return null;
+  return { documentNullifier: session.personhoodNullifier };
 }

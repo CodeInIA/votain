@@ -17,7 +17,7 @@
  * a different tab, is starting a different list, and leaving the limit where it
  * was would silently show them a hundred rows of it.
  */
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 export const DEFAULT_PAGE_SIZE = 12;
 
@@ -35,9 +35,14 @@ export function usePageLimit<T>(
 ): PageLimitState<T> {
   const [want, setWant] = useState(pageSize);
 
-  useEffect(() => {
+  // Back to the first page when the list becomes a different list. Set during
+  // render rather than in an effect, so the first render of the new list is
+  // already the right length instead of flashing the old length for a frame.
+  const [shownFor, setShownFor] = useState({ resetKey, pageSize });
+  if (shownFor.resetKey !== resetKey || shownFor.pageSize !== pageSize) {
+    setShownFor({ resetKey, pageSize });
     setWant(pageSize);
-  }, [resetKey, pageSize]);
+  }
 
   return {
     visible: items.slice(0, want),

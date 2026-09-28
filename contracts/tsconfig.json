@@ -9,6 +9,13 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "outDir": "dist",
+    // One level up: the E2E suite and the seed share `ballotCrypto.ts` with the
+    // frontend, so the three can never disagree about what a valid tally is.
+    "rootDir": "..",
     "types": ["node", "mocha"]
-  }
+  },
+  // Everything here, plus the frontend's snarkjs declaration: one description
+  // of the one API the prover and the browser share.
+  "include": ["**/*.ts", "../frontend/src/types/snarkjs.d.ts"],
+  "exclude": ["node_modules", "artifacts", "cache", "dist"]
 }

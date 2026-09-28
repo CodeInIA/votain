@@ -14,6 +14,8 @@
 import { network } from "hardhat";
 import poseidon from "poseidon-solidity";
 
+import { BASE, multiply } from "../../frontend/src/lib/ballotCrypto.js";
+
 const DEFAULT_RPC = "https://polygon-amoy-bor-rpc.publicnode.com";
 const FALLBACK_GAS_PRICE_GWEI = 30n;
 
@@ -102,61 +104,66 @@ async function main(): Promise<void> {
     return receipt.gasUsed;
   };
 
-  // 1. PoseidonT3 external library (LeanIMT dependency).
-  const poseidonGas = await gasOf(deployer.sendTransaction({ data: poseidon.PoseidonT3.bytecode }));
-  const poseidonAddress = (await ethers.provider.getTransactionReceipt(
-    (await ethers.provider.getBlock("latest"))!.transactions.at(-1)!,
-  ))!.contractAddress!;
-  steps.push({
-    label: "PoseidonT3 library",
-    gas: poseidonGas,
-    conditional: chain.poseidonDeployed ? "already on chain, SKIPPED" : undefined,
-  });
+  // 1. Poseidon libraries: T3 for the trees, T4 for the election's keys hash.
+  const libraries: Record<string, string> = {};
+  for (const name of ["PoseidonT3", "PoseidonT4"] as const) {
+    const tx = await deployer.sendTransaction({ data: poseidon[name].bytecode });
+    const receipt = (await tx.wait())!;
+    libraries[name] = receipt.contractAddress!;
+    steps.push({
+      label: `${name} library`,
+      gas: receipt.gasUsed,
+      conditional: chain.poseidonDeployed ? "already on chain, SKIPPED" : undefined,
+    });
+  }
 
-  // 2. PlatformRegistry.
-  const Registry = await ethers.getContractFactory("PlatformRegistry");
-  const registry = await Registry.deploy();
-  await registry.waitForDeployment();
-  steps.push({
-    label: "PlatformRegistry",
-    gas: (await ethers.provider.getTransactionReceipt(registry.deploymentTransaction()!.hash))!.gasUsed,
-  });
+  const deployed = async (label: string, contract: { waitForDeployment: () => Promise<unknown>; deploymentTransaction: () => { hash: string } | null }) => {
+    await contract.waitForDeployment();
+    steps.push({ label, gas: (await ethers.provider.getTransactionReceipt(contract.deploymentTransaction()!.hash))!.gasUsed });
+    return contract;
+  };
 
-  // 3. ElectionPaymaster.
-  const Paymaster = await ethers.getContractFactory("ElectionPaymaster");
-  const paymaster = await Paymaster.deploy();
-  await paymaster.waitForDeployment();
-  steps.push({
-    label: "ElectionPaymaster",
-    gas: (await ethers.provider.getTransactionReceipt(paymaster.deploymentTransaction()!.hash))!.gasUsed,
-  });
+  // 2-3. PlatformRegistry and ElectionPaymaster.
+  const registry = (await deployed("PlatformRegistry", await (await ethers.getContractFactory("PlatformRegistry")).deploy())) as any;
+  const paymaster = (await deployed("ElectionPaymaster", await (await ethers.getContractFactory("ElectionPaymaster")).deploy())) as any;
 
-  // 4. Official Semaphore Groth16 verifier (production path).
-  const Verifier = await ethers.getContractFactory("SemaphoreVerifierV4");
-  const verifier = await Verifier.deploy();
-  await verifier.waitForDeployment();
-  steps.push({
-    label: "SemaphoreVerifierV4",
-    gas: (await ethers.provider.getTransactionReceipt(verifier.deploymentTransaction()!.hash))!.gasUsed,
-  });
+  // 4. The circuits' verifiers, one ballot/tally pair per size. The generated
+  // ones when circuits/ has been built (their size is what matters here), the
+  // mocks otherwise, which UNDERSTATE this line and say so.
+  const ballotVerifiers: string[] = [];
+  const tallyVerifiers: string[] = [];
+  for (const size of [5, 9]) {
+    for (const [kind, out] of [["Ballot", ballotVerifiers], ["Tally", tallyVerifiers]] as const) {
+      let factory;
+      let label = `${kind}VerifierS${size}`;
+      try {
+        factory = await ethers.getContractFactory(label);
+      } catch {
+        factory = await ethers.getContractFactory(`Mock${kind}Verifier`);
+        label += " (MOCK: build circuits/ for the real size)";
+      }
+      const verifier = (await deployed(label, await (label.includes("MOCK") ? factory.deploy(size) : factory.deploy()))) as any;
+      out.push(await verifier.getAddress());
+    }
+  }
 
-  // 5. ElectionFactory (embeds the ElectionV4 creation bytecode).
-  const Factory = await ethers.getContractFactory("ElectionFactory", {
-    libraries: { PoseidonT3: poseidonAddress },
-  });
-  const factory = await Factory.deploy(
-    await paymaster.getAddress(),
-    deployer.address,
-    await verifier.getAddress(),
-    await registry.getAddress(),
-    // The platform attester, which costs the same to store whoever it is.
-    deployer.address,
-  );
-  await factory.waitForDeployment();
-  steps.push({
-    label: "ElectionFactory",
-    gas: (await ethers.provider.getTransactionReceipt(factory.deploymentTransaction()!.hash))!.gasUsed,
-  });
+  // 5. ElectionDeployer (holds the ElectionV4 creation code) and ElectionFactory.
+  const electionDeployer = (await deployed(
+    "ElectionDeployer",
+    await (await ethers.getContractFactory("ElectionDeployer", { libraries })).deploy(),
+  )) as any;
+  const factory = (await deployed(
+    "ElectionFactory",
+    await (await ethers.getContractFactory("ElectionFactory")).deploy(
+      await paymaster.getAddress(),
+      await electionDeployer.getAddress(),
+      ballotVerifiers,
+      tallyVerifiers,
+      await registry.getAddress(),
+      // The platform attester, which costs the same to store whoever it is.
+      deployer.address,
+    ),
+  )) as any;
 
   // 6. Paymaster wiring: only the factory may bind an election to a gas tank.
   steps.push({
@@ -175,14 +182,12 @@ async function main(): Promise<void> {
     enrollEnd: now + 100000,
     voteStart: now + 100000,
     voteEnd: now + 200000,
-    scope: 42n,
-    paillierPublicKey: '{"n":"0x' + "ab".repeat(256) + '","g":"0x' + "cd".repeat(256) + '"}',
+    // Four valid keys (three options and the blank vote): x·G for small x.
+    tallyKeys: [2n, 3n, 4n, 5n].flatMap(x => [...multiply(BASE, x)]),
     metadataJson: JSON.stringify({ description: "x".repeat(400), candidates: ["A", "B", "C"] }),
     eligibilityAttester: "0x0000000000000000000000000000000000000000",
     eligibilityPolicyHash: "0x" + "00".repeat(32),
     personhood: 0,
-    // Both were missing and the script could not have run: `privacyQuorum` has
-    // been in the config for a while, `fixedSchedule` since today.
     privacyQuorum: 0n,
     fixedSchedule: false,
     cancellable: true,
@@ -277,19 +282,12 @@ async function main(): Promise<void> {
 
   console.log("═".repeat(78));
   console.log("");
-  const optimized = process.argv.includes("production");
   console.log("  Notes:");
-  if (optimized) {
-    console.log("  - Compiled with the `production` profile (optimizer on), same as `deploy:amoy`.");
-  } else {
-    console.log("  - Compiled with the `default` profile (no optimizer). Add");
-    console.log("    `--build-profile production` to match what `npm run deploy:amoy` does;");
-    console.log("    it cuts the deploy by ~17% and each election by ~29%.");
-  }
+  console.log("  - Both build profiles run the optimizer, so this matches `npm run deploy:amoy`.");
   console.log("  - Polygon enforces a 30 gwei minimum priority fee; the base fee is ~0 on Amoy,");
   console.log("    so 30 gwei is effectively the floor and the price rarely moves.");
-  console.log("  - castVote is not measured here: it needs a real Groth16 proof. Budget roughly");
-  console.log("    350k-450k gas per vote, paid by the paymaster gas tank.");
+  console.log("  - castVote is not measured here: it needs a real Groth16 proof. The E2E suite");
+  console.log("    measures it and prints the figure; it is paid by the paymaster gas tank.");
   console.log("");
 }
 

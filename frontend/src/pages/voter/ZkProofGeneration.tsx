@@ -33,6 +33,10 @@ export default function ZkProofGeneration() {
 
   const [stepIdx, setStepIdx] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  // A second ballot inside the hour is the rate limit doing its job, not a
+  // failure: the voter's latest ballot already counts, and saying 'something
+  // went wrong' made it read as if their vote had been lost.
+  const [waitForHour, setWaitForHour] = useState(false);
   const started = useRef(false);
 
   const steps: { labelKey: string; status: StepStatus }[] = [
@@ -76,7 +80,7 @@ export default function ZkProofGeneration() {
             electionId: id,
             referenceNumber: result.referenceNumber,
             txHash: result.txHash,
-            nullifier: result.nullifier.toString(),
+            tag: result.tag.toString(),
           },
           replace: true,
         });
@@ -85,6 +89,7 @@ export default function ZkProofGeneration() {
         // Named rather than raw: the commonest failure here is an organizer's
         // drained gas tank, which is not the voter's doing and not something a
         // revert string explains.
+        setWaitForHour((e as { name?: string } | null)?.name === 'EpochAlreadyUsedError');
         setError(relayErrorMessage(e));
       }
     })();
@@ -96,9 +101,11 @@ export default function ZkProofGeneration() {
         <div className="w-full max-w-sm bg-surface-low/30 backdrop-blur-3xl rounded-4xl p-8 border border-white/5 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] flex flex-col items-center text-center">
           {error ? (
             <>
-              <span className="text-4xl mb-4">⚠️</span>
-              <h1 className="text-xl font-bold text-white mb-2">{t('errors.generic_title')}</h1>
-              <p className="text-xs text-error mb-6 wrap-break-word">{error}</p>
+              <span className="text-4xl mb-4" aria-hidden="true">{waitForHour ? '⏳' : '⚠️'}</span>
+              <h1 className="text-xl font-bold text-white mb-2">
+                {waitForHour ? t('errors.epoch_wait_title') : t('errors.generic_title')}
+              </h1>
+              <p className={`text-xs mb-6 wrap-break-word ${waitForHour ? 'text-on-surface-variant' : 'text-error'}`}>{error}</p>
               <Button variant="ghost" onClick={() => navigate(`/election/${id}`)}>
                 {t('common.back')}
               </Button>

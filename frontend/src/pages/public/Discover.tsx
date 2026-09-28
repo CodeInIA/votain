@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Compass } from 'lucide-react';
 import { PageLayout } from '../../components/layout/PageLayout';
@@ -90,13 +90,20 @@ export default function Discover() {
    * the list it is about to become is already being read.
    *
    * Written during render on purpose. An effect would set it one render late,
-   * which is exactly the render the flash happens in.
+   * which is exactly the render the flash happens in. State set during render
+   * is React's own pattern for "information from previous renders": it
+   * re-renders before committing, so nothing flashes, and unlike a ref it is
+   * never read stale. Compared item by item rather than by reference: the
+   * memo above can hand back a new array holding the same elections, and a
+   * reference check would then set state on every render, forever.
    */
-  const lastDrawn = useRef<typeof filtered>([]);
-  if (filtered.length > 0) lastDrawn.current = filtered;
+  const [lastDrawn, setLastDrawn] = useState<typeof filtered>([]);
+  const sameAsDrawn =
+    filtered.length === lastDrawn.length && filtered.every((e, i) => e === lastDrawn[i]);
+  if (filtered.length > 0 && !sameAsDrawn) setLastDrawn(filtered);
   /** A reorder settling over a grid that already has something in it. */
-  const settling = loading && lastDrawn.current.length > 0;
-  const shown = filtered.length > 0 ? filtered : lastDrawn.current;
+  const settling = loading && lastDrawn.length > 0;
+  const shown = filtered.length > 0 ? filtered : lastDrawn;
 
   /**
    * Whether the number below is a total or a running tally.

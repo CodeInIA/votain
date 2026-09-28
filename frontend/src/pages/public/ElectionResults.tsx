@@ -5,6 +5,7 @@ import { PageLayout } from '../../components/layout/PageLayout';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { BackButton } from '../../components/ui/BackButton';
+import { ElectionUnreadable } from '../../components/ui/ElectionUnreadable';
 import { Card } from '../../components/ui/Card';
 import { ResultBarChart } from '../../components/ui/BarChart';
 import { TallyCheck } from '../../components/ui/TallyCheck';
@@ -18,7 +19,7 @@ export default function ElectionResults() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { election, loading } = useElection(id);
+  const { election, loading, unreachable, refresh } = useElection(id);
 
   if (loading) {
     return (
@@ -26,6 +27,10 @@ export default function ElectionResults() {
         <div className="flex items-center justify-center min-h-[60vh]"><Spinner /></div>
       </PageLayout>
     );
+  }
+
+  if (!election && unreachable) {
+    return <ElectionUnreadable role="public" onRetry={() => void refresh()} onBack={() => navigate(-1)} />;
   }
 
   if (!election || !election.candidates.some(c => c.votes !== undefined)) {

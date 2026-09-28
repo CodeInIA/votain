@@ -11,24 +11,41 @@ what the attestation exists to rule out.
 
 ## The shape of it
 
-```
-push to main
-   │
-   ├─ frontend ─┐
-   ├─ backend  ─┼─ all three must pass
-   └─ contracts ┘
-                │
-                ├─ has anything changed?
-                │     ├─ frontend/ ............... → publish the frontend (4EVERLAND)
-                │     └─ what enters the image ... → publish the backend image (GHCR)
-                │                                        │
-                │                                        └─ AUTO_DEPLOY says:
-                │                                              none   → stop
-                │                                              heroku → deploy to heroku ─┐
-                │                                              phala  → deploy to phala ──┤
-                │                                                                         └─ dns follows
-                │
-                └─ (pull requests stop here: checked, never published)
+```mermaid
+flowchart TB
+  push["push to main"]
+  pr["pull request"]
+
+  subgraph checks["checks.yml: all must pass"]
+    frontend["frontend<br/>lint, typecheck, tests, build, smoke"]
+    backend["backend<br/>lint, typecheck, tests, image build"]
+    circuits["circuits<br/>witness tests, cached trusted setup"]
+    contracts["contracts<br/>E2E with real Groth16 proofs"]
+    tally["tally CLI"]
+    circuits -- "artefacts" --> contracts
+  end
+
+  changed{"has anything changed?"}
+  stop(["checked, never published"])
+  site["publish the frontend<br/>(4EVERLAND)"]
+  image["publish the backend image<br/>(GHCR, pinned by digest)"]
+  auto{"AUTO_DEPLOY"}
+  heroku["deploy to heroku"]
+  phala["deploy to phala"]
+  dns["DNS follows"]
+  release["publish the release"]
+
+  push --> checks
+  pr --> checks --> stop
+  checks --> changed
+  changed -- "frontend/" --> site
+  changed -- "what enters the image" --> image
+  image --> auto
+  auto -- "none" --> done(["stop"])
+  auto -- "heroku" --> heroku --> dns
+  auto -- "phala" --> phala --> dns
+  site --> release
+  image --> release
 ```
 
 Manual entry points, at any time, for any published version:
@@ -221,6 +238,37 @@ With `AUTO_DEPLOY=heroku` and the enclave serving, any commit to `main` that
 touches the backend will drag the hostname back to Heroku and stop the CVM,
 silently, with every test green, doing exactly what it was told. That is the
 right behaviour during development and the wrong behaviour in November.
+
+## Deploying the contracts to Amoy
+
+Not part of any workflow: a contract deployment is a one-off decision, and so is
+the ceremony it rests on. In order, because each step needs the one before:
+
+1. **Run the ceremony.** `cd circuits && PTAU=<public phase 1, at least 2^17>
+   CEREMONY_ENTROPY=<secret> npm run build`. The phase 1 comes from a public
+   ceremony (Hermez or the PSE perpetual powers of tau; the historical Hermez URL
+   answers 403, so take it from a mirror and check its hash). Discard the
+   entropy afterwards: whoever keeps it can forge ballots. On Windows this needs
+   the native circom compiler (see the README).
+2. **Name the platform attester.** `ELIGIBILITY_ATTESTER_PRIVATE_KEY` in
+   `backend/.env`, or `PLATFORM_ATTESTER_ADDRESS`, and it must be the key the
+   production backend signs with: it is frozen into every election.
+3. **Deploy.** `PRIVATE_KEY` and `AMOY_RPC_URL` in `contracts/.env`, then
+   `cd contracts && npm run deploy:amoy`. The script refuses the development
+   ceremony, a missing circuit build and a missing attester **before its first
+   transaction**, so a refusal costs nothing. It writes
+   `contracts/deployments/amoy.json` and mirrors it to
+   `frontend/src/lib/deployments/amoy.json`: commit both, since the frontend is
+   built from the repository and only `local.json` is ignored.
+4. **Publish the proving files.** `frontend/public/circuits/` holds the wasm,
+   zkey and vkey of THIS ceremony, tens of megabytes per zkey and too large for
+   the repository. Pin them (IPFS, say) and set `VITE_CIRCUITS_URL` in the
+   4EVERLAND build environment, with `VITE_CHAIN_NETWORK=amoy`. A wrong file does
+   no harm beyond wasting a voter's time: the chain refuses the proofs it makes.
+5. **Point the backend at it.** Production reads addresses from its environment
+   and ships no manifest: `REGISTRY_ADDRESS` and `PAYMASTER_ADDRESS` in
+   `PHALA_ENV` (and on Heroku), with the relayer and registrar wallets funded
+   with POL. The relayer is reimbursed by the paymaster; the registrar is not.
 
 ## Secrets and variables
 

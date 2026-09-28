@@ -1,7 +1,17 @@
 import poseidon from "poseidon-solidity";
 
-/// Library name used for linking (HH3 resolves the bare name when unambiguous).
-export const POSEIDON_FQN = "PoseidonT3";
+import {
+  BASE,
+  encryptCancellation,
+  encryptVote,
+  flattenPoints,
+  IDENTITY,
+  multiply,
+  padPoints,
+  randomScalar,
+  unflattenPoints,
+  type Point,
+} from "../../frontend/src/lib/ballotCrypto.js";
 
 export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 export const ZERO_HASH = "0x" + "00".repeat(32);
@@ -52,22 +62,31 @@ export async function signEnrollAttestation(
   return attester.signTypedData(domain, types, value);
 }
 
-/// Deploys the PoseidonT3 external library (required by LeanIMT) on the local
-/// test network and returns its address.
-export async function deployPoseidonT3(ethers: any): Promise<string> {
+/// Deploys the Poseidon libraries ElectionV4 links against (T3 for its
+/// trees, T4 for its keys hash) and returns them keyed for linking.
+export async function deployPoseidon(ethers: any): Promise<Record<string, string>> {
   const [deployer] = await ethers.getSigners();
-  const tx = await deployer.sendTransaction({ data: poseidon.PoseidonT3.bytecode });
-  const receipt = await tx.wait();
-  if (!receipt?.contractAddress) throw new Error("PoseidonT3 deployment failed");
-  return receipt.contractAddress;
+  const libraries: Record<string, string> = {};
+  for (const name of ["PoseidonT3", "PoseidonT4"] as const) {
+    const tx = await deployer.sendTransaction({ data: poseidon[name].bytecode });
+    const receipt = await tx.wait();
+    if (!receipt?.contractAddress) throw new Error(`${name} deployment failed`);
+    libraries[name] = receipt.contractAddress;
+  }
+  return libraries;
 }
+
+/// Circuit sizes the mock verifiers stand in for: the two built by default and
+/// the largest, so every option count the contract allows can be deployed.
+export const MOCK_SIZES = [5, 9, 51];
 
 export interface Stack {
   registry: any;
   paymaster: any;
-  verifier: any;
   factory: any;
-  poseidonAddress: string;
+  ballotVerifiers: any[];
+  tallyVerifiers: any[];
+  libraries: Record<string, string>;
 }
 
 /// EIP-712 payload the platform signs to authorise one PRIVATE enrollment.
@@ -78,6 +97,7 @@ export function privateEnrollmentTypedData(
   identityCommitment: bigint,
   humanTag: bigint,
   deadline: number | bigint,
+  documentTag: bigint = 0n,
 ) {
   return {
     domain: {
@@ -90,10 +110,11 @@ export function privateEnrollmentTypedData(
       PrivateEnrollment: [
         { name: "identityCommitment", type: "uint256" },
         { name: "humanTag", type: "uint256" },
+        { name: "documentTag", type: "uint256" },
         { name: "deadline", type: "uint256" },
       ],
     },
-    value: { identityCommitment, humanTag, deadline },
+    value: { identityCommitment, humanTag, documentTag, deadline },
   };
 }
 
@@ -105,6 +126,7 @@ export async function signPrivateEnrollment(
   identityCommitment: bigint,
   humanTag: bigint,
   deadline: number | bigint,
+  documentTag: bigint = 0n,
 ): Promise<string> {
   const { domain, types, value } = privateEnrollmentTypedData(
     electionAddress,
@@ -112,19 +134,19 @@ export async function signPrivateEnrollment(
     identityCommitment,
     humanTag,
     deadline,
+    documentTag,
   );
   return attester.signTypedData(domain, types, value);
 }
 
-/// Deploys the full contract stack with the MockVerifier (unit tests only).
+/// Deploys the full contract stack with mock verifiers (unit tests only).
 /// `platformAttester` defaults to nobody, which deploys elections that enrol
 /// the old public way: the tests for the private path pass a key explicitly.
 export async function deployStack(
   ethers: any,
-  forwarder: string,
   platformAttester: string = ZERO_ADDRESS,
 ): Promise<Stack> {
-  const poseidonAddress = await deployPoseidonT3(ethers);
+  const libraries = await deployPoseidon(ethers);
 
   const Registry = await ethers.getContractFactory("PlatformRegistry");
   const registry = await Registry.deploy();
@@ -134,17 +156,23 @@ export async function deployStack(
   const paymaster = await Paymaster.deploy();
   await paymaster.waitForDeployment();
 
-  const Verifier = await ethers.getContractFactory("MockVerifier");
-  const verifier = await Verifier.deploy();
-  await verifier.waitForDeployment();
+  const ballotVerifiers = [];
+  const tallyVerifiers = [];
+  for (const size of MOCK_SIZES) {
+    ballotVerifiers.push(await (await ethers.getContractFactory("MockBallotVerifier")).deploy(size));
+    tallyVerifiers.push(await (await ethers.getContractFactory("MockTallyVerifier")).deploy(size));
+  }
 
-  const Factory = await ethers.getContractFactory("ElectionFactory", {
-    libraries: { [POSEIDON_FQN]: poseidonAddress },
-  });
+  const Deployer = await ethers.getContractFactory("ElectionDeployer", { libraries });
+  const deployer = await Deployer.deploy();
+  await deployer.waitForDeployment();
+
+  const Factory = await ethers.getContractFactory("ElectionFactory");
   const factory = await Factory.deploy(
     await paymaster.getAddress(),
-    forwarder,
-    await verifier.getAddress(),
+    await deployer.getAddress(),
+    await Promise.all(ballotVerifiers.map(v => v.getAddress())),
+    await Promise.all(tallyVerifiers.map(v => v.getAddress())),
     await registry.getAddress(),
     platformAttester,
   );
@@ -153,7 +181,7 @@ export async function deployStack(
   // Only the factory may bind an election to the tank that funds its gas.
   await (await paymaster.setFactory(await factory.getAddress())).wait();
 
-  return { registry, paymaster, verifier, factory, poseidonAddress };
+  return { registry, paymaster, factory, ballotVerifiers, tallyVerifiers, libraries };
 }
 
 export interface ElectionConfig {
@@ -165,8 +193,8 @@ export interface ElectionConfig {
   enrollEnd: number;
   voteStart: number;
   voteEnd: number;
-  scope: bigint;
-  paillierPublicKey: string;
+  /** Flattened affine tally keys, one per option plus the blank vote. */
+  tallyKeys: bigint[];
   metadataJson: string;
   eligibilityAttester: string;
   eligibilityPolicyHash: string;
@@ -205,9 +233,24 @@ export const Outcome = {
   THRESHOLD_NOT_MET: 5n,
 } as const;
 
+/**
+ * The secrets behind `testTallyKeys`. Fixed and tiny ON PURPOSE: the unit tests
+ * decrypt the contract's aggregate with them to show it holds what was voted,
+ * and nothing about them needs to be secret.
+ */
+export const testTallySecrets = (numOptions: bigint): bigint[] =>
+  Array.from({ length: Number(numOptions) + 1 }, (_, i) => BigInt(i + 2));
+
+/** Valid tally keys for an election of `numOptions`: x·G for each test secret. */
+export const testTallyKeys = (numOptions: bigint): Point[] =>
+  testTallySecrets(numOptions).map(x => multiply(BASE, x));
+
 /// Base election config: enrollment open now, voting starts in 1000s, ends in 2000s.
+/// The tally keys follow `numOptions` unless an override supplies its own.
 export function baseConfig(now: number, overrides: Partial<ElectionConfig> = {}): ElectionConfig {
+  const numOptions = overrides.numOptions ?? 3n;
   return {
+    tallyKeys: flattenPoints(testTallyKeys(numOptions)),
     name: "Test Election",
     votingType: VotingType.SIMPLE_PLURALITY,
     thresholdValue: 0n,
@@ -216,8 +259,6 @@ export function baseConfig(now: number, overrides: Partial<ElectionConfig> = {})
     enrollEnd: now + 1000,
     voteStart: now + 1000,
     voteEnd: now + 2000,
-    scope: 42n,
-    paillierPublicKey: '{"n":"0x1234","g":"0x1235"}',
     metadataJson: "{}",
     eligibilityAttester: ZERO_ADDRESS,
     eligibilityPolicyHash: ZERO_HASH,
@@ -232,21 +273,20 @@ export function baseConfig(now: number, overrides: Partial<ElectionConfig> = {})
   };
 }
 
-/// Deploys a standalone ElectionV4 (bypassing the factory) for focused unit tests.
+/// Deploys a standalone ElectionV4 (bypassing the factory) for focused unit
+/// tests, on the smallest mock verifiers that fit its options.
 export async function deployElection(
   ethers: any,
   stack: Stack,
-  forwarder: string,
   organizer: any,
   cfg: ElectionConfig,
   platformAttester: string = ZERO_ADDRESS,
 ): Promise<any> {
-  const Election = await ethers.getContractFactory("ElectionV4", {
-    libraries: { [POSEIDON_FQN]: stack.poseidonAddress },
-  });
+  const Election = await ethers.getContractFactory("ElectionV4", { libraries: stack.libraries });
+  const [ballotVerifier, tallyVerifier] = await stack.factory.verifiersFor(cfg.numOptions);
   const election = await Election.deploy(
-    forwarder,
-    await stack.verifier.getAddress(),
+    ballotVerifier,
+    tallyVerifier,
     await stack.registry.getAddress(),
     platformAttester,
     organizer.address,
@@ -256,12 +296,53 @@ export async function deployElection(
   return election;
 }
 
-/// Dummy Groth16 proof accepted by the MockVerifier.
+/// Dummy Groth16 proof, accepted by the mock verifiers.
 export const DUMMY_PROOF = {
-  pA: [0n, 0n] as [bigint, bigint],
-  pB: [
+  a: [0n, 0n] as [bigint, bigint],
+  b: [
     [0n, 0n],
     [0n, 0n],
   ] as [[bigint, bigint], [bigint, bigint]],
-  pC: [0n, 0n] as [bigint, bigint],
+  c: [0n, 0n] as [bigint, bigint],
 };
+
+/** What a voter keeps of a ballot, to cancel it with the next one. */
+export interface CastVote {
+  a: Point;
+  b: Point[];
+}
+
+let tagSeq = 1n;
+
+/**
+ * A ballot as the client builds it, minus the proof: a real encryption of
+ * `choice` under the election's keys and a real cancellation of `previous`,
+ * so the contract's aggregate can be decrypted and checked. Tags are fresh
+ * unless given, and roots and epoch are the election's current ones.
+ */
+export async function makeBallot(
+  election: any,
+  choice: number,
+  opts: { previous?: CastVote | null; tag?: bigint; epochTag?: bigint; epoch?: bigint } = {},
+): Promise<{ ballot: any; vote: CastVote }> {
+  const slots = Number(await election.circuitSlots());
+  const keys = unflattenPoints(await election.tallyKeys());
+  const vote = encryptVote(keys, choice, randomScalar());
+  const cancel = encryptCancellation(keys, randomScalar(), opts.previous ?? null);
+  const pad = (points: Point[]) => flattenPoints(padPoints(points, slots));
+  const ballot = {
+    votersRoot: await election.merkleTreeRoot(),
+    ballotsRoot: await election.ballotsRoot(),
+    epoch: opts.epoch ?? (await election.currentEpoch()),
+    tag: opts.tag ?? tagSeq++,
+    epochTag: opts.epochTag ?? tagSeq++,
+    leaf: tagSeq++,
+    voteA: [...vote.a],
+    voteB: pad(vote.b),
+    cancelA: [...cancel.a],
+    cancelB: pad(cancel.b),
+  };
+  return { ballot, vote };
+}
+
+export { IDENTITY };

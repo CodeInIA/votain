@@ -10,8 +10,8 @@
  * Each exit clears its OWN browser data and leaves the other session untouched,
  * which is the whole reason the two are separable: `voterSignOut` takes the
  * voting identity and this device's vote records with it, `organizerSignOut`
- * takes the remembered wallet and display name. Neither touches the Paillier
- * tally keys, since those decrypt elections that are already on chain.
+ * takes the remembered wallet and display name. Neither touches the stored
+ * tally keys, since those count elections that are already on chain.
  *
  * Shared by both profiles so the wording and the confirmation cannot drift, and
  * so neither page has to work out where to send someone whose other session is

@@ -2,6 +2,7 @@ import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import { Button } from './Button';
 
@@ -26,6 +27,13 @@ export function Modal({
   showClose = true,
   size = 'md',
 }: ModalProps) {
+  const { t } = useTranslation();
+  // Named for assistive technology: without a role a screen reader met these as
+  // loose text over a page it could still tab through, and could not tell which
+  // question it was being asked.
+  const titleId = React.useId();
+  const descriptionId = React.useId();
+
   React.useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent): void => { if (e.key === 'Escape') onClose(); };
@@ -51,6 +59,10 @@ export function Modal({
             exit={{ opacity: 0, scale: 0.95, y: 8 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
             onClick={(e: React.MouseEvent) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={title ? titleId : undefined}
+            aria-describedby={description ? descriptionId : undefined}
             className={cn(
               'relative z-10 w-full bg-surface-high/80 backdrop-blur-3xl rounded-3xl border border-white/8 shadow-[0_24px_64px_rgba(0,0,0,0.7)] flex flex-col',
               size === 'sm' && 'max-w-sm',
@@ -64,7 +76,7 @@ export function Modal({
                 variant="ghost"
                 onClick={onClose}
                 className="absolute top-4 right-4 w-8 h-8 p-0 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-meta hover:text-on-surface"
-                aria-label="Close"
+                aria-label={t('common.close')}
               >
                 <X className="w-4 h-4" />
               </Button>
@@ -72,10 +84,10 @@ export function Modal({
             {(title || description) && (
               <div className="px-6 pt-6 pb-4">
                 {title && (
-                  <h2 className="text-lg font-semibold text-on-surface pr-6">{title}</h2>
+                  <h2 id={titleId} className="text-lg font-semibold text-on-surface pr-6">{title}</h2>
                 )}
                 {description && (
-                  <p className="mt-1 text-sm text-on-surface-variant leading-relaxed">{description}</p>
+                  <p id={descriptionId} className="mt-1 text-sm text-on-surface-variant leading-relaxed">{description}</p>
                 )}
               </div>
             )}

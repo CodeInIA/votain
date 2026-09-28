@@ -2,15 +2,27 @@
 pragma solidity ^0.8.37;
 
 import {ElectionV4} from "./ElectionV4.sol";
+import {ElectionDeployer} from "./ElectionDeployer.sol";
 import {ElectionPaymaster} from "./ElectionPaymaster.sol";
+import {IBallotVerifier} from "./IBallotVerifier.sol";
+import {ITallyVerifier} from "./ITallyVerifier.sol";
 
 /// @title ElectionFactory
 /// @notice Deploys ElectionV4 instances and forwards the organizer's MATIC deposit
 /// to the gas paymaster. Keeps an enumerable list of every election created.
 contract ElectionFactory {
     ElectionPaymaster public immutable paymaster;
-    address public immutable forwarder;
-    address public immutable verifier;
+    /// @notice Holds ElectionV4's creation code, which no longer fits in here.
+    ElectionDeployer public immutable deployer;
+    /**
+     * @notice The circuits' verifiers, one pair per size. An election uses the
+     * smallest size that holds its options and the blank vote.
+     *
+     * Fixed at deployment and ordered by size. An organizer never names a
+     * verifier: one who could would choose what counts as a valid ballot.
+     */
+    address[] internal _ballotVerifiers;
+    address[] internal _tallyVerifiers;
     address public immutable registry;
     /**
      * @notice The key every election deployed here trusts for private enrolment.
@@ -32,29 +44,40 @@ contract ElectionFactory {
         address indexed electionAddress,
         address indexed organizer,
         string name,
-        ElectionV4.VotingType votingType,
-        uint256 scope
+        ElectionV4.VotingType votingType
     );
 
     error ZeroAddress();
+    /// @dev The verifier lists are empty, of different lengths, or not in size order.
+    error BadVerifiers();
+    /// @dev No circuit is large enough for this many options.
+    error TooManyOptions();
 
     constructor(
         address _paymaster,
-        address _forwarder,
-        address _verifier,
+        address _deployer,
+        address[] memory ballotVerifiers_,
+        address[] memory tallyVerifiers_,
         address _registry,
         address _platformAttester
     ) {
-        if (
-            _paymaster == address(0) ||
-            _forwarder == address(0) ||
-            _verifier == address(0) ||
-            _registry == address(0)
-        ) revert ZeroAddress();
+        if (_paymaster == address(0) || _deployer == address(0) || _registry == address(0)) {
+            revert ZeroAddress();
+        }
+        if (ballotVerifiers_.length == 0 || ballotVerifiers_.length != tallyVerifiers_.length) {
+            revert BadVerifiers();
+        }
+        uint256 previous = 0;
+        for (uint256 i = 0; i < ballotVerifiers_.length; i++) {
+            uint256 size = IBallotVerifier(ballotVerifiers_[i]).slots();
+            if (size <= previous || ITallyVerifier(tallyVerifiers_[i]).slots() != size) revert BadVerifiers();
+            previous = size;
+        }
 
         paymaster = ElectionPaymaster(payable(_paymaster));
-        forwarder = _forwarder;
-        verifier = _verifier;
+        deployer = ElectionDeployer(_deployer);
+        _ballotVerifiers = ballotVerifiers_;
+        _tallyVerifiers = tallyVerifiers_;
         registry = _registry;
         platformAttester = _platformAttester;
     }
@@ -73,13 +96,9 @@ contract ElectionFactory {
         ElectionV4.Config calldata cfg,
         uint256 fromBalance
     ) external payable returns (address) {
-        ElectionV4 newElection = new ElectionV4(
-            forwarder,
-            verifier,
-            registry,
-            platformAttester,
-            msg.sender,
-            cfg
+        (address ballotVerifier, address tallyVerifier) = verifiersFor(cfg.numOptions);
+        ElectionV4 newElection = ElectionV4(
+            deployer.deploy(ballotVerifier, tallyVerifier, registry, platformAttester, msg.sender, cfg)
         );
         elections.push(address(newElection));
 
@@ -108,8 +127,26 @@ contract ElectionFactory {
             paymaster.reserveFromBalanceFor(address(newElection), msg.sender, fromBalance);
         }
 
-        emit ElectionCreated(address(newElection), msg.sender, cfg.name, cfg.votingType, cfg.scope);
+        emit ElectionCreated(address(newElection), msg.sender, cfg.name, cfg.votingType);
         return address(newElection);
+    }
+
+    /// @notice The smallest verifier pair that holds `numOptions` and the blank vote.
+    function verifiersFor(uint256 numOptions) public view returns (address ballot, address tallyV) {
+        for (uint256 i = 0; i < _ballotVerifiers.length; i++) {
+            if (IBallotVerifier(_ballotVerifiers[i]).slots() > numOptions) {
+                return (_ballotVerifiers[i], _tallyVerifiers[i]);
+            }
+        }
+        revert TooManyOptions();
+    }
+
+    function ballotVerifiers() external view returns (address[] memory) {
+        return _ballotVerifiers;
+    }
+
+    function tallyVerifiers() external view returns (address[] memory) {
+        return _tallyVerifiers;
     }
 
     function electionsCount() external view returns (uint256) {
@@ -121,8 +158,9 @@ contract ElectionFactory {
         uint256 total = elections.length;
         if (offset >= total) return new address[](0);
 
-        uint256 end = offset + limit;
-        if (end > total) end = total;
+        // Clamped before adding, so a caller asking for "everything" with a
+        // huge limit gets the rest of the list rather than an overflow revert.
+        uint256 end = limit > total - offset ? total : offset + limit;
 
         page = new address[](end - offset);
         for (uint256 i = offset; i < end; i++) {

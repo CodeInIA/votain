@@ -25,7 +25,14 @@ const ENROL = '0xbbbbbbbb';
 vi.mock('./contracts', () => ({
   getPaymaster: () => ({
     filters: { VoteSponsored: () => 'sponsored' },
-    interface: { getFunction: () => ({ selector: VOTE }) },
+    interface: {
+      getFunction: () => ({ selector: VOTE }),
+      // The slot count rides in the stub's calldata, where the real one reads
+      // it from the ballot's `voteB`: two coordinates per slot.
+      parseTransaction: ({ data }: { data: string }) => ({
+        args: [null, { voteB: Array.from({ length: 2 * parseInt(data.slice(10), 16) }) }],
+      }),
+    },
     maxGasPrice: async () => estado.maxGasPrice,
     maxRelayGas: async () => estado.maxRelayGas,
   }),
@@ -45,10 +52,10 @@ vi.mock('./logs', async () => ({
   queryTopicLogs: async () => [],
 }));
 
-/** One relay: `units` of gas at `price`, of the given kind. */
-function relay(hash: string, units: bigint, price: bigint, selector = VOTE) {
+/** One relay: `units` of gas at `price`, of the given kind and circuit size. */
+function relay(hash: string, units: bigint, price: bigint, selector = VOTE, slots = 5) {
   estado.eventos.push({ args: { cost: units * price }, transactionHash: hash });
-  estado.txs[hash] = { data: selector + '0'.repeat(64), gasPrice: price };
+  estado.txs[hash] = { data: selector + slots.toString(16).padStart(64, '0'), gasPrice: price };
 }
 
 describe('fetchVoteCost', () => {
@@ -135,5 +142,65 @@ describe('fetchVoteCost', () => {
     // A smaller sample, not a failure.
     expect(cost.samples).toBe(1);
     expect(cost.measured).toBe(true);
+  });
+});
+
+describe('the cost per circuit size', () => {
+  beforeEach(() => {
+    estado.eventos = [];
+    estado.txs = {};
+    estado.gasPrice = 1_000_000_000n;
+    estado.maxGasPrice = 200_000_000_000n;
+    estado.maxRelayGas = 2_000_000n;
+    vi.resetModules();
+  });
+
+  it('measures each size apart, because a bigger circuit costs more', async () => {
+    // Mostly small ballots and one big one: the median across them is the
+    // small figure, which quoted a six-option election half as many ballots
+    // again as its reserve could pay for.
+    relay('0x1', 800_000n, 1_000_000_000n, VOTE, 5);
+    relay('0x2', 800_000n, 1_000_000_000n, VOTE, 5);
+    relay('0x3', 1_240_000n, 1_000_000_000n, VOTE, 9);
+
+    const { fetchVoteCost, voteCostFor } = await import('./voteCost');
+    const cost = await fetchVoteCost();
+
+    expect(cost.matic).toBeCloseTo(0.0008);
+    expect(voteCostFor(cost, 4)).toBeCloseTo(0.0008);
+    // Six options, blank included, need the nine-slot circuit.
+    expect(voteCostFor(cost, 6)).toBeCloseTo(0.00124);
+  });
+
+  it('scales a size nobody has voted in up from the largest measured one', async () => {
+    relay('0x1', 1_000_000n, 1_000_000_000n, VOTE, 9);
+
+    const { fetchVoteCost, voteCostFor } = await import('./voteCost');
+    const cost = await fetchVoteCost();
+
+    // Seventeen slots, never measured: never quoted as cheaper than nine.
+    expect(voteCostFor(cost, 17)).toBeCloseTo(0.001 * (17 / 9));
+    // A smaller election than any measured is quoted at the smallest measured
+    // size that fits, which errs towards enough.
+    expect(voteCostFor(cost, 3)).toBeCloseTo(0.001);
+  });
+
+  it('scales to the circuit the election proves with, not to its option count', async () => {
+    // Only five-slot ballots so far. Six options prove with the nine-slot
+    // circuit, so the quote is nine fifths of the measured cost: scaling by the
+    // option count (six fifths) promised ballots the reserve could not pay.
+    relay('0x1', 1_000_000n, 1_000_000_000n, VOTE, 5);
+
+    const { fetchVoteCost, voteCostFor, circuitSizeFor } = await import('./voteCost');
+    const cost = await fetchVoteCost();
+
+    expect(circuitSizeFor(6)).toBe(9);
+    expect(voteCostFor(cost, 6)).toBeCloseTo(0.001 * (9 / 5));
+  });
+
+  it('keeps the platform-wide figure when no election is named', async () => {
+    const { voteCostFor, ASSUMED } = await import('./voteCost');
+    expect(voteCostFor(ASSUMED, 6)).toBe(ASSUMED.matic);
+    expect(voteCostFor({ ...ASSUMED, bySlots: { 5: 1 } }, undefined)).toBe(ASSUMED.matic);
   });
 });

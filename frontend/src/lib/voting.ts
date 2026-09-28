@@ -1,13 +1,17 @@
 /**
  * Voter actions: enroll and cast/change vote.
  *
- * Pipeline for a vote:
- *   1. Encrypt the ballot with the election's Paillier public key.
- *   2. Read the voter's current nullifier nonce (re-vote support).
- *   3. Rebuild the Semaphore group from chain events and generate the ZK
- *      membership proof binding keccak(ciphertext ‖ nonce) as the message.
- *   4. Submit castVote through the relayer, so every ballot reaches the chain
- *      from the same address and the sender reveals nothing (see relay.ts).
+ * Pipeline for a vote (see `ballot.ts` for the construction):
+ *   1. Find the voter's place in their own chain of ballots, which only their
+ *      secret can do, and the ballot the new one must cancel.
+ *   2. Encrypt the choice under the election's tally keys, with a cancellation
+ *      of the previous ballot (of nothing, on a first one), and prove it all in
+ *      zero knowledge.
+ *   3. Submit through the relayer, so every ballot reaches the chain from the
+ *      same address and the sender reveals nothing (see relay.ts).
+ *
+ * A first ballot and a re-vote look the same on chain and share no public
+ * value, so nobody watching can tell that a voter changed their mind.
  */
 import { getElection, getReadProvider } from "./contracts";
 import { eventArgs, queryLogsFrom } from "./logs";
@@ -21,30 +25,29 @@ import {
 import type { Identity } from "@semaphore-protocol/identity";
 import { identityForElection } from "./electionIdentity";
 import { claimAttestation } from "./eligibility";
-import { counterBaseFor, encryptBallot } from "./paillier";
+import { fetchBallots, prepareBallot, voterChain } from "./ballot";
+import { mapWithConcurrency } from "./utils";
 import {
-  computeNullifier,
   ensureRegistered,
-  fetchElectionGroup,
-  generateVoteProof,
   getOrCreateIdentity,
+  getStoredBallotTag,
   getStoredIdentity,
-  getStoredVoteNullifier,
   phraseIsUnprotected,
   rememberVote,
 } from "./semaphore";
 
+/** Elections read at once when a screen fans out over all of them. */
+const READ_CONCURRENCY = 6;
+
 export interface VoteResult {
   txHash: string;
-  nullifier: bigint;
-  nonce: bigint;
+  /** The ballot's tag: public, and linked to no other ballot of this voter's. */
+  tag: bigint;
+  /** Which step of the voter's own chain this ballot is; zero for the first. */
+  k: bigint;
   /**
    * What the voter is shown and can hand to anyone: the TRANSACTION HASH.
-   *
-   * Spelled out because the word "reference" used to name two different values,
-   * this one and the vote nullifier on `Election`, and the verifier was given
-   * whichever the caller happened to have. It is the transaction hash
-   * throughout now; the nullifier is `Election.voteNullifier`.
+   * The tag is `tag`; both are accepted by the receipt lookup.
    */
   referenceNumber: string;
 }
@@ -68,9 +71,13 @@ async function enrolsPrivately(electionAddress: string): Promise<boolean> {
   try {
     const attester: string = await getElection(electionAddress).platformAttester();
     answer = attester !== "0x0000000000000000000000000000000000000000";
-  } catch {
-    // An election deployed before the function existed reverts rather than
-    // answering zero. Same meaning: the old doors.
+  } catch (error: unknown) {
+    // An election deployed before the function existed REVERTS rather than
+    // answering zero. Same meaning: the old doors. Anything else (the RPC
+    // down, a timeout) is not an answer at all: caching "public" then would
+    // have this tab enrol and vote with the wrong identity until it reloads,
+    // so it is thrown and asked again next time.
+    if ((error as { code?: string } | null)?.code !== "CALL_EXCEPTION") throw error;
     answer = false;
   }
   privateEnrolment.set(key, answer);
@@ -149,101 +156,61 @@ export async function castVote(electionAddress: string, optionIndex: number): Pr
   // the election enrols privately.
   const identity = await votingIdentity(electionAddress);
 
-  const election = getElection(electionAddress);
-  const [paillierPk, scope, metadataJson] = await Promise.all([
-    election.paillierPublicKey(),
-    election.scope(),
-    election.metadataJson(),
-  ]);
+  const prepared = await prepareBallot(electionAddress, identity, optionIndex);
 
-  // 1. Encrypt ballot, in the base THIS election records. Using the current
-  //    constant instead would make every ballot cast after a base change
-  //    unreadable to a tally that correctly follows the election's own.
-  const ciphertext = encryptBallot(paillierPk, optionIndex, counterBaseFor(metadataJson));
+  // Relayed submission, carrying no session identifier, so nothing on chain
+  // ties this ballot to a voter. The issuer still sees the request's network
+  // origin, which is a metadata link this design does not close (see relay.ts).
+  const { txHash } = await relayVote({ election: electionAddress, ballot: prepared.calldata, proof: prepared.proof });
 
-  // 2. Read the current nonce (re-vote support) from the deterministic nullifier
-  const nullifier = computeNullifier(identity, BigInt(scope));
-  const nonce: bigint = await election.nullifierNonces(nullifier);
+  // Remember this device voted here (public tag) so the UI can show "already
+  // voted" without a passkey prompt later.
+  rememberVote(electionAddress, prepared.ballot.tag);
 
-  // 3. Membership proof against the on-chain group, bound to ciphertext+nonce
-  const group = await fetchElectionGroup(electionAddress);
-  const proof = await generateVoteProof(identity, group, ciphertext, nonce, BigInt(scope));
-
-  // 4. Relayed submission, carrying no session identifier, so nothing on chain
-  //    ties this ballot to a voter. The issuer still sees the request's network
-  //    origin, which is a metadata link this design does not close (see relay.ts).
-  const { txHash } = await relayVote({
-    election: electionAddress,
-    voteCiphertext: ciphertext,
-    nullifier: proof.nullifier,
-    merkleRoot: proof.merkleTreeRoot,
-    merkleDepth: proof.merkleTreeDepth,
-    pA: proof.pA,
-    pB: proof.pB,
-    pC: proof.pC,
-  });
-
-  // Remember this device voted here (public nullifier) so the UI can show
-  // "already voted" without a passkey prompt later.
-  rememberVote(electionAddress, proof.nullifier);
-
-  return {
-    txHash,
-    nullifier: proof.nullifier,
-    nonce,
-    // Full, copyable receipt (the on-chain tx hash). The UI truncates it for
-    // display but copies the whole value.
-    referenceNumber: txHash,
-  };
+  return { txHash, tag: prepared.ballot.tag, k: prepared.k, referenceNumber: txHash };
 }
 
-/** Looks up the vote history for the locally stored identity in one election. */
-export async function fetchVoteReceipts(electionAddress: string, nullifier: bigint) {
+/** One ballot as a receipt shows it. */
+interface BallotReceipt {
+  tag: bigint;
+  txHash: string;
+  timestamp: Date;
+}
+
+/** The ballot filed under one tag, or null. A tag is cast at most once. */
+async function fetchBallotByTag(electionAddress: string, tag: bigint): Promise<BallotReceipt | null> {
   const election = getElection(electionAddress);
-  const events = await queryLogsFrom(election, election.filters.VoteCast(nullifier));
-  return events.map(e => {
-    const args = eventArgs<{
-      nullifier: bigint;
-      voteCiphertext: string;
-      nonce: bigint;
-      timestamp: bigint;
-    }>(e);
-    return {
-      nullifier: args.nullifier,
-      nonce: args.nonce,
-      timestamp: new Date(Number(args.timestamp) * 1000),
-      txHash: e.transactionHash,
-    };
-  });
+  const [event] = await queryLogsFrom(election, election.filters.BallotCast(tag));
+  if (!event) return null;
+  const args = eventArgs<{ tag: bigint; timestamp: bigint }>(event);
+  return { tag: args.tag, txHash: event.transactionHash, timestamp: new Date(Number(args.timestamp) * 1000) };
 }
 
 /**
  * A vote receipt anyone can look up, holder or not.
  *
- * The point of publishing a nullifier is that a THIRD PARTY can check a receipt
- * somebody shows them: an auditor, a journalist, a losing candidate. So this
- * takes no identity, no session and no stored secret, only the string on the
- * receipt, and it reads the same public events the voter's own history reads.
+ * The point of a public receipt is that a THIRD PARTY can check one somebody
+ * shows them: an auditor, a journalist, a losing candidate. So this takes no
+ * identity, no session and no stored secret, only the string on the receipt,
+ * and reads the same public events the voter's own history reads.
  *
  * What it can confirm is that a ballot was recorded, when, and in which
- * election. What it can never confirm is WHAT was voted, which is the same
- * limit the voter's own history has and is the property the whole design is
- * built to keep.
+ * election. What it can never confirm is WHAT was voted, nor whether the same
+ * voter cast other ballots: each ballot's tag is unrelated to the others, which
+ * is exactly what keeps a re-vote invisible to whoever demanded the first one.
  */
 export interface PublicReceipt {
   electionId: string;
   electionTitle: string;
   phase: string;
-  /** Full, `0x`-prefixed. This is the value the chain indexed the vote by. */
-  nullifier: string;
+  /** Full, `0x`-prefixed. This is the value the chain indexed the ballot by. */
+  tag: string;
   txHash: string;
   timestamp: Date;
-  /** Every ballot this nullifier cast here. A re-vote replaces, so the last wins. */
-  voteCount: number;
 }
 
-/** Reads a query as a nullifier, in either of the two forms a receipt shows it. */
-function parseNullifier(query: string): bigint | null {
+/** Reads a query as a tag, in either of the two forms a receipt shows it. */
+function parseTag(query: string): bigint | null {
   const trimmed = query.trim();
   try {
     if (/^0x[0-9a-fA-F]+$/.test(trimmed)) return BigInt(trimmed);
@@ -255,13 +222,13 @@ function parseNullifier(query: string): bigint | null {
 }
 
 /**
- * Finds one receipt from a transaction hash or a nullifier.
+ * Finds one receipt from a transaction hash or a ballot tag.
  *
- * BOTH are tried for a `0x` string of 32 bytes, because a nullifier is a field
+ * BOTH are tried for a `0x` string of 32 bytes, because a tag is a field
  * element and prints at exactly the same width as a transaction hash: there is
  * no way to tell them apart by looking. The transaction lookup goes first
  * because it is one request and settles the question; only when no such
- * transaction exists is the same string tried as a nullifier.
+ * transaction exists is the same string tried as a tag.
  */
 export async function findVoteReceipt(
   query: string,
@@ -277,27 +244,31 @@ export async function findVoteReceipt(
     if (found) return found;
   }
 
-  const nullifier = parseNullifier(trimmed);
-  if (nullifier === null) return null;
+  const tag = parseTag(trimmed);
+  if (tag === null) return null;
 
-  for (const el of elections) {
-    const receipts = await fetchVoteReceipts(el.contractAddress, nullifier);
-    if (receipts.length === 0) continue;
-    const last = receipts[receipts.length - 1];
+  // In parallel, then the first match in the order given, so the answer is
+  // the same as a one-at-a-time loop gives, without waiting on every miss.
+  const found = await mapWithConcurrency(elections, READ_CONCURRENCY, el =>
+    fetchBallotByTag(el.contractAddress, tag),
+  );
+  for (let i = 0; i < elections.length; i++) {
+    const ballot = found[i];
+    if (!ballot) continue;
+    const el = elections[i];
     return {
       electionId: el.contractAddress,
       electionTitle: el.title,
       phase: el.phase,
-      nullifier: `0x${nullifier.toString(16)}`,
-      txHash: last.txHash,
-      timestamp: last.timestamp,
-      voteCount: receipts.length,
+      tag: `0x${tag.toString(16)}`,
+      txHash: ballot.txHash,
+      timestamp: ballot.timestamp,
     };
   }
   return null;
 }
 
-/** The transaction path: one receipt, read for the VoteCast it emitted. */
+/** The transaction path: one receipt, read for the BallotCast it emitted. */
 async function receiptFromTransaction(
   txHash: string,
   known: Map<string, { contractAddress: string; title: string; phase: string }>,
@@ -319,18 +290,16 @@ async function receiptFromTransaction(
     } catch {
       continue;
     }
-    if (parsed?.name !== "VoteCast") continue;
+    if (parsed?.name !== "BallotCast") continue;
 
-    const nullifier = parsed.args.nullifier as bigint;
-    const all = await fetchVoteReceipts(election.contractAddress, nullifier);
+    const tag = parsed.args.tag as bigint;
     return {
       electionId: election.contractAddress,
       electionTitle: election.title,
       phase: election.phase,
-      nullifier: `0x${nullifier.toString(16)}`,
+      tag: `0x${tag.toString(16)}`,
       txHash: receipt.hash,
       timestamp: new Date(Number(parsed.args.timestamp) * 1000),
-      voteCount: all.length || 1,
     };
   }
   return null;
@@ -341,51 +310,53 @@ export interface VoteHistoryEntry {
   electionTitle: string;
   phase: string;
   lastVoteAt: Date;
-  voteCount: number;
+  /**
+   * Ballots this voter cast here, when known. Only the full lookup, which holds
+   * the secret, can count them: nothing public links one ballot to another.
+   */
+  voteCount?: number;
   /** The transaction hash of the last ballot. See `VoteResult`. */
   referenceNumber: string;
-  /** The vote nullifier, full and `0x`-prefixed. Both are accepted by the verifier. */
-  nullifier: string;
+  /** The last ballot's tag, full and `0x`-prefixed. Both are accepted by the verifier. */
+  tag: string;
 }
 
 /**
  * The votes THIS BROWSER cast, read without the voting identity.
  *
- * `fetchVoteHistory` re-derives a nullifier per election from the Semaphore
- * secret, which in PRF mode is not stored at rest: after a reload it needs a
- * passkey tap before it can answer at all. But the nullifier of a ballot is a
- * PUBLIC value, sitting in the `VoteCast` event, and `rememberVote` already
- * writes each one down at the moment the vote is cast. So for a read there is
- * nothing to derive and nothing to unlock.
+ * `fetchVoteHistory` walks each election's ballots with the voter's secret,
+ * which in PRF mode is not stored at rest: after a reload it needs a passkey
+ * tap before it can answer at all. But a ballot's tag is PUBLIC, sitting in the
+ * `BallotCast` event, and `rememberVote` writes down the latest one at the
+ * moment the vote is cast. So for a read there is nothing to derive and
+ * nothing to unlock.
  *
- * What it cannot see is a ballot this browser has never heard of: one cast on
- * another device and not yet learned through an unlock. That is the honest
- * limit and the reason the full lookup still exists. After an unlock the two
- * agree, until the voter uses another device again.
- *
- * Cheaper as well as promptless: it queries only the elections this browser has
- * a record for, rather than every election in the list.
+ * What it cannot see is a ballot this browser has never heard of, one cast on
+ * another device and not yet learned through an unlock, nor how many ballots
+ * came before. That is the honest limit and the reason the full lookup exists.
  */
 export async function fetchLocalVoteHistory(
   elections: { contractAddress: string; title: string; phase: string }[],
 ): Promise<VoteHistoryEntry[]> {
+  const known = elections.flatMap(el => {
+    const tag = getStoredBallotTag(el.contractAddress);
+    return tag === null ? [] : [{ el, tag }];
+  });
+  const found = await mapWithConcurrency(known, READ_CONCURRENCY, ({ el, tag }) =>
+    fetchBallotByTag(el.contractAddress, tag),
+  );
   const entries: VoteHistoryEntry[] = [];
-  for (const el of elections) {
-    const nullifier = getStoredVoteNullifier(el.contractAddress);
-    if (nullifier === null) continue;
-
-    const receipts = await fetchVoteReceipts(el.contractAddress, nullifier);
-    if (receipts.length === 0) continue;
-
-    const last = receipts[receipts.length - 1];
+  for (let i = 0; i < known.length; i++) {
+    const ballot = found[i];
+    if (!ballot) continue;
+    const { el, tag } = known[i];
     entries.push({
       electionId: el.contractAddress,
       electionTitle: el.title,
       phase: el.phase,
-      lastVoteAt: last.timestamp,
-      voteCount: receipts.length,
-      referenceNumber: last.txHash,
-      nullifier: `0x${nullifier.toString(16)}`,
+      lastVoteAt: ballot.timestamp,
+      referenceNumber: ballot.txHash,
+      tag: `0x${tag.toString(16)}`,
     });
   }
   return entries.sort((a, b) => b.lastVoteAt.getTime() - a.lastVoteAt.getTime());
@@ -397,45 +368,40 @@ export async function fetchLocalVoteHistory(
  * only prove *that* and *when* you voted, never *what* you chose.
  */
 export async function fetchVoteHistory(
-  elections: { contractAddress: string; title: string; phase: string; scope?: bigint }[],
+  elections: { contractAddress: string; title: string; phase: string }[],
 ): Promise<VoteHistoryEntry[]> {
   const master = getStoredIdentity();
   if (!master) return [];
 
-  const entries: VoteHistoryEntry[] = [];
-  for (const el of elections) {
-    const election = getElection(el.contractAddress);
-    const scope: bigint = el.scope ?? BigInt(await election.scope());
+  const looked = await mapWithConcurrency(elections, READ_CONCURRENCY, async el => {
+    const scope: bigint = await getElection(el.contractAddress).scope();
     // Per election, because that is what the ballot was cast with wherever the
-    // election enrols privately. Computing this from the platform identity
-    // found nothing at all there, which reads as "you never voted".
+    // election enrols privately. Walking with the platform identity found
+    // nothing at all there, which reads as "you never voted".
     const identity = await votingIdentity(el.contractAddress, master);
-    const nullifier = computeNullifier(identity, scope);
-    const receipts = await fetchVoteReceipts(el.contractAddress, nullifier);
-    if (receipts.length === 0) continue;
+    const { mine } = voterChain(identity.secretScalar, scope, await fetchBallots(el.contractAddress));
+    return { el, mine };
+  });
+
+  const entries: VoteHistoryEntry[] = [];
+  for (const { el, mine } of looked) {
+    const last = mine.at(-1);
+    if (!last) continue;
 
     // Learned once, so this browser stops needing the passkey to answer the
-    // same question again. The nullifier is public, sitting in the event just
-    // read, and this device already records the ones for its own ballots; what
-    // is new is that a ballot cast elsewhere becomes visible here afterwards.
-    //
-    // Only where a vote actually exists. Writing the nullifier of an election
-    // the voter skipped would put a link between them and that election on this
-    // disk, and buy nothing for it.
-    rememberVote(el.contractAddress, nullifier);
+    // same question again. Only where a vote actually exists: writing a tag for
+    // an election the voter skipped would put a link between them and that
+    // election on this disk, and buy nothing for it.
+    rememberVote(el.contractAddress, last.tag);
 
-    const last = receipts[receipts.length - 1];
     entries.push({
       electionId: el.contractAddress,
       electionTitle: el.title,
       phase: el.phase,
       lastVoteAt: last.timestamp,
-      voteCount: receipts.length,
+      voteCount: mine.length,
       referenceNumber: last.txHash,
-      // Full, not the first 16 hex characters it used to carry: a truncated
-      // nullifier cannot be looked up, so exporting or copying one gave the
-      // voter a string that verifies nothing.
-      nullifier: `0x${nullifier.toString(16)}`,
+      tag: `0x${last.tag.toString(16)}`,
     });
   }
   return entries.sort((a, b) => b.lastVoteAt.getTime() - a.lastVoteAt.getTime());

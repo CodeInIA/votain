@@ -33,7 +33,7 @@ export function FundingNotice({ election, reserved, organizerFree, className }: 
   const { t } = useTranslation();
   // Read here rather than passed down: the answer is shared and cached, so two
   // components asking is one request, and a caller cannot forget to thread it.
-  const voteCost = useVoteCost();
+  const voteCost = useVoteCost(election.candidates.length);
   const verdict = fundingVerdict(election, reserved, organizerFree, voteCost.matic);
 
   if (verdict.unfunded) {

@@ -1,10 +1,11 @@
 /**
  * Shared SD-JWT issuer/verifier instance (EdDSA / Ed25519).
  *
- * Selective disclosure: identity attributes (country, ageOver18, region) are
- * issued as _sd claims so the voter can disclose only what an election's
- * eligibility check needs. Sources: World ID Credentials when available;
- * demo values otherwise (source-agnostic schema, see docs).
+ * Selective disclosure: identity attributes (country, ageOver18, region) would
+ * be issued as _sd claims so the voter could disclose only what a check needs.
+ * None is issued today, because no source this server trusts has verified
+ * them: eligibility is proved per election from the voter's own document (see
+ * `eligibility/`). The schema stays source-agnostic for when one exists.
  */
 import crypto from 'crypto';
 import {

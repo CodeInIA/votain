@@ -1,234 +1,93 @@
 /**
- * Deterministic Paillier key derivation for the election tally.
+ * The organizer's tally keys: one ElGamal key per ballot slot, on Baby Jubjub.
  *
- * The organizer's tally key is NOT stored anywhere: it is re-derived on demand
- * from a deterministic signature by the organizer's WALLET, so it is available
- * on any device they can work from at all and never sits at rest (localStorage
- * / backend). The only per-election input is a public `keyNonce` kept in the
- * on-chain metadata — it makes each election's key distinct and lets the key be
- * re-derived before the election address even exists (the public key is a
- * constructor argument).
+ * NOT STORED ANYWHERE by default: re-derived on demand from a deterministic
+ * signature by the organizer's WALLET (`organizerKey.ts`), so they are
+ * available on any device the organizer can work from and never sit at rest.
+ * The only per-election input is a public `keyNonce` kept in the on-chain
+ * metadata: it makes each election's keys distinct and lets them be derived
+ * before the election address exists, since the public keys are a constructor
+ * argument.
  *
- * THE SOURCE USED TO BE A PASSKEY'S PRF SECRET, and this comment used to say
- * so long after it stopped being true. It was changed because the passkey
- * failed at the one thing it had to do: Chrome and Firefox on Windows return a
- * PRF secret when a credential is created and refuse to evaluate it on an
- * assertion, so an organizer could sign in on a second machine and then not
- * open their own elections. `organizerKey.ts` has the full account, including
- * what moving to the wallet costs.
+ * A wallet whose signatures are NOT deterministic cannot derive anything
+ * reproducible, so for it the keys are random and must be kept in a file; see
+ * `randomTallyKeys` and the key file below.
  *
- * Only the *seeded randomness* is bespoke here: prime testing stays in
- * `bigint-crypto-utils` (audited Miller-Rabin) and the key math mirrors
- * `paillier-bigint`'s own `generateRandomKeys`, reusing its key classes.
+ * THE DERIVATION IS A COMPATIBILITY SURFACE. Change it and every election
+ * created before cannot be counted. `tallyKey.test.ts` pins it.
  */
-import { isProbablyPrime } from "bigint-crypto-utils";
-import { PublicKey, PrivateKey } from "paillier-bigint";
 import type { Signer } from "ethers";
 
+import { deriveTallyKeys, isInSubgroup, multiply, BASE, type Point } from "./ballotCrypto";
 import { organizerMasterSecret } from "./organizerKey";
-import { PAILLIER_KEY_BITS, type SerializedKeyPair } from "./paillier";
 
-// HKDF info for the per-election key stretch: it labels THIS derivation, and
-// is not the salt used anywhere else. Distinct labels are what stop one
-// secret's stretch from colliding with another's.
-const TALLY_KEY_SALT = "votain:tally-key:v1";
+export interface TallyKeys {
+  /** One secret per slot in use: the options, then the blank vote. */
+  secrets: bigint[];
+  /** The public keys the election stores, x·G for each secret. */
+  keys: Point[];
+}
 
-// Miller-Rabin rounds. 40 gives a false-prime probability < 2^-80, the usual
-// margin for RSA/Paillier-sized primes.
-const MR_ROUNDS = 40;
-
-const toHex = (x: bigint): string => "0x" + x.toString(16);
-
-/** A fresh, public per-election nonce (hex) — safe to store on-chain. */
+/** A fresh, public per-election nonce (hex), safe to store on chain. */
 export function newKeyNonce(): string {
   const b = new Uint8Array(16);
   crypto.getRandomValues(b);
   return "0x" + [...b].map(x => x.toString(16).padStart(2, "0")).join("");
 }
 
-// ── Deterministic byte stream: HMAC-SHA256 in counter mode (NIST SP800-108) ──
-
-async function hmac(key: Uint8Array, data: Uint8Array): Promise<Uint8Array> {
-  const k = await crypto.subtle.importKey(
-    "raw", key as BufferSource, { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
-  );
-  return new Uint8Array(await crypto.subtle.sign("HMAC", k, data as BufferSource));
-}
-
 /**
- * An endless, reproducible byte stream keyed by `secret` and labelled by `info`.
- * block(i) = HMAC(secret, info ‖ uint32BE(i)); bytes are handed out in order.
- */
-class SeededStream {
-  private buf: Uint8Array = new Uint8Array(0);
-  private counter = 0;
-  constructor(private readonly secret: Uint8Array, private readonly info: Uint8Array) {}
-
-  private async refill(): Promise<void> {
-    const ctr = new Uint8Array(4);
-    new DataView(ctr.buffer).setUint32(0, this.counter++, false);
-    const block = await hmac(this.secret, concat(this.info, ctr));
-    this.buf = concat(this.buf, block);
-  }
-
-  async take(n: number): Promise<Uint8Array> {
-    while (this.buf.length < n) await this.refill();
-    const out = this.buf.slice(0, n);
-    this.buf = this.buf.slice(n);
-    return out;
-  }
-}
-
-function concat(a: Uint8Array, b: Uint8Array): Uint8Array {
-  const out = new Uint8Array(a.length + b.length);
-  out.set(a); out.set(b, a.length);
-  return out;
-}
-
-function bytesToBigInt(b: Uint8Array): bigint {
-  let x = 0n;
-  for (const byte of b) x = (x << 8n) | BigInt(byte);
-  return x;
-}
-
-const bitLength = (x: bigint): number => x.toString(2).length;
-
-/**
- * Odd primes below TRIAL_DIVISION_LIMIT, for cheaply discarding composites.
- *
- * Around one odd number in 355 is prime at this size, so a naive walk spends
- * almost all of its time running full Miller-Rabin on numbers a single division
- * would have rejected. Dividing by the small primes first removes roughly seven
- * candidates in eight before any modular exponentiation happens.
- *
- * The limit is where the returns flatten: a larger sieve rejects a few percent
- * more candidates while costing a proportionally larger division pass on every
- * survivor.
- */
-const TRIAL_DIVISION_LIMIT = 10_000;
-
-const SMALL_PRIMES: bigint[] = (() => {
-  const composite = new Uint8Array(TRIAL_DIVISION_LIMIT + 1);
-  const primes: bigint[] = [];
-  for (let i = 3; i <= TRIAL_DIVISION_LIMIT; i += 2) {
-    if (composite[i]) continue;
-    primes.push(BigInt(i));
-    for (let j = i * i; j <= TRIAL_DIVISION_LIMIT; j += i) composite[j] = 1;
-  }
-  return primes;
-})();
-
-/** True when a small prime divides x, which proves x composite. */
-function hasSmallFactor(x: bigint): boolean {
-  for (const p of SMALL_PRIMES) {
-    if (x % p === 0n) return x !== p;
-  }
-  return false;
-}
-
-/**
- * Draws a candidate of exactly `bits` bits from the stream (top bit set, odd),
- * then walks upward by 2 to the next probable prime. Deterministic given the
- * stream. Setting only the top bit, not the second, keeps p·q from spilling
- * into an extra bit (the caller redraws q if n is still the wrong size).
- *
- * THE WALK IS PART OF THE KEY. This function must return the same prime it
- * always has: the organizer's tally key is re-derived rather than stored, so a
- * different result here makes every earlier election undecryptable. Both filters
- * below are therefore chosen to be exact rather than merely likely. Trial
- * division only rejects numbers a small prime divides, and the one-round test
- * only rejects numbers Miller-Rabin proves composite; neither can skip a value
- * the original loop would have accepted. `tallyKey.test.ts` pins the result.
- */
-async function nextPrime(stream: SeededStream, bits: number): Promise<bigint> {
-  const bytes = await stream.take(Math.ceil(bits / 8));
-  let x = bytesToBigInt(bytes) & ((1n << BigInt(bits)) - 1n);
-  x |= (1n << BigInt(bits - 1)) | 1n;
-
-  for (;;) {
-    if (!hasSmallFactor(x)) {
-      // One round first. A single Miller-Rabin witness rejects almost every
-      // composite that survived the sieve, at a fortieth of the cost, so the
-      // full MR_ROUNDS margin is only ever paid on a genuine candidate.
-      if (await isProbablyPrime(x, 1)) {
-        if (await isProbablyPrime(x, MR_ROUNDS)) return x;
-      }
-    }
-    x += 2n;
-  }
-}
-
-/**
- * Derives a Paillier keypair from a raw secret. Pure and deterministic — same
- * (secret, keyNonce) always yields the same keys. Exposed for testing;
- * production code should use `deriveElectionKeys`.
- */
-export async function deriveKeysFromSecret(
-  secret: Uint8Array,
-  keyNonce: string,
-  bitlength = PAILLIER_KEY_BITS,
-): Promise<SerializedKeyPair> {
-  const info = new TextEncoder().encode(`${TALLY_KEY_SALT}:${keyNonce}`);
-  const stream = new SeededStream(secret, info);
-
-  // Mirrors paillier-bigint: p is one bit longer than q, and n must be exactly
-  // `bitlength` bits — redraw q (deterministically, from the same stream) if not.
-  const p = await nextPrime(stream, Math.floor(bitlength / 2) + 1);
-  let q: bigint;
-  let n: bigint;
-  do {
-    q = await nextPrime(stream, Math.floor(bitlength / 2));
-    n = p * q;
-  } while (q === p || bitLength(n) !== bitlength);
-
-  // Simple variant (g = n + 1): a standard, valid Paillier instance.
-  const g = n + 1n;
-  const lambda = (p - 1n) * (q - 1n);
-  const mu = modInverse(lambda, n);
-
-  // Build with the library's own classes to be certain the instance is well-formed.
-  const publicKey = new PublicKey(n, g);
-  void new PrivateKey(lambda, mu, publicKey, p, q);
-
-  return {
-    publicKey: { n: toHex(n), g: toHex(g) },
-    privateKey: { lambda: toHex(lambda), mu: toHex(mu) },
-  };
-}
-
-/**
- * Re-derives the election's tally keypair from the organizer's wallet. Returns
- * null when there is no signer to ask, in which case the caller must fall back
- * to a random keypair it exports and stores, since nothing can be re-derived.
+ * Re-derives an election's tally keys from the organizer's wallet. Null when
+ * there is no signer to ask, in which case the caller falls back to keys it
+ * generated at random and stored, since nothing can be re-derived.
  */
 export async function deriveElectionKeys(
   keyNonce: string,
+  slots: number,
   signer?: Signer,
-): Promise<SerializedKeyPair | null> {
-  // No wallet, no key. The master is a function of a wallet signature, so a
-  // caller that cannot sign cannot derive, and returning null is how it learns
-  // to ask for the exported key file instead.
+): Promise<TallyKeys | null> {
   if (!signer) return null;
-
-  // TWO COSTS, and it is worth knowing which is which. The signature is a round
-  // trip to the wallet; the derivation that follows is 2048-bit Paillier key
-  // generation, which searches for two thousand-bit primes in this tab. On a
-  // phone that is seconds, not milliseconds, and it looks exactly like a hang.
-  // Anything that bounds a wallet request must not bound this: a deadline over
-  // the whole call once reported a lost wallet answer for a signature that had
-  // arrived perfectly and was merely being used slowly.
-  return deriveKeysFromSecret(await organizerMasterSecret(signer), keyNonce, PAILLIER_KEY_BITS);
+  return deriveTallyKeys(await organizerMasterSecret(signer), keyNonce, slots);
 }
 
-/** Modular inverse via the extended Euclidean algorithm (deterministic integer math). */
-function modInverse(a: bigint, m: bigint): bigint {
-  let [old_r, r] = [((a % m) + m) % m, m];
-  let [old_s, s] = [1n, 0n];
-  while (r !== 0n) {
-    const quot = old_r / r;
-    [old_r, r] = [r, old_r - quot * r];
-    [old_s, s] = [s, old_s - quot * s];
+/** Keys from fresh randomness, for a wallet that cannot derive them. Must be kept. */
+export async function randomTallyKeys(slots: number): Promise<TallyKeys> {
+  const secret = crypto.getRandomValues(new Uint8Array(32));
+  return deriveTallyKeys(secret, "random", slots);
+}
+
+// ────────────────────────────────────────────────
+// Key file
+// ────────────────────────────────────────────────
+
+/** What an exported key file holds: the secrets, which are enough to rebuild the keys. */
+interface KeyFile {
+  version: 2;
+  secrets: string[];
+}
+
+export function serializeTallyKeys(keys: TallyKeys): string {
+  const file: KeyFile = { version: 2, secrets: keys.secrets.map(x => "0x" + x.toString(16)) };
+  return JSON.stringify(file, null, 2);
+}
+
+/** Reads a key file back. Throws on anything that is not one. */
+export function parseTallyKeys(text: string): TallyKeys {
+  let file: Partial<KeyFile>;
+  try {
+    file = JSON.parse(text) as Partial<KeyFile>;
+  } catch {
+    throw new Error("Not a valid key file (invalid JSON)");
   }
-  if (old_r !== 1n) throw new Error("modInverse: not invertible");
-  return ((old_s % m) + m) % m;
+  if (file?.version !== 2 || !Array.isArray(file.secrets) || file.secrets.length === 0) {
+    throw new Error("Not a valid Votain tally key file");
+  }
+  const secrets = file.secrets.map(s => BigInt(s));
+  const keys = secrets.map(x => multiply(BASE, x));
+  if (!keys.every(isInSubgroup)) throw new Error("Not a valid Votain tally key file");
+  return { secrets, keys };
+}
+
+/** Whether a key set is the one an election stores, point for point. */
+export function keysMatch(keys: readonly Point[], onChain: readonly Point[]): boolean {
+  return keys.length === onChain.length && keys.every((k, i) => k[0] === onChain[i][0] && k[1] === onChain[i][1]);
 }

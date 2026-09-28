@@ -11,9 +11,9 @@
  * The cache is dropped on a full reload, which is the only moment the gas price
  * could have moved enough to matter for a figure quoted as "about".
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { isChainConfigured } from '../lib/deployments';
-import { fetchVoteCost, ASSUMED, type VoteCost } from '../lib/voteCost';
+import { fetchVoteCost, voteCostFor, ASSUMED, type VoteCost } from '../lib/voteCost';
 
 let shared: VoteCost | null = null;
 let inFlight: Promise<VoteCost> | null = null;
@@ -24,7 +24,11 @@ export function resetVoteCostCache(): void {
   inFlight = null;
 }
 
-export function useVoteCost(): VoteCost {
+/**
+ * `options` is an election's choice count, blank included: given, `matic` is
+ * what a ballot costs in THAT election's circuit rather than across all of them.
+ */
+export function useVoteCost(options?: number): VoteCost {
   const live = isChainConfigured();
   const [cost, setCost] = useState<VoteCost>(shared ?? ASSUMED);
 
@@ -43,5 +47,8 @@ export function useVoteCost(): VoteCost {
     return () => { cancelled = true; };
   }, [live]);
 
-  return cost;
+  return useMemo(
+    () => (options ? { ...cost, matic: voteCostFor(cost, options) } : cost),
+    [cost, options],
+  );
 }

@@ -4,14 +4,13 @@ import { deployStack, baseConfig, VotingType, type Stack } from "./fixtures.js";
 
 const { ethers, networkHelpers } = await network.create();
 
-const FORWARDER = ethers.Wallet.createRandom().address;
 
 let stack: Stack;
 let organizer: any;
 
 before(async () => {
   [, organizer] = await ethers.getSigners();
-  stack = await deployStack(ethers, FORWARDER);
+  stack = await deployStack(ethers);
 });
 
 describe("ElectionFactory", () => {
@@ -54,7 +53,41 @@ describe("ElectionFactory", () => {
     expect(await election.organizer()).to.equal(organizer.address);
     expect(await election.name()).to.equal("Presidential 2026");
     expect(await election.votingType()).to.equal(BigInt(VotingType.SIMPLE_PLURALITY));
-    expect(await election.scope()).to.equal(cfg.scope);
+    // Three options and the blank vote: the smallest circuit, five slots.
+    expect(await election.circuitSlots()).to.equal(5n);
+    expect(await election.ballotVerifier()).to.equal(await stack.ballotVerifiers[0].getAddress());
+    expect(await election.tallyVerifier()).to.equal(await stack.tallyVerifiers[0].getAddress());
+  });
+
+  it("gives each election the smallest circuit that holds its options, and refuses past the largest", async () => {
+    const [b5] = await stack.factory.verifiersFor(4n);
+    const [b9, t9] = await stack.factory.verifiersFor(5n);
+    const [b51] = await stack.factory.verifiersFor(50n);
+    expect(b5).to.equal(await stack.ballotVerifiers[0].getAddress());
+    expect(b9).to.equal(await stack.ballotVerifiers[1].getAddress());
+    expect(t9).to.equal(await stack.tallyVerifiers[1].getAddress());
+    expect(b51).to.equal(await stack.ballotVerifiers[2].getAddress());
+    await expect(stack.factory.verifiersFor(51n)).to.be.revertedWithCustomError(stack.factory, "TooManyOptions");
+  });
+
+  it("refuses verifier lists that are empty, unequal or out of size order", async () => {
+    const Factory = await ethers.getContractFactory("ElectionFactory");
+    const [b5, b9] = [await stack.ballotVerifiers[0].getAddress(), await stack.ballotVerifiers[1].getAddress()];
+    const [t5, t9] = [await stack.tallyVerifiers[0].getAddress(), await stack.tallyVerifiers[1].getAddress()];
+    const deploy = (ballots: string[], tallies: string[]) =>
+      Factory.deploy(
+        stack.paymaster.getAddress(),
+        stack.factory.deployer(),
+        ballots,
+        tallies,
+        stack.registry.getAddress(),
+        ethers.ZeroAddress,
+      );
+    await expect(deploy([], [])).to.be.revertedWithCustomError(Factory, "BadVerifiers");
+    await expect(deploy([b5, b9], [t5])).to.be.revertedWithCustomError(Factory, "BadVerifiers");
+    await expect(deploy([b9, b5], [t9, t5])).to.be.revertedWithCustomError(Factory, "BadVerifiers");
+    await expect(deploy([b5, b9], [t9, t5])).to.be.revertedWithCustomError(Factory, "BadVerifiers");
+    await expect(deploy([b5, b9], [t5, t9])).to.not.be.revert(ethers);
   });
 
   it("paginates the elections list", async () => {

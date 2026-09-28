@@ -16,7 +16,7 @@ import {
   readPendingVerification,
   endPendingVerification,
 } from '../auth/worldIdBridge.js';
-import { verifyWorldIdProof, type WorldIdPayload } from '../auth/worldId.js';
+import { verifyWorldIdProof, worldIdAction, type WorldIdPayload } from '../auth/worldId.js';
 
 const router = Router();
 
@@ -77,7 +77,8 @@ router.post('/logout', (_req: Request, res: Response) => {
 /** POST /worldid/request — opens one, and names it in an httpOnly cookie. */
 router.post('/worldid/request', async (req: Request, res: Response) => {
   try {
-    const { action, returnTo } = req.body as { action?: string; returnTo?: unknown };
+    // No `action` from the body, whatever it says: see `worldIdAction`.
+    const { returnTo } = req.body as { returnTo?: unknown };
 
     // One verification per browser at a time. Without this, pressing the
     // button twice leaves the first one orphaned in the store with nothing
@@ -85,7 +86,7 @@ router.post('/worldid/request', async (req: Request, res: Response) => {
     endPendingVerification(readPendingCookie(req));
 
     const { pendingId, connectorURI } = await startPendingVerification(
-      action ?? process.env.WORLD_ID_ACTION ?? 'vote-registration',
+      worldIdAction(),
       // KEPT FOR A CLIENT THAT CAN USE IT, which the web frontend is not.
       // `return_to` is a deep link, and World's own example is a custom
       // scheme: `myapp://verify-done`. A native app registers one of those and
@@ -104,9 +105,8 @@ router.post('/worldid/request', async (req: Request, res: Response) => {
     setPendingCookie(res, pendingId);
     return res.status(200).json({ connectorURI });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error opening World ID request:', error);
-    return res.status(500).json({ error: 'Internal server error', message });
+    return res.status(500).json({ error: 'Could not open a World ID request' });
   }
 });
 
@@ -177,7 +177,6 @@ router.post('/verify-human', async (req: Request, res: Response) => {
 
     const nullifier_hash = verified.nullifier ?? '';
 
-    // Revocation entry for this credential
     // The slot belongs to the HUMAN and is assigned by `registerMember`, so
     // signing in costs no transaction. Zero until they are registered, which is
     // the state a first-time voter is in while the vault write is still to come;
@@ -197,18 +196,27 @@ router.post('/verify-human', async (req: Request, res: Response) => {
       // accepts any credential: Orbs were withdrawn from Spain, and gating the
       // front door on one would lock out the voters this project is for.
       personhood: verified.level,
-      // Selective-disclosure identity attributes. Demo issuer values until
-      // World ID Credentials selective disclosure is wired (see docs).
-      country: process.env.DEMO_VC_COUNTRY ?? 'ES',
-      ageOver18: true,
-      region: process.env.DEMO_VC_REGION ?? 'Madrid',
-      credentialStatus: {
-        id: `${baseUrl}/api/credentials/status/${DEFAULT_LIST_ID}#${statusIndex}`,
-        type: 'StatusList2021Entry',
-        statusPurpose: 'revocation',
-        statusListIndex: String(statusIndex),
-        statusListCredential: `${baseUrl}/api/credentials/status/${DEFAULT_LIST_ID}`,
-      },
+      // NO IDENTITY ATTRIBUTES. This credential used to assert a country, a
+      // region and `ageOver18: true` for everybody, as placeholders. A signed
+      // credential is a statement by the issuer, and nothing here has verified
+      // any of those facts: age and nationality are proved per election, from
+      // the voter's own document, through `eligibility/`. The selective
+      // disclosure frame stays for when a verified source provides them.
+      //
+      // A status entry only once the human HAS a slot. Slot 0 names nobody and
+      // could never be revoked; a first-time voter is registered moments later,
+      // and `verifySession` then checks the slot their registration assigned.
+      ...(statusIndex > 0
+        ? {
+            credentialStatus: {
+              id: `${baseUrl}/api/credentials/status/${DEFAULT_LIST_ID}#${statusIndex}`,
+              type: 'StatusList2021Entry' as const,
+              statusPurpose: 'revocation' as const,
+              statusListIndex: String(statusIndex),
+              statusListCredential: `${baseUrl}/api/credentials/status/${DEFAULT_LIST_ID}`,
+            },
+          }
+        : {}),
     };
 
     const issuedCredential = await sdJwt.issue(credentialPayload, SELECTIVE_DISCLOSURE_FRAME);
@@ -231,9 +239,8 @@ router.post('/verify-human', async (req: Request, res: Response) => {
     });
 
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error verifying human:', error);
-    return res.status(500).json({ error: 'Internal server error', message });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 

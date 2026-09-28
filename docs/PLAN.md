@@ -6,10 +6,12 @@
 
 **Votain** is an end-to-end verifiable, anonymous, coercion-resistant voting dApp on Polygon Amoy. The architecture combines:
 
-- **Smart contracts** in Solidity (Semaphore V4, ERC-2771) inside `contracts/`.
+- **Smart contracts** in Solidity inside `contracts/`: Semaphore V4 identities and membership trees, exponential ElGamal ballots the election adds into an aggregate itself, and Groth16 verifiers generated from the circuits in `circuits/`.
 - **Backend issuer** in Node.js emitting Verifiable Credentials (SD-JWT) after validating World ID, inside `backend/`. Will be deployed on a **decentralized TEE** (Phala Network) at the end.
-- **Frontend** in React + Vite with **passkey-derived identities**, homomorphic Paillier and `@semaphore-protocol/*` inside `frontend/`. Will be published on **IPFS with CI/CD (Fleek)**.
-- **Tally script** off-chain to filter votes by nullifier and decrypt results.
+- **Frontend** in React + Vite with **passkey-derived identities**, ballots encrypted and proved in the browser (`snarkjs`) and `@semaphore-protocol/{identity,group}` inside `frontend/`. Published on **IPFS through 4EVERLAND** at `votain.app`.
+- **Tally**: in the app or the `scripts-tally` CLI, the organizer decrypts the on-chain aggregate and proves the decryption; the contract only publishes a result that proof accepts. `--verify` re-checks a published one with no key.
+
+> Sections written before 2026-09-24 describe the ballots as Paillier ciphertexts filtered by nullifier and nonce. That scheme was replaced by exponential ElGamal with hidden re-votes; [`docs/dev/architecture.md`](dev/architecture.md) is the current description. The milestones and their order below still stand.
 
 ### Confirmed stack decisions
 

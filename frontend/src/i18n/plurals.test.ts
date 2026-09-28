@@ -145,6 +145,7 @@ describe('plural translations', () => {
         "hi: discover.results_count",
         "hi: election_mgmt.tally_voters",
         "hi: gas.votes_remaining",
+        "hi: results.voters_count",
         "hi: voter_elections.urgent",
         "it: voter_elections.urgent",
         "nl: country_picker.more_results",

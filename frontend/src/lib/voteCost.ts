@@ -26,19 +26,32 @@
 import { getPaymaster, getReadProvider } from "./contracts";
 import { eventArgs, queryLogsFrom } from "./logs";
 
-/** Used only when the chain has no ballot to learn from. */
+/**
+ * Used only when the chain has no ballot to learn from. About a million gas,
+ * what the E2E suite measures for a relayed ballot at the default circuit size,
+ * at Polygon's 30 gwei floor.
+ */
 export const VOTE_COST_FALLBACK = 0.03;
 
 /** Selector of `relayVote`, the only relay this is about. */
 const RELAY_VOTE = "0x";
 
 export interface VoteCost {
-  /** Native token per ballot, at today's gas price. */
+  /** Native token per ballot, at today's gas price, across every circuit size. */
   matic: number;
   /** False when nothing on chain could be measured and the fallback is in use. */
   measured: boolean;
   /** How many past ballots the figure rests on. */
   samples: number;
+  /**
+   * The same figure per circuit size (slots), where that size was measured.
+   *
+   * A ballot's cost grows with its circuit: a nine-slot ballot verifies half as
+   * many public signals again as a five-slot one and adds twice the points to
+   * the aggregate. One median across sizes quoted a six-option election about
+   * fifty per cent more ballots than its reserve could pay for.
+   */
+  bySlots?: Record<number, number>;
 }
 
 export const ASSUMED: VoteCost = {
@@ -46,6 +59,37 @@ export const ASSUMED: VoteCost = {
   measured: false,
   samples: 0,
 };
+
+/**
+ * The circuit sizes a deployment can have, in slots. Mirrors `ALL_SIZES` in
+ * circuits/scripts/build.mjs: a deployment ships a subset of these, and the
+ * factory gives an election the smallest one it fits in.
+ */
+export const CIRCUIT_SIZES = [5, 9, 17, 33, 51] as const;
+
+/** The circuit an election with `options` choices, blank included, proves with. */
+export function circuitSizeFor(options: number): number {
+  return CIRCUIT_SIZES.find(size => size >= options) ?? CIRCUIT_SIZES[CIRCUIT_SIZES.length - 1];
+}
+
+/**
+ * What one ballot costs in an election with `options` choices, blank included.
+ *
+ * Its own circuit size when that was measured. Otherwise the next larger
+ * measured size, or the largest one scaled up to this circuit's slots: a size
+ * nobody has voted in yet is only ever quoted high, because a figure shown as
+ * "ballots paid for" has to err towards enough.
+ */
+export function voteCostFor(cost: VoteCost, options: number | undefined): number {
+  const measured = cost.bySlots ?? {};
+  const sizes = Object.keys(measured).map(Number).sort((a, b) => a - b);
+  if (!options || sizes.length === 0) return cost.matic;
+  const circuit = circuitSizeFor(options);
+  const fits = sizes.find(size => size >= circuit);
+  if (fits !== undefined) return measured[fits];
+  const largest = sizes[sizes.length - 1];
+  return measured[largest] * (circuit / largest);
+}
 
 /** Most recent relays to look at. Enough to be steady, few enough to be cheap. */
 const SAMPLE_SIZE = 12;
@@ -76,6 +120,7 @@ export async function fetchVoteCost(): Promise<VoteCost> {
   const voteSelector = paymaster.interface.getFunction("relayVote")?.selector ?? RELAY_VOTE;
 
   const units: bigint[] = [];
+  const unitsBySlots = new Map<number, bigint[]>();
   await Promise.all(
     recent.map(async log => {
       try {
@@ -84,7 +129,12 @@ export async function fetchVoteCost(): Promise<VoteCost> {
         const price = tx.gasPrice ?? 0n;
         if (price === 0n) return;
         const cost = eventArgs<{ cost?: bigint }>(log).cost ?? 0n;
-        if (cost > 0n) units.push(cost / price);
+        if (cost <= 0n) return;
+        units.push(cost / price);
+        // The ballot carries two coordinates per slot, so its own calldata
+        // says which circuit it was proved with.
+        const slots = ballotSlots(paymaster.interface.parseTransaction({ data: tx.data })?.args[1]);
+        if (slots) unitsBySlots.set(slots, [...(unitsBySlots.get(slots) ?? []), cost / price]);
       } catch {
         // One unreadable transaction is a smaller sample, not a failure.
       }
@@ -101,15 +151,25 @@ export async function fetchVoteCost(): Promise<VoteCost> {
 
   // The same two ceilings the contract applies when it pays, so the estimate
   // cannot promise more than a relay would ever be reimbursed.
-  const gasUnits = median(units);
-  const capped = gasUnits > maxRelayGas ? maxRelayGas : gasUnits;
   const now = feeData.gasPrice ?? feeData.maxFeePerGas ?? 0n;
   const price = now > maxGasPrice ? maxGasPrice : now;
   if (price === 0n) return ASSUMED;
+  const toMatic = (samples: bigint[]): number => {
+    const gasUnits = median(samples);
+    const capped = gasUnits > maxRelayGas ? maxRelayGas : gasUnits;
+    return Number(capped * price) / 1e18;
+  };
 
   return {
-    matic: Number(capped * price) / 1e18,
+    matic: toMatic(units),
     measured: true,
     samples: units.length,
+    bySlots: Object.fromEntries([...unitsBySlots].map(([slots, samples]) => [slots, toMatic(samples)])),
   };
+}
+
+/** Circuit slots of a decoded `relayVote` ballot, or 0 when it cannot tell. */
+function ballotSlots(ballot: unknown): number {
+  const voteB = (ballot as { voteB?: ArrayLike<unknown> } | undefined)?.voteB;
+  return voteB && voteB.length > 0 ? voteB.length / 2 : 0;
 }

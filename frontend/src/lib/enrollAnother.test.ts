@@ -65,7 +65,7 @@ describe('adding another passkey when this browser already registered one', () =
     localStorage.setItem('votain_identity_mode', 'local');
     localStorage.setItem(
       'votain_recovery_phrase',
-      'shelter drift canvas rosemary marble linen emerald eagle lilac glacier mineral hollow',
+      'salad acorn radar bagel tulip vapor wafer yeast zebra blimp cider dwarf',
     );
     const { enrollThisDevice } = await import('./semaphore');
 

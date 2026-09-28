@@ -167,7 +167,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${backendBase()}${path}`, {
     ...init,
     credentials: "include",
-    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+    headers: { "Content-Type": "application/json", ...init?.headers },
   });
   // A 401 here is the session, not the request: every one of these carries the
   // cookie, so the server refusing all of them means there is nothing to carry.

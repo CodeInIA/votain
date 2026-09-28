@@ -1,5 +1,7 @@
 # Votain: Agent State
 
+> **Superseded in part on 2026-09-24.** Ballots are no longer Paillier ciphertexts with a public nullifier and nonce: they are exponential ElGamal on Baby Jubjub with hidden re-votes, proved by the circuits in `circuits/`, and the contract proves the tally itself. Entries below that describe Paillier, `VoteCast`, `SemaphoreVerifierV4` or the trusted forwarder are history. The current state is in [`docs/dev/state.md`](../dev/state.md) and [`docs/dev/architecture.md`](../dev/architecture.md).
+
 ## Current milestone: post-Phase-B lifecycle + tally + UX pass ✅, next up: live Amoy deploy
 
 ### Post-Phase-B pass (2026-07)

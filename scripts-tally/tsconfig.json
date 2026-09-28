@@ -9,5 +9,6 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["*.ts"]
+  // The snarkjs declaration is the frontend's: one description of the one API.
+  "include": ["*.ts", "../frontend/src/types/snarkjs.d.ts"]
 }

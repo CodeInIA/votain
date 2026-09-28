@@ -65,6 +65,8 @@
     "retry": "Réessayer",
     "close": "Fermer",
     "confirm": "Confirmer",
+    "hour": "Heure",
+    "minute": "Minute",
     "integration_pending": "Cette fonctionnalité sera connectée lors de la phase d'intégration.",
     "all": "Tout",
     "yes": "Oui",
@@ -205,8 +207,8 @@
     "step1_desc": "World ID vous donne un compte sans révéler qui vous êtes. Une élection exigeant une voix par personne demande en plus une vérification de document sur votre propre téléphone, qui ne divulgue rien d'autre.",
     "step2_title": "Votez en privé",
     "step2_desc": "Votre vote est chiffré sur votre appareil et une preuve à divulgation nulle le fait compter sans révéler votre choix. Chaque élection à laquelle vous participez voit aussi une identité différente, si bien que la chaîne ne dit jamais auxquelles vous avez pris part.",
-    "step3_title": "Changez de vote à tout moment",
-    "step3_desc": "En cas de coercition, vous pouvez voter à nouveau plus tard. Seul votre dernier vote compte.",
+    "step3_title": "Changez votre vote sans que cela se voie",
+    "step3_desc": "Si l’on vous contraint, vous pouvez voter à nouveau : une fois tout de suite, puis une fois par heure. Seul votre dernier vote compte, et personne qui observe la chaîne ne peut savoir que vous l’avez changé.",
     "step4_title": "Vérifiez les résultats",
     "step4_desc": "Chaque bulletin chiffré et le décompte final sont sur la blockchain. Chacun peut les recompter sans briser l’anonymat de personne.",
     "built_on": "Construit sur",
@@ -222,11 +224,14 @@
     "export_json": "Exporter la piste d'audit",
     "view_ipfs": "Voir sur IPFS",
     "not_available": "Résultats pas encore disponibles.",
-    "check_ok_title": "Vérifié avec le registre public",
-    "check_ok_body": "Les décomptes publiés totalisent {{declared}} et le contrat a enregistré {{voters}} votants. Aucun bulletin n'a été inventé ni écarté.",
-    "check_bad_title": "Ne correspond pas au registre public",
-    "check_bad_body": "Les décomptes publiés totalisent {{declared}}, mais le contrat a enregistré {{voters}} votants. Ces deux nombres devraient être identiques.",
-    "check_limit": "Aucune clé ni confiance requise : n'importe qui peut le refaire. Cela ne détecte pas un déplacement de voix entre options, qui laisse le total inchangé."
+    "check_pending": "Vérification du résultat publié avec les bulletins enregistrés sur la chaîne…",
+    "check_verified_title": "Vérifié avec les bulletins sur la chaîne",
+    "check_verified_body": "L'élection n'a accepté ces décomptes qu'avec une preuve à divulgation nulle de connaissance qu'ils déchiffrent la somme de tous les bulletins, et les {{ballots}} bulletins présents sur la chaîne ont été additionnés à nouveau ici jusqu'à cette même somme : {{voters}}. Chacun peut refaire cette vérification sans clé et sans confiance.",
+    "voters_count_one": "{{count}} votant",
+    "voters_count_other": "{{count}} votants",
+    "voters_count_many": "{{count}} votants",
+    "check_failed_title": "Ne correspond pas aux bulletins sur la chaîne",
+    "check_failed_body": "Les décomptes publiés n'ont pas pu être vérifiés avec les bulletins enregistrés sur la chaîne. Ne vous fiez pas à ce résultat."
   },
   "verify_receipt": {
     "title": "Vérifier un vote",
@@ -242,7 +247,6 @@
     "reference": "Référence",
     "nullifier": "Identifiant du vote",
     "date": "Date",
-    "ballots": "Bulletins déposés",
     "choice_never_shown": "Le registre public retient qu'un vote a été émis et quand, jamais ce qu'il disait. Personne ne peut lire un choix à partir d'un reçu, nous non plus.",
     "your_receipts": "Vos reçus",
     "unlock_hint": "Ce navigateur ne connaît encore aucun bulletin. Si vous avez voté depuis un autre appareil, une pression sur votre passkey les trouvera et les retiendra ici."
@@ -282,7 +286,8 @@
     "reference": "Numéro de référence",
     "view_tx": "Voir le registre public",
     "back_elections": "Retour aux élections",
-    "check_receipt": "Vérifier mon reçu"
+    "check_receipt": "Vérifier mon reçu",
+    "demo_reference": "Données de démonstration : aucun bulletin n'a été enregistré, il n'y a donc pas de référence à vérifier."
   },
   "change_vote": {
     "title": "Changer votre vote",
@@ -470,7 +475,9 @@
     "open_voting_early": "Ouvrir le vote",
     "open_voting_title": "Commencer le vote en avance ?",
     "open_voting_desc": "Les inscriptions sont closes et le vote n’est pas encore dû. Tous les inscrits pourront voter dès maintenant. La date de clôture ne change pas.",
-    "voting_opened_done": "Le vote est ouvert"
+    "voting_opened_done": "Le vote est ouvert",
+    "void_refused": "Cette élection s'est engagée à ne pas être annulée, et assez de personnes ont voté pour que son résultat soit publié : elle ne peut donc pas être invalidée. Importez la clé de déchiffrement pour publier le résultat.",
+    "key_device_only": "La clé de déchiffrement de cette élection n'a pas pu être dérivée de votre portefeuille : elle n'existe que sur cet appareil. Exportez-la maintenant et conservez-la en lieu sûr, sans elle l'élection ne peut pas être dépouillée."
   },
   "gas": {
     "title": "Gestion du gaz",
@@ -605,7 +612,13 @@
     "wallet_request_rejected": "Vous avez annulé la demande dans votre portefeuille. Rien n’a été fait.",
     "passkey_cancelled": "Vous avez fermé la demande de passkey. Rien n’a été créé : vous pouvez réessayer.",
     "list_unreadable": "Cette liste n’a pas pu être lue depuis la chaîne, ce qui n’est pas la même chose qu’une liste vide. Vérifiez la connexion et réessayez.",
-    "passkey_unproven": "La passkey a été créée, mais nous n’avons pas encore pu confirmer qu’elle peut déchiffrer. Appuyez à nouveau : c’est la même qui sera interrogée, sans en créer de nouvelle."
+    "election_unreadable": "Cette élection n’a pas pu être lue depuis la chaîne, ce qui ne veut pas dire qu’elle n’existe pas. Vérifiez la connexion et réessayez.",
+    "passkey_unproven": "La passkey a été créée, mais nous n’avons pas encore pu confirmer qu’elle peut déchiffrer. Appuyez à nouveau : c’est la même qui sera interrogée, sans en créer de nouvelle.",
+    "epoch_already_cast": "Vous avez changé votre vote très récemment. Votre dernier bulletin est celui qui compte ; vous pourrez le changer à nouveau d’ici une heure.",
+    "epoch_already_cast_until": "Vous avez changé votre vote très récemment. Votre dernier bulletin est celui qui compte ; vous pourrez le changer à nouveau à partir de {{time}}.",
+    "epoch_wait_title": "Votre dernier vote compte déjà",
+    "ballot_already_cast": "Ce bulletin était déjà enregistré. Vous n'avez rien d'autre à faire : votre vote est pris en compte.",
+    "ballot_expired": "Ce bulletin a été préparé il y a trop longtemps pour être accepté. Votez à nouveau ; un nouveau bulletin prend quelques secondes."
   },
   "demo": {
     "banner": "Données de démonstration: aucun contrat déployé. Rien ici n'est sur la blockchain."
@@ -655,7 +668,7 @@
   },
   "terms": {
     "title": "Conditions d'utilisation",
-    "updated": "Dernière mise à jour : 3 septembre 2026",
+    "updated": "Dernière mise à jour : 28 septembre 2026",
     "what_title": "Ce qu'est Votain",
     "what_1": "Votain est un projet de fin d'études : une application de vote anonyme et vérifiable de bout en bout, construite sur le réseau de test Polygon Amoy. C'est un prototype de recherche, pas un service commercial.",
     "what_2": "Il fonctionne sur un réseau de TEST. Les jetons utilisés n'ont aucune valeur monétaire et le réseau ne garantit aucune pérennité : les réseaux de test sont réinitialisés ou arrêtés de temps à autre, et toute élection tenue ici peut disparaître avec eux.",
@@ -667,7 +680,7 @@
     "identity_2": "Quiconque détient la phrase peut restaurer l'identité sur n'importe quel appareil, sans clé d'accès et sans notre aide. Si vous perdez la phrase et toutes les clés d'accès qui la détenaient, une nouvelle vérification World ID vous permet de repartir de zéro. Ce redémarrage est volontairement limité : vous pourrez rejoindre les élections où vous n'étiez pas encore inscrit, mais jamais revenir dans une élection où vous l'étiez, car le système ne peut pas savoir si vous y avez déjà voté sans briser l'anonymat du bulletin.",
     "organizer_title": "Si vous organisez une élection",
     "organizer_1": "Vous êtes responsable de ce que vous publiez sur la chaîne. Les noms, descriptions et listes de candidats sont stockés publiquement et de façon permanente, et ne peuvent être ni modifiés ni supprimés une fois publiés. N'y faites pas figurer de données personnelles de tiers.",
-    "organizer_2": "Vous alimentez une réserve de gas unique qui paie les frais de transaction des électeurs de TOUTES vos élections. Si elle se vide, le vote s'arrête dans chacune d'elles jusqu'à ce que vous la rechargiez.",
+    "organizer_2": "Chaque élection paie les frais de ses votants d’abord avec le gaz que vous lui avez réservé, que vous ne pouvez pas retirer avant sa fin, puis avec votre solde libre, que partagent toutes vos élections. Si les deux s’épuisent, le vote de cette élection s’arrête jusqu’à ce que vous rechargiez.",
     "warranty_title": "Aucune garantie",
     "warranty_1": "Votain est fourni en l'état, sans garantie d'aucune sorte. Il n'a pas fait l'objet d'un audit indépendant. Il peut contenir des défauts affectant l'exactitude, la disponibilité ou la confidentialité d'un vote.",
     "warranty_2": "Dans la mesure maximale permise par la loi, l'auteur décline toute responsabilité pour les pertes ou dommages découlant de son utilisation.",
@@ -676,9 +689,9 @@
   },
   "privacy": {
     "title": "Confidentialité",
-    "updated": "Dernière mise à jour : 16 septembre 2026",
+    "updated": "Dernière mise à jour : 28 septembre 2026",
     "summary_title": "En bref",
-    "summary_1": "Nous ne connaissons jamais votre nom, votre visage ni vos données biométriques. Nous ne savons pas ce que vous avez voté, et l'organisateur non plus, car les bulletins sont chiffrés avant de quitter votre appareil et seul le total final est déchiffré.",
+    "summary_1": "Nous ne connaissons jamais votre nom, votre visage ni vos données biométriques. Nous ne savons pas comment vous avez voté. Les bulletins sont chiffrés avant de quitter votre appareil et seul le total final est déchiffré ; la clé de l'organisateur pourrait ouvrir un bulletin isolé, mais rien n'y indique à qui il appartient.",
     "summary_2": "Cette page décrit ce que le logiciel fait réellement, et non ce qu'il serait autorisé à faire, y compris les points où la conception ne vous protège pas.",
     "worldid_title": "Ce que World ID nous transmet",
     "worldid_1": "Lors de la vérification, World ID nous envoie une preuve et un nullificateur : un nombre dérivé de vous et de cette application. Il est identique à chaque retour, ce qui empêche un même compte de s'inscrire deux fois à la même élection, et il diffère pour chaque application utilisant World ID. Il ne prouve pas que vous êtes une seule personne : une élection qui l'exige demande aussi une vérification de document, qui produit un second nombre, propre à cette élection.",
@@ -687,14 +700,15 @@
     "identity_1": "Votre secret de vote est une phrase générée sur votre appareil et affichée une seule fois, pour que vous la conserviez. Là où une clé d'accès peut la détenir, une copie scellée est conservée pour chaque clé d'accès que vous enregistrez, afin de voter depuis plusieurs appareils sans rien saisir. Ces copies sont écrites sur la blockchain et non sur notre serveur : nous perdre ne vous enferme pas dehors, et ce qui les ouvre ne quitte jamais votre authentificateur. Nous ne voyons jamais la phrase et ne pouvons pas la récupérer pour vous.",
     "identity_2": "Ce n'est pas une formalité. Si nous pouvions le déchiffrer, nous pourrions calculer l'identifiant que porte votre bulletin et associer chaque vote à son auteur. Le chiffrement est ce qui nous en rend incapables, pas seulement ce qui nous l'interdit.",
     "ballot_title": "Votre bulletin",
-    "ballot_1": "Votre choix est chiffré dans votre navigateur avant l'envoi, avec une clé détenue par l'organisateur. Les bulletins sont additionnés sans être déchiffrés et seul le total l'est, de sorte qu'aucun vote individuel n'est jamais révélé à personne, pas même à l'organisateur.",
-    "ballot_2": "Vous pouvez voter autant de fois que vous le souhaitez ; seul le dernier bulletin compte. Les précédents restent stockés mais en sont indiscernables, ce qui vous permet de remplacer discrètement un vote émis sous pression.",
+    "ballot_1": "Votre choix est chiffré dans votre navigateur avant d'être envoyé, avec des clés détenues par l'organisateur. L'élection additionne tous les bulletins sans les déchiffrer, et seule cette somme est déchiffrée, avec une preuve que le contrat vérifie. Ces clés pourraient ouvrir n'importe quel bulletin isolé, c'est pourquoi rien sur un bulletin n'indique qui l'a déposé ni lequel de vos bulletins l'a précédé.",
+    "ballot_2": "Vous pouvez voter à nouveau autant de fois que vous le souhaitez : une fois tout de suite, puis une fois par heure. Seul votre dernier bulletin compte. Chaque nouveau bulletin annule silencieusement le précédent, et un premier vote et un vote modifié sont identiques sur la chaîne, si bien que personne ne peut savoir que vous avez voté à nouveau. C’est ce qui vous permet de remplacer discrètement un vote qu’on vous a forcé à exprimer.",
     "onchain_title": "Ce qui est public sur la blockchain",
     "onchain_1": "Public et permanent : quelles élections existent, qu'une identité est enregistrée sur la plateforme, que quelqu'un de vérifié s'est inscrit à chaque élection, les bulletins chiffrés avec leurs totaux publiés, et les copies scellées de chaque identité de vote, une par passkey enregistrée. Ce qui s'inscrit est un engagement dérivé pour cette élection seule, de sorte que la chaîne ne dit pas à quelles élections une même personne a participé. Tout le monde peut tout lire. Ces copies sont chiffrées et ne s'ouvrent qu'avec la passkey qui les a créées, mais leur existence et leur nombre sont visibles.",
     "onchain_2": "Non public : le lien entre une identité inscrite et un bulletin particulier, ni le lien entre les inscriptions d'une même personne à des élections différentes. Briser le premier est précisément la raison d'être de la preuve à divulgation nulle, et c'est pourquoi chaque vote est soumis via un même contrat partagé plutôt que depuis une adresse qui vous serait propre. Le second explique pourquoi ce qui s'inscrit est dérivé pour chaque élection au lieu d'être réutilisé.",
     "limits_title": "Ce contre quoi cela ne vous protège pas",
     "limits_1": "Lorsque vous envoyez un vote, la requête atteint notre serveur depuis votre connexion : son origine nous est donc visible, comme pour n'importe quel site que vous utilisez. Nous ne nous en servons pas pour identifier les électeurs, mais la conception ne nous en empêche pas, et vous devez le savoir avant de vous fier à l'anonymat de votre bulletin.",
     "limits_2": "L'émetteur est aussi un point de confiance : il vérifie les preuves World ID, enregistre les électeurs et signe chaque inscription, ce qui en fait la seule partie capable de savoir à quelles élections vous avez participé. Un émetteur malhonnête pourrait ajouter des électeurs inexistants. Il ne pourrait ni lire votre bulletin ni modifier le décompte, mais vous comptez sur son honnêteté quant à qui a le droit de voter et sur sa discrétion quant à où vous avez voté.",
+    "limits_3": "Vous pouvez déposer au plus deux bulletins en une heure : c’est la limite qui empêche quiconque d’épuiser le gaz que paie l’organisateur. Un vote qu’on vous a imposé peut donc toujours être remplacé une fois, tout de suite ; mais si l’on vous force à voter deux fois de suite dans la dernière heure avant la clôture, vous ne pourrez plus remplacer ces votes.",
     "retention_title": "Conservation et suppression",
     "retention_1": "Nous ne gardons rien sur nos serveurs : votre session vit dans un cookie de votre navigateur et tout ce qui est durable est sur la blockchain. Retirer une passkey supprime sa copie scellée de la chaîne ; retirer la dernière est refusé, car cela rendrait votre identité définitivement inutilisable.",
     "retention_2": "Ce qui est déjà inscrit sur la blockchain ne peut être effacé ni par nous ni par personne. C'est inhérent à un registre public, et c'est la propriété même qui vous permet de vérifier que votre vote a été compté."
@@ -874,20 +888,20 @@
   },
   "timeline": {
     "title": "Calendrier",
-    "created": "Creee",
+    "created": "Créée",
     "enrollment": "Inscription",
     "gap": "Entre l'inscription et le vote",
     "voting": "Vote",
-    "results": "Depouillement et resultats",
-    "from_date": "A partir du {{date}}",
-    "ended_early": "Ecourte",
-    "abandoned": "Cette election a ete interrompue, ce calendrier n'a donc pas ete suivi jusqu'au bout."
+    "results": "Dépouillement et résultats",
+    "from_date": "À partir du {{date}}",
+    "ended_early": "Écourté",
+    "abandoned": "Cette élection a été interrompue, ce calendrier n’a donc pas été suivi jusqu’au bout."
   },
   "sort": {
-    "newest": "Les plus recentes d'abord",
-    "oldest": "Les plus anciennes d'abord",
-    "closing": "Cloture la plus proche",
+    "newest": "Les plus récentes d’abord",
+    "oldest": "Les plus anciennes d’abord",
+    "closing": "Clôture la plus proche",
     "enrolled": "Le plus d'inscrits",
-    "partial_notice": "triees sur ce qui a ete lu jusqu'ici"
+    "partial_notice": "triées sur ce qui a été lu jusqu’ici"
   }
 }

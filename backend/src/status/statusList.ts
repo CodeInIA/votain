@@ -33,9 +33,13 @@
  */
 import { gzipSync, gunzipSync } from 'node:zlib';
 
-import { getRegistryReader, getRegistryWriter, isRegistrarConfigured } from '../chain/registrar.js';
+import { getRegistryReader, isRegistrarConfigured, writeRegistry } from '../chain/registrar.js';
 
-const LIST_SIZE_BITS = 131_072; // 16 KB bitstring, spec-recommended minimum
+/** 16 KB bitstring, the spec-recommended minimum. Grows past it, never truncates. */
+const MIN_LIST_SIZE_BITS = 131_072;
+
+/** How many slots are read from the chain at once while building the list. */
+const READ_CONCURRENCY = 25;
 export const DEFAULT_LIST_ID = 'voters-1';
 
 /**
@@ -48,6 +52,8 @@ export const DEFAULT_LIST_ID = 'voters-1';
 const CACHE_TTL_MS = 30_000;
 
 let cache: { revoked: Set<number>; count: number; at: number } | null = null;
+/** The scan in progress, so a burst of requests at expiry pays for one. */
+let inFlight: Promise<{ revoked: Set<number>; count: number }> | null = null;
 
 /**
  * One slot's verdict, for the session path.
@@ -62,11 +68,18 @@ async function readRevocations(): Promise<{ revoked: Set<number>; count: number 
   const registry = getRegistryReader();
   const count = Number(await registry.memberCount());
 
-  // One call per slot handed out. Bounded by the number of registered humans,
-  // and only paid when the cache has expired.
+  // One call per slot handed out, a batch at a time. Bounded by the number of
+  // registered humans, and only paid when the cache has expired.
   const revoked = new Set<number>();
-  for (let index = 1; index <= count; index++) {
-    if (await registry.revokedStatus(index)) revoked.add(index);
+  for (let start = 1; start <= count; start += READ_CONCURRENCY) {
+    const batch = Array.from(
+      { length: Math.min(READ_CONCURRENCY, count - start + 1) },
+      (_, i) => start + i,
+    );
+    const flags = await Promise.all(batch.map(index => registry.revokedStatus(index) as Promise<boolean>));
+    flags.forEach((isRevoked, i) => {
+      if (isRevoked) revoked.add(batch[i]);
+    });
   }
   return { revoked, count };
 }
@@ -75,15 +88,22 @@ async function snapshot(): Promise<{ revoked: Set<number>; count: number }> {
   if (!isRegistrarConfigured()) return { revoked: new Set(), count: 0 };
   if (cache && Date.now() - cache.at < CACHE_TTL_MS) return cache;
 
-  const fresh = await readRevocations();
-  cache = { ...fresh, at: Date.now() };
-  return fresh;
+  inFlight ??= readRevocations()
+    .then(fresh => {
+      cache = { ...fresh, at: Date.now() };
+      return fresh;
+    })
+    .finally(() => {
+      inFlight = null;
+    });
+  return inFlight;
 }
 
 /** Drops both caches, so a revocation made here is honoured immediately. */
 export function refreshRevocations(): void {
   cache = null;
   slotCache.clear();
+  humanSlots.clear();
 }
 
 /**
@@ -98,10 +118,31 @@ export async function statusIndexFor(nullifier: string): Promise<number> {
   return Number(await getRegistryReader().statusIndexOf(nullifier));
 }
 
+/**
+ * The slot of a human, for a credential that does not carry one.
+ *
+ * A first-time voter signs in before they are registered, so their credential
+ * names no slot. Their registration assigns one moments later, and from then
+ * on it can be revoked: this is how the session path finds it. A slot never
+ * changes once assigned, so a found one is cached for good; "not registered
+ * yet" is cached only for the usual TTL.
+ */
+const humanSlots = new Map<string, { slot: number; at: number }>();
+const MAX_CACHED_HUMANS = 50_000;
+
+export async function statusSlotOfHuman(nullifier: string): Promise<number> {
+  const cached = humanSlots.get(nullifier);
+  if (cached && (cached.slot > 0 || Date.now() - cached.at < CACHE_TTL_MS)) return cached.slot;
+
+  const slot = await statusIndexFor(nullifier);
+  if (humanSlots.size >= MAX_CACHED_HUMANS) humanSlots.clear();
+  humanSlots.set(nullifier, { slot, at: Date.now() });
+  return slot;
+}
+
 export async function revokeIndex(index: number): Promise<void> {
-  if (!isRegistrarConfigured()) return;
-  const tx = await getRegistryWriter().revokeStatus(index);
-  await tx.wait();
+  if (!isRegistrarConfigured()) throw new Error('registrar not configured');
+  await writeRegistry(r => r.revokeStatus(index));
   refreshRevocations();
 }
 
@@ -120,8 +161,12 @@ export async function isRevoked(index: number): Promise<boolean> {
 
 /** gzip+base64url bitstring with revoked bits set, per StatusList2021. */
 export async function encodedList(): Promise<string> {
-  const { revoked } = await snapshot();
-  const bytes = Buffer.alloc(LIST_SIZE_BITS / 8);
+  const { revoked, count } = await snapshot();
+  // Slot `count` is the highest handed out. A fixed 16 KB list silently lost
+  // every revocation past slot 131071, since writing beyond a Buffer is a
+  // no-op; the list now grows, in whole bytes, to hold every slot.
+  const bits = Math.max(MIN_LIST_SIZE_BITS, count + 1);
+  const bytes = Buffer.alloc(Math.ceil(bits / 8));
   for (const index of revoked) {
     bytes[Math.floor(index / 8)] |= 1 << (7 - (index % 8));
   }

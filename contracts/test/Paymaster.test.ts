@@ -1,10 +1,9 @@
 import { expect } from "chai";
 import { network } from "hardhat";
-import { deployStack, baseConfig, type Stack } from "./fixtures.js";
+import { deployStack, baseConfig, DUMMY_PROOF, makeBallot, type Stack } from "./fixtures.js";
 
 const { ethers, networkHelpers } = await network.create();
 
-const FORWARDER = "0x000000000000000000000000000000000000dEaD";
 
 let owner: any;
 let organizer: any;
@@ -14,7 +13,7 @@ let stack: Stack;
 
 before(async () => {
   [owner, organizer, relayer, stranger] = await ethers.getSigners();
-  stack = await deployStack(ethers, FORWARDER);
+  stack = await deployStack(ethers);
 });
 
 describe("ElectionPaymaster, gas tank", () => {
@@ -592,5 +591,114 @@ describe("ElectionFactory, funding a new election from both sources", () => {
     // An election created with less behind it than was asked for is worse than
     // one that was never created, so the whole transaction goes.
     expect(await stack.factory.electionsCount()).to.equal(before);
+  });
+});
+
+describe("ElectionPaymaster, what its owner cannot do", () => {
+  it("names the factory once, so no later factory can claim anybody's balance", async () => {
+    const Paymaster = await ethers.getContractFactory("ElectionPaymaster");
+    const paymaster = await Paymaster.connect(owner).deploy();
+    await paymaster.waitForDeployment();
+
+    await (await paymaster.connect(owner).setFactory(stranger.address)).wait();
+    await expect(
+      paymaster.connect(owner).setFactory(owner.address),
+    ).to.be.revertedWithCustomError(paymaster, "FactoryAlreadySet");
+  });
+
+  it("lets even the factory spend a balance only on that organizer's own election", async () => {
+    const Paymaster = await ethers.getContractFactory("ElectionPaymaster");
+    const paymaster = await Paymaster.connect(owner).deploy();
+    await paymaster.waitForDeployment();
+    // An account standing in for the factory, to drive the factory-only paths.
+    await (await paymaster.connect(owner).setFactory(relayer.address)).wait();
+
+    const election = ethers.Wallet.createRandom().address;
+    await (await paymaster.connect(relayer).registerElection(election, stranger.address)).wait();
+    await (await paymaster.connect(organizer).deposit({ value: ethers.parseEther("1") })).wait();
+
+    // The organizer's money, pointed at somebody else's election.
+    await expect(
+      paymaster.connect(relayer).reserveFromBalanceFor(election, organizer.address, 1n),
+    ).to.be.revertedWithCustomError(paymaster, "NotElectionOrganizer");
+  });
+
+  it("keeps the relay parameters inside fixed bounds", async () => {
+    const p = stack.paymaster.connect(owner);
+    const gwei = 1_000_000_000n;
+    await expect(p.setRelayParams(501n * gwei, 32_000n, 16n, 2_000_000n)).to.be.revertedWithCustomError(
+      stack.paymaster,
+      "RelayParamsOutOfBounds",
+    );
+    await expect(p.setRelayParams(50n * gwei, 100_001n, 16n, 2_000_000n)).to.be.revertedWithCustomError(
+      stack.paymaster,
+      "RelayParamsOutOfBounds",
+    );
+    await expect(p.setRelayParams(50n * gwei, 32_000n, 17n, 2_000_000n)).to.be.revertedWithCustomError(
+      stack.paymaster,
+      "RelayParamsOutOfBounds",
+    );
+    await expect(p.setRelayParams(50n * gwei, 32_000n, 16n, 6_000_001n)).to.be.revertedWithCustomError(
+      stack.paymaster,
+      "RelayParamsOutOfBounds",
+    );
+    await expect(p.setRelayParams(0n, 32_000n, 16n, 2_000_000n)).to.be.revertedWithCustomError(
+      stack.paymaster,
+      "RelayParamsOutOfBounds",
+    );
+    await expect(p.setRelayParams(500n * gwei, 100_000n, 16n, 6_000_000n)).to.emit(
+      stack.paymaster,
+      "RelayParamsChanged",
+    );
+    // Back to the defaults for the tests that follow.
+    await (await p.setRelayParams(50n * gwei, 32_000n, 16n, 2_000_000n)).wait();
+  });
+});
+
+describe("ElectionPaymaster, sponsored ballots", () => {
+  /**
+   * The paymaster no longer keeps a per-voter cooldown: it keyed on the
+   * Semaphore nullifier, which made every voter's ballots publicly linkable.
+   * The election's epoch tags bound the same rate, so a relayed voter gets one
+   * sponsored ballot per epoch and the relay learns nothing about whose.
+   */
+  it("relays and reimburses a ballot, and one voter gets one per epoch", async () => {
+    const now = await networkHelpers.time.latest();
+    await (
+      await stack.factory
+        .connect(organizer)
+        .createElection(baseConfig(now, { voteEnd: now + 3 * 3600 }), 0n, {
+          value: ethers.parseEther("1"),
+        })
+    ).wait();
+    const address = await stack.factory.elections((await stack.factory.electionsCount()) - 1n);
+    const election = await ethers.getContractAt("ElectionV4", address);
+
+    const nullifier = 88_001n;
+    const commitment = 88_002n;
+    await (await stack.registry.registerMember(nullifier, commitment)).wait();
+    await (await stack.paymaster.connect(relayer).relayEnroll(address, commitment)).wait();
+    await networkHelpers.time.increaseTo(await election.voteStart());
+
+    const reserved = await stack.paymaster.reservedFor(address);
+    const first = await makeBallot(election, 0, { epochTag: 5_001n });
+    await expect(stack.paymaster.connect(relayer).relayVote(address, first.ballot, DUMMY_PROOF))
+      .to.emit(election, "BallotCast")
+      .and.to.emit(stack.paymaster, "VoteSponsored");
+    expect(await stack.paymaster.reservedFor(address)).to.be.lessThan(reserved);
+
+    const again = await makeBallot(election, 1, { previous: first.vote, epochTag: 5_001n });
+    await expect(
+      stack.paymaster.connect(relayer).relayVote(address, again.ballot, DUMMY_PROOF),
+    ).to.be.revertedWithCustomError(election, "EpochAlreadyCast");
+
+    // The override is delayed, never refused: next epoch, it lands.
+    await networkHelpers.time.increase(Number(await election.EPOCH_LENGTH()));
+    const later = await makeBallot(election, 1, { previous: first.vote, epochTag: 5_002n });
+    await expect(stack.paymaster.connect(relayer).relayVote(address, later.ballot, DUMMY_PROOF)).to.emit(
+      election,
+      "BallotCast",
+    );
+    expect(await election.voteCount()).to.equal(2n);
   });
 });

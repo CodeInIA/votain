@@ -73,7 +73,7 @@ vi.mock('./identityVault', async () => {
 });
 
 describe('adoptRecoveryPhrase', () => {
-  const frase = 'amber anchor apple arrow autumn bamboo beacon berry bishop bottle branch bridge';
+  const frase = 'radar acorn salad bagel tulip vapor wafer yeast zebra blimp cider dwarf';
 
   beforeEach(() => {
     localStorage.clear();
@@ -130,7 +130,7 @@ describe('a phrase that rebuilds nobody', () => {
    * the voter a brand new identity enrolled in nothing, and every election
    * then told them they were not a member with no way back.
    */
-  const frase = 'amber anchor apple arrow autumn bamboo beacon berry bishop bottle branch bridge';
+  const frase = 'radar acorn salad bagel tulip vapor wafer yeast zebra blimp cider dwarf';
 
   beforeEach(() => {
     localStorage.clear();
@@ -191,7 +191,7 @@ describe('where a recovered phrase ends up', () => {
    * The second step, which is where this decision lives now. Same outcomes as
    * before, asked for out loud instead of behind a dialog nobody expected.
    */
-  const frase = 'amber anchor apple arrow autumn bamboo beacon berry bishop bottle branch bridge';
+  const frase = 'radar acorn salad bagel tulip vapor wafer yeast zebra blimp cider dwarf';
 
   beforeEach(() => {
     localStorage.clear();

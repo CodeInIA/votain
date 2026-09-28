@@ -60,7 +60,7 @@ interface SchedulePromiseProps {
  *
  * WHAT IT IS ABOUT. An organizer can normally close enrolment or voting early,
  * and while doing it they can see exactly what they are doing: `memberCount` and
- * `distinctVoters` are public and rise in real time. So the roll can be cut off
+ * `voteCount` are public and rise in real time. So the roll can be cut off
  * once it suits, and the vote ended once the result does, and neither leaves any
  * trace of why. Giving that power up at deployment is a promise the contract
  * keeps rather than one the organizer makes.

@@ -43,6 +43,7 @@ const PRIVATE_EIP712_TYPES = {
   PrivateEnrollment: [
     { name: 'identityCommitment', type: 'uint256' },
     { name: 'humanTag', type: 'uint256' },
+    { name: 'documentTag', type: 'uint256' },
     { name: 'deadline', type: 'uint256' },
   ],
 } as const;
@@ -162,9 +163,38 @@ export function humanTagFor(
   return BigInt(scoped).toString();
 }
 
+/**
+ * The value that answers "has this DOCUMENT already enrolled here".
+ *
+ * `humanTag` is derived from the World ID account, and below Orb an account is
+ * not a person: somebody holding several could pass the same passport check
+ * once per account. This tag is derived from the nullifier the document proof
+ * carried, under the same epoch key and for the same reason: the contract can
+ * refuse it the second time, and nobody without the key can recognise it.
+ * Separated from `humanTagFor` by a domain label, so the two can never collide.
+ */
+export function documentTagFor(
+  documentNullifier: string,
+  electionAddress: string,
+  createdAtSeconds: number,
+): string {
+  const scoped = solidityPackedKeccak256(
+    ['bytes32', 'string', 'uint256', 'address'],
+    [
+      '0x' + tagKey(epochOf(createdAtSeconds)).toString('hex'),
+      'votain/document-tag/v1',
+      BigInt(documentNullifier),
+      getAddress(electionAddress),
+    ],
+  );
+  return BigInt(scoped).toString();
+}
+
 export interface PrivateEnrollment {
   /** Decimal string, as the contract and the relay both expect it. */
   humanTag: string;
+  /** Decimal string; "0" on an election that requires no document. */
+  documentTag: string;
   deadline: number;
   signature: string;
 }
@@ -182,6 +212,7 @@ export async function signPrivateEnrollment(
   chainId: bigint,
   identityCommitment: string,
   humanTag: string,
+  documentTag: string = '0',
   nowSeconds: number = Math.floor(Date.now() / 1000),
 ): Promise<PrivateEnrollment> {
   const wallet = getAttesterWallet();
@@ -204,11 +235,12 @@ export async function signPrivateEnrollment(
     {
       identityCommitment: BigInt(identityCommitment),
       humanTag: BigInt(humanTag),
+      documentTag: BigInt(documentTag),
       deadline,
     },
   );
 
-  return { humanTag, deadline, signature };
+  return { humanTag, documentTag, deadline, signature };
 }
 
 export interface EnrollAttestation {

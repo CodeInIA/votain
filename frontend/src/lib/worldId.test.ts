@@ -204,11 +204,11 @@ describe('opening one', () => {
     expect(JSON.parse(llamadas[0].init?.body as string)).not.toHaveProperty('returnTo');
   });
 
-  it('carries an action override, since each one yields its own nullifier', async () => {
+  it('never names an action, which only the server may fix', async () => {
     respuestas = [{ connectorURI: 'x' }, { status: 'none' }];
-    await requestWorldIdProof({ action: 'recover-identity' });
+    await requestWorldIdProof();
 
-    expect(JSON.parse(llamadas[0].init?.body as string)).toEqual({ action: 'recover-identity' });
+    expect(JSON.parse(llamadas[0].init?.body as string)).toEqual({});
   });
 
   it('abandons one on request, so a reload does not put its QR straight back', async () => {

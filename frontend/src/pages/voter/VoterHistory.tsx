@@ -23,7 +23,7 @@ interface HistoryRow {
   phase: string;
   date: Date;
   referenceNumber: string;
-  nullifier: string;
+  tag: string;
 }
 
 export default function VoterHistory() {
@@ -50,7 +50,7 @@ export default function VoterHistory() {
     if (!live) return; // seed history is already the initial state
     // Both paths answer; they differ in reach. Without the identity this lists
     // the ballots this browser recorded when it cast them, which needs no
-    // passkey because a nullifier is public. With it, every ballot anywhere.
+    // passkey because a ballot's tag is public. With it, every ballot anywhere.
     let cancelled = false;
     void (async () => {
       try {
@@ -69,7 +69,7 @@ export default function VoterHistory() {
           phase: e.phase,
           date: e.lastVoteAt,
           referenceNumber: e.referenceNumber,
-          nullifier: e.nullifier,
+          tag: e.tag,
         })));
       } finally {
         if (!cancelled) setLoading(false);
@@ -141,12 +141,12 @@ export default function VoterHistory() {
 
   const handleExport = () => {
     const csv = [
-      ['Election', 'Date', 'Reference', 'Nullifier'].join(','),
+      ['Election', 'Date', 'Reference', 'Ballot tag'].join(','),
       ...rows.map(v => [
         `"${v.electionTitle}"`,
         v.date.toLocaleDateString(),
         v.referenceNumber,
-        v.nullifier,
+        v.tag,
       ].join(',')),
     ].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });

@@ -10,7 +10,8 @@
  * Env:
  *   CHAIN_RPC_URL   RPC endpoint
  */
-import { Contract, JsonRpcProvider, ZeroAddress, isAddress } from 'ethers';
+import { Contract, ZeroAddress, isAddress, type JsonRpcProvider } from 'ethers';
+import { chainProvider } from './signer.js';
 import { parsePolicy, policyHash, type EligibilityPolicy } from '../eligibility/policy.js';
 
 const ELECTION_ABI = [
@@ -28,7 +29,7 @@ export function isChainConfigured(): boolean {
 }
 
 function getProvider(): JsonRpcProvider {
-  return new JsonRpcProvider(process.env.CHAIN_RPC_URL);
+  return chainProvider();
 }
 
 export interface ElectionEligibility {

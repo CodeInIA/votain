@@ -1,0 +1,27 @@
+{
+  "name": "votain-circuits",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The Votain ballot and tally circuits, their trusted setup and the Solidity verifiers they produce",
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "engines": {
+    "node": ">=24",
+    "npm": ">=11"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "build:all": "node scripts/build.mjs --all",
+    "test": "node scripts/build.mjs --compile && node --import tsx --test test/*.test.ts"
+  },
+  "devDependencies": {
+    "@semaphore-protocol/identity": "^4.14.3",
+    "@zk-kit/binary-merkle-root.circom": "^2.0.0",
+    "@zk-kit/lean-imt": "^2.2.5",
+    "circom2": "^0.2.23",
+    "circomlib": "^2.0.5",
+    "poseidon-lite": "^0.3.0",
+    "snarkjs": "^0.7.6",
+    "tsx": "^4.23.15"
+  }
+}

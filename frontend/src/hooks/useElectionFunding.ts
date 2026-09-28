@@ -26,7 +26,10 @@ export interface ElectionFundingState {
 }
 
 export function useElectionFunding(election: string | undefined): ElectionFundingState {
-  const live = isChainConfigured() && Boolean(election?.startsWith('0x'));
+  // A whole address, not just a 0x prefix: the demo elections carry
+  // placeholders like `0xCon1aaa`, which ethers took for an ENS name and
+  // failed on every render once a chain was configured.
+  const live = isChainConfigured() && /^0x[0-9a-fA-F]{40}$/.test(election ?? '');
   const [reserved, setReserved] = useState(0);
   const [free, setFree] = useState(0);
   const [loading, setLoading] = useState(live);

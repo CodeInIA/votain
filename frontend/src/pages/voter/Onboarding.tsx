@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, type ReactNode } from 'react';
+import { useState, useMemo, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -73,9 +73,14 @@ export default function Onboarding() {
    * Moving the counter rather than deriving around it keeps the dots, the
    * heading and the panel all saying the same thing.
    */
-  useEffect(() => {
-    if (isVerifying || isLoadingQr) setStep(VERIFY_STEP);
-  }, [isVerifying, isLoadingQr]);
+  // On the transition into verifying, set during render so the verify slide is
+  // the first thing drawn rather than one frame after slide one.
+  const verifyingNow = isVerifying || isLoadingQr;
+  const [wasVerifying, setWasVerifying] = useState(verifyingNow);
+  if (verifyingNow !== wasVerifying) {
+    setWasVerifying(verifyingNow);
+    if (verifyingNow) setStep(VERIFY_STEP);
+  }
 
   const isVerifyStepActive = step === VERIFY_STEP;
   const infoStepData = !isVerifyStepActive ? infoSteps[step] : null;

@@ -23,6 +23,8 @@ import { registerOnChain, rotateOnChain, isRegistrarConfigured } from '../chain/
 import { verifySession } from '../auth/session.js';
 import { readSessionCookie } from '../auth/cookie.js';
 import { verifyWorldIdProof, type WorldIdPayload } from '../auth/worldId.js';
+import { perVoterLimit, requireSession, sessionOf } from '../auth/voterLimit.js';
+import { chainFailure, errorMessage } from '../utils/errors.js';
 
 const router = Router();
 
@@ -34,6 +36,34 @@ const recoverLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+/**
+ * Vault writes are registry transactions the platform pays for, so they are
+ * counted per voter. A voter adds a passkey a handful of times in their life;
+ * ten an hour is a ceiling nobody honest meets.
+ */
+const vaultWriteQuota = perVoterLimit(60 * 60 * 1000, 10);
+
+/**
+ * The ceilings `PlatformRegistry` enforces, checked here first so an oversized
+ * request is refused before it costs a simulation. A WebAuthn credential id is
+ * at most 1023 bytes by specification; a sealed secret is an IV, a recovery
+ * phrase and a tag.
+ */
+const MAX_CREDENTIAL_ID_BYTES = 1023;
+const MAX_VAULT_BLOB_BYTES = 512;
+const MAX_VAULT_ENTRIES = 8;
+
+/** Why a base64url vault field is unacceptable, or null when it is fine. */
+function vaultFieldProblem(value: unknown, maxBytes: number, name: string): string | null {
+  if (typeof value !== 'string' || !/^[A-Za-z0-9_-]+$/.test(value)) {
+    return `${name} must be base64url`;
+  }
+  if (Buffer.from(value, 'base64url').length > maxBytes) {
+    return `${name} must be at most ${maxBytes} bytes`;
+  }
+  return null;
+}
 
 /** Reads the voter's World ID nullifier from their verified session cookie. */
 async function sessionNullifier(req: Request): Promise<string | null> {
@@ -74,9 +104,8 @@ router.get('/identity/vault', async (req: Request, res: Response) => {
 // ────────────────────────────────────────────────
 // POST /identity/vault: register a passkey for this identity
 // ────────────────────────────────────────────────
-router.post('/identity/vault', async (req: Request, res: Response) => {
-  const nullifier = await sessionNullifier(req);
-  if (!nullifier) return res.status(401).json({ error: 'Not authenticated' });
+router.post('/identity/vault', requireSession, vaultWriteQuota, async (req: Request, res: Response) => {
+  const nullifier = sessionOf(res).nullifier;
 
   const { credentialId, blob, commitment } = req.body as {
     credentialId?: string;
@@ -94,6 +123,12 @@ router.post('/identity/vault', async (req: Request, res: Response) => {
   // would write half a vault entry that no assertion could ever open.
   if (Boolean(credentialId) !== Boolean(blob)) {
     return res.status(400).json({ error: 'credentialId and blob go together' });
+  }
+  if (credentialId && blob) {
+    const problem =
+      vaultFieldProblem(credentialId, MAX_CREDENTIAL_ID_BYTES, 'credentialId') ??
+      vaultFieldProblem(blob, MAX_VAULT_BLOB_BYTES, 'blob');
+    if (problem) return res.status(400).json({ error: problem });
   }
 
   // Ahead of the read, not after it: `getVault` throws without a configured
@@ -170,15 +205,22 @@ router.post('/identity/vault', async (req: Request, res: Response) => {
         registrationTx: probe.txHash,
       });
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.error('Registered, but the vault entry did not get written:', message);
+      console.error('Registered, but the vault entry did not get written:', errorMessage(error));
       return res.status(502).json({
-        error: message,
+        error: chainFailure(error),
         code: 'vault_write_failed',
         onchainRegistered: true,
         registrationTx: probe.txHash,
       });
     }
+  }
+
+  const replacing = existing?.entries.some(e => e.credentialId === credentialId) ?? false;
+  if (!replacing && (existing?.entries.length ?? 0) >= MAX_VAULT_ENTRIES) {
+    return res.status(409).json({
+      error: `At most ${MAX_VAULT_ENTRIES} passkeys can open one identity`,
+      code: 'too_many_passkeys',
+    });
   }
 
   let record;
@@ -208,9 +250,8 @@ router.post('/identity/vault', async (req: Request, res: Response) => {
 // ────────────────────────────────────────────────
 // DELETE /identity/vault/:credentialId: unlink a passkey
 // ────────────────────────────────────────────────
-router.delete('/identity/vault/:credentialId', async (req: Request, res: Response) => {
-  const nullifier = await sessionNullifier(req);
-  if (!nullifier) return res.status(401).json({ error: 'Not authenticated' });
+router.delete('/identity/vault/:credentialId', requireSession, vaultWriteQuota, async (req: Request, res: Response) => {
+  const nullifier = sessionOf(res).nullifier;
 
   const record = await getVault(nullifier);
   if (!record) return res.status(404).json({ error: 'No vault for this voter' });
@@ -266,6 +307,12 @@ router.post('/identity/recover', recoverLimiter, async (req: Request, res: Respo
   // writing it would leave a blob no assertion could ever open.
   if (Boolean(credentialId) !== Boolean(blob)) {
     return res.status(400).json({ error: 'credentialId and blob go together' });
+  }
+  if (credentialId && blob) {
+    const problem =
+      vaultFieldProblem(credentialId, MAX_CREDENTIAL_ID_BYTES, 'credentialId') ??
+      vaultFieldProblem(blob, MAX_VAULT_BLOB_BYTES, 'blob');
+    if (problem) return res.status(400).json({ error: problem });
   }
 
   const proof = await verifyWorldIdProof(worldIdProof);

@@ -36,8 +36,17 @@ const INFO_PREFIX = "votain/election-identity/v1:";
  */
 const COMMITMENTS_KEY = "votain_election_commitments";
 
-/** In-memory, so a page that enrols and then votes derives once. */
+/**
+ * In-memory, so a page that enrols and then votes derives once.
+ *
+ * Keyed by the MASTER as well as the election. It used to be keyed by the
+ * election alone, so after a recovery or a different phrase in the same tab
+ * the old identity's derivations kept being handed out, and the voter enrolled
+ * and voted as somebody they no longer were.
+ */
 const derived = new Map<string, Identity>();
+const derivedKey = (master: Identity, electionAddress: string): string =>
+  `${master.commitment}:${keyFor(electionAddress)}`;
 
 const keyFor = (electionAddress: string): string => electionAddress.toLowerCase();
 
@@ -79,7 +88,7 @@ export async function identityForElection(
   master: Identity,
   electionAddress: string,
 ): Promise<Identity> {
-  const cached = derived.get(keyFor(electionAddress));
+  const cached = derived.get(derivedKey(master, electionAddress));
   if (cached) return cached;
 
   const ikm = await crypto.subtle.importKey(
@@ -105,7 +114,7 @@ export async function identityForElection(
   const seed = Array.from(new Uint8Array(bits), b => b.toString(16).padStart(2, "0")).join("");
   const identity = new Identity(seed);
 
-  derived.set(keyFor(electionAddress), identity);
+  derived.set(derivedKey(master, electionAddress), identity);
   rememberCommitment(electionAddress, identity.commitment);
   return identity;
 }
