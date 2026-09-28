@@ -30,7 +30,7 @@ import {
   type Point,
   type SolidityProof,
 } from "./ballotCrypto";
-import { getElection } from "./contracts";
+import { getElection, getReadProvider } from "./contracts";
 import { eventArgs, queryLogsFrom } from "./logs";
 import { fetchElectionGroup } from "./semaphore";
 
@@ -116,6 +116,52 @@ export class EpochAlreadyUsedError extends Error {
 }
 
 /**
+ * How long before the epoch turns a proof naming the PREVIOUS epoch is still
+ * worth making: proving and relaying take seconds, and once the epoch turns the
+ * contract refuses it as stale. Inside this margin the voter waits instead,
+ * never more than this long, and the new epoch is free.
+ */
+export const PREVIOUS_EPOCH_MARGIN_SECONDS = 120n;
+
+/**
+ * Which epoch a ballot names: the current one, or the one that just ended.
+ *
+ * The contract accepts either, each tag once, which is two ballots per voter in
+ * any hour. The app used to name only the current epoch, so a voter who had
+ * just cast waited for the next clock hour, and a vote forced after the last
+ * hour boundary before the close could not be replaced at all. Naming the
+ * previous epoch gives that voter one immediate override.
+ *
+ * CHOSEN AT RANDOM WHEN BOTH ARE FREE, and that is the privacy argument, not a
+ * detail. The epoch is public calldata. Were the previous epoch used only once
+ * the current one was spent, a ballot naming it would say "this voter already
+ * cast this hour": a re-vote, visible, in exactly the last hour where a coercer
+ * is watching. Drawn at random, a first ballot names either epoch half the
+ * time, a re-vote names whichever is left, and no single ballot says which it
+ * is.
+ */
+export function chooseEpoch(args: {
+  current: bigint;
+  epochLength: bigint;
+  /** Chain time, in seconds: the clock the contract judges staleness by. */
+  now: bigint;
+  currentUsed: boolean;
+  previousUsed: boolean;
+  /** Injected for tests; a fair coin otherwise. */
+  coin?: () => boolean;
+}): bigint {
+  const { current, epochLength, now, currentUsed, previousUsed } = args;
+  const coin = args.coin ?? (() => crypto.getRandomValues(new Uint8Array(1))[0] < 128);
+  const nextAt = (current + 1n) * epochLength;
+  const previousUsable = current > 0n && !previousUsed && nextAt - now > PREVIOUS_EPOCH_MARGIN_SECONDS;
+
+  if (!currentUsed && previousUsable) return coin() ? current - 1n : current;
+  if (!currentUsed) return current;
+  if (previousUsable) return current - 1n;
+  throw new EpochAlreadyUsedError(new Date(Number(nextAt) * 1000));
+}
+
+/**
  * Where the proving artefacts for one circuit size are served from.
  *
  * VITE_CIRCUITS_URL in a deployment: the files belong to the ceremony that
@@ -154,18 +200,29 @@ export async function prepareBallot(
   const context = await readBallotContext(address);
   const secret = identity.secretScalar;
 
-  const [ballots, group, epoch, epochLength] = await Promise.all([
+  const [ballots, group, current, epochLength, block] = await Promise.all([
     fetchBallots(address, context.keys.length),
     fetchElectionGroup(address),
     election.currentEpoch() as Promise<bigint>,
     election.EPOCH_LENGTH() as Promise<bigint>,
+    getReadProvider().getBlock("latest"),
   ]);
 
   // Checked before proving, because the proof would be refused anyway and it
   // is seconds of work the voter should not wait through for nothing.
-  if (await election.usedEpochTags(epochTag(poseidon4, secret, context.scope, epoch))) {
-    throw new EpochAlreadyUsedError(new Date(Number((epoch + 1n) * epochLength) * 1000));
-  }
+  const [currentUsed, previousUsed] = await Promise.all([
+    election.usedEpochTags(epochTag(poseidon4, secret, context.scope, current)) as Promise<boolean>,
+    current > 0n
+      ? (election.usedEpochTags(epochTag(poseidon4, secret, context.scope, current - 1n)) as Promise<boolean>)
+      : Promise.resolve(true),
+  ]);
+  const epoch = chooseEpoch({
+    current,
+    epochLength,
+    now: BigInt(block?.timestamp ?? Math.floor(Date.now() / 1000)),
+    currentUsed,
+    previousUsed,
+  });
 
   const memberIndex = group.indexOf(identity.commitment);
   if (memberIndex < 0) throw new Error("This identity is not enrolled in this election");
