@@ -15,7 +15,8 @@
  * contracts' `onlyOrganizer` check.
  */
 import { useCallback, useEffect, useState } from "react";
-import { BrowserProvider, type Eip1193Provider, type JsonRpcSigner } from "ethers";
+import { type Eip1193Provider, type JsonRpcSigner } from "ethers";
+import { WalletProvider } from "../lib/walletProvider";
 import { chainInfo } from "../lib/deployments";
 import {
   connectWalletConnect,
@@ -207,7 +208,7 @@ export function useOrganizerWallet(): OrganizerWalletState {
   const refreshNetwork = useCallback(async () => {
     const eth = activeProvider();
     if (!eth) return;
-    const provider = new BrowserProvider(eth);
+    const provider = new WalletProvider(eth);
     const network = await provider.getNetwork();
     setWrongNetwork(Number(network.chainId) !== chainInfo.chainId);
   }, []);
@@ -241,7 +242,7 @@ export function useOrganizerWallet(): OrganizerWalletState {
       const eth = await resumeProvider();
       if (!eth || cancelled) return;
       try {
-        const accounts = await new BrowserProvider(eth).send('eth_accounts', []) as string[];
+        const accounts = await new WalletProvider(eth).send('eth_accounts', []) as string[];
         if (cancelled || !accounts[0]) return;
         setAddress(accounts[0]);
         setLive(true);
@@ -360,7 +361,7 @@ export function useOrganizerWallet(): OrganizerWalletState {
       }
       // A session that was just opened has listeners to attach.
       if (!before) setProviderEpoch(n => n + 1);
-      const provider = new BrowserProvider(eth);
+      const provider = new WalletProvider(eth);
       const accounts = (await provider.send("eth_requestAccounts", [])) as string[];
       const account = accounts[0];
       setAddress(account);
@@ -385,7 +386,7 @@ export function useOrganizerWallet(): OrganizerWalletState {
   const isWrongNetwork = useCallback(async (): Promise<boolean> => {
     const eth = await resumeProvider();
     if (!eth) return true;
-    const provider = new BrowserProvider(eth);
+    const provider = new WalletProvider(eth);
     const network = await provider.getNetwork();
     const wrong = Number(network.chainId) !== chainInfo.chainId;
     setWrongNetwork(wrong);
@@ -416,7 +417,7 @@ export function useOrganizerWallet(): OrganizerWalletState {
       }
     }
 
-    const provider = new BrowserProvider(eth);
+    const provider = new WalletProvider(eth);
 
     /**
      * The same ordering every other wallet request needs: issue it, THEN bring
@@ -519,7 +520,7 @@ export function useOrganizerWallet(): OrganizerWalletState {
       eth = session;
     }
     if (!eth) throw new Error(i18n.t("errors.no_wallet"));
-    const provider = new BrowserProvider(eth);
+    const provider = new WalletProvider(eth);
 
     const authorized = (await provider.send("eth_accounts", [])) as string[];
     if (authorized.length === 0) {

@@ -16,15 +16,50 @@
  * A failed submission resets the nonce from the chain, so a transaction that
  * never left cannot leave a gap that stalls every later one.
  */
-import { JsonRpcProvider, NonceManager, Wallet } from 'ethers';
+import { FeeData, JsonRpcProvider, NonceManager, Wallet, parseUnits } from 'ethers';
+
+/**
+ * The most this server tips a validator per unit of gas, in gwei.
+ *
+ * WHY A CAP AT ALL. Amoy's blocks are nearly empty and take a 30 gwei tip, but
+ * the few transactions in them come from bots paying 279 gwei, and that is what
+ * `eth_maxPriorityFeePerGas` hands back as a suggestion. Taken as given, every
+ * registration and every relayed vote paid five times what inclusion costs,
+ * and the relayer, whose float has to cover gas limit times fee up front,
+ * could not afford a single ballot on 0.1 POL.
+ *
+ * WHY 50. It is what `ElectionPaymaster` reimburses at most (`maxGasPrice`), so
+ * a relayer paying more than this loses the difference on every vote it sends.
+ * Raise both together if the network ever needs more.
+ */
+function maxTip(): bigint {
+  return parseUnits(process.env.CHAIN_MAX_TIP_GWEI?.trim() || '50', 'gwei');
+}
+
+/** A provider whose fee suggestion never tips above `maxTip`. */
+class CappedFeeProvider extends JsonRpcProvider {
+  override async getFeeData(): Promise<FeeData> {
+    const suggested = await super.getFeeData();
+    const cap = maxTip();
+    const tip = suggested.maxPriorityFeePerGas;
+    if (tip === null || tip <= cap) return suggested;
+    const block = await this.getBlock('latest');
+    const base = block?.baseFeePerGas ?? 0n;
+    return new FeeData(
+      suggested.gasPrice !== null && suggested.gasPrice > base + cap ? base + cap : suggested.gasPrice,
+      base * 2n + cap,
+      cap,
+    );
+  }
+}
 
 let provider: { url: string; instance: JsonRpcProvider } | null = null;
 
-/** The shared read provider for `CHAIN_RPC_URL`. */
+/** The shared provider for `CHAIN_RPC_URL`, with its fee suggestion capped. */
 export function chainProvider(): JsonRpcProvider {
   const url = process.env.CHAIN_RPC_URL;
   if (!url) throw new Error('CHAIN_RPC_URL not configured');
-  if (provider?.url !== url) provider = { url, instance: new JsonRpcProvider(url) };
+  if (provider?.url !== url) provider = { url, instance: new CappedFeeProvider(url) };
   return provider.instance;
 }
 
