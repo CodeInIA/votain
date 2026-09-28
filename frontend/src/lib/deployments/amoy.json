@@ -1,0 +1,25 @@
+{
+  "chainId": 80002,
+  "network": "amoy",
+  "deployedAt": "2026-09-28T18:22:29.017Z",
+  "deployedAtBlock": 48797332,
+  "deployer": "0xa5216eD9AB68FCEb8CD8dBb0A47Dc18740e946Ce",
+  "contracts": {
+    "PlatformRegistry": "0x1FF8af6c8781D2bc268eA7401C3326ecA0C610e6",
+    "OrganizerDomains": "0x1B3932522A5eD584536D25889e8f19a7ed2F8684",
+    "ElectionPaymaster": "0x780a18837DaEB1D09b71c57f4695FFe9fE405252",
+    "ElectionDeployer": "0xfFDd5003d995bf791955eB48D58B8453491cb975",
+    "ElectionFactory": "0x67494187488fD35008Acf45713781A4283CC982F",
+    "PoseidonT3": "0x3333333C0A88F9BE4fd23ed0536F9B6c427e3B93",
+    "PoseidonT4": "0x4443338EF595F44e0121df4C21102677B142ECF0"
+  },
+  "ceremony": "custom",
+  "ballotVerifiers": [
+    "0x820a9244B29dc8CD49a66179C957389BC5d359D0",
+    "0xf52647481cfaC4aE61a26Af627f96613543A6202"
+  ],
+  "tallyVerifiers": [
+    "0xc8cE44a917f324ECcdF26F4Dc23EDb6Ceb8e017d",
+    "0xCf999e8aE8B6fe14A227CF4A6123C7D238B49cF8"
+  ]
+}
