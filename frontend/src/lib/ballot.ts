@@ -17,7 +17,11 @@
  */
 import type { Identity } from "@semaphore-protocol/identity";
 import { LeanIMT } from "@zk-kit/lean-imt";
-import { poseidon2, poseidon3, poseidon4 } from "poseidon-lite";
+// One subpath per arity, never the package root: its CommonJS index loads the
+// round constants of all sixteen arities, 580 kB the bundler cannot drop.
+import { poseidon2 } from "poseidon-lite/poseidon2";
+import { poseidon3 } from "poseidon-lite/poseidon3";
+import { poseidon4 } from "poseidon-lite/poseidon4";
 
 import {
   ballotCalldata,

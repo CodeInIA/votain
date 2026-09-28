@@ -23,7 +23,7 @@
  * without the counts ever leaving this device.
  */
 import type { Signer } from "ethers";
-import { poseidon3 } from "poseidon-lite";
+import { poseidon3 } from "poseidon-lite/poseidon3";
 
 import { circuitFiles } from "./ballot";
 import {

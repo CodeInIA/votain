@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { poseidon4 } from 'poseidon-lite';
+import { poseidon4 } from 'poseidon-lite/poseidon4';
 
 import { ballotTag } from './ballotCrypto';
 
