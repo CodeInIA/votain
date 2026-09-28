@@ -14,7 +14,7 @@
     "test": "hardhat test",
     "build": "hardhat compile",
     "typecheck": "tsc --noEmit",
-    "deploy:amoy": "hardhat run scripts/deploy.ts --network amoy --build-profile production",
+    "deploy:amoy": "hardhat run scripts/deploy.ts --network amoy --build-profile production && npm --prefix ../circuits run publish:circuits -- amoy",
     "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
     "estimate:amoy": "hardhat run scripts/estimate-deploy-cost.ts --build-profile production",
     "node:local": "hardhat node",

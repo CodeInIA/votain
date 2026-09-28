@@ -17,6 +17,8 @@ npm install
 npm test          # compiles the smallest size, then 8 witness tests
 npm run build     # sizes 5 and 9: compile, trusted setup, verifiers
 npm run build:all # adds 17, 33 and 51 slots (up to 50 options)
+npm run publish:circuits -- amoy   # upload a deployment's files (circuits/.env)
+npm run check:published -- amoy    # what CI runs: still there, and still right
 ```
 
 On Windows the WebAssembly compiler (circom2) cannot build these circuits: put
@@ -44,7 +46,9 @@ flowchart LR
   end
 
   deploy["contracts: deploy.ts<br/>refuses the dev ceremony off local"]
-  ipfs[("VITE_CIRCUITS_URL<br/>published with the deployment")]
+  publish["scripts/publish.mjs<br/>keys checked against the<br/>deployed verifiers first"]
+  bucket[("4EVERLAND bucket<br/>one folder per ceremony")]
+  manifest["deployments/amoy.json<br/>circuits.url, read by the site"]
 
   ballot --> build
   tally --> build
@@ -56,8 +60,31 @@ flowchart LR
   build --> pub
   sol --> deploy
   art -- "manifest: sizes, hashes, ceremony" --> deploy
-  pub --> ipfs
+  pub --> publish
+  deploy --> publish
+  publish --> bucket
+  publish --> manifest
 ```
+
+## Publishing a deployment's files
+
+The browser proves with the wasm and zkey of the ceremony whose verifiers are on
+chain. They are too large for the repository, and CI cannot produce them without
+seeing the ceremony's entropy, so the machine that ran the ceremony publishes
+them: `deploy:amoy` ends with `npm run publish:circuits -- amoy`.
+
+It refuses before sending anything unless each verification key's constants are
+all in the bytecode of the verifier deployed for it. It then uploads to a folder
+named after the ceremony's zkeys (a later ceremony never overwrites an earlier
+one, and a rerun uploads nothing), downloads every file back from the site's
+origin to prove the bucket serves it with CORS, and only then writes
+`circuits.url` into both deployment manifests. The frontend takes the URL from
+there, beside the contract addresses, so it cannot pair them with another
+ceremony's files.
+
+CI's `published circuits` job runs `check-published.mjs` on every push: the same
+download and key check, against what the manifest records. It catches the
+bucket being deleted or the files changing, which no build would notice.
 
 With `CEREMONY_ENTROPY` unset the build uses a fixed, public entropy so every
 machine produces the same development artefacts. Anyone can forge proofs

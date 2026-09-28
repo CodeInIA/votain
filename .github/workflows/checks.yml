@@ -270,6 +270,29 @@ jobs:
       - run: npm run typecheck
         working-directory: scripts-tally
 
+  # ── DO THE PUBLISHED PROVING FILES STILL WORK ───────────────────────────────
+  #
+  # Voters' browsers prove with the wasm and zkey the Amoy manifest names, which
+  # live in a bucket rather than in this repository: they come out of a trusted
+  # setup this CI must never run. Nothing else here would notice that bucket
+  # being emptied, CORS being switched off, or the manifest naming another
+  # ceremony's files, and every one of those stops voting while every other
+  # check stays green. So each run downloads them as the site would and checks
+  # each key against the verifier deployed for it (circuits/scripts/published.mjs).
+  #
+  # No `npm ci`: the check uses nothing but Node. It gates the frontend deploy,
+  # since a site that cannot prove is not worth publishing.
+  published:
+    name: published circuits
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: node scripts/check-published.mjs amoy
+        working-directory: circuits
+
   # ── IS THERE A NEW IMAGE TO BUILD AT ALL ────────────────────────────────────
   #
   # Without this, every green commit on main published a version, and the first
@@ -430,7 +453,7 @@ jobs:
 
   deploy:
     name: publish the frontend
-    needs: [frontend, backend, contracts, tally, cambios]
+    needs: [frontend, backend, contracts, tally, published, cambios]
     if: |
       github.event_name == 'push' && github.ref == 'refs/heads/main'
         && needs.cambios.outputs.frontend == 'yes'

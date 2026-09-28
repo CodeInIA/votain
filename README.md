@@ -78,7 +78,7 @@ flowchart TB
     prover["snarkjs<br/>ballot and tally proofs"]
   end
 
-  circuitfiles[("Proving files<br/>wasm + zkey, VITE_CIRCUITS_URL")]
+  circuitfiles[("Proving files<br/>wasm + zkey, one bucket<br/>folder per ceremony")]
 
   subgraph tee["Issuer backend in a TEE (Phala, Intel TDX)"]
     api["Express API<br/>World ID and Self checks,<br/>SD-JWT session, attestations"]

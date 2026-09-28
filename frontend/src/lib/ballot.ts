@@ -35,6 +35,7 @@ import {
   type SolidityProof,
 } from "./ballotCrypto";
 import { getElection, getReadProvider } from "./contracts";
+import { circuitsBaseUrl } from "./deployments";
 import { eventArgs, queryLogsFrom } from "./logs";
 import { fetchElectionGroup } from "./semaphore";
 
@@ -168,16 +169,15 @@ export function chooseEpoch(args: {
 /**
  * Where the proving artefacts for one circuit size are served from.
  *
- * VITE_CIRCUITS_URL in a deployment: the files belong to the ceremony that
- * produced the deployed verifiers and are far too large for the repository, so
- * they are published with the deployment (an IPFS pin, say) rather than built
- * with the site. Locally, `circuits/scripts/build.mjs` copies them into
- * `public/circuits/`. A wrong file is harmless beyond wasting the voter's time:
- * its proofs simply fail on chain.
+ * The files belong to the ceremony that produced the deployed verifiers and are
+ * far too large for the repository, so `circuits/scripts/publish.mjs` uploads
+ * them and records the URL in the deployment manifest (`circuitsBaseUrl`).
+ * Locally, `circuits/scripts/build.mjs` copies them into `public/circuits/`. A
+ * wrong file is harmless beyond wasting the voter's time: its proofs simply
+ * fail on chain, and CI checks the published ones against the verifiers.
  */
 export function circuitFiles(kind: "ballot" | "tally", slots: number): { wasm: string; zkey: string } {
-  const root = (import.meta.env.VITE_CIRCUITS_URL as string | undefined) ?? `${import.meta.env.BASE_URL ?? "/"}circuits`;
-  const base = `${root.replace(/\/$/, "")}/${kind}_s${slots}`;
+  const base = `${circuitsBaseUrl}/${kind}_s${slots}`;
   return { wasm: `${base}.wasm`, zkey: `${base}.zkey` };
 }
 
