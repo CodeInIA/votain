@@ -271,8 +271,8 @@ in [`docs/dev/architecture.md`](docs/dev/architecture.md#known-limits-stated-pla
 - **Nothing makes the organizer tally.** There is no publishing deadline, so an
   organizer who never decrypts leaves the election without a result.
 
-Threshold decryption, an auto-tally and a tally deadline are designed but left
-for after the thesis: see [Future work](docs/dev/architecture.md#future-work).
+Threshold decryption, an auto-tally, a tally deadline and taking the per-user
+gas off the platform are designed but left for after the thesis: see [Future work](docs/dev/architecture.md#future-work).
 
 ## Documentation
 

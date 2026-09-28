@@ -1709,6 +1709,32 @@ linked; none needs the ballots or the circuits of this version to change.
 - **Last-hour coercion.** A proof of "at most K sponsored ballots" per voter,
   with the voter paying beyond it, would replace the hourly limit and its
   last-hour window (see *Two votes forced in a row in the last hour stand*).
+- **No per-user gas for the platform.** Today the issuer's registrar pays, and
+  is never reimbursed, for every `registerMember`, vault entry, preferences
+  blob, rotation and revocation in `PlatformRegistry`: a cost that grows with
+  users, not with elections. None of it is on the voting path any more:
+  `enrollPrivate` checks only the platform's signature and never reads the
+  registry, which only the legacy public `enroll` still needs. So it can go:
+  - **Batch it behind one root.** Keep the vault and preference blobs in
+    content-addressed storage (IPFS or Arweave, pinned by the issuer and by
+    anyone else who wants to), and anchor them with one Merkle root of
+    `nullifier -> blob hash` per batch, posted hourly or daily. A device
+    fetches its blob and checks it against the root, so losing the issuer still
+    does not lock a voter out. Members and revocations go the same way: one
+    root per batch, and the legacy `enroll` takes a Merkle proof instead of
+    reading a mapping. The platform's cost becomes one transaction per batch,
+    whatever the number of users. The price: a new passkey is usable on another
+    device only once its batch lands, which the issuer can bridge by serving
+    pending entries signed with its key.
+  - **Or bill it to the organizer who brings the voter.** The paymaster already
+    charges each election for its relays; it could add a fixed platform fee
+    per newly enrolled voter, paid to the platform's treasury from the same
+    reserve. Simpler, but it only covers voters who enrol, and a vault written
+    at sign-up belongs to no election yet, so it works best combined with the
+    batching above.
+
+  Deploying the contracts stays a one-off cost for whoever deploys them, and
+  organizers keep paying their own transactions and their voters' gas.
 - **Scale.** An indexer (a subgraph, or the issuer) serving lists, receipts and
   Merkle paths, with the browser's own reads kept as the audit path; the
   backend's in-memory state moved to a shared store so it can run as more than
