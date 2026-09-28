@@ -142,7 +142,7 @@ jobs:
         working-directory: circuits
       - run: npm test
         working-directory: circuits
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         id: build
         with:
           path: |
@@ -150,7 +150,7 @@ jobs:
             contracts/contracts/verifiers
             frontend/public/circuits
           key: circuits-${{ hashFiles('circuits/src/**', 'circuits/scripts/build.mjs', 'circuits/package-lock.json') }}
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v6
         id: ptau
         if: steps.build.outputs.cache-hit != 'true'
         with:
@@ -161,7 +161,7 @@ jobs:
         run: node scripts/build.mjs --ptau 17
         working-directory: circuits
         timeout-minutes: 75
-      - uses: actions/cache/save@v4
+      - uses: actions/cache/save@v6
         if: steps.build.outputs.cache-hit != 'true' && steps.ptau.outputs.cache-hit != 'true'
         with:
           path: circuits/build/pot17_dev.ptau
@@ -170,7 +170,7 @@ jobs:
         run: npm run build
         working-directory: circuits
         timeout-minutes: 30
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: circuits
           # The verifiers and what proving needs; not the phase 1 files.
@@ -193,7 +193,7 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: contracts/package-lock.json
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: circuits
           path: .
