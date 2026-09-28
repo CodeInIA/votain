@@ -10,7 +10,7 @@
 
 **Nullifier**: in Semaphore, a value derived from the identity secret and a scope that detects double signalling. Votain ballots no longer publish one: a public nullifier shows that the same voter cast two ballots, which is what a coercer needs to see a re-vote. The ballot tag and the epoch tag replace it (below). The word survives for World ID, whose nullifier identifies a human to the platform.
 
-**Re-vote (coercion resistance)**: a voter may cast again, and the later ballot replaces the earlier. Each ballot carries a proved cancellation of that voter's previous one, so the sum of all ballots holds only each voter's last vote, and nothing public says a ballot is a re-vote. It replaced the earlier per-nullifier `nonce`, which made re-votes visible. One ballot per voter per hour (the epoch tag) bounds how fast the organizer's gas can be spent.
+**Re-vote (coercion resistance)**: a voter may cast again, and the later ballot replaces the earlier. Each ballot carries a proved cancellation of that voter's previous one, so the sum of all ballots holds only each voter's last vote, and nothing public says a ballot is a re-vote. It replaced the earlier per-nullifier `nonce`, which made re-votes visible. At most two ballots per voter within an hour (the epoch tag) bound how fast the organizer's gas can be spent.
 
 **Scope**: election identifier within Semaphore. Nullifiers are scope-specific. The same user has different nullifiers in different elections.
 
@@ -20,7 +20,7 @@
 
 **Ballot tag**: the public identifier of one ballot, Poseidon(TAG, secret, scope, k) for the k-th ballot of a voter. Only the voter can compute their tags, so only they can tell which ballots are theirs; a re-vote carries a new tag that links to nothing.
 
-**Epoch tag**: Poseidon(EPOCH, secret, scope, epoch), one per voter per hour. The contract accepts each once, which limits a voter to one ballot an hour without linking their ballots across hours.
+**Epoch tag**: Poseidon(EPOCH, secret, scope, epoch), one per voter per clock hour. The contract accepts each once and takes a ballot naming the current hour or the last, so a voter casts at most two within an hour; the app draws between the two at random so neither marks a re-vote. Nothing links a voter's ballots across hours.
 
 **Groth16 / trusted setup**: the zero-knowledge proof system of the ballot and tally circuits. Each circuit needs a one-off setup whose randomness must be destroyed; whoever keeps it can forge proofs.
 
