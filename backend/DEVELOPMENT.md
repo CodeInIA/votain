@@ -330,19 +330,28 @@ returning voter would be handed a brand new identity on every device.
 
 ## Issuer architecture
 
-```
-User → POST /api/worldid/request { returnTo? }   → Set-Cookie: voter_pending
-        └── signs the RP request and opens the bridge request HERE, so it
-              survives the phone discarding the tab
-     → World ID QR / deep link (verify in WLD app)
-     → GET  /api/worldid/request?wait=1   (held open; a reload may ask again)
-     → POST /api/verify-human { ...worldIdProof }
-        ├── verify World ID proof
-        └── issue SD-JWT VC (sub=nullifier; no identity attributes: none is verified here;
-              credentialStatus → Status List 2021 entry) → httpOnly cookie (7d)
-     → GET  /api/identity/vault   (unlock the existing identity, or find none)
-     → POST /api/identity/vault { credentialId, blob, commitment }
-        └── PlatformRegistry.registerMember(nullifier, commitment)  [on-chain]
+```mermaid
+sequenceDiagram
+  autonumber
+  participant F as Frontend
+  participant B as Issuer
+  participant W as World App
+  participant R as PlatformRegistry
+
+  F->>B: POST /api/worldid/request {returnTo?}
+  Note right of B: signs the RP request and opens the bridge<br/>request HERE, so it survives the phone<br/>discarding the tab
+  B-->>F: connector URI, Set-Cookie voter_pending
+  F->>W: QR code or deep link
+  W-->>B: proof, via World's bridge, which the issuer polls
+  F->>B: GET /api/worldid/request?wait=1 (held open, a reload may ask again)
+  B-->>F: the proof
+  F->>B: POST /api/verify-human {proof}
+  B->>B: verify under the server-fixed action
+  B-->>F: SD-JWT VC, sub = nullifier, no identity attributes,<br/>Status List 2021 entry, httpOnly cookie, 7 days
+  F->>B: GET /api/identity/vault
+  B-->>F: the sealed identity, or none
+  F->>B: POST /api/identity/vault {credentialId, blob, commitment}
+  B->>R: registerMember(nullifier, commitment)
 ```
 
 Source layout: `sd/issuer.ts` (shared SD-JWT instance + disclosure frame),

@@ -2,119 +2,156 @@
 
 ## Overview
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                            USER                                 │
-│  Browser (IPFS gateway / 4EVERLAND CDN)                        │
-│  React 19 + Vite + Tailwind 4 + Semaphore v4 + ElGamal/Groth16 │
-└─────────────────┬───────────────────────────┬───────────────────┘
-                  │ World ID QR + relayed tx   │ RPC (read only)
-                  ▼                            ▼
-┌─────────────────────────┐    ┌──────────────────────────────────┐
-│   BACKEND ISSUER (TEE)  │    │   BLOCKCHAIN (Polygon Amoy)      │
-│   Node.js Express       │    │                                   │
-│   Phala Network TEE     │    │  ElectionFactory.sol             │
-│   (Intel TDX)           │    │  ElectionV4.sol                  │
-│                         │    │  ElectionPaymaster.sol           │
-│  POST /verify-human     │    │  PlatformRegistry.sol            │
-│  ← World ID proof       │    │                                   │
-│  → SD-JWT cookie        │    │                                   │
-│  POST /relay/vote       │───▶│  relayed through                  │
-│  (unauthenticated)      │    │  ElectionPaymaster                │
-│  /attestation           │    │                                   │
-│  → Intel TDX report     │    │  Ballot + Tally Groth16 verifiers │
-└─────────────────────────┘    │  (one pair per circuit size)      │
-                               │  ElectionV4 keeps the running     │
-                               │  ElGamal aggregate of all ballots │
-                               └──────────────────────────────────┘
-                                              │
-                                              │ aggregate()
-                                              ▼
-                               ┌──────────────────────────────────┐
-                               │   TALLY (in-app or off-chain CLI) │
-                               │   in browser · scripts-tally/     │
-                               │                                   │
-                               │  1. Read the on-chain aggregate  │
-                               │  2. Decrypt w/ wallet-derived keys│
-                               │  3. Prove it (tally circuit)     │
-                               │  4. Generate auditable JSON      │
-                               │  5. Pin to IPFS (CLI only)       │
-                               │  6. publishResults(+ proof),     │
-                               │     verified by the contract     │
-                               └──────────────────────────────────┘
+```mermaid
+flowchart TB
+  subgraph user["User's browser: frontend on IPFS (4EVERLAND)"]
+    ui["React 19 + Vite + Tailwind 4"]
+    idn["Semaphore V4 identity<br/>from a 12-word phrase"]
+    zk["ElGamal ballots and tally,<br/>Groth16 proofs (snarkjs)"]
+  end
+
+  subgraph issuer["Issuer backend: Node + Express in a Phala TEE (Intel TDX)"]
+    verify["POST /verify-human<br/>World ID proof in, SD-JWT cookie out"]
+    enrol["POST /relay/enroll<br/>platform-signed private enrolment"]
+    vote["POST /relay/vote<br/>no session: the proof authorises"]
+  end
+  tdx["TDX attestation<br/>served by the Phala platform (dstack)"]
+
+  subgraph chain["Polygon Amoy"]
+    factory["ElectionFactory"]
+    election["ElectionV4<br/>keeps the running ElGamal<br/>aggregate of every ballot"]
+    paymaster["ElectionPaymaster<br/>relays, reimburses from the organizer"]
+    registry["PlatformRegistry"]
+    verifiers["Ballot + tally Groth16 verifiers<br/>one pair per circuit size"]
+  end
+
+  subgraph tally["Tally: in the app, or scripts-tally/"]
+    t1["read aggregate()"]
+    t2["decrypt with the election's keys"]
+    t3["prove the decryption (tally circuit)"]
+    t4["audit JSON, pinned to IPFS by the CLI"]
+    t5["publishResults(cid, counts, proof)<br/>or voidBelowQuorum(voters, proof)"]
+  end
+
+  user -- "World ID proof, enrolments, ballots" --> issuer
+  user -. "RPC reads" .-> chain
+  issuer -. "attested by" .-> tdx
+  enrol --> paymaster
+  vote --> paymaster
+  paymaster --> election
+  factory -- "deploys" --> election
+  election --> verifiers
+  election --> registry
+  election -- "aggregate()" --> t1
+  t1 --> t2 --> t3 --> t4 --> t5
+  t5 -- "verified on chain" --> election
 ```
 
 ## Full voting flow
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor U as Voter
+  participant W as World App
+  participant F as Frontend
+  participant B as Issuer
+  participant R as PlatformRegistry
+  participant P as ElectionPaymaster
+  participant E as ElectionV4
+
+  rect rgba(120,120,120,0.08)
+  Note over U,B: 1. Identity registration
+  U->>W: verify (Orb or device)
+  W-->>F: World ID proof
+  F->>B: POST /api/verify-human
+  B->>B: verify the proof under the server-fixed action
+  B-->>F: SD-JWT in a __Host- httpOnly cookie (7 days)
+  end
+
+  rect rgba(120,120,120,0.08)
+  Note over U,R: 2. Voting identity
+  F->>F: mint a 12-word phrase, derive the Semaphore identity
+  F->>B: POST /api/identity/vault {commitment}
+  B->>R: registerMember(nullifier, commitment)
+  F->>F: seal the phrase under a passkey's PRF secret
+  F->>B: POST /api/identity/vault {commitment, credentialId, blob}
+  B->>R: addVaultEntry
+  end
+
+  rect rgba(120,120,120,0.08)
+  Note over F,E: 3. Enrolment in one election
+  F->>F: derive a commitment for THIS election (HKDF of the secret)
+  F->>B: POST /api/relay/enroll {election, commitment}
+  B->>P: relayEnrollPrivate(humanTag, documentTag, platform signature)
+  P->>E: enrollPrivate: one per account,<br/>and one per document where required
+  end
+
+  rect rgba(120,120,120,0.08)
+  Note over F,E: 4 and 5. Voting, and voting again
+  F->>F: find the voter's chain of ballots by their tags
+  F->>F: encrypt the vote, cancel the previous ballot,<br/>prove it (ballot circuit)
+  F->>B: POST /api/relay/vote {ballot, proof}
+  B->>P: relayVote
+  P->>E: castVote: roots, tag, epoch tag, proof,<br/>file the leaf, add to the aggregate
+  P->>B: reimburse the relayer from the organizer's reserve
+  end
+
+  rect rgba(120,120,120,0.08)
+  Note over F,E: 6. Tally
+  F->>E: aggregate()
+  F->>F: decrypt with keys derived from a wallet signature,<br/>prove the decryption (tally circuit)
+  F->>E: publishResults(cid, counts, proof)
+  E->>E: verify the tally proof, then publish
+  end
 ```
-1. IDENTITY REGISTRATION
-   User → World ID App (Orb/Device)
-   → Backend: POST /api/verify-human
-   → Backend verifies World ID v4 proof (on-chain / off-chain)
-   → Backend issues SD-JWT (`__Host-` httpOnly cookie, Secure, SameSite=strict,
-     7 days). See "The voter's session" below
-   → SD-JWT claims: nullifier_hash, verification_level, issued_at
 
-2. VOTING IDENTITY
-   Frontend, on the device
-   → a twelve-word recovery phrase is minted; the Semaphore identity is a
-     pure function of it, so the same words rebuild the same voter anywhere
-   → POST /api/identity/vault {commitment} → PlatformRegistry.registerMember
-   → WebAuthn (Passkey) → PRF secret → the phrase sealed under it
-     → POST /api/identity/vault {commitment, credentialId, blob}
-       → PlatformRegistry.addVaultEntry
-   → REGISTRATION AND THE PASSKEY ARE TWO WRITES, on purpose. An
-     authenticator that creates a credential and then refuses to evaluate it
-     (Windows Hello, measured 2026-09-15) must still leave a registered
-     voter, holding their phrase. Welding the two together meant such a voter
-     was never on chain at all, and their next device read the empty vault as
-     "new" and minted a second identity for one human.
-   → the voter never holds an address: transactions go through the
-     issuer relayer, because a per-voter address would link their
-     enrolment to their ballot on chain
+What each step rests on:
 
-3. ELECTION ENROLLMENT
-   Frontend reads SD-JWT cookie
-   → Verifies eligibility criteria
-   → ElectionV4 adds the already-registered commitment to the Semaphore group
-   → `enroll` refuses a commitment PlatformRegistry has not verified, which is
-     what step 2 wrote
-
-4. VOTING
-   Frontend: user selects candidate
-   → find the voter's place in their own chain of ballots: tags
-     Poseidon(TAG, secret, scope, k) for k = 0, 1, ... until one is missing;
-     only the voter's secret can compute them
-   → exponential ElGamal on Baby Jubjub, one key per option:
-     vote   A = r·G, B_i = v_i·G + r·H_i
-     cancel A' = -A_prev + s·G, B'_i = -B_prev_i + s·H_i  (of nothing, on a first ballot)
-   → ZK proof, ballot circuit (circuits/src/ballot.circom), in the browser:
-     on the roll, exactly one option, cancels the voter's OWN previous ballot
-     (by membership in the ballots tree, not by pointing at it), tags are theirs
-   → ElectionPaymaster.relayVote(election, ballot, proof): the relayer is
-     reimbursed from the organizer's gas tank in the same transaction
-   → ElectionV4 checks roots, tag, epoch tag and proof, files the ballot as a
-     leaf of the ballots tree and adds vote AND cancellation to its aggregate
-
-5. COERCION RESISTANCE (vote change)
-   The same pipeline: the next tag, a cancellation of the last ballot.
-   → The aggregate telescopes each voter's chain to their LAST vote
-   → A first ballot and a re-vote look the same on chain and share no public
-     value, so nobody watching can tell that a voter changed their mind
-   → One ballot per voter per epoch (an hour) bounds the gas one voter can
-     spend, through an epoch tag that links nothing across epochs
-
-6. TALLY (two interchangeable paths, same pipeline)
-   a) In-app (default): organizer opens the election → Compute tally → Publish.
-      Decryption and proving run in the browser; the tally keys are DERIVED on
-      demand from a wallet signature (public per-election keyNonce in metadata),
-      never stored at rest. Publishing is a wallet-signed publishResults tx.
-   b) Offline CLI (auditor path): scripts-tally/tally-votes.ts does the same
-      from a key file and pins the audit JSON to IPFS (Pinata).
-   Both: aggregate() → decrypt → prove (tally circuit) → if voters < Privacy
-   Quorum → voidBelowQuorum(voters, proof), counts never revealed; else
-   publishResults(cid, counts, proof). The contract verifies the proof.
-```
+1. **Identity registration.** The World ID proof is checked under an action the
+   server fixes; a client-chosen action would give one person as many
+   nullifiers as actions. The SD-JWT carries the nullifier and the
+   verification level, and no identity attributes: nothing here verifies any.
+   See "The voter's session" below.
+2. **Voting identity.** The Semaphore identity is a pure function of the
+   phrase, so the same words rebuild the same voter anywhere. REGISTRATION AND
+   THE PASSKEY ARE TWO WRITES, on purpose: an authenticator that creates a
+   credential and then refuses to evaluate it (Windows Hello, measured
+   2026-09-15) must still leave a registered voter holding their phrase.
+   Welding the two together meant such a voter was never on chain, and their
+   next device read the empty vault as "new" and minted a second identity for
+   one human. The voter never holds an address: a per-voter address would
+   link their enrolment to their ballot on chain.
+3. **Enrolment.** What enters an election's tree is a commitment derived for
+   that election alone, so no two trees share a leaf and the chain does not
+   say which elections one person joined. The issuer signs a human tag, from
+   the World ID nullifier, which the election accepts once: one enrolment per
+   World ID account. Where the election requires a document it also signs a
+   document tag, accepted once too: one enrolment per passport or ID card,
+   whichever account it arrives with.
+4. **Voting.** Exponential ElGamal on Baby Jubjub, one key per option:
+   vote `A = r·G, B_i = v_i·G + r·H_i`, cancellation
+   `A' = -A_prev + s·G, B'_i = -B_prev_i + s·H_i` (of nothing on a first
+   ballot). The ballot circuit (`circuits/src/ballot.circom`) proves the voter
+   is on the roll, the vote is exactly one option, the cancellation undoes the
+   voter's OWN previous ballot (by membership in the ballots tree, not by
+   pointing at it), and the tags are theirs. The relayer is reimbursed in the
+   same transaction.
+5. **Voting again (coercion resistance).** The same pipeline, one tag further
+   along the voter's chain. The aggregate telescopes each chain down to the
+   voter's LAST vote, and a first ballot and a re-vote share no public value,
+   so nobody watching can tell a voter changed their mind. At most two ballots
+   per voter within an hour (current and previous epoch tags, drawn at random)
+   bound the gas one voter can spend, through tags that link nothing across
+   hours.
+6. **Tally.** Two interchangeable paths, one pipeline. In the app (default)
+   the keys are derived on demand from a wallet signature (public per-election
+   `keyNonce` in the metadata) and never stored at rest; publishing is a
+   wallet-signed transaction. The offline CLI (`scripts-tally/`) does the same
+   from a key file and pins the audit JSON to IPFS. Both: below the privacy
+   quorum, `voidBelowQuorum(voters, proof)` and the counts are never revealed;
+   otherwise `publishResults(cid, counts, proof)`. The contract verifies the
+   proof either way.
 
 ## Module breakdown
 
@@ -392,12 +429,28 @@ no elections, and the address filter is applied either way.
 flags). `PENDING_VOTE` only occurs when a separate enrollment window leaves a gap
 (`enrollEnd < voteStart`); with no gap it collapses away.
 
+```mermaid
+stateDiagram-v2
+  direction LR
+  [*] --> Upcoming: deployed
+  Upcoming --> Enrolling: enrollStart
+  Enrolling --> PendingVote: enrollEnd, if voting opens later
+  Enrolling --> Active: enrollEnd = voteStart
+  PendingVote --> Active: voteStart
+  Active --> Tallying: voteEnd
+  Tallying --> Closed: publishResults with a tally proof
+  Tallying --> Voided: voidBelowQuorum, or markVoided
+  Upcoming --> Cancelled: cancelElection
+  Enrolling --> Cancelled: cancelElection
+  PendingVote --> Cancelled: cancelElection
+  Active --> Cancelled: cancelElection
+  Closed --> [*]
+  Voided --> [*]
+  Cancelled --> [*]
 ```
-Upcoming → Enrolling → PendingVote → Active → Tallying → Closed (Approved / Rejected)
-└──────────── any pre-decision phase ────────┘    │
-                     ↓                             ↓
-                 Cancelled                       Voided (Privacy Quorum not reached)
-```
+
+Cancelling is only open to an election created as cancellable. Closed results
+are Approved or Rejected according to the voting type below.
 
 - **Upcoming**: deployed, enrollment not open yet (`now < enrollStart`).
 - **Enrolling**: enrollment open (`enrollStart ≤ now < enrollEnd`).

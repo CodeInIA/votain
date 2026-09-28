@@ -11,24 +11,41 @@ what the attestation exists to rule out.
 
 ## The shape of it
 
-```
-push to main
-   │
-   ├─ frontend ─┐
-   ├─ backend  ─┼─ all three must pass
-   └─ contracts ┘
-                │
-                ├─ has anything changed?
-                │     ├─ frontend/ ............... → publish the frontend (4EVERLAND)
-                │     └─ what enters the image ... → publish the backend image (GHCR)
-                │                                        │
-                │                                        └─ AUTO_DEPLOY says:
-                │                                              none   → stop
-                │                                              heroku → deploy to heroku ─┐
-                │                                              phala  → deploy to phala ──┤
-                │                                                                         └─ dns follows
-                │
-                └─ (pull requests stop here: checked, never published)
+```mermaid
+flowchart TB
+  push["push to main"]
+  pr["pull request"]
+
+  subgraph checks["checks.yml: all must pass"]
+    frontend["frontend<br/>lint, typecheck, tests, build, smoke"]
+    backend["backend<br/>lint, typecheck, tests, image build"]
+    circuits["circuits<br/>witness tests, cached trusted setup"]
+    contracts["contracts<br/>E2E with real Groth16 proofs"]
+    tally["tally CLI"]
+    circuits -- "artefacts" --> contracts
+  end
+
+  changed{"has anything changed?"}
+  stop(["checked, never published"])
+  site["publish the frontend<br/>(4EVERLAND)"]
+  image["publish the backend image<br/>(GHCR, pinned by digest)"]
+  auto{"AUTO_DEPLOY"}
+  heroku["deploy to heroku"]
+  phala["deploy to phala"]
+  dns["DNS follows"]
+  release["publish the release"]
+
+  push --> checks
+  pr --> checks --> stop
+  checks --> changed
+  changed -- "frontend/" --> site
+  changed -- "what enters the image" --> image
+  image --> auto
+  auto -- "none" --> done(["stop"])
+  auto -- "heroku" --> heroku --> dns
+  auto -- "phala" --> phala --> dns
+  site --> release
+  image --> release
 ```
 
 Manual entry points, at any time, for any published version:
