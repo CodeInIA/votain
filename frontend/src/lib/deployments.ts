@@ -119,6 +119,20 @@ function resolveRpcUrl(value: string | undefined): string | undefined {
   return window.location.origin + value;
 }
 
+/**
+ * TWO AMOY ENDPOINTS, because no free one does both jobs.
+ *
+ * publicnode takes batches of any size, which ethers sends whenever reads share
+ * a tick, but caps eth_getLogs at 10000 blocks (a few hours of Amoy). Tenderly's
+ * public gateway serves eth_getLogs over any range, but answers 429 to a batch
+ * of four or more eth_call and to a burst of a dozen single ones, and ethers
+ * retries a 429 with backoff: a page reading one election hung for minutes.
+ * So calls go to publicnode and only log queries go to Tenderly (see
+ * `getReadProvider`). rpc-amoy.polygon.technology is dead; drpc refuses batches.
+ */
+const AMOY_RPC_URL = "https://polygon-amoy-bor-rpc.publicnode.com";
+const AMOY_LOGS_RPC_URL = "https://polygon-amoy.gateway.tenderly.co";
+
 export const chainInfo = {
   chainId: CHAIN_ID,
   network: TARGET_NETWORK,
@@ -127,9 +141,12 @@ export const chainInfo = {
   rpcUrl:
     resolveRpcUrl(envOverride(import.meta.env.VITE_RPC_URL)) ??
     envOverride(import.meta.env.VITE_AMOY_RPC_URL) ??
-    // Tenderly, not rpc-amoy.polygon.technology (dead) and not drpc/publicnode,
-    // which cap eth_getLogs at 10000 blocks and would truncate queryFilter reads.
-    (CHAIN_ID === 31337 ? "http://127.0.0.1:8545" : "https://polygon-amoy.gateway.tenderly.co"),
+    (CHAIN_ID === 31337 ? "http://127.0.0.1:8545" : AMOY_RPC_URL),
+  /// Where eth_getLogs goes, when that is not `rpcUrl`. Unset off Amoy: a local
+  /// node has no range cap, and an unknown chain has no known second endpoint.
+  logsRpcUrl:
+    resolveRpcUrl(envOverride(import.meta.env.VITE_LOGS_RPC_URL)) ??
+    (CHAIN_ID === 80002 ? AMOY_LOGS_RPC_URL : undefined),
   name: KNOWN_CHAINS[CHAIN_ID]?.name ?? `Chain ${CHAIN_ID}`,
   currency: KNOWN_CHAINS[CHAIN_ID]?.currency ?? "ETH",
   explorer: KNOWN_CHAINS[CHAIN_ID]?.explorer,

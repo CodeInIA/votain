@@ -301,7 +301,15 @@ async function main() {
   // Tenderly serves eth_getLogs over the full block range. drpc and publicnode
   // cap it at 10000 blocks; queryAll() falls back to windowed queries so the
   // audit still completes on those endpoints.
-  const provider = new JsonRpcProvider(process.env.RPC_URL ?? "https://polygon-amoy.gateway.tenderly.co");
+  // ONE REQUEST PER CALL: Tenderly's public gateway answers 429 to a batch of
+  // four or more eth_call, and ethers retries a 429 with backoff, so the six
+  // parallel reads of `readElection` hung instead of failing. Single requests
+  // pass, and a stray 429 on one of them is retried and then answered.
+  const provider = new JsonRpcProvider(
+    process.env.RPC_URL ?? "https://polygon-amoy.gateway.tenderly.co",
+    undefined,
+    { batchMaxCount: 1 },
+  );
   const election = new Contract(address, ELECTION_ABI, provider);
   if (doVerify) {
     await verifyPublished(address, election, provider);

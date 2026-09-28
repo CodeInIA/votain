@@ -209,10 +209,14 @@ auditable JSON → optional Pinata pin (`--pin`) + `publishResults` on-chain (`-
 
 - `https://rpc-amoy.polygon.technology` is **dead** (no DNS record). Replaced everywhere.
   Tenderly (`polygon-amoy.gateway.tenderly.co`) is the only free Amoy endpoint that serves
-  `eth_getLogs` over the full block range, which every `queryFilter` call needs since none of
-  them pass a `fromBlock`. drpc and publicnode cap it at 10000 blocks and would silently
-  truncate member lists, vote history and the tally, so they are used only where the code
-  writes but never reads logs (contract deploys, backend registrar).
+  `eth_getLogs` over the full block range. drpc and publicnode cap it at 10000 blocks.
+- **Revised 2026-09-28, at the Amoy deployment.** Tenderly's public gateway answers 429 to
+  any batch of four or more `eth_call`, and ethers retries a 429 with backoff, so the backend
+  (five parallel reads per eligibility check) hung for minutes. No free endpoint on
+  chainlist.org does both jobs, so: the backend uses publicnode (it never reads logs); the
+  frontend sends calls to publicnode and only `getLogs` to Tenderly (`SplitLogsProvider` in
+  `frontend/src/lib/contracts.ts`, falling back to publicnode in windows); the tally CLI
+  keeps Tenderly with `batchMaxCount: 1`.
 - `TRUSTED_FORWARDER` resolved to `0x…dEaD`. ZeroDev is ERC-4337, not ERC-2771: the Kernel
   smart account is the direct `msg.sender` of `enroll`/`castVote`, and `_msgSender()` only
   affects organizer-only functions, where organizers sign with MetaMask. A burn address keeps

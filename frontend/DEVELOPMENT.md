@@ -449,10 +449,11 @@ VITE_BACKEND_URL=http://localhost:3000
 # own .env. Setting VITE_WORLD_ID_* has no effect.
 VITE_CHAIN_NETWORK=amoy
 VITE_CHAIN_ID=80002
-# rpc-amoy.polygon.technology is dead. Tenderly is the only free Amoy endpoint
-# that serves eth_getLogs over the full block range, which queryFilter needs.
-VITE_RPC_URL=https://polygon-amoy.gateway.tenderly.co
-VITE_AMOY_RPC_URL=https://polygon-amoy.gateway.tenderly.co
+# Calls through publicnode (takes batches), log queries through Tenderly
+# (serves any getLogs range, but refuses batches of calls). These are also the
+# defaults, so both lines may be left out. See .env.example for the numbers.
+VITE_RPC_URL=https://polygon-amoy-bor-rpc.publicnode.com
+VITE_LOGS_RPC_URL=https://polygon-amoy.gateway.tenderly.co
 # Contract addresses. Override-only: the deploy script writes
 # src/lib/deployments/<network>.json and the client reads it automatically.
 # Leave BLANK rather than deleting; an empty value is treated as unset.

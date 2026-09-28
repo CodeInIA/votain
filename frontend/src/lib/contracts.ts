@@ -5,7 +5,7 @@
  * injected EOA signer (organizer via MetaMask) or relayed through
  * ElectionPaymaster (voters): see relay.ts.
  */
-import { Contract, JsonRpcProvider, type Signer } from "ethers";
+import { Contract, JsonRpcProvider, type PerformActionRequest, type Signer } from "ethers";
 import { addresses, chainInfo } from "./deployments";
 
 // ────────────────────────────────────────────────
@@ -117,12 +117,41 @@ export const REGISTRY_ABI = [
 // Providers & contract getters
 // ────────────────────────────────────────────────
 
+/**
+ * A read provider that sends eth_getLogs to a second endpoint.
+ *
+ * Why two endpoints at all is in `chainInfo` (deployments.ts). The log endpoint
+ * gets one request per HTTP call (`batchMaxCount: 1`), because it is the one
+ * that refuses batches. If it fails for any reason, the query is retried on the
+ * main endpoint, where `logs.ts` walks the range in windows if it has to: slower,
+ * but a result, instead of a page that never loads.
+ */
+class SplitLogsProvider extends JsonRpcProvider {
+  readonly #logs: JsonRpcProvider;
+
+  constructor(url: string, logsUrl: string, chainId: number) {
+    super(url, chainId, { staticNetwork: true });
+    this.#logs = new JsonRpcProvider(logsUrl, chainId, { staticNetwork: true, batchMaxCount: 1 });
+  }
+
+  override async _perform(req: PerformActionRequest): Promise<unknown> {
+    if (req.method !== "getLogs") return super._perform(req);
+    try {
+      return await this.#logs._perform(req);
+    } catch {
+      return super._perform(req);
+    }
+  }
+}
+
 let readProvider: JsonRpcProvider | undefined;
 
 export function getReadProvider(): JsonRpcProvider {
-  readProvider ??= new JsonRpcProvider(chainInfo.rpcUrl, chainInfo.chainId, {
-    staticNetwork: true,
-  });
+  const { rpcUrl, logsRpcUrl, chainId } = chainInfo;
+  readProvider ??=
+    logsRpcUrl && logsRpcUrl !== rpcUrl
+      ? new SplitLogsProvider(rpcUrl, logsRpcUrl, chainId)
+      : new JsonRpcProvider(rpcUrl, chainId, { staticNetwork: true });
   return readProvider;
 }
 

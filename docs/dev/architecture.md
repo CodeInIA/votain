@@ -1671,6 +1671,14 @@ written down so that nobody reads their absence as a guarantee.
   deployment block, with bounded concurrency. That is fine for a thesis-sized
   deployment and grows with the chain; a public platform would add an indexer
   (a subgraph or the issuer itself) and keep the browser path for auditors.
+- **The RPC endpoints see who reads what.** On Amoy the browser reads through
+  two free public endpoints, calls through publicnode and event logs through
+  Tenderly, because no free one accepts both batches and wide log ranges. A
+  voter looking up their own enrolments asks for logs carrying their identity
+  commitment, so that endpoint can pair the voter's IP address with that
+  commitment. It learns nothing about how they voted, but it is a third party
+  with a logging policy of its own. Mainnet would want an endpoint run by the
+  platform, or one bound by a privacy agreement.
 - **A wallet signature is the organizer's tally key.** Any site that persuades
   an organizer to sign the same typed data obtains it, since EIP-712 cannot
   bind a signature to an origin. Wallets whose signatures are not deterministic

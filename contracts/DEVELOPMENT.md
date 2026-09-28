@@ -295,8 +295,10 @@ ALLOW_INSECURE_CEREMONY=1  # only for a throwaway testnet: deploy verifiers from
 `https://rpc-amoy.polygon.technology` is dead (no DNS record since 2026). Working free
 endpoints: `polygon-amoy.drpc.org`, `polygon-amoy-bor-rpc.publicnode.com`,
 `polygon-amoy.gateway.tenderly.co`. Deployment sends transactions only, so any of them works
-here, but the frontend and the tally need Tenderly (the others cap `eth_getLogs` at 10000
-blocks).
+here. Reading is pickier: Tenderly is the only one serving `eth_getLogs` over a wide range
+(the others cap it at 10000 blocks) but it refuses batches of calls, so the frontend splits
+the two (calls to publicnode, logs to Tenderly) and the backend, which reads no logs, uses
+publicnode alone. See `frontend/.env.example`.
 
 ### No trusted forwarder
 
