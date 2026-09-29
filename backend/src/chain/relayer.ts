@@ -188,8 +188,12 @@ async function relay(
   try {
     const tx = await submitInTurn('RELAYER_PRIVATE_KEY', async signer => {
       const paymaster = new Contract(paymasterAddress() as string, PAYMASTER_ABI, signer);
+      // Simulated WITHOUT fees. With a price and no gas limit the node prices
+      // the call at its whole gas cap and refuses it for want of that balance,
+      // with no revert data: every relay failed that way before it was sent.
+      // Whether a call reverts does not depend on the price; its gas does.
+      await paymaster[method].staticCall(...args);
       const fees = await relayFees(signer);
-      await paymaster[method].staticCall(...args, fees);
       const estimate: bigint = await paymaster[method].estimateGas(...args, fees);
       return paymaster[method](...args, { ...fees, gasLimit: withMargin(estimate) });
     });
