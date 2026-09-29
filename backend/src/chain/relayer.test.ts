@@ -1,7 +1,9 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { isVoteCall } from './relayer.js';
+import { FeeData } from 'ethers';
+
+import { isVoteCall, relayFees, withMargin } from './relayer.js';
 
 /**
  * The shape check `/relay/vote` runs before simulating anything.
@@ -64,5 +66,35 @@ describe('a relayed ballot', () => {
   test('is refused with a proof of the wrong shape', () => {
     assert.equal(isVoteCall(call({ proof: { a: ['1', '2'], b: [['3', '4']], c: ['7', '8'] } })), false);
     assert.equal(isVoteCall(call({ proof: { a: ['1'], b: [['3', '4'], ['5', '6']], c: ['7', '8'] } })), false);
+  });
+});
+
+/**
+ * Two enrolments on Amoy ran out of gas with the whole estimated limit spent:
+ * ethers estimated at a gas price of zero, where the paymaster skips paying the
+ * relayer back, and the real price takes the longer path. The relay now fixes
+ * its fees first, estimates with them, and adds a margin.
+ */
+describe('relay pricing', () => {
+  const gwei = (n: number) => BigInt(n) * 1_000_000_000n;
+  const signerWith = (data: FeeData) => ({ provider: { getFeeData: async () => data } });
+
+  test('estimates with the EIP-1559 fees the transaction will carry', async () => {
+    const fees = await relayFees(signerWith(new FeeData(gwei(30), gwei(50), gwei(50))));
+    assert.deepEqual(fees, { maxFeePerGas: gwei(50), maxPriorityFeePerGas: gwei(50) });
+  });
+
+  test('falls back to a legacy gas price where the chain has no EIP-1559 fees', async () => {
+    const fees = await relayFees(signerWith(new FeeData(gwei(30), null, null)));
+    assert.deepEqual(fees, { gasPrice: gwei(30) });
+  });
+
+  test('refuses to price a relay with no provider', async () => {
+    await assert.rejects(relayFees({ provider: null }));
+  });
+
+  test('adds a quarter to the estimate', () => {
+    assert.equal(withMargin(281_878n), 352_347n);
+    assert.equal(withMargin(100n), 125n);
   });
 });

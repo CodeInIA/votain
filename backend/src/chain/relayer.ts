@@ -19,7 +19,7 @@
  *   PAYMASTER_ADDRESS      ElectionPaymaster deployment address
  *   RELAYER_PRIVATE_KEY    hot wallet with a small POL float
  */
-import { Contract, isAddress } from 'ethers';
+import { Contract, isAddress, type FeeData } from 'ethers';
 
 import { contractAddress } from './deployments.js';
 import { submitInTurn } from './signer.js';
@@ -134,6 +134,36 @@ export function isVoteCall(body: unknown): body is VoteCall {
 type PaymasterMethod = 'relayEnroll' | 'relayEnrollAttested' | 'relayEnrollPrivate' | 'relayVote';
 
 /**
+ * The fees the relayed transaction will pay, fixed BEFORE it is estimated.
+ *
+ * WHY THE ORDER MATTERS. ethers estimates the gas limit before it fills in the
+ * fees, so the node simulated every relay at a gas price of zero. At zero the
+ * paymaster owes the relayer nothing: it skips the transfer back and leaves the
+ * reserve untouched. At the real price it does both, which is about fifteen
+ * thousand gas more than the estimate allowed for, and on Amoy two enrolments
+ * in a row ran out of gas with their whole limit spent. Estimating with the
+ * price the transaction will carry makes the simulation take the same path.
+ */
+export async function relayFees(signer: { provider: { getFeeData(): Promise<FeeData> } | null }) {
+  const data = await signer.provider?.getFeeData();
+  if (!data) throw new Error('no provider to price the relay');
+  return data.maxFeePerGas !== null && data.maxPriorityFeePerGas !== null
+    ? { maxFeePerGas: data.maxFeePerGas, maxPriorityFeePerGas: data.maxPriorityFeePerGas }
+    : { gasPrice: data.gasPrice ?? undefined };
+}
+
+/**
+ * A quarter on top of the estimate. The remaining difference between simulation
+ * and execution is which of the organizer's two balances pays, which can
+ * change between the two, and running out of gas costs the relayer the whole
+ * limit anyway, so the margin is cheaper than the failure it prevents. Unused
+ * gas is not charged.
+ */
+export function withMargin(estimate: bigint): bigint {
+  return (estimate * 125n) / 100n;
+}
+
+/**
  * Simulates, submits in turn and waits for one relayed call.
  *
  * Simulated first because a reverting call still costs the relayer its gas,
@@ -158,8 +188,10 @@ async function relay(
   try {
     const tx = await submitInTurn('RELAYER_PRIVATE_KEY', async signer => {
       const paymaster = new Contract(paymasterAddress() as string, PAYMASTER_ABI, signer);
-      await paymaster[method].staticCall(...args);
-      return paymaster[method](...args);
+      const fees = await relayFees(signer);
+      await paymaster[method].staticCall(...args, fees);
+      const estimate: bigint = await paymaster[method].estimateGas(...args, fees);
+      return paymaster[method](...args, { ...fees, gasLimit: withMargin(estimate) });
     });
     const receipt = await tx.wait();
     return { relayed: true, txHash: receipt?.hash };
