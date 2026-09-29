@@ -23,17 +23,26 @@ to anyone who visits, and the thesis can quote them; only the store cannot.
 App name is `Votain` in every language, including the scripts that do not use
 the Latin alphabet: it is a product name, not a word to translate.
 
-## Submission is held until Amoy
+## Submission: Amoy is live, an open election is the last condition
 
-The listing is finished and deliberately not submitted. The published review
-criteria require that an app "is a final version, and is not a demo, trial or
-beta version", and that its integration "functioned properly when tested".
+The listing is finished. It was held back until the contracts left the local
+Hardhat node, because the published review criteria require that an app "is a
+final version, and is not a demo, trial or beta version", and that its
+integration "functioned properly when tested". The contracts have been on Amoy
+since 2026-09-28, so that condition is met.
 
-The contracts currently run on a local Hardhat node reached through a Cloudflare
-tunnel at `rpc.votain.app`. A reviewer opening `votain.app` while that laptop is
-off sees no elections at all: World ID sign-in still works, since it never
-touches the chain, and everything after it does not. Both objections disappear
-when the contracts are on Amoy, so that is the trigger.
+What remains is that the reviewer has something to do after signing in. On a
+fresh deployment `/discover` is empty: World ID sign-in works and then there is
+no election to enrol in. Before submitting, create one for the reviewer and
+leave it open:
+
+- personhood **"A World ID account"**, since the reviewer has no passport to scan;
+- enrolment open two to three weeks, voting a week after that;
+- privacy quorum 1, and a gas deposit of about 0.3 POL;
+- its link in the changelog, after the first line.
+
+A published election with results is worth having too, so the reviewer can see
+the end of the flow at `/election/<id>/results`.
 
 Two things to check on the way in:
 

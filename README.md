@@ -8,7 +8,7 @@ Votain is a Bachelor's thesis project (TFG) demonstrating how modern cryptograph
 
 | Property | How it is achieved |
 |----------|--------------------|
-| **End-to-end verifiable** | Every ballot is an ElGamal ciphertext on chain with a zero-knowledge proof that it is exactly one valid option, so a stuffed or malformed ballot never gets in. The election adds every ballot into an aggregate itself, and publishes a result only with a proof that the counts are that aggregate's decryption. Anyone can re-add the ballots and re-check the proof with no key, in the results screen or with `npm run tally -- <election> --verify`. The auditor CLI additionally pins a result JSON to IPFS; the in-app tally does not pin yet |
+| **End-to-end verifiable** | Every ballot is an ElGamal ciphertext on chain with a zero-knowledge proof that it is exactly one valid option, so a stuffed or malformed ballot never gets in. The election adds every ballot into an aggregate itself, and publishes a result only with a proof that the counts are that aggregate's decryption. Anyone can re-add the ballots and re-check the proof with no key, in the results screen or with `npm run tally -- <election> --verify`. Nothing else has to be trusted or stored: the ballots and the verified proof are on chain. The auditor CLI can also pin a result JSON to IPFS, as a readable copy; the app does not, because it adds no evidence the chain lacks |
 | **Anonymous** | Each ballot carries a zero-knowledge proof that its voter is on the election's roll, over Semaphore V4 identities and a per-election tree, without saying which member cast it |
 | **Coercion resistant** | A coerced voter can vote again, and nobody watching can tell they did. Every ballot silently cancels the voter's previous one, proved in zero knowledge without saying which, and a first vote and a re-vote look the same on chain. At most two ballots per voter within an hour (one straight away, then one an hour) bound how fast anyone can spend the organizer's gas, through tags that link nothing. The limit, stated plainly: the organizer's key could open a single ballot and see that it replaced one, though never whose it is (see [Known limits](#known-limits)) |
 | **Sybil resistant** | World ID v4 proof of personhood under one action fixed by the server, so one person holds one platform identity. Elections that require a document also refuse the same passport or ID card twice, whatever World ID account it arrives with |
@@ -224,10 +224,9 @@ npm run build
 
 ## Project status
 
-Contracts, backend issuer and both user flows are written, wired together and green.
-What is NOT done is the last mile: nothing is deployed to Amoy yet, so none of it has
-been exercised against a live chain, and the IPFS audit trail is produced only by the
-auditor CLI. See [`docs/PLAN.md`](docs/PLAN.md) for the plan and
+Contracts, backend issuer and both user flows are written, wired together and green,
+and deployed: the contracts on Polygon Amoy since 2026-09-28 (verified on Polygonscan),
+the frontend at `votain.app` and the issuer at `api.votain.app`. See [`docs/PLAN.md`](docs/PLAN.md) for the plan and
 [`docs/dev/state.md`](docs/dev/state.md) for what is pinned and what is owed.
 
 | Milestone | Description | Status |
@@ -235,10 +234,10 @@ auditor CLI. See [`docs/PLAN.md`](docs/PLAN.md) for the plan and
 | H0 | Bootstrap, dependency upgrade, dev docs | ✅ |
 | H1 | Design system and base components | ✅ |
 | H2 to H4 | 24 screens, 13 languages | ✅ |
-| H5 | Production contracts + chain client | ✅ code complete, Amoy deploy pending |
+| H5 | Production contracts + chain client | ✅ on Polygon Amoy since 2026-09-28, verified on Polygonscan |
 | H6 | Backend issuer feature complete | ✅ |
 | H7, H8 | Real voter and organizer integration | ✅ |
-| H9 | Tally + IPFS results | 🟡 tally done in-app and in the CLI; IPFS pinning only in the CLI |
+| H9 | Tally + results | ✅ proved and verified on chain, in-app and from the CLI. IPFS pinning is optional and CLI only: the chain already holds the ballots and the proof |
 | H10 | Frontend on IPFS (4EVERLAND) | ✅ live at `votain.app` |
 | H11 | Backend in a TEE | ✅ verified on Phala (Intel TDX): image pinned by digest, signed provenance, attestation reports that digest. Served from Heroku between sessions, since Phala is $42/month; one workflow switches either way |
 | H12, H13 | Thesis and defense | ⏳ |

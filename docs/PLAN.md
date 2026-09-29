@@ -306,17 +306,21 @@ World ID + Enrollment + real ZK Proof + Vote + History.
 
 Real WebAuthn Passkey + Create Election tx + phase-gated controls.
 
-### Milestone 9. Tally script + IPFS results 🟡 TALLY DONE, AUDIT TRAIL ONLY FROM THE CLI
+### Milestone 9. Tally script + IPFS results ✅ TALLY PROVED ON CHAIN; IPFS OPTIONAL
 
 `tally-votes.ts` ✅, Pinata pin ✅ **in the CLI only**, `publishResults` ✅, Privacy Quorum ✅.
 After the Paillier homomorphic sum is decrypted, the verdict branches on `VotingType`
 (most-votes / >50% / ≥2/3 / ≥N) and is embedded in the published JSON.
 
-**What is open, and it is the headline claim of the project.** The in-app tally does not pin.
-`organizer.publishResults(signer, address, counts, ipfsCid = "")` publishes an EMPTY CID when
-the organizer closes the count from the interface, which is the normal path; the JSON reaches
-IPFS only if somebody runs the auditor CLI by hand. Until that is closed, "the tally is
-published with an IPFS audit trail" is true of the CLI and false of the app.
+**Revised 2026-09-29: IPFS is no longer the audit trail, and the app does not need it.**
+This milestone was written when the tally was computed off chain and published without a
+proof, so the pinned JSON was the evidence. Since 2026-09-24 the contract itself refuses a
+result whose proof does not verify against the aggregate, and every ballot stays on chain as
+a ciphertext anyone can re-add (TallyCheck in the app, `--verify` in the CLI). The JSON
+would add a readable copy and no evidence, so the app publishes with an empty CID on
+purpose and the CLI's `--pin` stays as an option. Pinning from the app was costed and
+declined: it needs a pinning credential on the server and a signed upload route to guard
+it, for a file the chain makes redundant.
 
 ---
 

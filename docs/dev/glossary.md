@@ -66,7 +66,7 @@
 
 **Attestation**: hardware-signed report certifying what code is running in the TEE. In Votain: the backend's `/attestation` endpoint returns the TDX report.
 
-**IPFS (InterPlanetary File System)**: distributed, content-addressed file system (CID). In Votain: the frontend is deployed on IPFS (4EVERLAND) at `votain.app`, and tally audit trails are to be pinned on Pinata.
+**IPFS (InterPlanetary File System)**: distributed, content-addressed file system (CID). In Votain: the frontend is deployed on IPFS (4EVERLAND) at `votain.app`, and the tally CLI can optionally pin a result JSON on Pinata (`--pin`). The app does not: the ballots and the verified tally proof are already on chain.
 
 **CID (Content Identifier)**: cryptographic hash of IPFS content. Immutable. If the content changes, the CID changes.
 

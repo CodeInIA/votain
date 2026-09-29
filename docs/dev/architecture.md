@@ -1276,8 +1276,8 @@ commitment already covers. The image goes to IPFS and only the content
 identifier reaches the chain, about sixty bytes per candidate. Content
 addressing is what makes it safe: the CID IS the hash of the image, so it cannot
 be swapped for another one, and an unpinned image simply stops loading rather
-than turning into something else. IPFS is already how results are published, so
-this reuses a decision rather than adding one.
+than turning into something else. IPFS already serves the frontend, and the
+tally CLI can pin results there, so this reuses a decision rather than adding one.
 
 What it would take beyond the schema: an upload path from the browser, which
 does not exist today (`PINATA_JWT` is noted as postponed), the create wizard,
@@ -1299,7 +1299,7 @@ Deployed on 2026-09-21. What is actually running, rather than what was planned:
 | Contracts | Local Hardhat, reached over a named Cloudflare tunnel at `rpc.votain.app` | Amoy deliberately deferred: the whole stack is exercised against a throwaway chain first |
 | DNS | Cloudflare, **proxied** | Required by `dstack-ingress` for DNS-01, and what makes the subdomain layout below work. Behind the proxy the API answers `cf-cache-status: DYNAMIC`, so nothing dynamic is cached, and `_redirects` still resolves deep links through the extra hop |
 | Image build | GitHub Actions to GHCR, with signed SLSA provenance | See "Why the image is built in CI" |
-| IPFS tally | Pinata free (1 GB) | Still the plan; unbuilt, see H9 |
+| IPFS tally | Pinata free (1 GB), from the CLI only | Optional: the chain holds every ballot and the verified tally proof, so the JSON is a readable copy rather than evidence. Not built into the app on purpose, see H9 in `docs/PLAN.md` |
 
 **THE SUBDOMAIN LAYOUT IS NOT COSMETIC.** The session cookie is `__Host-`
 prefixed and `SameSite=strict`, so it is sent only on same-SITE requests.

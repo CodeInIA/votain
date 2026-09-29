@@ -171,8 +171,9 @@ npm run tunnel:local                # expose that node at rpc.votain.app
 is served from IPFS and `api.votain.app` from a host that is not this laptop, so
 neither can reach `127.0.0.1`. The named Cloudflare tunnel `votain-local`
 publishes the Hardhat node at `rpc.votain.app`, which is the RPC URL the
-frontend is built with. Nothing is deployed to Amoy yet, on purpose: the whole
-stack is exercised against a throwaway chain that costs no POL.
+frontend was built with while the whole stack was exercised against a
+throwaway chain that costs no POL. Production has run on Amoy since 2026-09-28,
+and the tunnel is now for development only.
 
 Named, not a quick tunnel, because the hostname has to stay put. A quick tunnel
 mints a new `*.trycloudflare.com` name every run, and the frontend bakes its RPC
