@@ -289,9 +289,11 @@ gas off the platform are designed but left for after the thesis: see [Future wor
 
 ## License
 
-Votain is released under the **GNU Affero General Public License v3.0 (AGPL-3.0)**. See [`LICENSE`](LICENSE) for the full text.
+Copyright © 2026 Sergio Barrios Paz. **All rights reserved.** See [`LICENSE`](LICENSE).
 
-This means you are free to use, modify and redistribute Votain, but if you run a modified version as a network-accessible service you must publish your source. **Commercial licenses without AGPL obligations are available**. Contact the author.
+The source code is public so that anyone can read and audit it, and verify an election held with it. That grants no right to use, run, deploy, copy, modify or redistribute Votain: any use needs a written agreement with the author. **Commercial licenses are available**. Contact the author.
+
+The circuits (`circuits/`) and the generated verifiers (`contracts/contracts/verifiers/`) keep their own licenses, as the `LICENSE` file details.
 
 ## Author
 

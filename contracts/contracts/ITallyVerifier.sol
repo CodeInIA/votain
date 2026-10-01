@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: LicenseRef-Votain-Proprietary
 pragma solidity ^0.8.37;
 
 /// @title ITallyVerifier

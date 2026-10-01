@@ -25,7 +25,7 @@
     "voting"
   ],
   "author": "Sergio Barrios Paz",
-  "license": "AGPL-3.0-only",
+  "license": "SEE LICENSE IN ../LICENSE",
   "type": "module",
   "dependencies": {
     "@sd-jwt/core": "^0.21.0",

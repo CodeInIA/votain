@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Off-chain tally, proof and audit for Votain elections",
   "type": "module",
-  "license": "AGPL-3.0-only",
+  "license": "SEE LICENSE IN ../LICENSE",
   "engines": {
     "node": ">=24",
     "npm": ">=11"

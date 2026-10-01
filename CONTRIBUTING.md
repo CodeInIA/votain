@@ -2,6 +2,10 @@
 
 Votain is an **end-to-end verifiable, anonymous, coercion-resistant voting dApp** on Polygon Amoy (testnet). Bachelor's thesis project (TFG).
 
+## Outside contributions
+
+The code is public for audit only; all rights are reserved (see [`LICENSE`](LICENSE)). **Pull requests from anyone other than the author are not accepted** unless a contributor license agreement assigning the rights to the author has been signed first. Issues and security reports are welcome.
+
 ## Read first
 
 - `docs/PLAN.md`. Full iterative plan (milestones, current state, operating rules).

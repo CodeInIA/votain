@@ -673,7 +673,7 @@
     "warranty_1": "Votain 按现状提供，不附带任何形式的担保。它未经过独立审计，可能存在影响表决正确性、可用性或私密性的缺陷。",
     "warranty_2": "在法律允许的最大范围内，作者不对因使用本软件而产生的损失或损害承担责任。",
     "licence_title": "许可与源代码",
-    "licence_1": "Votain 依据 GNU Affero General Public License v3.0 发布。完整源代码公开，正是这一点让任何人都能核实软件确实在做本页所声明的事。"
+    "licence_1": "Votain © 2026 Sergio Barrios Paz，保留所有权利。完整源代码公开，以便任何人核实软件确实在做本页所述的事情，但这并不授予未经书面许可使用、复制、修改或部署它的权利。"
   },
   "privacy": {
     "title": "隐私",

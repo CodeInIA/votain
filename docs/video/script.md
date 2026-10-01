@@ -12,7 +12,8 @@ questions afterwards. Every line below is true of the system as built:
 - **True today**: ballots are encrypted in the browser, summed without being
   opened, and only the total is decrypted. Enrolment is anonymous. A voter can
   verify their own ballot. The backend runs in a TEE whose attestation reports
-  the image digest. It is open source under AGPL-3.0.
+  the image digest. Its source code is public for audit, with all rights
+  reserved.
 - **Not said**: that anyone is using it, that it has been audited, that it is
   running on a public chain. The contracts are on a development chain until the
   Amoy deployment, so the narration says "the chain" and never "mainnet", and no
@@ -112,11 +113,12 @@ to the longer of the two so neither version feels rushed.
 
 ### 8. Close (2:40-3:00)
 
-> **EN** Votain is open source, end to end verifiable, and built as a Computer
-> Engineering bachelor's thesis. votain.app
+> **EN** Votain is end to end verifiable, its source is public for audit, and it
+> was built as a Computer Engineering bachelor's thesis. votain.app
 >
-> **ES** Votain es software libre, verificable de extremo a extremo, y se
-> desarrolló como Trabajo de Fin de Grado en Ingeniería Informática. votain.app
+> **ES** Votain es verificable de extremo a extremo, su código es público para
+> auditarlo, y se desarrolló como Trabajo de Fin de Grado en Ingeniería
+> Informática. votain.app
 
 ## Capture notes
 

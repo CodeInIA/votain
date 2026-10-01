@@ -685,7 +685,7 @@
     "warranty_1": "Votain est fourni en l'état, sans garantie d'aucune sorte. Il n'a pas fait l'objet d'un audit indépendant. Il peut contenir des défauts affectant l'exactitude, la disponibilité ou la confidentialité d'un vote.",
     "warranty_2": "Dans la mesure maximale permise par la loi, l'auteur décline toute responsabilité pour les pertes ou dommages découlant de son utilisation.",
     "licence_title": "Licence et code source",
-    "licence_1": "Votain est publié sous licence GNU Affero General Public License v3.0. Le code source complet est public, ce qui permet précisément à quiconque de vérifier que le logiciel fait ce que cette page affirme."
+    "licence_1": "Votain est © 2026 Sergio Barrios Paz, tous droits réservés. Le code source complet est public afin que chacun puisse vérifier que le logiciel fait ce que décrit cette page, mais cela ne donne aucun droit de l'utiliser, de le copier, de le modifier ni de le déployer sans autorisation écrite."
   },
   "privacy": {
     "title": "Confidentialité",

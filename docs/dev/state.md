@@ -243,7 +243,7 @@ scrollbars, full i18n (13 locales, Arabic right-to-left).
 
 ## License
 
-The project is released under **AGPL-3.0** (was MIT until H0 cleanup). All `package.json` files declare `"license": "AGPL-3.0-only"`. Root `LICENSE` file contains the canonical GNU text. Strategy: dual-license, commercial licenses available for entities that cannot comply with AGPL.
+**All rights reserved** since 2026-10-01: the source is public for audit only, and any use needs a written agreement with the author. The root `LICENSE` holds the notice. Own Solidity files carry `SPDX-License-Identifier: LicenseRef-Votain-Proprietary` and `backend`, `contracts`, `frontend` and `scripts-tally` declare `"license": "SEE LICENSE IN ../LICENSE"`. Exceptions: `circuits/` stays AGPL-3.0-only (built on circomlib, GPL-3.0) and the snarkjs verifiers in `contracts/contracts/verifiers/` stay GPL-3.0. Strategy: commercial licenses only.
 
 ---
 
