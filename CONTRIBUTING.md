@@ -23,11 +23,10 @@ votain/
 ├── frontend/         # React 19 + Vite + Tailwind 4 + ethers v6
 ├── circuits/         # ballot + tally circuits, trusted setup, generated verifiers
 ├── scripts-tally/    # off-chain tally, proof and --verify (auditor CLI)
-├── docs/
-│   ├── PLAN.md       # iterative plan (source of truth for progress)
-│   ├── dev/          # developer documentation
-│   └── screenshots/  # Playwright captures used by the root README
-└── memoria/          # LaTeX thesis (parallel track from H0)
+└── docs/
+    ├── PLAN.md       # iterative plan (source of truth for progress)
+    ├── dev/          # developer documentation
+    └── screenshots/  # Playwright captures used by the root README
 ```
 
 ## Quick commands

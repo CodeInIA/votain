@@ -1,5 +1,6 @@
 {
   "name": "contracts",
+  "private": true,
   "version": "1.0.0",
   "description": "Smart Contracts for Votain E2E Voting System",
   "main": "index.js",

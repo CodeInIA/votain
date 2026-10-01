@@ -1,5 +1,6 @@
 {
   "name": "votain-issuer-backend",
+  "private": true,
   "version": "1.0.0",
   "description": "The VC Issuer backend for emitting Verifiable Credentials (SD-JWT) mediated by World ID proofs (Phase 2).",
   "main": "index.js",
