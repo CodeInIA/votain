@@ -366,7 +366,7 @@ Source layout: `sd/issuer.ts` (shared SD-JWT instance + disclosure frame),
 
 ```bash
 npm run dev    # tsx watch src/index.ts (hot-reload)
-npm test       # node --test (session, identity vault, SD-JWT, Status List, relay, chain): 160 tests
+npm test       # node --test (session, identity vault, SD-JWT, Status List, relay, chain): 167 tests
 ```
 
 ## Required environment variables

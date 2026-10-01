@@ -162,16 +162,17 @@ votain/
 ├── backend/           # Node.js Express SD-JWT issuer (target: Phala TEE)
 ├── frontend/          # React 19 + Vite (deployed: IPFS / 4EVERLAND)
 ├── scripts-tally/     # off-chain tally, proof, IPFS publication and --verify (auditor CLI)
-├── docs/
-│   ├── PLAN.md        # iterative milestone plan (source of truth)
-│   ├── dev/           # developer documentation
-│   │   ├── architecture.md
-│   │   ├── conventions.md
-│   │   ├── glossary.md
-│   │   └── state.md   # current milestone, versions, technical debt
-│   └── screenshots/   # the images this README shows
-└── memoria/           # LaTeX thesis (parallel track)
+└── docs/
+    ├── PLAN.md        # iterative milestone plan (source of truth)
+    ├── dev/           # developer documentation
+    │   ├── architecture.md
+    │   ├── conventions.md
+    │   ├── glossary.md
+    │   └── state.md   # current milestone, versions, technical debt
+    └── screenshots/   # the images this README shows
 ```
+
+The LaTeX thesis lives in a separate private repository.
 
 ## Tech stack
 
@@ -207,13 +208,13 @@ npx hardhat compile
 # Backend (requires .env with ISSUER_PRIVATE_KEY, see backend/.env.example)
 cd backend
 npm install
-npm test                             # 160 tests, node:test
+npm test                             # 167 tests, node:test
 npm run dev                          # http://localhost:3000
 
 # Frontend
 cd frontend
 npm install
-npm test                             # 597 tests, vitest
+npm test                             # 602 tests, vitest
 npm run dev                          # http://localhost:5173
 npm run build
 ```
@@ -242,7 +243,7 @@ the frontend at `votain.app` and the issuer at `api.votain.app`. See [`docs/PLAN
 | H11 | Backend in a TEE | ✅ verified on Phala (Intel TDX): image pinned by digest, signed provenance, attestation reports that digest. Served from Heroku between sessions, since Phala is $42/month; one workflow switches either way |
 | H12, H13 | Thesis and defense | ⏳ |
 
-**987 tests pass**: 8 on the circuits, 222 on the contracts (the end-to-end suite with real Groth16 proofs), 160 on the backend, 597 on the frontend. The Playwright smoke suite renders every screen on desktop, tablet and phone (72).
+**1008 tests pass**: 17 on the circuits, 222 on the contracts (the end-to-end suite with real Groth16 proofs), 167 on the backend, 602 on the frontend. The Playwright smoke suite renders every screen on desktop, tablet and phone (72).
 
 ## Known limits
 

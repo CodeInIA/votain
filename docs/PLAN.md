@@ -334,7 +334,9 @@ it, for a file the chain makes redundant.
 
 ## PHASE D. Thesis + Defense (H12 to H13)
 
-### Milestone 12. LaTeX thesis (~80 to 120 pp.), parallel from H0
+### Milestone 12. LaTeX thesis (40 to 60 pp. from the Introduction, appendices excluded, ETSII Art. 16), parallel from H0
+
+Source kept in a separate private repository (`votain-memory`): Spanish (official) and English versions, built with latexmk.
 
 - H12.1 (parallel H0 to H2): template + chapters 1 and 2.
 - H12.2 (parallel H3 to H5): chapters 3 and 4.
