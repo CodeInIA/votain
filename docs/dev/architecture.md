@@ -29,7 +29,7 @@ flowchart TB
     t1["read aggregate()"]
     t2["decrypt with the election's keys"]
     t3["prove the decryption (tally circuit)"]
-    t4["audit JSON, pinned to IPFS by the CLI"]
+    t4["optional: audit JSON pinned to IPFS<br/>(CLI --pin only; the app sends an empty CID)"]
     t5["publishResults(cid, counts, proof)<br/>or voidBelowQuorum(voters, proof)"]
   end
 
@@ -43,7 +43,8 @@ flowchart TB
   election --> verifiers
   election --> registry
   election -- "aggregate()" --> t1
-  t1 --> t2 --> t3 --> t4 --> t5
+  t1 --> t2 --> t3 --> t5
+  t3 -. "CLI only" .-> t4 -.-> t5
   t5 -- "verified on chain" --> election
 ```
 
@@ -148,7 +149,9 @@ What each step rests on:
    the keys are derived on demand from a wallet signature (public per-election
    `keyNonce` in the metadata) and never stored at rest; publishing is a
    wallet-signed transaction. The offline CLI (`scripts-tally/`) does the same
-   from a key file and pins the audit JSON to IPFS. Both: below the privacy
+   from a key file and, with `--pin`, can also pin an audit JSON to IPFS as a
+   readable copy (the app publishes with an empty CID: the chain already holds
+   the ballots and the verified proof). Both: below the privacy
    quorum, `voidBelowQuorum(voters, proof)` and the counts are never revealed;
    otherwise `publishResults(cid, counts, proof)`. The contract verifies the
    proof either way.
